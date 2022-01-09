@@ -11,14 +11,14 @@ func TestSetup(t *testing.T) {
 	defer BackupAndRestore(t)
 	homedir, err := os.UserHomeDir()
 	Check(t, err)
-	if _, err := os.Stat(path.Join(homedir, SECRET_PATH)); err == nil {
+	if _, err := os.Stat(path.Join(homedir, CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
 	Check(t, Setup([]string{}))
-	if _, err := os.Stat(path.Join(homedir, SECRET_PATH)); err != nil {
+	if _, err := os.Stat(path.Join(homedir, CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, SECRET_PATH))
+	data, err := os.ReadFile(path.Join(homedir, CONFIG_PATH))
 	Check(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))

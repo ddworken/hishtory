@@ -1,7 +1,9 @@
 package shared
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -15,7 +17,7 @@ import (
 )
 
 const (
-	SECRET_PATH = ".hishtory.secret"
+	CONFIG_PATH = ".hishtory.config"
 )
 
 func getCwd() (string, error) {
@@ -91,15 +93,11 @@ func getLastCommand(history string) (string, error) {
 }
 
 func GetUserSecret() (string, error) {
-	homedir, err := os.UserHomeDir()
+	config, err := GetConfig()
 	if err != nil {
-		return "", fmt.Errorf("failed to read secret hishtory key: %v", err)
+		return "", err
 	}
-	secret, err := os.ReadFile(path.Join(homedir, SECRET_PATH))
-	if err != nil {
-		return "", fmt.Errorf("failed to read secret hishtory key: %v", err)
-	}
-	return string(secret), nil
+	return config.UserSecret, nil
 }
 
 func Setup(args []string) error {
@@ -109,15 +107,10 @@ func Setup(args []string) error {
 	}
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to retrieve homedir: %v", err)
-	}
-	err = os.WriteFile(path.Join(homedir, SECRET_PATH), []byte(userSecret), 0600)
-	if err != nil {
-		return fmt.Errorf("failed to write hishtory secret: %v", err)
-	}
-	return nil
+	var config ClientConfig
+	config.UserSecret = userSecret
+	config.IsEnabled = true
+	return SetConfig(config)
 }
 
 func DisplayResults(results []*HistoryEntry) {
@@ -130,4 +123,74 @@ func DisplayResults(results []*HistoryEntry) {
 	}
 
 	tbl.Print()
+}
+
+type ClientConfig struct {
+	UserSecret string `json:"user_secret"`
+	IsEnabled  bool   `json:"is_enabled"`
+}
+
+func GetConfig() (ClientConfig, error) {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return ClientConfig{}, fmt.Errorf("failed to retrieve homedir: %v", err)
+	}
+	data, err := os.ReadFile(path.Join(homedir, CONFIG_PATH))
+	if err != nil {
+		return ClientConfig{}, fmt.Errorf("failed to read config file: %v", err)
+	}
+	var config ClientConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return ClientConfig{}, fmt.Errorf("failed to parse config file: %v", err)
+	}
+	return config, nil
+}
+
+func SetConfig(config ClientConfig) error {
+	serializedConfig, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to serialize config: %v", err)
+	}
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve homedir: %v", err)
+	}
+	err = os.WriteFile(path.Join(homedir, CONFIG_PATH), serializedConfig, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to write config: %v", err)
+	}
+	return nil
+}
+
+func IsEnabled() (bool, error) {
+	config, err := GetConfig()
+	if err != nil {
+		return false, err
+	}
+	return config.IsEnabled, nil
+}
+
+func Enable() error {
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+	config.IsEnabled = true
+	return SetConfig(config)
+}
+
+func Disable() error {
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+	config.IsEnabled = false
+	return SetConfig(config)
+}
+
+func CheckFatalError(err error) {
+	if err != nil {
+		log.Fatalf("hishtory fatal error: %v", err)
+	}
 }

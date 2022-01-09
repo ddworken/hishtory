@@ -23,6 +23,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	case "enable":
+		shared.CheckFatalError(shared.Enable())
+	case "disable":
+		shared.CheckFatalError(shared.Disable())
 	}
 }
 
@@ -35,14 +39,10 @@ func getServerHostname() string {
 
 func query() {
 	userSecret, err := shared.GetUserSecret()
-	if err != nil {
-		panic(err)
-	}
+	shared.CheckFatalError(err)
 
 	req, err := http.NewRequest("GET", getServerHostname()+"/api/v1/search", nil)
-	if err != nil {
-		panic(err)
-	}
+	shared.CheckFatalError(err)
 
 	q := req.URL.Query()
 	q.Add("query", strings.Join(os.Args[2:], " "))
@@ -52,36 +52,30 @@ func query() {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
+	shared.CheckFatalError(err)
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
+	shared.CheckFatalError(err)
 	if resp.Status != "200 OK" {
-		panic("search API returned invalid result. status=" + resp.Status)
+		shared.CheckFatalError(fmt.Errorf("search API returned invalid result. status=" + resp.Status))
 	}
 
 	var data []*shared.HistoryEntry
 	err = json.Unmarshal(resp_body, &data)
-	if err != nil {
-		panic(err)
-	}
+	shared.CheckFatalError(err)
 	shared.DisplayResults(data)
 }
 
 func saveHistoryEntry() {
+	isEnabled, err := shared.IsEnabled()
+	shared.CheckFatalError(err)
+	if !isEnabled {
+		return
+	}
 	entry, err := shared.BuildHistoryEntry(os.Args)
-	if err != nil {
-		panic(err)
-	}
-
+	shared.CheckFatalError(err)
 	err = send(*entry)
-	if err != nil {
-		panic(err)
-	}
+	shared.CheckFatalError(err)
 }
 
 func send(entry shared.HistoryEntry) error {

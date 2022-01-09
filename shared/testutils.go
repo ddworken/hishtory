@@ -20,10 +20,10 @@ func BackupAndRestore(t *testing.T) func() {
 	}
 
 	os.Rename(path.Join(homedir, DB_PATH), path.Join(homedir, DB_PATH+".bak"))
-	os.Rename(path.Join(homedir, SECRET_PATH), path.Join(homedir, SECRET_PATH+".bak"))
+	os.Rename(path.Join(homedir, CONFIG_PATH), path.Join(homedir, CONFIG_PATH+".bak"))
 	return func() {
 		Check(t, os.Rename(path.Join(homedir, DB_PATH+".bak"), path.Join(homedir, DB_PATH)))
-		Check(t, os.Rename(path.Join(homedir, SECRET_PATH+".bak"), path.Join(homedir, SECRET_PATH)))
+		Check(t, os.Rename(path.Join(homedir, CONFIG_PATH+".bak"), path.Join(homedir, CONFIG_PATH)))
 	}
 }
 
