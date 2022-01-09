@@ -27,6 +27,8 @@ func main() {
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
 		shared.CheckFatalError(shared.Disable())
+	default:
+		shared.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
 }
 
@@ -63,7 +65,7 @@ func query() {
 	var data []*shared.HistoryEntry
 	err = json.Unmarshal(resp_body, &data)
 	shared.CheckFatalError(err)
-	shared.DisplayResults(data)
+	shared.DisplayResults(data, true)
 }
 
 func saveHistoryEntry() {

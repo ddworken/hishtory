@@ -35,7 +35,8 @@ func TestIntegration(t *testing.T) {
 	out := RunInteractiveBashCommands(t, `
 	gvm use go1.17
 	cd ../../
-	go build -o /tmp/client clients/local/client.go
+	go build -o /tmp/client clients/remote/client.go
+	go build -o /tmp/server server/server.go
 	/tmp/client init`)
 	match, err := regexp.MatchString(`Setting secret hishtory key to .*`, out)
 	shared.Check(t, err)
@@ -44,7 +45,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Test recording commands
-	out = RunInteractiveBashCommands(t, PROMPT_COMMAND+`
+	out = RunInteractiveBashCommands(t, `/tmp/server &`+PROMPT_COMMAND+`
 		ls /a
 		ls /bar
 		ls /foo
@@ -55,12 +56,12 @@ func TestIntegration(t *testing.T) {
 		/tmp/client enable
 		echo thisisrecorded
 		`)
-	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
+	if out != "Listening on localhost:8080\nfoo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
 		t.Fatalf("unexpected output from running commands: %#v", out)
 	}
 
 	// Test querying for all commands
-	out = RunInteractiveBashCommands(t, "/tmp/client query")
+	out = RunInteractiveBashCommands(t, `/tmp/server & /tmp/client query`)
 	expected := []string{"echo thisisrecorded", "/tmp/client enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {

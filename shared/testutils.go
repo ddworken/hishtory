@@ -13,6 +13,12 @@ func Check(t *testing.T, err error) {
 	}
 }
 
+func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
+	if err != nil {
+		t.Fatalf("Unexpected error: %v! Additional info: %v", err, additionalInfo)
+	}
+}
+
 func BackupAndRestore(t *testing.T) func() {
 	homedir, err := os.UserHomeDir()
 	if err != nil {

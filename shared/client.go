@@ -113,13 +113,20 @@ func Setup(args []string) error {
 	return SetConfig(config)
 }
 
-func DisplayResults(results []*HistoryEntry) {
+func DisplayResults(results []*HistoryEntry, displayHostname bool) {
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
-	tbl := table.New("Hostname", "CWD", "Timestamp", "Exit Code", "Command")
+	tbl := table.New("CWD", "Timestamp", "Exit Code", "Command")
+	if displayHostname {
+		tbl = table.New("Hostname", "CWD", "Timestamp", "Exit Code", "Command")
+	}
 	tbl.WithHeaderFormatter(headerFmt)
 
 	for _, result := range results {
-		tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, result.EndTime.Format("Jan 2 2006 15:04:05 MST"), result.ExitCode, result.Command)
+		if displayHostname {
+			tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, result.EndTime.Format("Jan 2 2006 15:04:05 MST"), result.ExitCode, result.Command)
+		} else {
+			tbl.AddRow(result.CurrentWorkingDirectory, result.EndTime.Format("Jan 2 2006 15:04:05 MST"), result.ExitCode, result.Command)
+		}
 	}
 
 	tbl.Print()

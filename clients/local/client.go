@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -19,6 +20,8 @@ func main() {
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
 		shared.CheckFatalError(shared.Disable())
+	default:
+		shared.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
 }
 
@@ -35,9 +38,9 @@ func query() {
 	db, err := shared.OpenDB()
 	shared.CheckFatalError(err)
 	query := strings.Join(os.Args[2:], " ")
-	data, err := shared.Search(db, query, userSecret, 25)
+	data, err := shared.Search(db, userSecret, query, 25)
 	shared.CheckFatalError(err)
-	shared.DisplayResults(data)
+	shared.DisplayResults(data, false)
 }
 
 func saveHistoryEntry() {

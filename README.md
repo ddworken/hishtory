@@ -1,5 +1,5 @@
 Installation:
 
 ```
-export PROMPT_COMMAND='~/.hishtory-client upload $? "`history 1`"'
+export PROMPT_COMMAND='~/.hishtory-client saveHistoryEntry $? "`history 1`"'
 ```
