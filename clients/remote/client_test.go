@@ -23,10 +23,6 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 	return out.String()
 }
 
-const (
-	PROMPT_COMMAND = "export PROMPT_COMMAND='/tmp/client saveHistoryEntry $? \"`history 1`\"'"
-)
-
 func TestIntegration(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)
@@ -37,23 +33,24 @@ func TestIntegration(t *testing.T) {
 	cd ../../
 	go build -o /tmp/client clients/remote/client.go
 	go build -o /tmp/server server/server.go
-	/tmp/client init`)
+	/tmp/client install`)
 	match, err := regexp.MatchString(`Setting secret hishtory key to .*`, out)
 	shared.Check(t, err)
 	if !match {
-		t.Fatalf("unexpected output from init: %v", out)
+		t.Fatalf("unexpected output from install: %v", out)
 	}
 
 	// Test recording commands
-	out = RunInteractiveBashCommands(t, `/tmp/server &`+PROMPT_COMMAND+`
+	out = RunInteractiveBashCommands(t, `/tmp/server &
+		sleep 2 # to give the server time to start
 		ls /a
 		ls /bar
 		ls /foo
 		echo foo
 		echo bar
-		/tmp/client disable
+		hishtory disable
 		echo thisisnotrecorded
-		/tmp/client enable
+		hishtory enable
 		echo thisisrecorded
 		`)
 	if out != "Listening on localhost:8080\nfoo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
@@ -61,8 +58,8 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Test querying for all commands
-	out = RunInteractiveBashCommands(t, `/tmp/server & /tmp/client query`)
-	expected := []string{"echo thisisrecorded", "/tmp/client enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
+	out = RunInteractiveBashCommands(t, `/tmp/server & hishtory query`)
+	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
 			t.Fatalf("output is missing expected item %#v: %#v", item, out)

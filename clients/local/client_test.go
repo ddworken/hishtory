@@ -23,36 +23,32 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 	return out.String()
 }
 
-const (
-	PROMPT_COMMAND = "export PROMPT_COMMAND='/tmp/client saveHistoryEntry $? \"`history 1`\"'"
-)
-
 func TestIntegration(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)
 
-	// Test init
+	// Test install
 	out := RunInteractiveBashCommands(t, `
 	gvm use go1.17
 	cd ../../
 	go build -o /tmp/client clients/local/client.go
-	/tmp/client init`)
+	/tmp/client install`)
 	match, err := regexp.MatchString(`Setting secret hishtory key to .*`, out)
 	shared.Check(t, err)
 	if !match {
-		t.Fatalf("unexpected output from init: %v", out)
+		t.Fatalf("unexpected output from install: %v", out)
 	}
 
 	// Test recording commands
-	out = RunInteractiveBashCommands(t, PROMPT_COMMAND+`
+	out = RunInteractiveBashCommands(t, `
 		ls /a
 		ls /bar
 		ls /foo
 		echo foo
 		echo bar
-		/tmp/client disable
+		hishtory disable
 		echo thisisnotrecorded
-		/tmp/client enable
+		hishtory enable
 		echo thisisrecorded
 		`)
 	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
@@ -60,11 +56,26 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Test querying for all commands
-	out = RunInteractiveBashCommands(t, "/tmp/client query")
-	expected := []string{"echo thisisrecorded", "/tmp/client enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
+	out = RunInteractiveBashCommands(t, "hishtory query")
+	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
 			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+	}
+
+	// Test querying for a specific command
+	out = RunInteractiveBashCommands(t, "hishtory query foo")
+	expected = []string{"echo foo", "ls /foo"}
+	unexpected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "ls /bar", "ls /a"}
+	for _, item := range expected {
+		if !strings.Contains(out, item) {
+			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+	}
+	for _, item := range unexpected {
+		if strings.Contains(out, item) {
+			t.Fatalf("output is containing unexpected item %#v: %#v", item, out)
 		}
 	}
 }

@@ -13,16 +13,20 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 1 {
+		fmt.Println("Must specify a command! Do you mean `hishtory query`?")
+		return
+	}
 	switch os.Args[1] {
 	case "saveHistoryEntry":
 		saveHistoryEntry()
 	case "query":
-		query()
+		query(strings.Join(os.Args[2:], " "))
 	case "init":
-		err := shared.Setup(os.Args)
-		if err != nil {
-			panic(err)
-		}
+		shared.CheckFatalError(shared.Setup(os.Args))
+	case "install":
+		shared.CheckFatalError(shared.Setup(os.Args))
+		shared.CheckFatalError(shared.Install())
 	case "enable":
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
@@ -39,7 +43,7 @@ func getServerHostname() string {
 	return "http://localhost:8080"
 }
 
-func query() {
+func query(query string) {
 	userSecret, err := shared.GetUserSecret()
 	shared.CheckFatalError(err)
 
@@ -47,7 +51,7 @@ func query() {
 	shared.CheckFatalError(err)
 
 	q := req.URL.Query()
-	q.Add("query", strings.Join(os.Args[2:], " "))
+	q.Add("query", query)
 	q.Add("user_secret", userSecret)
 	q.Add("limit", "25")
 	req.URL.RawQuery = q.Encode()

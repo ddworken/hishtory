@@ -3,10 +3,14 @@ package shared
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -200,4 +204,88 @@ func CheckFatalError(err error) {
 	if err != nil {
 		log.Fatalf("hishtory fatal error: %v", err)
 	}
+}
+
+const (
+	PROMPT_COMMAND = "export PROMPT_COMMAND='%s saveHistoryEntry $? \"`history 1`\"'"
+)
+
+func Install() error {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+	path, err := installBinary(homedir)
+	if err != nil {
+		return err
+	}
+	return configureBashrc(homedir, path)
+}
+
+func configureBashrc(homedir, binaryPath string) error {
+	promptCommand := fmt.Sprintf(PROMPT_COMMAND, binaryPath)
+	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
+	if err != nil {
+		return fmt.Errorf("failed to read bashrc: %v", err)
+	}
+	if strings.Contains(string(bashrc), promptCommand) {
+		return nil
+	}
+	f, err := os.OpenFile(path.Join(homedir, ".bashrc"), os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to append to bashrc: %v", err)
+	}
+	defer f.Close()
+	_, err = f.WriteString(string(bashrc) + "\n# Hishtory Config:\nexport PATH=\"$PATH:" + filepath.Dir(binaryPath) + "\"\n" + promptCommand + "\n")
+	if err != nil {
+		return fmt.Errorf("failed to append to bashrc: %v", err)
+	}
+	return nil
+}
+
+func installBinary(homedir string) (string, error) {
+	clientPath, err := exec.LookPath("hishtory")
+	if err == nil {
+		return clientPath, nil
+	}
+	clientDir := path.Join(homedir, ".hishtory-bin")
+	err = os.MkdirAll(clientDir, 0744)
+	if err != nil {
+		return "", fmt.Errorf("failed to create folder for hishtory binary: %v", err)
+	}
+	clientPath = path.Join(clientDir, "hishtory")
+	err = copyFile(os.Args[0], clientPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to copy hishtory binary to $PATH: %v", err)
+	}
+	err = os.Chmod(clientPath, 0700)
+	if err != nil {
+		return "", fmt.Errorf("failed to set permissions on hishtory binary: %v", err)
+	}
+	return clientPath, nil
+}
+
+func copyFile(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, source)
+	return err
 }
