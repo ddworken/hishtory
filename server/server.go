@@ -5,46 +5,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 
-	"github.com/ddworken/hishtory/shared"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"github.com/ddworken/hishtory/shared"
 )
-
-func openDB() (*gorm.DB, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
-	}
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, ".hishtory.db")), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-	db.AutoMigrate(&shared.HistoryEntry{})
-	return db, nil
-}
-
-func persist(entry shared.HistoryEntry) error {
-	log.Printf("Saving %#v to the DB\n", entry)
-	db, err := openDB()
-	if err != nil {
-		return err
-	}
-	conn, err := db.DB()
-	defer conn.Close()
-	db.Create(&entry).Commit()
-	return nil
-}
 
 func search(db *gorm.DB, userSecret, query string, limit int) ([]*shared.HistoryEntry, error) {
 	fmt.Println("Received search query: " + query)
 	tokens, err := tokenize(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to tokenize query: %v")
+		return nil, fmt.Errorf("failed to tokenize query: %v", err)
 	}
 	tx := db.Debug().Where("user_secret = ?", userSecret)
 	for _, token := range tokens {
@@ -72,6 +45,9 @@ func search(db *gorm.DB, userSecret, query string, limit int) ([]*shared.History
 }
 
 func tokenize(query string) ([]string, error) {
+	if query == "" {
+		return []string{}, nil
+	}
 	return strings.Split(query, " "), nil
 }
 
@@ -82,7 +58,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	err = persist(entry)
+	err = shared.Persist(entry)
 	if err != nil {
 		panic(err)
 	}
@@ -99,7 +75,7 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		limit = 0
 	}
-	db, err := openDB()
+	db, err := shared.OpenDB()
 	if err != nil {
 		panic(err)
 	}
@@ -118,7 +94,7 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	_, err := openDB()
+	_, err := shared.OpenDB()
 	if err != nil {
 		panic(err)
 	}
