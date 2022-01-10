@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -12,7 +11,6 @@ import (
 )
 
 func RunInteractiveBashCommands(t *testing.T, script string) string {
-	shared.Check(t, ioutil.WriteFile("/tmp/hishtory-test-in.sh", []byte(script), 0600))
 	cmd := exec.Command("bash", "-i")
 	cmd.Stdin = strings.NewReader(script)
 	var out bytes.Buffer
@@ -59,10 +57,30 @@ func TestIntegration(t *testing.T) {
 
 	// Test querying for all commands
 	out = RunInteractiveBashCommands(t, `/tmp/server & hishtory query`)
-	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
+	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a", "ms"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
 			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+	}
+	match, err = regexp.MatchString(`.*[a-zA-Z-_0-9]+\s+~/.*\s+[a-zA-Z]{3} \d+ 2022 \d\d:\d\d:\d\d PST\s+\d{1,2}ms\s+0\s+echo thisisrecorded.*`, out)
+	shared.Check(t, err)
+	if !match {
+		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
+	}
+
+	// Test querying for a specific command
+	out = RunInteractiveBashCommands(t, "hishtory query foo")
+	expected = []string{"echo foo", "ls /foo", "ms"}
+	unexpected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "ls /bar", "ls /a"}
+	for _, item := range expected {
+		if !strings.Contains(out, item) {
+			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+	}
+	for _, item := range unexpected {
+		if strings.Contains(out, item) {
+			t.Fatalf("output is containing unexpected item %#v: %#v", item, out)
 		}
 	}
 }
