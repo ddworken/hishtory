@@ -22,7 +22,6 @@ func main() {
 		shared.CheckFatalError(shared.Setup(os.Args))
 	case "install":
 		shared.CheckFatalError(shared.Install())
-		shared.CheckFatalError(shared.Setup(os.Args))
 	case "enable":
 		shared.CheckFatalError(shared.Enable())
 	case "disable":

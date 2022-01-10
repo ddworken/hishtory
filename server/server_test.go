@@ -17,7 +17,7 @@ func TestSubmitThenQuery(t *testing.T) {
 	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry
-	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  "})
+	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	shared.Check(t, err)
 	reqBody, err := json.Marshal(entry)
 	shared.Check(t, err)
@@ -63,7 +63,7 @@ func TestNoUserSecretGivesNoResults(t *testing.T) {
 	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry
-	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  "})
+	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	shared.Check(t, err)
 	reqBody, err := json.Marshal(entry)
 	shared.Check(t, err)
@@ -91,14 +91,14 @@ func TestSearchQuery(t *testing.T) {
 	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry that we'll match
-	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /bar  "})
+	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /bar  ", "1641774958326745663"})
 	shared.Check(t, err)
 	reqBody, err := json.Marshal(entry)
 	shared.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	apiSubmitHandler(nil, submitReq)
 	// Submit an entry that we won't match
-	entry, err = shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /foo  "})
+	entry, err = shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /foo  ", "1641774958326745663"})
 	shared.Check(t, err)
 	reqBody, err = json.Marshal(entry)
 	shared.Check(t, err)

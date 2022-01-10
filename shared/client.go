@@ -1,6 +1,8 @@
 package shared
 
 import (
+	_ "embed"
+
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +24,11 @@ import (
 
 const (
 	CONFIG_PATH = ".hishtory.config"
+)
+
+var (
+	//go:embed config.sh
+	CONFIG_SH_CONTENTS string
 )
 
 func getCwd() (string, error) {
@@ -63,7 +70,12 @@ func BuildHistoryEntry(args []string) (*HistoryEntry, error) {
 	}
 	entry.CurrentWorkingDirectory = cwd
 
-	// TODO(ddworken): start time
+	// start time
+	nanos, err := strconv.ParseInt(args[4], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[4], err)
+	}
+	entry.StartTime = time.Unix(0, nanos)
 
 	// end time
 	entry.EndTime = time.Now()
@@ -119,17 +131,19 @@ func Setup(args []string) error {
 
 func DisplayResults(results []*HistoryEntry, displayHostname bool) {
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
-	tbl := table.New("CWD", "Timestamp", "Exit Code", "Command")
+	tbl := table.New("CWD", "Timestamp", "Runtime", "Exit Code", "Command")
 	if displayHostname {
-		tbl = table.New("Hostname", "CWD", "Timestamp", "Exit Code", "Command")
+		tbl = table.New("Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command")
 	}
 	tbl.WithHeaderFormatter(headerFmt)
 
 	for _, result := range results {
+		timestamp := result.StartTime.Format("Jan 2 2006 15:04:05 MST")
+		duration := result.EndTime.Sub(result.StartTime).Round(time.Millisecond).String()
 		if displayHostname {
-			tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, result.EndTime.Format("Jan 2 2006 15:04:05 MST"), result.ExitCode, result.Command)
+			tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
 		} else {
-			tbl.AddRow(result.CurrentWorkingDirectory, result.EndTime.Format("Jan 2 2006 15:04:05 MST"), result.ExitCode, result.Command)
+			tbl.AddRow(result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
 		}
 	}
 
@@ -206,10 +220,6 @@ func CheckFatalError(err error) {
 	}
 }
 
-const (
-	PROMPT_COMMAND = "export PROMPT_COMMAND='%s saveHistoryEntry $? \"`history 1`\"'"
-)
-
 func Install() error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
@@ -219,24 +229,41 @@ func Install() error {
 	if err != nil {
 		return err
 	}
-	return configureBashrc(homedir, path)
+	err = configureBashrc(homedir, path)
+	if err != nil {
+		return err
+	}
+	_, err = GetConfig()
+	if err != nil {
+		// No config, so set up a new installation
+		return Setup(os.Args)
+	}
+	return nil
 }
 
 func configureBashrc(homedir, binaryPath string) error {
-	promptCommand := fmt.Sprintf(PROMPT_COMMAND, binaryPath)
+	// Check if we need to configure the bashrc
 	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
 	if err != nil {
 		return fmt.Errorf("failed to read bashrc: %v", err)
 	}
-	if strings.Contains(string(bashrc), promptCommand) {
+	if strings.Contains(string(bashrc), "# Hishtory Config:") {
 		return nil
 	}
+	// Create the file we're going to source in our bashrc
+	bashConfigPath := path.Join(filepath.Dir(binaryPath), "config.sh")
+	err = ioutil.WriteFile(bashConfigPath, []byte(CONFIG_SH_CONTENTS), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config.sh file: %v", err)
+	}
+
+	// Add to bashrc
 	f, err := os.OpenFile(path.Join(homedir, ".bashrc"), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString(string(bashrc) + "\n# Hishtory Config:\nexport PATH=\"$PATH:" + filepath.Dir(binaryPath) + "\"\n" + promptCommand + "\n")
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + filepath.Dir(binaryPath) + "\"\nsource " + bashConfigPath + "\n")
 	if err != nil {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}

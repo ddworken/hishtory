@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSetup(t *testing.T) {
@@ -28,7 +29,7 @@ func TestSetup(t *testing.T) {
 func TestBuildHistoryEntry(t *testing.T) {
 	defer BackupAndRestore(t)
 	Check(t, Setup([]string{}))
-	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  "})
+	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
 	if entry.UserSecret == "" || len(entry.UserSecret) < 10 || strings.TrimSpace(entry.UserSecret) != entry.UserSecret {
 		t.Fatalf("history entry has unexpected user secret: %v", entry.UserSecret)
@@ -44,6 +45,9 @@ func TestBuildHistoryEntry(t *testing.T) {
 	}
 	if entry.Command != "ls /" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
+	}
+	if entry.StartTime.Format(time.RFC3339) != "2022-01-09T16:35:58-08:00" {
+		t.Fatalf("history entry has incorrect start time: %v", entry.StartTime.Format(time.RFC3339))
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 func TestPersist(t *testing.T) {
 	defer BackupAndRestore(t)
 	Check(t, Setup([]string{}))
-	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  "})
+	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
 	Check(t, Persist(*entry))
 
@@ -30,13 +30,13 @@ func TestSearch(t *testing.T) {
 	Check(t, Setup([]string{}))
 
 	// Insert data
-	entry1, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  "})
+	entry1, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
 	Check(t, Persist(*entry1))
-	entry2, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /foo  "})
+	entry2, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /foo  ", "1641774958326745663"})
 	Check(t, err)
 	Check(t, Persist(*entry2))
-	entry3, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  echo hi  "})
+	entry3, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  echo hi  ", "1641774958326745663"})
 	Check(t, err)
 	Check(t, Persist(*entry3))
 

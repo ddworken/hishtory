@@ -2,7 +2,6 @@ package shared
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -28,7 +27,6 @@ const (
 )
 
 func Persist(entry HistoryEntry) error {
-	log.Printf("Saving %#v to the DB\n", entry)
 	db, err := OpenDB()
 	if err != nil {
 		return err
@@ -46,7 +44,7 @@ func OpenDB() (*gorm.DB, error) {
 	}
 	db, err := gorm.Open(sqlite.Open(path.Join(homedir, DB_PATH)), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
 	db.AutoMigrate(&HistoryEntry{})
 	return db, nil
@@ -65,6 +63,8 @@ func Search(db *gorm.DB, userSecret, query string, limit int) ([]*HistoryEntry, 
 			val := splitToken[1]
 			// tx = tx.Where()
 			panic("TODO(ddworken): Use " + field + val)
+		} else if strings.HasPrefix(token, "-") {
+			panic("TODO(ddworken): Implement -foo as filtering out foo")
 		} else {
 			wildcardedToken := "%" + token + "%"
 			tx = tx.Where("(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken)
