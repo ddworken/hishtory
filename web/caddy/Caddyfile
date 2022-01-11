@@ -1,0 +1,7 @@
+hishtory.dev:80 {
+    root /srv/landing
+    gzip
+    ext .html
+    log stdout
+    tls off
+}

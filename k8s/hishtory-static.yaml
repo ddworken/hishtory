@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hishtory-static
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: hishtory-static
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hishtory-static
+spec:
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: hishtory-static
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hishtory-static
+    spec:
+      containers:
+      - name: hishtory-static
+        image: gcr.io/dworken-k8s/hishtory-static
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Hishtory: Better Shell History</title>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-144207374-1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+
+        gtag('js', new Date());
+
+        gtag('config', 'UA-144207374-1');
+    </script>
+
+    <!-- Begin Inspectlet Asynchronous Code -->
+    <script type="text/javascript">
+        (function () {
+            window.__insp = window.__insp || [];
+            __insp.push(['wid', 1312045050]);
+            var ldinsp = function () {
+                if (typeof window.__inspld != "undefined") return;
+                window.__inspld = 1;
+                var insp = document.createElement('script');
+                insp.type = 'text/javascript';
+                insp.async = true;
+                insp.id = "inspsync";
+                insp.src = ('https:' == document.location.protocol ? 'https' : 'http') + '://cdn.inspectlet.com/inspectlet.js?wid=1312045050&r=' + Math.floor(new Date().getTime() / 3600000);
+                var x = document.getElementsByTagName('script')[0];
+                x.parentNode.insertBefore(insp, x);
+            };
+            setTimeout(ldinsp, 0);
+        })();
+    </script>
+    <!-- End Inspectlet Asynchronous Code -->
+
+    <!-- Font Awesome Icons -->
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Merriweather+Sans:400,700" rel="stylesheet">
+    <link href='https://fonts.googleapis.com/css?family=Merriweather:400,300,300italic,400italic,700,700italic'
+          rel='stylesheet' type='text/css'>
+
+    <!-- Plugin CSS -->
+    <link href="vendor/magnific-popup/magnific-popup.css" rel="stylesheet">
+
+    <!-- Theme CSS - Includes Bootstrap -->
+    <link href="css/creative.min.css" rel="stylesheet">
+
+    <!-- Highlight JS -->
+    <link rel="stylesheet"
+          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.8/styles/default.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.8/highlight.min.js"></script>
+
+</head>
+
+<body id="page-top">
+
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top py-3" id="mainNav">
+    <div class="container">
+        <a class="navbar-brand js-scroll-trigger" href="#page-top">Hishtory</a>
+        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse"
+                data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto my-2 my-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link js-scroll-trigger" href="#about">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link js-scroll-trigger" href="#setup">How it works</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link js-scroll-trigger" href="#signup">Sign up</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link js-scroll-trigger" href="#contact">Contact</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Masthead -->
+<header class="masthead">
+    <div class="container h-100">
+        <div class="row h-100 align-items-center justify-content-center text-center">
+            <div class="col-lg-10 align-self-end">
+                <h1 class="text-uppercase text-white font-weight-bold">Low Friction Security for Startups</h1>
+                <hr class="divider my-4">
+            </div>
+            <div class="col-lg-8 align-self-baseline">
+                <p class="text-white-75 font-weight-light mb-5">
+                    Cascara SSH eliminates the need to manage SSH keys and increases security.
+                </p>
+                <a class="btn btn-primary btn-xl js-scroll-trigger" href="#about">Find Out More</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- About Section -->
+<section class="page-section bg-primary" id="about">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="text-white mt-0">SSH security integrated with GSuite</h2>
+                <hr class="divider light my-4">
+                <p class="text-white-50 mb-4">
+                    Rely on Google's security for authenticating users and enforcing 2FA. Cascara builds on top of
+                    Google
+                    in order to seamlessly provision short lived SSH keys. Deploy one key to all of your servers and use
+                    SSH the same way everyone from Facebook to Uber does.
+                    <br/><br/>
+                    According to <a style="color:inherit;text-decoration:underline"
+                                    href="https://www.ssh.com/iam/how-to-kill-a-fortune-500">ssh.com</a>, 90% of SSH
+                    keys in a typical enterprise company are not actively used. Cascara ensures
+                    that no inactive keys exist thereby reducing the threat of a breach.
+                </p>
+            </div>
+            <p class="text-white-50 mb-4">
+            <pre>
+              <code class="bash">
+david@laptop $ cssh david@cascarasecurity.com
+Logging in with Google...       # Opens a browser window to login using OAuth
+Provisioning a new SSH key...
+Session Established
+david@cascarasecurity.com $
+              </code>
+            </pre>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Setup Section -->
+<section class="page-section" id="setup">
+    <div class="container">
+        <h2 class="text-center mt-0">Setup Process</h2>
+        <hr class="divider my-4">
+        <div class="row">
+            <div class="col-lg-3 col-md-6 text-center">
+                <div class="mt-5">
+                    <i class="fas fa-4x fa-user-plus text-primary mb-4"></i>
+                    <h3 class="h4 mb-2">Signup</h3>
+                    <p class="text-muted mb-0">Configure custom SSH permissions through our website</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 text-center">
+                <div class="mt-5">
+                    <i class="fas fa-4x fa-server code text-primary mb-4"></i>
+                    <h3 class="h4 mb-2">Deploy</h3>
+                    <p class="text-muted mb-0">Deploy a single SSH certificate on all of your servers</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 text-center">
+                <div class="mt-5">
+                    <i class="fas fa-4x fa-laptop-code text-primary mb-4"></i>
+                    <h3 class="h4 mb-2">Install</h3>
+                    <p class="text-muted mb-0">Install the open source cssh binary on your computer</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 text-center">
+                <div class="mt-5">
+                    <i class="fas fa-4x fa-heart text-primary mb-4"></i>
+                    <h3 class="h4 mb-2">Work, securely</h3>
+                    <p class="text-muted mb-0">Get back to the things that matter, confident that your servers are
+                        secure</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Signup Section -->
+<section class="page-section bg-primary" id="signup">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="text-white mt-0">Sign up</h2>
+                <p class="text-white-50 mb-4">
+                    Sign up now and get started within 10 minutes
+                </p>
+                <hr class="divider light my-4">
+                <a class="btn btn-light btn-xl js-scroll-trigger" href="https://console.cascarasecurity.com/signup">Get
+                    Started!</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section class="page-section" id="contact">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="mt-0">FAQ</h2>
+                <!-- FAQ -->
+                <hr class="divider my-4">
+                <div class="accordion" id="accordionExample">
+                    <div class="card">
+                        <div class="card-header" id="headingZero">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link" type="button" data-toggle="collapse"
+                                        data-target="#collapseZero" aria-expanded="true" aria-controls="collapseZero">
+                                    How does this work?
+                                </button>
+                            </h2>
+                        </div>
+
+                        <div id="collapseZero" class="collapse show" aria-labelledby="headingZero"
+                             data-parent="#accordionExample">
+                            <div class="card-body">
+                                SSH has a concept of "certificate authorities" where a single master key is placed on
+                                the server, and that key is used to create temporary keys that automatically expire
+                                after a set period of time. Cascara automates this process of provisioning new temporary
+                                keys based off of authenticating with your Google account.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingOne">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
+                                        data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    Is this secure?
+                                </button>
+                            </h2>
+                        </div>
+
+                        <div id="collapseOne" class="collapse" aria-labelledby="headingOne"
+                             data-parent="#accordionExample">
+                            <div class="card-body">
+                                Security is never absolute, but we believe that this does raise the bar for security.
+                                Cascara centralizes your SSH security so that one must attack Google in order to
+                                attack your SSH servers.
+                                <br/><br/>
+                                Using this service also requires trusting us. We maintain a <a href="/canary.txt">warrant
+                                canary</a> that we promise to keep up to date. In order to ensure that compromising us
+                                does not allow an attacker to compromise your servers, we recommend either configuring
+                                2FA or a bastion host following the guides in the admin console.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingTwo">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
+                                        data-target="#collapseTwo" aria-expanded="false"
+                                        aria-controls="collapseTwo">
+                                    Is this really easier?
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo"
+                             data-parent="#accordionExample">
+                            <div class="card-body">
+                                Cascara eliminates the need to onboard and offboard engineers by manually editing the
+                                SSH keys deployed on servers.
+                                Even if you use Ansible or Chef to manage SSH keys, Cascara ensures that you do not need
+                                to wait for every server to get updated. With Cascara, you simply add or remove
+                                someone's
+                                email and it is done.
+                                <br/> <br/>
+                                Cascara also removes the time consuming process of rotating SSH keys since all keys
+                                automatically expire.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingThree">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
+                                        data-target="#collapseThree" aria-expanded="false"
+                                        aria-controls="collapseThree">
+                                    How much does this cost?
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseThree" class="collapse" aria-labelledby="headingThree"
+                             data-parent="#accordionExample">
+                            <div class="card-body">
+                                Nothing! We are dedicated to ensuring that hobbyists and small startups can use our
+                                product. Overtime we plan on
+                                adding more enterprise focused features which we will charge for.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingFour">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
+                                        data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                    Who made this?
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseFour" class="collapse" aria-labelledby="headingFour"
+                             data-parent="#accordionExample">
+                            <div class="card-body">
+                                Made with ❤️ by <a
+                                    href="https://daviddworken.com">David Dworken</a>.
+
+                                I'm a Security Engineer with experience working
+                                everywhere from Snapchat to Keybase. I designed Cascara to solve a recurring
+                                security problem I've seen time and time again. In addition, it has been designed
+                                from the ground up with a secure scalable architecture.
+                                <br/><br/>
+                                More features are incoming!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr class="divider my-4">
+                <p class="text-muted mb-5">
+                    Feedback, thoughts, ideas, or other questions? Let us know
+                </p>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-4 text-center">
+                <i class="fas fa-envelope fa-3x mb-3 text-muted"></i>
+                <a class="d-block" href="mailto:david@cascarasecurity.com">david@cascarasecurity.com</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-light py-5">
+    <div class="container">
+        <div class="small text-center text-muted">Copyright &copy; 2019 - Cascara Security</div>
+    </div>
+</footer>
+
+<!-- Bootstrap core JavaScript -->
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+<!-- Plugin JavaScript -->
+<script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<script src="vendor/magnific-popup/jquery.magnific-popup.min.js"></script>
+
+<!-- Custom scripts for this template -->
+<script src="js/creative.min.js"></script>
+
+</body>
+
+</html>
