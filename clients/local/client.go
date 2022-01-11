@@ -18,6 +18,8 @@ func main() {
 		saveHistoryEntry()
 	case "query":
 		query(strings.Join(os.Args[2:], " "))
+	case "export":
+		export()
 	case "init":
 		shared.CheckFatalError(shared.Setup(os.Args))
 	case "install":
@@ -58,4 +60,16 @@ func saveHistoryEntry() {
 	shared.CheckFatalError(err)
 	err = shared.Persist(*entry)
 	shared.CheckFatalError(err)
+}
+
+func export() {
+	userSecret, err := shared.GetUserSecret()
+	shared.CheckFatalError(err)
+	db, err := shared.OpenDB()
+	shared.CheckFatalError(err)
+	data, err := shared.Search(db, userSecret, "", 0)
+	shared.CheckFatalError(err)
+	for _, entry := range data {
+		fmt.Println(entry)
+	}
 }

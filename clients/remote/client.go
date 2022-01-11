@@ -22,6 +22,8 @@ func main() {
 		saveHistoryEntry()
 	case "query":
 		query(strings.Join(os.Args[2:], " "))
+	case "export":
+		export()
 	case "init":
 		shared.CheckFatalError(shared.Setup(os.Args))
 	case "install":
@@ -43,11 +45,20 @@ func getServerHostname() string {
 }
 
 func query(query string) {
-	userSecret, err := shared.GetUserSecret()
+	data, err := doQuery(query)
 	shared.CheckFatalError(err)
+	shared.DisplayResults(data, true)
+}
 
+func doQuery(query string) ([]*shared.HistoryEntry, error) {
+	userSecret, err := shared.GetUserSecret()
+	if err != nil {
+		return nil, err 
+	}
 	req, err := http.NewRequest("GET", getServerHostname()+"/api/v1/search", nil)
-	shared.CheckFatalError(err)
+	if err != nil {
+		return nil, err 
+	}
 
 	q := req.URL.Query()
 	q.Add("query", query)
@@ -57,18 +68,21 @@ func query(query string) {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	shared.CheckFatalError(err)
+	if err != nil {
+		return nil, err 
+	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
-	shared.CheckFatalError(err)
+	if err != nil {
+		return nil, err 
+	}
 	if resp.Status != "200 OK" {
-		shared.CheckFatalError(fmt.Errorf("search API returned invalid result. status=" + resp.Status))
+		return nil, fmt.Errorf("search API returned invalid result. status=" + resp.Status)
 	}
 
 	var data []*shared.HistoryEntry
 	err = json.Unmarshal(resp_body, &data)
-	shared.CheckFatalError(err)
-	shared.DisplayResults(data, true)
+	return data, err 
 }
 
 func saveHistoryEntry() {
@@ -94,4 +108,8 @@ func send(entry shared.HistoryEntry) error {
 		return fmt.Errorf("failed to send HistoryEntry to api: %v", err)
 	}
 	return nil
+}
+
+func export() {
+
 }
