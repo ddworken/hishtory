@@ -8,6 +8,13 @@ import (
 	"strconv"
 
 	"github.com/ddworken/hishtory/shared"
+	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+const (
+	POSTGRES_DB = "postgresql://postgres:O74Ji4735C@postgres-postgresql.default.svc.cluster.local:5432/hishtory?sslmode=disable"
 )
 
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,10 +24,27 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	err = shared.Persist(entry)
+	db, err := OpenDB()
 	if err != nil {
 		panic(err)
 	}
+	err = shared.Persist(db, entry)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func OpenDB() (*gorm.DB, error) {
+	if shared.IsTestEnvironment() {
+		return shared.OpenLocalSqliteDb()
+	}
+
+	db, err := gorm.Open(postgres.Open(POSTGRES_DB), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+	}
+	db.AutoMigrate(&shared.HistoryEntry{})
+	return db, nil
 }
 
 func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +56,7 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		limit = 0
 	}
-	db, err := shared.OpenDB()
+	db, err := OpenDB()
 	if err != nil {
 		panic(err)
 	}
@@ -51,7 +75,18 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	_, err := shared.OpenDB()
+	// db, err := sql.Open("postgres", "postgresql://postgres:O74Ji4735C@postgres-postgresql.default.svc.cluster.local:5432/cascara_prod?sslmode=disable")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer db.Close()
+
+	// _, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s;", "hishtory"))
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	_, err := OpenDB()
 	if err != nil {
 		panic(err)
 	}

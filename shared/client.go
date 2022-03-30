@@ -3,6 +3,7 @@ package shared
 import (
 	_ "embed"
 
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,6 +40,9 @@ func getCwd() (string, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+	if cwd == homedir {
+		return "~/", nil
 	}
 	if strings.HasPrefix(cwd, homedir) {
 		return strings.Replace(cwd, homedir, "~", 1), nil
@@ -242,6 +246,12 @@ func Install() error {
 }
 
 func configureBashrc(homedir, binaryPath string) error {
+	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
+	bashConfigPath := path.Join(filepath.Dir(binaryPath), "config.sh")
+	err := ioutil.WriteFile(bashConfigPath, []byte(CONFIG_SH_CONTENTS), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config.sh file: %v", err)
+	}
 	// Check if we need to configure the bashrc
 	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
 	if err != nil {
@@ -250,13 +260,6 @@ func configureBashrc(homedir, binaryPath string) error {
 	if strings.Contains(string(bashrc), "# Hishtory Config:") {
 		return nil
 	}
-	// Create the file we're going to source in our bashrc
-	bashConfigPath := path.Join(filepath.Dir(binaryPath), "config.sh")
-	err = ioutil.WriteFile(bashConfigPath, []byte(CONFIG_SH_CONTENTS), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write config.sh file: %v", err)
-	}
-
 	// Add to bashrc
 	f, err := os.OpenFile(path.Join(homedir, ".bashrc"), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
@@ -272,15 +275,14 @@ func configureBashrc(homedir, binaryPath string) error {
 
 func installBinary(homedir string) (string, error) {
 	clientPath, err := exec.LookPath("hishtory")
-	if err == nil {
-		return clientPath, nil
-	}
-	clientDir := path.Join(homedir, ".hishtory-bin")
-	err = os.MkdirAll(clientDir, 0744)
 	if err != nil {
-		return "", fmt.Errorf("failed to create folder for hishtory binary: %v", err)
+		clientDir := path.Join(homedir, ".hishtory-bin")
+		err = os.MkdirAll(clientDir, 0744)
+		if err != nil {
+			return "", fmt.Errorf("failed to create folder for hishtory binary: %v", err)
+		}
+		clientPath = path.Join(clientDir, "hishtory")
 	}
-	clientPath = path.Join(clientDir, "hishtory")
 	err = copyFile(os.Args[0], clientPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to copy hishtory binary to $PATH: %v", err)
@@ -315,4 +317,17 @@ func copyFile(src, dst string) error {
 	defer destination.Close()
 	_, err = io.Copy(destination, source)
 	return err
+}
+
+func Update(url string) error {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd := exec.Command("bash", "-c", "curl -o /tmp/hishtory-client "+url+"; chmod +x /tmp/hishtory-client; /tmp/hishtory-client install")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Failed to update: %v, stdout=%+v, stderr=%+v", err, stdout.String(), stderr.String())
+	}
+	return nil
 }

@@ -23,27 +23,6 @@
         gtag('config', 'UA-144207374-1');
     </script>
 
-    <!-- Begin Inspectlet Asynchronous Code -->
-    <script type="text/javascript">
-        (function () {
-            window.__insp = window.__insp || [];
-            __insp.push(['wid', 1312045050]);
-            var ldinsp = function () {
-                if (typeof window.__inspld != "undefined") return;
-                window.__inspld = 1;
-                var insp = document.createElement('script');
-                insp.type = 'text/javascript';
-                insp.async = true;
-                insp.id = "inspsync";
-                insp.src = ('https:' == document.location.protocol ? 'https' : 'http') + '://cdn.inspectlet.com/inspectlet.js?wid=1312045050&r=' + Math.floor(new Date().getTime() / 3600000);
-                var x = document.getElementsByTagName('script')[0];
-                x.parentNode.insertBefore(insp, x);
-            };
-            setTimeout(ldinsp, 0);
-        })();
-    </script>
-    <!-- End Inspectlet Asynchronous Code -->
-
     <!-- Font Awesome Icons -->
     <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
 
@@ -82,13 +61,10 @@
                     <a class="nav-link js-scroll-trigger" href="#about">About</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link js-scroll-trigger" href="#setup">How it works</a>
+                    <a class="nav-link js-scroll-trigger" href="#setup">Setup</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link js-scroll-trigger" href="#signup">Sign up</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link js-scroll-trigger" href="#contact">Contact</a>
+                    <a class="nav-link js-scroll-trigger" href="#contact">FAQ</a>
                 </li>
             </ul>
         </div>
@@ -99,15 +75,12 @@
 <header class="masthead">
     <div class="container h-100">
         <div class="row h-100 align-items-center justify-content-center text-center">
-            <div class="col-lg-10 align-self-end">
-                <h1 class="text-uppercase text-white font-weight-bold">Low Friction Security for Startups</h1>
+            <div class="col-lg-12 align-self-end">
+                <h2 class="text-white font-weight-bold">Your shell history: synced, queryable, and in context</h1>
                 <hr class="divider my-4">
             </div>
             <div class="col-lg-8 align-self-baseline">
-                <p class="text-white-75 font-weight-light mb-5">
-                    Cascara SSH eliminates the need to manage SSH keys and increases security.
-                </p>
-                <a class="btn btn-primary btn-xl js-scroll-trigger" href="#about">Find Out More</a>
+                <script id="asciicast-xW0ddZdZm7Utv1iLATegM4Oe4" src="https://asciinema.org/a/xW0ddZdZm7Utv1iLATegM4Oe4.js" async data-autoplay="true" data-loop="true"></script>
             </div>
         </div>
     </div>
@@ -118,30 +91,15 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8 text-center">
-                <h2 class="text-white mt-0">SSH security integrated with GSuite</h2>
+                <h2 class="text-white mt-0">Bash scripting is powerful, keep track of how you use it</h2>
                 <hr class="divider light my-4">
                 <p class="text-white-50 mb-4">
-                    Rely on Google's security for authenticating users and enforcing 2FA. Cascara builds on top of
-                    Google
-                    in order to seamlessly provision short lived SSH keys. Deploy one key to all of your servers and use
-                    SSH the same way everyone from Facebook to Uber does.
-                    <br/><br/>
-                    According to <a style="color:inherit;text-decoration:underline"
-                                    href="https://www.ssh.com/iam/how-to-kill-a-fortune-500">ssh.com</a>, 90% of SSH
-                    keys in a typical enterprise company are not actively used. Cascara ensures
-                    that no inactive keys exist thereby reducing the threat of a breach.
+                    Bash keeps a list of every command you run locally, but this list of commands is devoid of context (where did I run that command? what was the output of the command? how long did it take to run?) and it is easily corrupted (open two terminals at once? Say goodbye to your bash history!). 
+                    <br>
+                    <br>
+                    Hishtory keeps track of the command you ran, how long it took to run, whether it succeeded or failed, where you ran it, and on what machine. It syncs this information across all your machines, so you can always find that useful bash pipeline you wrote a month ago. 
                 </p>
             </div>
-            <p class="text-white-50 mb-4">
-            <pre>
-              <code class="bash">
-david@laptop $ cssh david@cascarasecurity.com
-Logging in with Google...       # Opens a browser window to login using OAuth
-Provisioning a new SSH key...
-Session Established
-david@cascarasecurity.com $
-              </code>
-            </pre>
             </p>
         </div>
     </div>
@@ -152,54 +110,13 @@ david@cascarasecurity.com $
     <div class="container">
         <h2 class="text-center mt-0">Setup Process</h2>
         <hr class="divider my-4">
-        <div class="row">
-            <div class="col-lg-3 col-md-6 text-center">
-                <div class="mt-5">
-                    <i class="fas fa-4x fa-user-plus text-primary mb-4"></i>
-                    <h3 class="h4 mb-2">Signup</h3>
-                    <p class="text-muted mb-0">Configure custom SSH permissions through our website</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 text-center">
-                <div class="mt-5">
-                    <i class="fas fa-4x fa-server code text-primary mb-4"></i>
-                    <h3 class="h4 mb-2">Deploy</h3>
-                    <p class="text-muted mb-0">Deploy a single SSH certificate on all of your servers</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 text-center">
-                <div class="mt-5">
-                    <i class="fas fa-4x fa-laptop-code text-primary mb-4"></i>
-                    <h3 class="h4 mb-2">Install</h3>
-                    <p class="text-muted mb-0">Install the open source cssh binary on your computer</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 text-center">
-                <div class="mt-5">
-                    <i class="fas fa-4x fa-heart text-primary mb-4"></i>
-                    <h3 class="h4 mb-2">Work, securely</h3>
-                    <p class="text-muted mb-0">Get back to the things that matter, confident that your servers are
-                        secure</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Signup Section -->
-<section class="page-section bg-primary" id="signup">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h2 class="text-white mt-0">Sign up</h2>
-                <p class="text-white-50 mb-4">
-                    Sign up now and get started within 10 minutes
-                </p>
-                <hr class="divider light my-4">
-                <a class="btn btn-light btn-xl js-scroll-trigger" href="https://console.cascarasecurity.com/signup">Get
-                    Started!</a>
-            </div>
-        </div>
+        <p class="text-black-50 mb-4">
+            To install hishtory in offline mode: `curl -o hishtory https://hishtory.dev/hishtory-offline; chmod +x hishtory; ./hishtory install`
+            <br>
+            To install hishtory in online mode on your first machine: `curl -o hishtory https://hishtory.dev/hishtory-online; chmod +x hishtory; ./hishtory install`
+            <br>
+            To install hishtory in online mode on your other machines: `curl -o hishtory https://hishtory.dev/hishtory-online; chmod +x hishtory; ./hishtory install $YOUR_HISHTORY_SECRET`
+        </p>
     </div>
 </section>
 
@@ -225,10 +142,11 @@ david@cascarasecurity.com $
                         <div id="collapseZero" class="collapse show" aria-labelledby="headingZero"
                              data-parent="#accordionExample">
                             <div class="card-body">
-                                SSH has a concept of "certificate authorities" where a single master key is placed on
-                                the server, and that key is used to create temporary keys that automatically expire
-                                after a set period of time. Cascara automates this process of provisioning new temporary
-                                keys based off of authenticating with your Google account.
+                                Hishtory hooks into your shell to record everything you could want to know about your shell history. It supports two modes:
+                                <ol>
+                                    <li>Offline mode: It persists all this data in a local SQLite database</li>
+                                    <li>Online mode: Only if you opt-in, it syncs this data between all your machines so your history is immediately queryable from every one of your machines</li>
+                                </ol>                                  
                             </div>
                         </div>
                     </div>
@@ -237,7 +155,7 @@ david@cascarasecurity.com $
                             <h2 class="mb-0">
                                 <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
                                         data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                    Is this secure?
+                                    Can I use this without syncing my bash history to the internet? 
                                 </button>
                             </h2>
                         </div>
@@ -245,14 +163,7 @@ david@cascarasecurity.com $
                         <div id="collapseOne" class="collapse" aria-labelledby="headingOne"
                              data-parent="#accordionExample">
                             <div class="card-body">
-                                Security is never absolute, but we believe that this does raise the bar for security.
-                                Cascara centralizes your SSH security so that one must attack Google in order to
-                                attack your SSH servers.
-                                <br/><br/>
-                                Using this service also requires trusting us. We maintain a <a href="/canary.txt">warrant
-                                canary</a> that we promise to keep up to date. In order to ensure that compromising us
-                                does not allow an attacker to compromise your servers, we recommend either configuring
-                                2FA or a bastion host following the guides in the admin console.
+                                Yes! The default is to use it in the offline mode where your shell history stays 100% local and never leaves your machine. Only if you opt-in will it be synced to your other machines with hishtory installed.
                             </div>
                         </div>
                     </div>
@@ -262,22 +173,14 @@ david@cascarasecurity.com $
                                 <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
                                         data-target="#collapseTwo" aria-expanded="false"
                                         aria-controls="collapseTwo">
-                                    Is this really easier?
+                                    What about `.bash_history`? 
                                 </button>
                             </h2>
                         </div>
                         <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo"
                              data-parent="#accordionExample">
                             <div class="card-body">
-                                Cascara eliminates the need to onboard and offboard engineers by manually editing the
-                                SSH keys deployed on servers.
-                                Even if you use Ansible or Chef to manage SSH keys, Cascara ensures that you do not need
-                                to wait for every server to get updated. With Cascara, you simply add or remove
-                                someone's
-                                email and it is done.
-                                <br/> <br/>
-                                Cascara also removes the time consuming process of rotating SSH keys since all keys
-                                automatically expire.
+                                If it works for you, great! But I find I constantly get annoyed with `.bash_history` either because I lose context (which directory do I need to run that command from?) or because I full on lose the file (it tends to get corrupted if you open multiple terminals at the same time).
                             </div>
                         </div>
                     </div>
@@ -287,16 +190,14 @@ david@cascarasecurity.com $
                                 <button class="btn btn-link collapsed" type="button" data-toggle="collapse"
                                         data-target="#collapseThree" aria-expanded="false"
                                         aria-controls="collapseThree">
-                                    How much does this cost?
+                                    Is this free?
                                 </button>
                             </h2>
                         </div>
                         <div id="collapseThree" class="collapse" aria-labelledby="headingThree"
                              data-parent="#accordionExample">
                             <div class="card-body">
-                                Nothing! We are dedicated to ensuring that hobbyists and small startups can use our
-                                product. Overtime we plan on
-                                adding more enterprise focused features which we will charge for.
+                                Yes! This is just a hobby project for me that I use, and I hope other people get some use out of. 
                             </div>
                         </div>
                     </div>
@@ -315,12 +216,7 @@ david@cascarasecurity.com $
                                 Made with ❤️ by <a
                                     href="https://daviddworken.com">David Dworken</a>.
 
-                                I'm a Security Engineer with experience working
-                                everywhere from Snapchat to Keybase. I designed Cascara to solve a recurring
-                                security problem I've seen time and time again. In addition, it has been designed
-                                from the ground up with a secure scalable architecture.
-                                <br/><br/>
-                                More features are incoming!
+                                I'm a Security Engineer working at Google. I built this to solve a problem for myself, and wanted to share it with others who may find it useful.
                             </div>
                         </div>
                     </div>
@@ -334,7 +230,7 @@ david@cascarasecurity.com $
         <div class="row justify-content-center">
             <div class="col-lg-4 text-center">
                 <i class="fas fa-envelope fa-3x mb-3 text-muted"></i>
-                <a class="d-block" href="mailto:david@cascarasecurity.com">david@cascarasecurity.com</a>
+                <a class="d-block" href="mailto:david@daviddworken.com">david@daviddworken.com</a>
             </div>
         </div>
     </div>
@@ -343,7 +239,7 @@ david@cascarasecurity.com $
 <!-- Footer -->
 <footer class="bg-light py-5">
     <div class="container">
-        <div class="small text-center text-muted">Copyright &copy; 2019 - Cascara Security</div>
+        <div class="small text-center text-muted">Copyright &copy; 2022 - David Dworken</div>
     </div>
 </footer>
 

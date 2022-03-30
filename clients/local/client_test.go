@@ -25,7 +25,9 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 
 func TestIntegration(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)
+	defer shared.BackupAndRestore(t)()
+
+	// TODO(ddworken): Test status
 
 	// Test install
 	out := RunInteractiveBashCommands(t, `
@@ -84,4 +86,5 @@ func TestIntegration(t *testing.T) {
 		}
 	}
 }
+
 // TODO(ddworken): Test export

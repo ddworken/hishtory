@@ -32,6 +32,15 @@ func main() {
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
 		shared.CheckFatalError(shared.Disable())
+	case "status":
+		config, err := shared.GetConfig()
+		shared.CheckFatalError(err)
+		fmt.Print("Hishtory: Online Mode\nEnabled: ")
+		fmt.Print(config.IsEnabled)
+		fmt.Print("\nSecret Key: " + config.UserSecret + "\n")
+		fmt.Print("Remote Server: " + getServerHostname() + "\n")
+	case "update":
+		shared.CheckFatalError(shared.Update("https://hishtory.dev/hishtory-online"))
 	default:
 		shared.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
@@ -41,7 +50,7 @@ func getServerHostname() string {
 	if server := os.Getenv("HISHTORY_SERVER"); server != "" {
 		return server
 	}
-	return "http://localhost:8080"
+	return "https://api.hishtory.dev"
 }
 
 func query(query string) {
@@ -53,11 +62,11 @@ func query(query string) {
 func doQuery(query string) ([]*shared.HistoryEntry, error) {
 	userSecret, err := shared.GetUserSecret()
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 	req, err := http.NewRequest("GET", getServerHostname()+"/api/v1/search", nil)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 
 	q := req.URL.Query()
@@ -69,12 +78,12 @@ func doQuery(query string) ([]*shared.HistoryEntry, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 	if resp.Status != "200 OK" {
 		return nil, fmt.Errorf("search API returned invalid result. status=" + resp.Status)
@@ -82,7 +91,7 @@ func doQuery(query string) ([]*shared.HistoryEntry, error) {
 
 	var data []*shared.HistoryEntry
 	err = json.Unmarshal(resp_body, &data)
-	return data, err 
+	return data, err
 }
 
 func saveHistoryEntry() {
@@ -111,5 +120,5 @@ func send(entry shared.HistoryEntry) error {
 }
 
 func export() {
-
+	// TODO(ddworken)
 }

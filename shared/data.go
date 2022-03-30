@@ -2,13 +2,13 @@ package shared
 
 import (
 	"fmt"
-	"os"
-	"path"
 	"strings"
 	"time"
+	"os"
+"path"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/driver/sqlite"
 )
 
 type HistoryEntry struct {
@@ -26,18 +26,11 @@ const (
 	DB_PATH = ".hishtory.db"
 )
 
-func Persist(entry HistoryEntry) error {
-	db, err := OpenDB()
-	if err != nil {
-		return err
-	}
-	conn, err := db.DB()
-	defer conn.Close()
-	db.Create(&entry).Commit()
-	return nil
+func IsTestEnvironment() bool {
+	return os.Getenv("HISHTORY_TEST") != ""
 }
 
-func OpenDB() (*gorm.DB, error) {
+func OpenLocalSqliteDb() (*gorm.DB, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
@@ -48,6 +41,12 @@ func OpenDB() (*gorm.DB, error) {
 	}
 	db.AutoMigrate(&HistoryEntry{})
 	return db, nil
+}
+
+
+func Persist(db *gorm.DB, entry HistoryEntry) error {
+	db.Create(&entry).Commit()
+	return nil 
 }
 
 func Search(db *gorm.DB, userSecret, query string, limit int) ([]*HistoryEntry, error) {

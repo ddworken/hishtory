@@ -7,12 +7,12 @@ import (
 func TestPersist(t *testing.T) {
 	defer BackupAndRestore(t)
 	Check(t, Setup([]string{}))
+	db, err := OpenLocalSqliteDb()
+	Check(t, err)
+
 	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
-	Check(t, Persist(*entry))
-
-	db, err := OpenDB()
-	Check(t, err)
+	Check(t, Persist(db, *entry))
 	var historyEntries []*HistoryEntry
 	result := db.Find(&historyEntries)
 	Check(t, result.Error)
@@ -28,21 +28,21 @@ func TestPersist(t *testing.T) {
 func TestSearch(t *testing.T) {
 	defer BackupAndRestore(t)
 	Check(t, Setup([]string{}))
+	db, err := OpenLocalSqliteDb()
+	Check(t, err)
 
 	// Insert data
 	entry1, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
-	Check(t, Persist(*entry1))
+	Check(t, Persist(db, *entry1))
 	entry2, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /foo  ", "1641774958326745663"})
 	Check(t, err)
-	Check(t, Persist(*entry2))
+	Check(t, Persist(db, *entry2))
 	entry3, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  echo hi  ", "1641774958326745663"})
 	Check(t, err)
-	Check(t, Persist(*entry3))
+	Check(t, Persist(db, *entry3))
 
 	// Search for data
-	db, err := OpenDB()
-	Check(t, err)
 	secret, err := GetUserSecret()
 	Check(t, err)
 	results, err := Search(db, secret, "ls", 5)

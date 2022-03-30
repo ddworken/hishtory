@@ -13,7 +13,7 @@ import (
 
 func TestSubmitThenQuery(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)
+	defer shared.BackupAndRestore(t)()
 	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry
@@ -59,7 +59,7 @@ func TestSubmitThenQuery(t *testing.T) {
 
 func TestNoUserSecretGivesNoResults(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)
+	defer shared.BackupAndRestore(t)()
 	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry
@@ -87,7 +87,7 @@ func TestNoUserSecretGivesNoResults(t *testing.T) {
 
 func TestSearchQuery(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)
+	defer shared.BackupAndRestore(t)()
 	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry that we'll match

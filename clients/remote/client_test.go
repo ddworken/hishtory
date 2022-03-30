@@ -12,7 +12,7 @@ import (
 
 func RunInteractiveBashCommands(t *testing.T, script string) string {
 	cmd := exec.Command("bash", "-i")
-	cmd.Stdin = strings.NewReader(script)
+	cmd.Stdin = strings.NewReader("export HISHTORY_SERVER=http://localhost:8080; /tmp/server &; sleep 2; " + script + "\nsleep 2; killall server || true;")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	var err bytes.Buffer
@@ -23,9 +23,11 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 
 func TestIntegration(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)
+	defer shared.BackupAndRestore(t)()
 
-	// Test init
+// TODO(ddworken): Test status
+
+	// Test install
 	out := RunInteractiveBashCommands(t, `
 	gvm use go1.17
 	cd ../../
@@ -39,8 +41,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Test recording commands
-	out = RunInteractiveBashCommands(t, `/tmp/server &
-		sleep 2 # to give the server time to start
+	out = RunInteractiveBashCommands(t, `
 		ls /a
 		ls /bar
 		ls /foo
@@ -51,12 +52,12 @@ func TestIntegration(t *testing.T) {
 		hishtory enable
 		echo thisisrecorded
 		`)
-	if out != "Listening on localhost:8080\nfoo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
+	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
 		t.Fatalf("unexpected output from running commands: %#v", out)
 	}
 
 	// Test querying for all commands
-	out = RunInteractiveBashCommands(t, `/tmp/server & hishtory query`)
+	out = RunInteractiveBashCommands(t, `hishtory query`)
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a", "ms"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {

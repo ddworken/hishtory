@@ -28,6 +28,14 @@ func main() {
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
 		shared.CheckFatalError(shared.Disable())
+	case "status":
+		config, err := shared.GetConfig()
+		shared.CheckFatalError(err)
+		fmt.Print("Hishtory: Offline Mode\nEnabled: ")
+		fmt.Print(config.IsEnabled)
+		fmt.Print("\n")
+	case "update":
+		shared.CheckFatalError(shared.Update("https://hishtory.dev/hishtory-offline"))
 	default:
 		shared.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
@@ -43,7 +51,7 @@ func getServerHostname() string {
 func query(query string) {
 	userSecret, err := shared.GetUserSecret()
 	shared.CheckFatalError(err)
-	db, err := shared.OpenDB()
+	db, err := shared.OpenLocalSqliteDb()
 	shared.CheckFatalError(err)
 	data, err := shared.Search(db, userSecret, query, 25)
 	shared.CheckFatalError(err)
@@ -58,14 +66,16 @@ func saveHistoryEntry() {
 	}
 	entry, err := shared.BuildHistoryEntry(os.Args)
 	shared.CheckFatalError(err)
-	err = shared.Persist(*entry)
+	db, err := shared.OpenLocalSqliteDb()
+	shared.CheckFatalError(err)
+	err = shared.Persist(db, *entry)
 	shared.CheckFatalError(err)
 }
 
 func export() {
 	userSecret, err := shared.GetUserSecret()
 	shared.CheckFatalError(err)
-	db, err := shared.OpenDB()
+	db, err := shared.OpenLocalSqliteDb()
 	shared.CheckFatalError(err)
 	data, err := shared.Search(db, userSecret, "", 0)
 	shared.CheckFatalError(err)
