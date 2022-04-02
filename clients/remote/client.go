@@ -28,6 +28,7 @@ func main() {
 		shared.CheckFatalError(shared.Setup(os.Args))
 	case "install":
 		shared.CheckFatalError(shared.Install())
+		// TODO: should be able to do hishtory install $secret
 	case "enable":
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
