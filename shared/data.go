@@ -39,7 +39,7 @@ type EncHistoryEntry struct {
 	DeviceId      string    `json:"device_id"`
 	UserId        string    `json:"user_id"`
 	Date          time.Time `json:"time"`
-	Id            string    `json:"id"`
+	EncryptedId            string    `json:"id"`
 	ReadCount int `json:"read_count"`
 }
 
@@ -48,13 +48,13 @@ type Device struct {
 	DeviceId string `json:"device_id"`
 }
 
-const (
-	MESSAGE_TYPE_REQUEST_DUMP = iota
-)
+// const (
+// 	MESSAGE_TYPE_REQUEST_DUMP = iota
+// )
 
-type AsyncMessage struct {
-	MessageType int `json:"message_type"`
-}
+// type AsyncMessage struct {
+// 	MessageType int `json:"message_type"`
+// }
 
 const (
 	HISHTORY_PATH = ".hishtory"
@@ -145,7 +145,7 @@ func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (EncHistoryEntry
 		Nonce:         nonce,
 		UserId:        UserId(userSecret),
 		Date:          time.Now(),
-		Id:            uuid.Must(uuid.NewRandom()).String(),
+		EncryptedId:            uuid.Must(uuid.NewRandom()).String(),
 		ReadCount: 0,
 	}, nil
 }
@@ -196,6 +196,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	}
 	db.AutoMigrate(&HistoryEntry{})
 	db.AutoMigrate(&EncHistoryEntry{})
+	db.AutoMigrate(&Device{})
 	return db, nil
 }
 

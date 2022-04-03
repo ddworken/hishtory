@@ -36,8 +36,21 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	GLOBAL_DB.Where("user_id = ?", )
 	for _, entry := range entries {
-		GLOBAL_DB.Create(&entry)
+		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
+		var devices []*shared.Device;
+		result := tx.Find(&devices)
+		if result.Error != nil {
+			panic(fmt.Errorf("DB query error: %v", result.Error))
+		}
+		if len(devices) == 0{
+			panic(fmt.Errorf("Found no devices associated with user_id=%s, can't save history entry!", entry.UserId))
+		}
+		for _, device := range devices {
+			entry.DeviceId = device.DeviceId;
+			GLOBAL_DB.Create(&entry)
+		}
 	}
 }
 
@@ -75,8 +88,10 @@ func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func apiERegister(w http.ResponseWriter, r *http.Request) {
-
+func apiERegisterHandler(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+	deviceId := r.URL.Query().Get("device_id")
+	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId})
 }
 
 func OpenDB() (*gorm.DB, error) {
@@ -144,6 +159,6 @@ func main() {
 	http.HandleFunc("/api/v1/esubmit", apiESubmitHandler)
 	http.HandleFunc("/api/v1/equery", apiEQueryHandler)
 	http.HandleFunc("/api/v1/ebootstrap", apiEBootstrapHandler)
-	http.HandleFunc("/api/v1/eregister", apiERegister)
+	http.HandleFunc("/api/v1/eregister", apiERegisterHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

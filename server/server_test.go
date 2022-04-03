@@ -135,6 +135,19 @@ func TestESubmitThenQuery(t *testing.T) {
 	InitDB()
 	shared.Check(t, shared.Setup(0, []string{}))
 
+	// Register a few devices
+	userId := shared.UserId("key")
+	devId1 := shared.DeviceId("key", 1)
+	devId2 := shared.DeviceId("key", 2)
+	otherUser := shared.UserId("otherkey")
+	otherDev := shared.DeviceId("otherkey", 1)
+	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	apiERegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
+	apiERegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev+"&user_id="+otherUser, nil)
+	apiERegisterHandler(nil, deviceReq)
+
 	// Submit a few entries for different devices
 	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	shared.Check(t, err)
@@ -202,7 +215,7 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, *entry)
 	}
 
-	// Bootstrap handler should return 3 entries, one for each device
+	// Bootstrap handler should return 2 entries, one for each device
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+shared.UserId("key"), nil)
 	apiEBootstrapHandler(w, searchReq)
@@ -211,8 +224,8 @@ func TestESubmitThenQuery(t *testing.T) {
 	data, err = ioutil.ReadAll(res.Body)
 	shared.Check(t, err)
 	shared.Check(t, json.Unmarshal(data, &retrievedEntries))
-	if len(retrievedEntries) != 3 {
-		t.Fatalf("Expected to retrieve 3 entries, found %d", len(retrievedEntries))
+	if len(retrievedEntries) != 2 {
+		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
 
 }
