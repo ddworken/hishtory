@@ -174,7 +174,6 @@ func IsTestEnvironment() bool {
 }
 
 func OpenLocalSqliteDb() (*gorm.DB, error) {
-	fmt.Printf("LOCAL SQLITE DB!\n")
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
@@ -183,7 +182,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
 	}
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, HISHTORY_PATH, DB_PATH)), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(path.Join(homedir, HISHTORY_PATH, DB_PATH)), &gorm.Config{SkipDefaultTransaction: true,})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
@@ -197,9 +196,6 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	}
 	db.AutoMigrate(&HistoryEntry{})
 	db.AutoMigrate(&EncHistoryEntry{})
-
-	db.Create(&HistoryEntry{Hostname: "foo"})
-	db.Create(&HistoryEntry{Hostname: "bar"}) // toDO: delete me
 	return db, nil
 }
 

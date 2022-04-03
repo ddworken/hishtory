@@ -26,7 +26,6 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("handler GLOBAL_DB=%#v\n", GLOBAL_DB)
 	GLOBAL_DB.Create(&entry)
 }
 
@@ -81,7 +80,6 @@ func apiERegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func OpenDB() (*gorm.DB, error) {
-	fmt.Println("OPENDDDDDDDDDDDBBBBBBBBBBBB")
 	if shared.IsTestEnvironment() {
 		return shared.OpenLocalSqliteDb()
 	}
@@ -120,6 +118,10 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
+	InitDB()
+}
+
+func InitDB() {
 	var err error
 	GLOBAL_DB, err = OpenDB()
 	if err != nil {
@@ -133,12 +135,9 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	GLOBAL_DB.Create(&shared.HistoryEntry{Hostname: "foo"})
-	fmt.Printf("init GLOBAL_DB=%#v\n", GLOBAL_DB)
 }
 
 func main() {
-	GLOBAL_DB.Create(&shared.HistoryEntry{Hostname: "foo"})
 	fmt.Println("Listening on localhost:8080")
 	http.HandleFunc("/api/v1/submit", apiSubmitHandler)
 	http.HandleFunc("/api/v1/search", apiSearchHandler)
