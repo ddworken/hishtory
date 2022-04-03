@@ -120,7 +120,7 @@ func GetUserSecret() (string, error) {
 	return config.UserSecret, nil
 }
 
-func Setup(args []string) error {
+func Setup(deviceId int, args []string) error {
 	userSecret := uuid.Must(uuid.NewRandom()).String()
 	if len(args) > 2 && args[2] != "" {
 		userSecret = args[2]
@@ -130,6 +130,7 @@ func Setup(args []string) error {
 	var config ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
+	config.DeviceId = deviceId
 	return SetConfig(config)
 }
 
@@ -157,6 +158,7 @@ func DisplayResults(results []*HistoryEntry, displayHostname bool) {
 type ClientConfig struct {
 	UserSecret string `json:"user_secret"`
 	IsEnabled  bool   `json:"is_enabled"`
+	DeviceId int `json:"device_id"`
 }
 
 func GetConfig() (ClientConfig, error) {
@@ -164,7 +166,7 @@ func GetConfig() (ClientConfig, error) {
 	if err != nil {
 		return ClientConfig{}, fmt.Errorf("failed to retrieve homedir: %v", err)
 	}
-	data, err := os.ReadFile(path.Join(homedir, CONFIG_PATH))
+	data, err := os.ReadFile(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 	if err != nil {
 		return ClientConfig{}, fmt.Errorf("failed to read config file: %v", err)
 	}
@@ -185,7 +187,12 @@ func SetConfig(config ClientConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve homedir: %v", err)
 	}
-	err = os.WriteFile(path.Join(homedir, CONFIG_PATH), serializedConfig, 0600)
+	clientDir := path.Join(homedir, HISHTORY_PATH)
+	err = os.MkdirAll(clientDir, 0744)
+	if err != nil {
+		return fmt.Errorf("failed to create ~/.hishtory/ folder: %v", err)
+	}
+	err = os.WriteFile(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), serializedConfig, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write config: %v", err)
 	}
@@ -229,6 +236,11 @@ func Install() error {
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
 	}
+	clientDir := path.Join(homedir, HISHTORY_PATH)
+	err = os.MkdirAll(clientDir, 0744)
+	if err != nil {
+		return fmt.Errorf("failed to create folder for hishtory binary: %v", err)
+	}
 	path, err := installBinary(homedir)
 	if err != nil {
 		return err
@@ -240,7 +252,8 @@ func Install() error {
 	_, err = GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
-		return Setup(os.Args)
+		// TODO: GO THROUGH THE REGISTRATION FLOW
+		return Setup(0, os.Args)
 	}
 	return nil
 }
@@ -276,12 +289,7 @@ func configureBashrc(homedir, binaryPath string) error {
 func installBinary(homedir string) (string, error) {
 	clientPath, err := exec.LookPath("hishtory")
 	if err != nil {
-		clientDir := path.Join(homedir, ".hishtory-bin")
-		err = os.MkdirAll(clientDir, 0744)
-		if err != nil {
-			return "", fmt.Errorf("failed to create folder for hishtory binary: %v", err)
-		}
-		clientPath = path.Join(clientDir, "hishtory")
+		clientPath = path.Join(homedir, HISHTORY_PATH, "hishtory")
 	}
 	err = copyFile(os.Args[0], clientPath)
 	if err != nil {

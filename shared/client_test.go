@@ -9,17 +9,17 @@ import (
 )
 
 func TestSetup(t *testing.T) {
-	defer BackupAndRestore(t)
+	defer BackupAndRestore(t)()
 	homedir, err := os.UserHomeDir()
 	Check(t, err)
-	if _, err := os.Stat(path.Join(homedir, CONFIG_PATH)); err == nil {
+	if _, err := os.Stat(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	Check(t, Setup([]string{}))
-	if _, err := os.Stat(path.Join(homedir, CONFIG_PATH)); err != nil {
+	Check(t, Setup(0, []string{}))
+	if _, err := os.Stat(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, CONFIG_PATH))
+	data, err := os.ReadFile(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 	Check(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
@@ -27,8 +27,8 @@ func TestSetup(t *testing.T) {
 }
 
 func TestBuildHistoryEntry(t *testing.T) {
-	defer BackupAndRestore(t)
-	Check(t, Setup([]string{}))
+	defer BackupAndRestore(t)()
+	Check(t, Setup(0, []string{}))
 	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
 	if entry.UserSecret == "" || len(entry.UserSecret) < 10 || strings.TrimSpace(entry.UserSecret) != entry.UserSecret {
@@ -52,15 +52,15 @@ func TestBuildHistoryEntry(t *testing.T) {
 }
 
 func TestGetUserSecret(t *testing.T) {
-	defer BackupAndRestore(t)
-	Check(t, Setup([]string{}))
+	defer BackupAndRestore(t)()
+	Check(t, Setup(0, []string{}))
 	secret1, err := GetUserSecret()
 	Check(t, err)
 	if len(secret1) < 10 || strings.Contains(secret1, " ") || strings.Contains(secret1, "\n") {
 		t.Fatalf("unexpected secret: %v", secret1)
 	}
 
-	Check(t, Setup([]string{}))
+	Check(t, Setup(0, []string{}))
 	secret2, err := GetUserSecret()
 	Check(t, err)
 

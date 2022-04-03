@@ -25,11 +25,11 @@ func BackupAndRestore(t *testing.T) func() {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	os.Rename(path.Join(homedir, DB_PATH), path.Join(homedir, DB_PATH+".bak"))
-	os.Rename(path.Join(homedir, CONFIG_PATH), path.Join(homedir, CONFIG_PATH+".bak"))
+	os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"))
+	os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"))
 	return func() {
-		Check(t, os.Rename(path.Join(homedir, DB_PATH+".bak"), path.Join(homedir, DB_PATH)))
-		Check(t, os.Rename(path.Join(homedir, CONFIG_PATH+".bak"), path.Join(homedir, CONFIG_PATH)))
+		os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
+		os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 	}
 }
 

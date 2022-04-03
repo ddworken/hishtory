@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"bytes"
+	"encoding/json"
+	"net/http"
 
 	"github.com/ddworken/hishtory/shared"
 )
@@ -21,9 +24,11 @@ func main() {
 	case "export":
 		export()
 	case "init":
-		shared.CheckFatalError(shared.Setup(os.Args))
+		shared.CheckFatalError(shared.Setup(0, os.Args))
+		// TODO: Call ebootstrap here 
 	case "install":
 		shared.CheckFatalError(shared.Install())
+		// TODO: Call ebootstrap here 
 	case "enable":
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
@@ -59,16 +64,27 @@ func query(query string) {
 }
 
 func saveHistoryEntry() {
-	isEnabled, err := shared.IsEnabled()
+	config, err := shared.GetConfig()
 	shared.CheckFatalError(err)
-	if !isEnabled {
+	if !config.IsEnabled {
 		return
 	}
 	entry, err := shared.BuildHistoryEntry(os.Args)
 	shared.CheckFatalError(err)
+
+	// Persist it locally 
 	db, err := shared.OpenLocalSqliteDb()
 	shared.CheckFatalError(err)
-	err = shared.Persist(db, *entry)
+	err = db.Create(entry)
+	shared.CheckFatalError(err)
+
+	// Persist it remotely
+	// TODO: This is encrypting one to this device, this is wrong. We want to encrypt it to every device except this one. 
+	encEntry, err := shared.EncryptHistoryEntry(config.UserSecret ,config.DeviceId, *entry)
+	shared.CheckFatalError(err)
+	jsonValue, err := json.Marshal(encEntry)
+	shared.CheckFatalError(err)
+	_, err = http.Post(getServerHostname()+"/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
 	shared.CheckFatalError(err)
 }
 

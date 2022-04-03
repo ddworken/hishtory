@@ -17,6 +17,8 @@ const (
 	POSTGRES_DB = "postgresql://postgres:O74Ji4735C@postgres-postgresql.default.svc.cluster.local:5432/hishtory?sslmode=disable"
 )
 
+var GLOBAL_DB *gorm.DB
+
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var entry shared.HistoryEntry
@@ -24,17 +26,62 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	db, err := OpenDB()
+	fmt.Printf("handler GLOBAL_DB=%#v\n", GLOBAL_DB)
+	GLOBAL_DB.Create(&entry)
+}
+
+func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var entries []shared.EncHistoryEntry
+	err := decoder.Decode(&entries)
 	if err != nil {
 		panic(err)
 	}
-	err = shared.Persist(db, entry)
-	if err != nil {
-		panic(err)
+	for _, entry := range entries {
+		GLOBAL_DB.Create(&entry)
 	}
 }
 
+func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
+	deviceId := r.URL.Query().Get("device_id")
+	// Increment the count 
+	GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
+
+	// Then retrieve, to avoid a race condition
+	tx := GLOBAL_DB.Where("device_id = ?", deviceId)
+	var historyEntries []*shared.EncHistoryEntry
+	result := tx.Find(&historyEntries)
+	if result.Error != nil {
+		panic(fmt.Errorf("DB query error: %v", result.Error))
+	}
+	resp, err := json.Marshal(historyEntries)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(resp)
+}
+
+func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+	tx := GLOBAL_DB.Where("user_id = ?", userId)
+	var historyEntries []*shared.EncHistoryEntry
+	result := tx.Find(&historyEntries)
+	if result.Error != nil {
+		panic(fmt.Errorf("DB query error: %v", result.Error))
+	}
+	resp, err := json.Marshal(historyEntries)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(resp)
+}
+
+func apiERegister(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func OpenDB() (*gorm.DB, error) {
+	fmt.Println("OPENDDDDDDDDDDDBBBBBBBBBBBB")
 	if shared.IsTestEnvironment() {
 		return shared.OpenLocalSqliteDb()
 	}
@@ -44,6 +91,8 @@ func OpenDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
 	db.AutoMigrate(&shared.HistoryEntry{})
+	db.AutoMigrate(&shared.EncHistoryEntry{})
+	db.AutoMigrate(&shared.Device{})
 	return db, nil
 }
 
@@ -56,11 +105,7 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		limit = 0
 	}
-	db, err := OpenDB()
-	if err != nil {
-		panic(err)
-	}
-	entries, err := shared.Search(db, userSecret, query, limit)
+	entries, err := shared.Search(GLOBAL_DB, userSecret, query, limit)
 	if err != nil {
 		panic(err)
 	}
@@ -74,24 +119,32 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func main() {
-	// db, err := sql.Open("postgres", "postgresql://postgres:O74Ji4735C@postgres-postgresql.default.svc.cluster.local:5432/cascara_prod?sslmode=disable")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer db.Close()
-
-	// _, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s;", "hishtory"))
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	_, err := OpenDB()
+func init() {
+	var err error
+	GLOBAL_DB, err = OpenDB()
 	if err != nil {
 		panic(err)
 	}
+	tx, err := GLOBAL_DB.DB()
+	if err != nil {
+		panic(err)
+	}
+	err = tx.Ping()
+	if err != nil {
+		panic(err)
+	}
+	GLOBAL_DB.Create(&shared.HistoryEntry{Hostname: "foo"})
+	fmt.Printf("init GLOBAL_DB=%#v\n", GLOBAL_DB)
+}
+
+func main() {
+	GLOBAL_DB.Create(&shared.HistoryEntry{Hostname: "foo"})
 	fmt.Println("Listening on localhost:8080")
 	http.HandleFunc("/api/v1/submit", apiSubmitHandler)
 	http.HandleFunc("/api/v1/search", apiSearchHandler)
+	http.HandleFunc("/api/v1/esubmit", apiESubmitHandler)
+	http.HandleFunc("/api/v1/equery", apiEQueryHandler)
+	http.HandleFunc("/api/v1/ebootstrap", apiEBootstrapHandler)
+	http.HandleFunc("/api/v1/eregister", apiERegister)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

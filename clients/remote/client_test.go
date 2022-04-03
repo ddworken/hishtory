@@ -25,7 +25,7 @@ func TestIntegration(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
 
-// TODO(ddworken): Test status
+	// TODO(ddworken): Test status
 
 	// Test install
 	out := RunInteractiveBashCommands(t, `
