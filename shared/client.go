@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net/http"
+
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -131,7 +133,17 @@ func Setup(args []string) error {
 	config.UserSecret = userSecret
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
-	return SetConfig(config)
+
+	err := SetConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to persist config to disk: %v", err)
+	}
+
+
+	_, err = http.Get(getServerHostname()+"/api/v1/eregister?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	if err != nil {
+		return fmt.Errorf("failed to register device with backend: %v", err)
+	}
 }
 
 func DisplayResults(results []*HistoryEntry, displayHostname bool) {
@@ -252,7 +264,6 @@ func Install() error {
 	_, err = GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
-		// TODO: GO THROUGH THE REGISTRATION FLOW
 		return Setup(os.Args)
 	}
 	return nil

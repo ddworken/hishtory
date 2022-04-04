@@ -25,10 +25,8 @@ func main() {
 		export()
 	case "init":
 		shared.CheckFatalError(shared.Setup( os.Args))
-		// TODO: Call ebootstrap here
 	case "install":
 		shared.CheckFatalError(shared.Install())
-		// TODO: Call ebootstrap here
 	case "enable":
 		shared.CheckFatalError(shared.Enable())
 	case "disable":
