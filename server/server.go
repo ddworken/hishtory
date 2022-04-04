@@ -36,19 +36,19 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	GLOBAL_DB.Where("user_id = ?", )
+	GLOBAL_DB.Where("user_id = ?")
 	for _, entry := range entries {
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
-		var devices []*shared.Device;
+		var devices []*shared.Device
 		result := tx.Find(&devices)
 		if result.Error != nil {
 			panic(fmt.Errorf("DB query error: %v", result.Error))
 		}
-		if len(devices) == 0{
+		if len(devices) == 0 {
 			panic(fmt.Errorf("Found no devices associated with user_id=%s, can't save history entry!", entry.UserId))
 		}
 		for _, device := range devices {
-			entry.DeviceId = device.DeviceId;
+			entry.DeviceId = device.DeviceId
 			GLOBAL_DB.Create(&entry)
 		}
 	}
@@ -56,7 +56,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 
 func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 	deviceId := r.URL.Query().Get("device_id")
-	// Increment the count 
+	// Increment the count
 	GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
 
 	// Then retrieve, to avoid a race condition

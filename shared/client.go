@@ -158,7 +158,7 @@ func DisplayResults(results []*HistoryEntry, displayHostname bool) {
 type ClientConfig struct {
 	UserSecret string `json:"user_secret"`
 	IsEnabled  bool   `json:"is_enabled"`
-	DeviceId int `json:"device_id"`
+	DeviceId   int    `json:"device_id"`
 }
 
 func GetConfig() (ClientConfig, error) {

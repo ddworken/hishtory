@@ -39,12 +39,12 @@ type EncHistoryEntry struct {
 	DeviceId      string    `json:"device_id"`
 	UserId        string    `json:"user_id"`
 	Date          time.Time `json:"time"`
-	EncryptedId            string    `json:"id"`
-	ReadCount int `json:"read_count"`
+	EncryptedId   string    `json:"id"`
+	ReadCount     int       `json:"read_count"`
 }
 
 type Device struct {
-	UserId string `json:"user_id"`
+	UserId   string `json:"user_id"`
 	DeviceId string `json:"device_id"`
 }
 
@@ -57,7 +57,7 @@ type Device struct {
 // }
 
 const (
-	HISHTORY_PATH = ".hishtory"
+	HISHTORY_PATH      = ".hishtory"
 	DB_PATH            = ".hishtory.db"
 	KDF_USER_ID        = "user_id"
 	KDF_DEVICE_ID      = "device_id"
@@ -145,8 +145,8 @@ func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (EncHistoryEntry
 		Nonce:         nonce,
 		UserId:        UserId(userSecret),
 		Date:          time.Now(),
-		EncryptedId:            uuid.Must(uuid.NewRandom()).String(),
-		ReadCount: 0,
+		EncryptedId:   uuid.Must(uuid.NewRandom()).String(),
+		ReadCount:     0,
 	}, nil
 }
 
@@ -182,15 +182,15 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
 	}
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, HISHTORY_PATH, DB_PATH)), &gorm.Config{SkipDefaultTransaction: true,})
+	db, err := gorm.Open(sqlite.Open(path.Join(homedir, HISHTORY_PATH, DB_PATH)), &gorm.Config{SkipDefaultTransaction: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
 	tx, err := db.DB()
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
-	err = tx.Ping() 
+	err = tx.Ping()
 	if err != nil {
 		return nil, err
 	}
