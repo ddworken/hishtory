@@ -6,7 +6,7 @@ import (
 
 func TestPersist(t *testing.T) {
 	defer BackupAndRestore(t)()
-	Check(t, Setup(0, []string{}))
+	Check(t, Setup([]string{}))
 	db, err := OpenLocalSqliteDb()
 	Check(t, err)
 
@@ -27,7 +27,7 @@ func TestPersist(t *testing.T) {
 
 func TestSearch(t *testing.T) {
 	defer BackupAndRestore(t)()
-	Check(t, Setup(0, []string{}))
+	Check(t, Setup([]string{}))
 	db, err := OpenLocalSqliteDb()
 	Check(t, err)
 

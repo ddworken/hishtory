@@ -120,7 +120,7 @@ func GetUserSecret() (string, error) {
 	return config.UserSecret, nil
 }
 
-func Setup(deviceId int, args []string) error {
+func Setup(args []string) error {
 	userSecret := uuid.Must(uuid.NewRandom()).String()
 	if len(args) > 2 && args[2] != "" {
 		userSecret = args[2]
@@ -130,7 +130,7 @@ func Setup(deviceId int, args []string) error {
 	var config ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
-	config.DeviceId = deviceId
+	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
 	return SetConfig(config)
 }
 
@@ -158,7 +158,7 @@ func DisplayResults(results []*HistoryEntry, displayHostname bool) {
 type ClientConfig struct {
 	UserSecret string `json:"user_secret"`
 	IsEnabled  bool   `json:"is_enabled"`
-	DeviceId   int    `json:"device_id"`
+	DeviceId   string    `json:"device_id"`
 }
 
 func GetConfig() (ClientConfig, error) {
@@ -253,7 +253,7 @@ func Install() error {
 	if err != nil {
 		// No config, so set up a new installation
 		// TODO: GO THROUGH THE REGISTRATION FLOW
-		return Setup(0, os.Args)
+		return Setup(os.Args)
 	}
 	return nil
 }

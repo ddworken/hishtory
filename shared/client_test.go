@@ -15,7 +15,7 @@ func TestSetup(t *testing.T) {
 	if _, err := os.Stat(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	Check(t, Setup(0, []string{}))
+	Check(t, Setup([]string{}))
 	if _, err := os.Stat(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
@@ -28,7 +28,7 @@ func TestSetup(t *testing.T) {
 
 func TestBuildHistoryEntry(t *testing.T) {
 	defer BackupAndRestore(t)()
-	Check(t, Setup(0, []string{}))
+	Check(t, Setup([]string{}))
 	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	Check(t, err)
 	if entry.UserSecret == "" || len(entry.UserSecret) < 10 || strings.TrimSpace(entry.UserSecret) != entry.UserSecret {
@@ -53,14 +53,14 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 func TestGetUserSecret(t *testing.T) {
 	defer BackupAndRestore(t)()
-	Check(t, Setup(0, []string{}))
+	Check(t, Setup([]string{}))
 	secret1, err := GetUserSecret()
 	Check(t, err)
 	if len(secret1) < 10 || strings.Contains(secret1, " ") || strings.Contains(secret1, "\n") {
 		t.Fatalf("unexpected secret: %v", secret1)
 	}
 
-	Check(t, Setup(0, []string{}))
+	Check(t, Setup([]string{}))
 	secret2, err := GetUserSecret()
 	Check(t, err)
 

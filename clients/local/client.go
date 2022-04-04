@@ -24,7 +24,7 @@ func main() {
 	case "export":
 		export()
 	case "init":
-		shared.CheckFatalError(shared.Setup(0, os.Args))
+		shared.CheckFatalError(shared.Setup( os.Args))
 		// TODO: Call ebootstrap here
 	case "install":
 		shared.CheckFatalError(shared.Install())

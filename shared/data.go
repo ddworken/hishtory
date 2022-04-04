@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -72,10 +71,6 @@ func Hmac(key, additionalData string) string {
 
 func UserId(key string) string {
 	return Hmac(key, KDF_USER_ID)
-}
-
-func DeviceId(key string, id int) string {
-	return Hmac(key, KDF_DEVICE_ID+strconv.Itoa(id))
 }
 
 func EncryptionKey(userSecret string) ([]byte, error) {
@@ -150,12 +145,9 @@ func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (EncHistoryEntry
 	}, nil
 }
 
-func DecryptHistoryEntry(userSecret string, deviceId int, entry EncHistoryEntry) (HistoryEntry, error) {
+func DecryptHistoryEntry(userSecret string, entry EncHistoryEntry) (HistoryEntry, error) {
 	if entry.UserId != UserId(userSecret) {
 		return HistoryEntry{}, fmt.Errorf("Refusing to decrypt history entry with mismatching UserId")
-	}
-	if entry.DeviceId != DeviceId(userSecret, deviceId) {
-		return HistoryEntry{}, fmt.Errorf("Refusing to decrypt history entry with mismatching DeviceId")
 	}
 	plaintext, err := Decrypt(userSecret, entry.EncryptedData, []byte(UserId(userSecret)), entry.Nonce)
 	if err != nil {

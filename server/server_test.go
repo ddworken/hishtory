@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/ddworken/hishtory/shared"
 )
 
@@ -15,7 +16,7 @@ func TestSubmitThenQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	InitDB()
-	shared.Check(t, shared.Setup(0, []string{}))
+	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry
 	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
@@ -62,7 +63,7 @@ func TestNoUserSecretGivesNoResults(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	InitDB()
-	shared.Check(t, shared.Setup(0, []string{}))
+	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry
 	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
@@ -91,7 +92,7 @@ func TestSearchQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	InitDB()
-	shared.Check(t, shared.Setup(0, []string{}))
+	shared.Check(t, shared.Setup([]string{}))
 
 	// Submit an entry that we'll match
 	entry, err := shared.BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /bar  ", "1641774958326745663"})
@@ -133,14 +134,14 @@ func TestESubmitThenQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	InitDB()
-	shared.Check(t, shared.Setup(0, []string{}))
+	shared.Check(t, shared.Setup([]string{}))
 
 	// Register a few devices
 	userId := shared.UserId("key")
-	devId1 := shared.DeviceId("key", 1)
-	devId2 := shared.DeviceId("key", 2)
+	devId1 := uuid.Must(uuid.NewRandom()).String()
+	devId2 := uuid.Must(uuid.NewRandom()).String()
 	otherUser := shared.UserId("otherkey")
-	otherDev := shared.DeviceId("otherkey", 1)
+	otherDev := uuid.Must(uuid.NewRandom()).String()
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	apiERegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
@@ -160,7 +161,7 @@ func TestESubmitThenQuery(t *testing.T) {
 
 	// Query for device id 1
 	w := httptest.NewRecorder()
-	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+shared.DeviceId("key", 1), nil)
+	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1, nil)
 	apiEQueryHandler(w, searchReq)
 	res := w.Result()
 	defer res.Body.Close()
@@ -172,7 +173,7 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
 	dbEntry := retrievedEntries[0]
-	if dbEntry.DeviceId != shared.DeviceId("key", 1) {
+	if dbEntry.DeviceId != devId1 {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
 	if dbEntry.UserId != shared.UserId("key") {
@@ -181,7 +182,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	if dbEntry.ReadCount != 1 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
-	decEntry, err := shared.DecryptHistoryEntry("key", 1, *dbEntry)
+	decEntry, err := shared.DecryptHistoryEntry("key", *dbEntry)
 	shared.Check(t, err)
 	if !shared.EntryEquals(decEntry, *entry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, *entry)
@@ -189,7 +190,7 @@ func TestESubmitThenQuery(t *testing.T) {
 
 	// Same for device id 2
 	w = httptest.NewRecorder()
-	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+shared.DeviceId("key", 2), nil)
+	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2, nil)
 	apiEQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
@@ -200,7 +201,7 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
 	dbEntry = retrievedEntries[0]
-	if dbEntry.DeviceId != shared.DeviceId("key", 2) {
+	if dbEntry.DeviceId != devId2 {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
 	if dbEntry.UserId != shared.UserId("key") {
@@ -209,7 +210,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	if dbEntry.ReadCount != 1 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
-	decEntry, err = shared.DecryptHistoryEntry("key", 2, *dbEntry)
+	decEntry, err = shared.DecryptHistoryEntry("key", *dbEntry)
 	shared.Check(t, err)
 	if !shared.EntryEquals(decEntry, *entry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, *entry)
