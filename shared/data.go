@@ -191,12 +191,6 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	return db, nil
 }
 
-// TODO: DELETE THIS METHOD
-func Persist(db *gorm.DB, entry HistoryEntry) error {
-	db.Create(&entry)
-	return nil
-}
-
 func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 	tokens, err := tokenize(query)
 	if err != nil {

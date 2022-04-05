@@ -11,7 +11,7 @@ func TestPersist(t *testing.T) {
 	Check(t, err)
 
 	entry := MakeFakeHistoryEntry("ls ~/")
-	Check(t, Persist(db, entry))
+	db.Create(entry)
 	var historyEntries []*HistoryEntry
 	result := db.Find(&historyEntries)
 	Check(t, result.Error)
@@ -32,9 +32,9 @@ func TestSearch(t *testing.T) {
 
 	// Insert data
 	entry1 := MakeFakeHistoryEntry("ls /foo")
-	Check(t, Persist(db, entry1))
+	db.Create(entry1)
 	entry2 := MakeFakeHistoryEntry("ls /bar")
-	Check(t, Persist(db, entry2))
+	db.Create(entry2)
 
 	// Search for data
 	results, err := Search(db, "ls", 5)
