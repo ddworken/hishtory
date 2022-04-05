@@ -2,8 +2,7 @@ test:
 	HISHTORY_TEST=1 go test -p 1 ./...
 
 build-static:
-	go build -o web/landing/www/hishtory-offline clients/local/client.go
-	go build -o web/landing/www/hishtory-online clients/remote/client.go
+	go build -o web/landing/www/binaries/hishtory-linux client/client.go
 	docker build -t gcr.io/dworken-k8s/hishtory-static -f web/caddy/Dockerfile .
 
 build-api:

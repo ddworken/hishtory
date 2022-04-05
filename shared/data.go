@@ -21,8 +21,6 @@ import (
 )
 
 type HistoryEntry struct {
-	// TODO: UserSecret needs to be removed from here once I drop all the old code
-	UserSecret              string    `json:"user_secret" gorm:"index"`
 	LocalUsername           string    `json:"local_username"`
 	Hostname                string    `json:"hostname"`
 	Command                 string    `json:"command"`
@@ -56,6 +54,7 @@ type Device struct {
 // }
 
 const (
+	CONFIG_PATH = ".hishtory.config"
 	HISHTORY_PATH      = ".hishtory"
 	DB_PATH            = ".hishtory.db"
 	KDF_USER_ID        = "user_id"
@@ -192,17 +191,18 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	return db, nil
 }
 
+// TODO: DELETE THIS METHOD
 func Persist(db *gorm.DB, entry HistoryEntry) error {
 	db.Create(&entry)
 	return nil
 }
 
-func Search(db *gorm.DB, userSecret, query string, limit int) ([]*HistoryEntry, error) {
+func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 	tokens, err := tokenize(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to tokenize query: %v", err)
 	}
-	tx := db.Where("user_secret = ?", userSecret)
+	tx := db.Where("true")
 	for _, token := range tokens {
 		if strings.Contains(token, ":") {
 			splitToken := strings.SplitN(token, ":", 2)

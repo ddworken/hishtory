@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/ddworken/hishtory/shared"
 	_ "github.com/lib/pq"
@@ -18,16 +17,6 @@ const (
 )
 
 var GLOBAL_DB *gorm.DB
-
-func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var entry shared.HistoryEntry
-	err := decoder.Decode(&entry)
-	if err != nil {
-		panic(err)
-	}
-	GLOBAL_DB.Create(&entry)
-}
 
 func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
@@ -109,29 +98,6 @@ func OpenDB() (*gorm.DB, error) {
 	return db, nil
 }
 
-func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
-	userSecret := r.URL.Query().Get("user_secret")
-	query := r.URL.Query().Get("query")
-	fmt.Println("Received search query: " + query)
-	limitStr := r.URL.Query().Get("limit")
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		limit = 0
-	}
-	entries, err := shared.Search(GLOBAL_DB, userSecret, query, limit)
-	if err != nil {
-		panic(err)
-	}
-	for _, entry := range entries {
-		entry.UserSecret = ""
-	}
-	resp, err := json.Marshal(entries)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(resp)
-}
-
 func init() {
 	InitDB()
 }
@@ -154,8 +120,6 @@ func InitDB() {
 
 func main() {
 	fmt.Println("Listening on localhost:8080")
-	http.HandleFunc("/api/v1/submit", apiSubmitHandler)
-	http.HandleFunc("/api/v1/search", apiSearchHandler)
 	http.HandleFunc("/api/v1/esubmit", apiESubmitHandler)
 	http.HandleFunc("/api/v1/equery", apiEQueryHandler)
 	http.HandleFunc("/api/v1/ebootstrap", apiEBootstrapHandler)
