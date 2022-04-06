@@ -19,6 +19,8 @@ import (
 	"time"
 	"net/http"
 
+	"gorm.io/gorm"
+
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/rodaine/table"
@@ -96,7 +98,7 @@ func BuildHistoryEntry(args []string) (*shared.HistoryEntry, error) {
 		return nil, fmt.Errorf("failed to build history entry: %v", err)
 	}
 	entry.Hostname = hostname
-	
+
 	return &entry, nil
 }
 
@@ -133,7 +135,49 @@ func Setup(args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %v", err)
 	}
+
+	resp, err := http.Get(GetServerHostname()+"/api/v1/ebootstrap?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	if err != nil {
+		return fmt.Errorf("failed to bootstrap device from the backend: %v", err)
+	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read bootstrap response body: %v", err)
+	}
+	var retrievedEntries []*shared.EncHistoryEntry
+	err = json.Unmarshal(data, &retrievedEntries)
+	if err != nil {
+		return fmt.Errorf("failed to load JSON response: %v", err)
+	}
+	db, err := shared.OpenLocalSqliteDb()
+	if err != nil {
+		return fmt.Errorf("failed to open DB: %v", err)
+	}
+	for _, entry := range retrievedEntries {
+		decEntry, err := shared.DecryptHistoryEntry(userSecret, *entry)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
+		}
+		AddToDbIfNew(db, decEntry)
+	}
+
 	return nil 
+}
+
+func AddToDbIfNew(db *gorm.DB, entry shared.HistoryEntry) {
+	tx := db.Where("local_username = ?", entry.LocalUsername)
+	tx = tx.Where("hostname = ?", entry.Hostname)
+	tx = tx.Where("command = ?", entry.Command)
+	tx = tx.Where("current_working_directory = ?", entry.CurrentWorkingDirectory)
+	tx = tx.Where("exit_code = ?", entry.ExitCode)
+	tx = tx.Where("start_time = ?", entry.StartTime)
+	tx = tx.Where("end_time = ?", entry.EndTime)
+	var results []shared.HistoryEntry 
+	tx.Limit(1).Find(&results)
+	if len(results) == 0 {
+		db.Create(entry)
+	}
 }
 
 func DisplayResults(results []*shared.HistoryEntry, displayHostname bool) {
@@ -346,5 +390,5 @@ func GetServerHostname() string {
 	if server := os.Getenv("HISHTORY_SERVER"); server != "" {
 		return server
 	}
-	return "http://localhost:8080"
+	return "https://api.hishtory.dev"
 }

@@ -21,13 +21,13 @@ import (
 )
 
 type HistoryEntry struct {
-	LocalUsername           string    `json:"local_username"`
-	Hostname                string    `json:"hostname"`
-	Command                 string    `json:"command"`
-	CurrentWorkingDirectory string    `json:"current_working_directory"`
-	ExitCode                int       `json:"exit_code"`
-	StartTime               time.Time `json:"start_time"`
-	EndTime                 time.Time `json:"end_time"`
+	LocalUsername           string    `json:"local_username" gorm:"uniqueIndex:compositeindex"`
+	Hostname                string    `json:"hostname" gorm:"uniqueIndex:compositeindex"`
+	Command                 string    `json:"command" gorm:"uniqueIndex:compositeindex"`
+	CurrentWorkingDirectory string    `json:"current_working_directory" gorm:"uniqueIndex:compositeindex"`
+	ExitCode                int       `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
+	StartTime               time.Time `json:"start_time" gorm:"uniqueIndex:compositeindex"`
+	EndTime                 time.Time `json:"end_time" gorm:"uniqueIndex:compositeindex"`
 }
 
 type EncHistoryEntry struct {

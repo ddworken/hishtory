@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/ddworken/hishtory/shared"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
+
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -19,11 +22,14 @@ const (
 var GLOBAL_DB *gorm.DB
 
 func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var entries []shared.EncHistoryEntry
-	err := decoder.Decode(&entries)
+	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
+	}
+	var entries []shared.EncHistoryEntry
+	err = json.Unmarshal(data, &entries)
+	if err != nil {
+		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
 	}
 	GLOBAL_DB.Where("user_id = ?")
 	for _, entry := range entries {
@@ -62,6 +68,7 @@ func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+// TODO: bootstrap is a janky solution for the initial version of this. Long term, need to support deleting entries from the DB which means replacing bootstrap with a queued message sent to any live instances.
 func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	tx := GLOBAL_DB.Where("user_id = ?", userId)
@@ -85,7 +92,14 @@ func apiERegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func OpenDB() (*gorm.DB, error) {
 	if shared.IsTestEnvironment() {
-		return shared.OpenLocalSqliteDb()
+		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+		}
+		db.AutoMigrate(&shared.HistoryEntry{})
+		db.AutoMigrate(&shared.EncHistoryEntry{})
+		db.AutoMigrate(&shared.Device{})
+		return db, nil
 	}
 
 	db, err := gorm.Open(postgres.Open(POSTGRES_DB), &gorm.Config{})

@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"io/ioutil"
 	"os"
 	"strings"
+
+	"gorm.io/gorm"
 
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/client/lib"
@@ -45,9 +48,40 @@ func main() {
 	}
 }
 
+func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
+	config, err := lib.GetConfig()
+	if err != nil {
+		return err 
+	}
+	resp, err := http.Get(lib.GetServerHostname()+"/api/v1/equery?device_id=" + config.DeviceId)
+	if err != nil {
+		return fmt.Errorf("failed to pull latest history entries from the backend: %v", err)
+	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read latest history entries response body: %v", err)
+	}
+	var retrievedEntries []*shared.EncHistoryEntry
+	err = json.Unmarshal(data, &retrievedEntries)
+	if err != nil {
+		return fmt.Errorf("failed to load JSON response: %v", err)
+	}
+	for _, entry := range retrievedEntries {
+		decEntry, err := shared.DecryptHistoryEntry(config.UserSecret, *entry)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
+		}
+		// TODO: Is this creating duplicate entries?
+		lib.AddToDbIfNew(db, decEntry)
+	}
+	return nil 
+}
+
 func query(query string) {
 	db, err := shared.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
+	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
 	data, err := shared.Search(db, query, 25)
 	lib.CheckFatalError(err)
 	lib.DisplayResults(data, false)
@@ -71,7 +105,7 @@ func saveHistoryEntry() {
 	// Persist it remotely
 	encEntry, err := shared.EncryptHistoryEntry(config.UserSecret, *entry)
 	lib.CheckFatalError(err)
-	jsonValue, err := json.Marshal(encEntry)
+	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	lib.CheckFatalError(err)
 	_, err = http.Post(lib.GetServerHostname()+"/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
 	lib.CheckFatalError(err)
@@ -80,6 +114,7 @@ func saveHistoryEntry() {
 func export() {
 	db, err := shared.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
+	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
 	data, err := shared.Search(db, "", 0)
 	lib.CheckFatalError(err)
 	for _, entry := range data {
