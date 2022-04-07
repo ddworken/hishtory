@@ -2,7 +2,7 @@ test:
 	HISHTORY_TEST=1 go test -p 1 ./...
 
 build-binary:
-	go build -o web/landing/www/binaries/hishtory-linux -ldflags "-X main.GitCommit=`git rev-list -1 HEAD`" client/client.go
+	go build -trimpath -o web/landing/www/binaries/hishtory-linux -ldflags "-X main.GitCommit=`git rev-list -1 HEAD`" client/client.go
 
 build-static: build-binary
 	docker build -t gcr.io/dworken-k8s/hishtory-static -f web/caddy/Dockerfile .

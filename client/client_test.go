@@ -24,7 +24,11 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 	var err bytes.Buffer
 	cmd.Stderr = &err
 	shared.CheckWithInfo(t, cmd.Run(), out.String()+err.String())
-	return out.String()
+	outStr := out.String()
+	if strings.Contains(outStr, "hishtory fatal error:") {
+		t.Fatalf("Ran command, but hishtory had a fatal error! out=%#v", outStr)
+	}
+	return outStr 
 }
 
 func TestIntegration(t *testing.T) {
@@ -150,6 +154,12 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	if !strings.Contains(out, "othercomputer") {
 		t.Fatalf("hishtory query doesn't contain cmd run on another machine! out=%#v", out)
 	}
+
+	// Finally, test the export command
+	out = RunInteractiveBashCommands(t, `hishtory export`)
+	if out != fmt.Sprintf("/tmp/client install\n/tmp/client install\nhishtory status\nhishtory query\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\n/tmp/client install %s\nhishtory query\necho mynewcommand\nhishtory query\nhishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\n", userSecret, userSecret) {
+		t.Fatalf("hishtory export had unexpected output! out=%#v", out)
+	}
 }
 
 func testIntegration(t *testing.T) string {
@@ -233,4 +243,3 @@ func testIntegration(t *testing.T) string {
 	return userSecret
 }
 
-// TODO(ddworken): Test export
