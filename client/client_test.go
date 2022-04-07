@@ -12,7 +12,7 @@ import (
 )
 
 func RunInteractiveBashCommands(t *testing.T, script string) string {
-	shared.Check(t, ioutil.WriteFile("/tmp/hishtory-test-in.sh", []byte("set -euo pipefail\n" + script), 0600))
+	shared.Check(t, ioutil.WriteFile("/tmp/hishtory-test-in.sh", []byte("set -euo pipefail\n"+script), 0600))
 	cmd := exec.Command("bash", "-i")
 	cmd.Stdin = strings.NewReader(script)
 	var out bytes.Buffer
@@ -28,8 +28,8 @@ func TestIntegration(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	defer shared.RunTestServer(t)()
 
-	// Run the test 
-	testIntegration(t) 
+	// Run the test
+	testIntegration(t)
 }
 
 func TestIntegrationWithNewDevice(t *testing.T) {
@@ -37,8 +37,8 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	defer shared.RunTestServer(t)()
 
-	// Run the test 
-	userSecret := testIntegration(t) 
+	// Run the test
+	userSecret := testIntegration(t)
 
 	// Clear all local state
 	shared.ResetLocalState(t)
@@ -55,13 +55,13 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("unexpected output from install: %v", out)
 	}
 
-	// Set the secret key to the previous secret key 
-	out = RunInteractiveBashCommands(t, `hishtory init ` + userSecret)
-	if !strings.Contains(out, "Setting secret hishtory key to " + userSecret) {
+	// Set the secret key to the previous secret key
+	out = RunInteractiveBashCommands(t, `hishtory init `+userSecret)
+	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
 		t.Fatalf("Failed to re-init with the user secret: %v", out)
 	}
 
-	// Querying should show the history from the previous run 
+	// Querying should show the history from the previous run
 	out = RunInteractiveBashCommands(t, "hishtory query")
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
@@ -82,7 +82,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("output has `echo mynewcommand` the wrong number of times")
 	}
 
-	// Clear local state again 
+	// Clear local state again
 	shared.ResetLocalState(t)
 
 	// Install it a 3rd time
@@ -97,13 +97,13 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("unexpected output from install: %v", out)
 	}
 
-	// Set the secret key to the previous secret key 
-	out = RunInteractiveBashCommands(t, `hishtory init ` + userSecret)
-	if !strings.Contains(out, "Setting secret hishtory key to " + userSecret) {
+	// Set the secret key to the previous secret key
+	out = RunInteractiveBashCommands(t, `hishtory init `+userSecret)
+	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
 		t.Fatalf("Failed to re-init with the user secret: %v", out)
 	}
 
-	// Querying should show the history from the previous run 
+	// Querying should show the history from the previous run
 	out = RunInteractiveBashCommands(t, "hishtory query")
 	expected = []string{"echo thisisrecorded", "echo mynewcommand", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
@@ -140,13 +140,12 @@ func testIntegration(t *testing.T) string {
 		t.Fatalf("Failed to extract userSecret from output: matches=%#v", matches)
 	}
 	userSecret := matches[1]
-	
 
 	// TODO(ddworken): Test the status subcommand
 	out = RunInteractiveBashCommands(t, `
 		hishtory status
 	`)
-	if out != "Hishtory: Offline Mode\nEnabled: true\n"{
+	if out != "Hishtory: Offline Mode\nEnabled: true\n" {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 

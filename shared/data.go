@@ -54,7 +54,7 @@ type Device struct {
 // }
 
 const (
-	CONFIG_PATH = ".hishtory.config"
+	CONFIG_PATH        = ".hishtory.config"
 	HISHTORY_PATH      = ".hishtory"
 	DB_PATH            = ".hishtory.db"
 	KDF_USER_ID        = "user_id"

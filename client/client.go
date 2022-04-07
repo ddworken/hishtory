@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
 	"gorm.io/gorm"
 
-	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/shared"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	case "export":
 		export()
 	case "init":
-		lib.CheckFatalError(lib.Setup( os.Args))
+		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
 		lib.CheckFatalError(lib.Install())
 	case "enable":
@@ -51,9 +51,9 @@ func main() {
 func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	config, err := lib.GetConfig()
 	if err != nil {
-		return err 
+		return err
 	}
-	resp, err := http.Get(lib.GetServerHostname()+"/api/v1/equery?device_id=" + config.DeviceId)
+	resp, err := http.Get(lib.GetServerHostname() + "/api/v1/equery?device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to pull latest history entries from the backend: %v", err)
 	}
@@ -75,7 +75,7 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 		// TODO: Is this creating duplicate entries?
 		lib.AddToDbIfNew(db, decEntry)
 	}
-	return nil 
+	return nil
 }
 
 func query(query string) {

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/google/uuid"
 )
 
 func TestESubmitThenQuery(t *testing.T) {

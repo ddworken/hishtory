@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
@@ -16,8 +17,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
-	"net/http"
 
 	"gorm.io/gorm"
 
@@ -131,12 +132,12 @@ func Setup(args []string) error {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
 	}
 
-	_, err = http.Get(GetServerHostname()+"/api/v1/eregister?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	_, err = http.Get(GetServerHostname() + "/api/v1/eregister?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %v", err)
 	}
 
-	resp, err := http.Get(GetServerHostname()+"/api/v1/ebootstrap?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	resp, err := http.Get(GetServerHostname() + "/api/v1/ebootstrap?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap device from the backend: %v", err)
 	}
@@ -162,7 +163,7 @@ func Setup(args []string) error {
 		AddToDbIfNew(db, decEntry)
 	}
 
-	return nil 
+	return nil
 }
 
 func AddToDbIfNew(db *gorm.DB, entry shared.HistoryEntry) {
@@ -173,7 +174,7 @@ func AddToDbIfNew(db *gorm.DB, entry shared.HistoryEntry) {
 	tx = tx.Where("exit_code = ?", entry.ExitCode)
 	tx = tx.Where("start_time = ?", entry.StartTime)
 	tx = tx.Where("end_time = ?", entry.EndTime)
-	var results []shared.HistoryEntry 
+	var results []shared.HistoryEntry
 	tx.Limit(1).Find(&results)
 	if len(results) == 0 {
 		db.Create(entry)
@@ -204,7 +205,7 @@ func DisplayResults(results []*shared.HistoryEntry, displayHostname bool) {
 type ClientConfig struct {
 	UserSecret string `json:"user_secret"`
 	IsEnabled  bool   `json:"is_enabled"`
-	DeviceId   string    `json:"device_id"`
+	DeviceId   string `json:"device_id"`
 }
 
 func GetConfig() (ClientConfig, error) {
@@ -375,16 +376,28 @@ func copyFile(src, dst string) error {
 func Update(url string) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd := exec.Command("bash", "-c", "curl -o /tmp/hishtory-client "+url+"; chmod +x /tmp/hishtory-client; /tmp/hishtory-client install")
+	cmd := exec.Command("bash", "-c", "curl -o /tmp/hishtory-client "+url+"; chmod +x /tmp/hishtory-client")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("Failed to update: %v, stdout=%+v, stderr=%+v", err, stdout.String(), stderr.String())
+		return fmt.Errorf("Failed to download update: %v, stdout=%#v, stderr=%#v", err, stdout.String(), stderr.String())
+	}
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+	err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
+	if err != nil {
+		return fmt.Errorf("Failed to unlink: %v", err)
+	}
+	cmd = exec.Command("/tmp/hishtory-client", "install")
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Failed to update: %v", err)
 	}
 	return nil
 }
-
 
 func GetServerHostname() string {
 	if server := os.Getenv("HISHTORY_SERVER"); server != "" {
