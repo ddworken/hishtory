@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"encoding/json"
+	"net/http"
 
 	"github.com/ddworken/hishtory/shared"
 )
@@ -131,7 +133,23 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("output has `echo mynewercommand` the wrong number of times")
 	}
 
-	// Manually submit an event that is tied to the second user, and then we'll check if we see it for the third user
+	// Manually submit an event that isn't in the local DB, and then we'll
+	// check if we see it when we do a query without ever having done an init 
+	newEntry := shared.MakeFakeHistoryEntry("othercomputer")
+	encEntry, err := shared.EncryptHistoryEntry(userSecret, newEntry)
+	shared.Check(t, err)
+	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	shared.Check(t, err)
+	resp, err := http.Post("http://localhost:8080/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
+	shared.Check(t, err)
+	if resp.StatusCode != 200 {
+		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
+	}
+	// Now check if that is in there when we do hishtory query 
+	out = RunInteractiveBashCommands(t, `hishtory query`)
+	if !strings.Contains(out, "othercomputer") {
+		t.Fatalf("hishtory query doesn't contain cmd run on another machine! out=%#v", out)
+	}
 }
 
 func testIntegration(t *testing.T) string {
