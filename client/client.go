@@ -152,7 +152,7 @@ func export() {
 	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
 	data, err := shared.Search(db, "", 0)
 	lib.CheckFatalError(err)
-	for i := len(data)-1; i >= 0; i-- {
+	for i := len(data) - 1; i >= 0; i-- {
 		fmt.Println(data[i].Command)
 	}
 }

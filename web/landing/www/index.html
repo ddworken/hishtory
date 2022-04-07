@@ -47,7 +47,7 @@
               <a class="nav-link js-scroll-trigger" href="#setup">Setup</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link js-scroll-trigger" href="#contact">FAQ</a>
+              <a class="nav-link js-scroll-trigger" href="#faq">FAQ</a>
             </li>
           </ul>
         </div>
@@ -86,7 +86,7 @@
     <section class="page-section" id="setup">
       <div class="container">
           <style>
-              li.nav-item>:not([active]) {
+              li.install-nav-item>:not([active]) {
                   background-color: #f7f7f9
               }
           </style>
@@ -95,11 +95,11 @@
         <p class="text-black-50 mb-4">
             <div style="border: solid #f7f7f9; border-width: 2px;border-radius:10px;padding:2%">
         <ul class="nav nav-tabs nav-pills nav-justified" id="myTab" role="tablist" style="/*border: solid #f7f7f9; border-width: 2px;*/">
-          <li class="nav-item">
-            <a class="nav-link active" id="install-online-tab" data-toggle="tab" href="#install-online" role="tab" style="margin: 10px">Install (Online Mode)</a>
+          <li class="nav-item install-nav-item">
+            <a class="nav-link active" id="install-first-tab" data-toggle="tab" href="#install-first" role="tab" style="margin: 10px">First Installation</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link" id="install-offline-tab" data-toggle="tab" href="#install-offline" role="tab" style="margin: 10px">Install (Offline Mode)</a>
+          <li class="nav-item install-nav-item">
+            <a class="nav-link" id="install-second-tab" data-toggle="tab" href="#install-second" role="tab" style="margin: 10px">Installation on additional computers</a>
           </li>
         </ul>
         <div class="tab-content">
@@ -107,9 +107,9 @@
               <br>To install hishtory on your first machine: 
               <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/binaries/hishtory-linux; chmod +x hishtory; ./hishtory install</code>
           </div>
-          <div class="tab-pane" id="install-offline" role="tabpanel" aria-labelledby="profile-tab">
+          <div class="tab-pane" id="install-second" role="tabpanel" aria-labelledby="profile-tab">
           <br>To install hishtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run <code>hishtory status</code> and copy your "Secret Key".
-          <br> Then to install it on your second machine: 
+          Then to install it on your second machine: 
           <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/binaries/hishtory-linux; chmod +x hishtory; ./hishtory install $YOUR_HISHTORY_SECRET</code>
         </div>
         </div>
@@ -117,8 +117,7 @@
         </p>
       </div>
     </section>
-    <!-- Contact Section -->
-    <section class="page-section" id="contact">
+    <section class="page-section" id="faq">
       <div class="container">
         <div class="row justify-content-center">
           <div class="col-lg-8 text-center">

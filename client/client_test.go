@@ -2,15 +2,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
-	"encoding/json"
-	"net/http"
 
 	"github.com/ddworken/hishtory/shared"
 )
@@ -28,7 +28,7 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 	if strings.Contains(outStr, "hishtory fatal error:") {
 		t.Fatalf("Ran command, but hishtory had a fatal error! out=%#v", outStr)
 	}
-	return outStr 
+	return outStr
 }
 
 func TestIntegration(t *testing.T) {
@@ -138,7 +138,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	}
 
 	// Manually submit an event that isn't in the local DB, and then we'll
-	// check if we see it when we do a query without ever having done an init 
+	// check if we see it when we do a query without ever having done an init
 	newEntry := shared.MakeFakeHistoryEntry("othercomputer")
 	encEntry, err := shared.EncryptHistoryEntry(userSecret, newEntry)
 	shared.Check(t, err)
@@ -149,7 +149,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
 	}
-	// Now check if that is in there when we do hishtory query 
+	// Now check if that is in there when we do hishtory query
 	out = RunInteractiveBashCommands(t, `hishtory query`)
 	if !strings.Contains(out, "othercomputer") {
 		t.Fatalf("hishtory query doesn't contain cmd run on another machine! out=%#v", out)
@@ -242,4 +242,3 @@ func testIntegration(t *testing.T) string {
 
 	return userSecret
 }
-
