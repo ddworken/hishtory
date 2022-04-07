@@ -82,14 +82,52 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("output has `echo mynewcommand` the wrong number of times")
 	}
 
-	// TODO: Set up a third client and check it gets commands from both previous ones
+	// Clear local state again 
+	shared.ResetLocalState(t)
+
+	// Install it a 3rd time
+	out = RunInteractiveBashCommands(t, `
+	gvm use go1.17
+	cd /home/david/code/hishtory/
+	go build -o /tmp/client client/client.go
+	/tmp/client install`)
+	match, err = regexp.MatchString(`Setting secret hishtory key to .*`, out)
+	shared.Check(t, err)
+	if !match {
+		t.Fatalf("unexpected output from install: %v", out)
+	}
+
+	// Set the secret key to the previous secret key 
+	out = RunInteractiveBashCommands(t, `hishtory init ` + userSecret)
+	if !strings.Contains(out, "Setting secret hishtory key to " + userSecret) {
+		t.Fatalf("Failed to re-init with the user secret: %v", out)
+	}
+
+	// Querying should show the history from the previous run 
+	out = RunInteractiveBashCommands(t, "hishtory query")
+	expected = []string{"echo thisisrecorded", "echo mynewcommand", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
+	for _, item := range expected {
+		if !strings.Contains(out, item) {
+			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+		if strings.Count(out, item) != 1 {
+			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
+		}
+	}
+
+	RunInteractiveBashCommands(t, "echo mynewercommand")
+	out = RunInteractiveBashCommands(t, "hishtory query")
+	if !strings.Contains(out, "echo mynewercommand") {
+		t.Fatalf("output is missing `echo mynewercommand`")
+	}
+	if strings.Count(out, "echo mynewercommand") != 1 {
+		t.Fatalf("output has `echo mynewercommand` the wrong number of times")
+	}
 
 	// TODO: Test the live update flow
 }
 
 func testIntegration(t *testing.T) string {
-	// TODO(ddworken): Test the status subcommand
-
 	// Test install
 	out := RunInteractiveBashCommands(t, `
 	gvm use go1.17
@@ -103,6 +141,14 @@ func testIntegration(t *testing.T) string {
 	}
 	userSecret := matches[1]
 	
+
+	// TODO(ddworken): Test the status subcommand
+	out = RunInteractiveBashCommands(t, `
+		hishtory status
+	`)
+	if out != "Hishtory: Offline Mode\nEnabled: true\n"{
+		t.Fatalf("status command has unexpected output: %#v", out)
+	}
 
 	// Test recording commands
 	out = RunInteractiveBashCommands(t, `
