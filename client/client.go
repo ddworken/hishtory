@@ -99,7 +99,7 @@ func query(query string) {
 func displayBannerIfSet() error {
 	config, err := lib.GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to get config: %v", err) 
+		return fmt.Errorf("failed to get config: %v", err)
 	}
 	url := lib.GetServerHostname() + "/api/v1/banner?commit_hash=" + GitCommit + "&device_id=" + config.DeviceId + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	resp, err := http.Get(url)
@@ -156,4 +156,3 @@ func export() {
 		fmt.Println(entry)
 	}
 }
-

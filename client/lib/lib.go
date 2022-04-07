@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"time"
 
-	"gorm.io/gorm"
 	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -123,7 +123,7 @@ func Setup(args []string) error {
 	}
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
-	// Create and set the config 
+	// Create and set the config
 	var config ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
@@ -133,7 +133,7 @@ func Setup(args []string) error {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
 	}
 
-	// Drop all existing data 
+	// Drop all existing data
 	db, err := OpenLocalSqliteDb()
 	if err != nil {
 		return fmt.Errorf("failed to open DB: %v", err)

@@ -71,7 +71,6 @@ func TestGetUserSecret(t *testing.T) {
 	}
 }
 
-
 func TestPersist(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	db, err := OpenLocalSqliteDb()

@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
-	"os/exec"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
-	"fmt"
 
 	"github.com/ddworken/hishtory/shared"
 )
@@ -50,7 +50,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	gvm use go1.17
 	cd /home/david/code/hishtory/
 	go build -o /tmp/client client/client.go
-	/tmp/client install ` + userSecret)
+	/tmp/client install `+userSecret)
 	match, err := regexp.MatchString(`Setting secret hishtory key to .*`, out)
 	shared.Check(t, err)
 	if !match {
@@ -131,7 +131,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("output has `echo mynewercommand` the wrong number of times")
 	}
 
-	// TODO: Test the live update flow
+	// Manually submit an event that is tied to the second user, and then we'll check if we see it for the third user
 }
 
 func testIntegration(t *testing.T) string {
@@ -156,7 +156,7 @@ func testIntegration(t *testing.T) string {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
-	// Test the banner 
+	// Test the banner
 	os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
 	out = RunInteractiveBashCommands(t, `hishtory query`)
 	if !strings.Contains(out, "HELLO_FROM_SERVER") {
