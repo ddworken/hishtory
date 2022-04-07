@@ -103,14 +103,15 @@
           </li>
         </ul>
         <div class="tab-content">
-          <div class="tab-pane active" id="install-online" role="tabpanel" aria-labelledby="home-tab"> 
-              <br>To install hishtory in online mode on your first machine: 
-              <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/hishtory-online; chmod +x hishtory; ./hishtory install</code>
-            <br> To install hishtory in online mode on your other machines: 
-            <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/hishtory-online; chmod +x hishtory; ./hishtory install $YOUR_HISHTORY_SECRET</code>
+          <div class="tab-pane active" id="install-first" role="tabpanel" aria-labelledby="home-tab"> 
+              <br>To install hishtory on your first machine: 
+              <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/binaries/hishtory-linux; chmod +x hishtory; ./hishtory install</code>
           </div>
-          <div class="tab-pane" id="install-offline" role="tabpanel" aria-labelledby="profile-tab"><br> To install hishtory in offline mode: <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/hishtory-offline; chmod +x hishtory; ./hishtory install</code>
-          </div>
+          <div class="tab-pane" id="install-offline" role="tabpanel" aria-labelledby="profile-tab">
+          <br>To install hishtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run <code>hishtory status</code> and copy your "Secret Key".
+          <br> Then to install it on your second machine: 
+          <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/binaries/hishtory-linux; chmod +x hishtory; ./hishtory install $YOUR_HISHTORY_SECRET</code>
+        </div>
         </div>
     </div>
         </p>

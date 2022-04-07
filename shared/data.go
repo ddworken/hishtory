@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/google/uuid"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -162,33 +160,6 @@ func DecryptHistoryEntry(userSecret string, entry EncHistoryEntry) (HistoryEntry
 
 func IsTestEnvironment() bool {
 	return os.Getenv("HISHTORY_TEST") != ""
-}
-
-func OpenLocalSqliteDb() (*gorm.DB, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
-	}
-	err = os.MkdirAll(path.Join(homedir, HISHTORY_PATH), 0744)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
-	}
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, HISHTORY_PATH, DB_PATH)), &gorm.Config{SkipDefaultTransaction: true})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
-	}
-	tx, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
-	err = tx.Ping()
-	if err != nil {
-		return nil, err
-	}
-	db.AutoMigrate(&HistoryEntry{})
-	db.AutoMigrate(&EncHistoryEntry{})
-	db.AutoMigrate(&Device{})
-	return db, nil
 }
 
 func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {

@@ -16,7 +16,6 @@ func TestESubmitThenQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	InitDB()
-	// shared.Check(t, shared.Setup([]string{}))
 
 	// Register a few devices
 	userId := shared.UserId("key")

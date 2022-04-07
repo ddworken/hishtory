@@ -32,6 +32,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
 	}
 	GLOBAL_DB.Where("user_id = ?")
+	fmt.Printf("apiESubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	for _, entry := range entries {
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
 		var devices []*shared.Device
@@ -42,9 +43,13 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 		if len(devices) == 0 {
 			panic(fmt.Errorf("Found no devices associated with user_id=%s, can't save history entry!", entry.UserId))
 		}
+		fmt.Printf("apiESubmitHandler: Found %d devices\n", len(devices))
 		for _, device := range devices {
 			entry.DeviceId = device.DeviceId
-			GLOBAL_DB.Create(&entry)
+			result := GLOBAL_DB.Create(&entry)
+			if result.Error != nil {
+				panic(result.Error)
+			}
 		}
 	}
 }
@@ -61,6 +66,7 @@ func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		panic(fmt.Errorf("DB query error: %v", result.Error))
 	}
+	fmt.Printf("apiEQueryHandler: Found %d entries\n", len(historyEntries))
 	resp, err := json.Marshal(historyEntries)
 	if err != nil {
 		panic(err)
@@ -90,13 +96,20 @@ func apiERegisterHandler(w http.ResponseWriter, r *http.Request) {
 	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId})
 }
 
+func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
+	commitHash := r.URL.Query().Get("commit_hash")
+	deviceId := r.URL.Query().Get("device_id")
+	forcedBanner := r.URL.Query().Get("forced_banner")
+	fmt.Printf("apiBannerHandler: commit_hash=%#v, device_id=%#v, forced_banner=%#v\n", commitHash, deviceId, forcedBanner)
+	w.Write([]byte(forcedBanner))
+}
+
 func OpenDB() (*gorm.DB, error) {
 	if shared.IsTestEnvironment() {
 		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 		}
-		db.AutoMigrate(&shared.HistoryEntry{})
 		db.AutoMigrate(&shared.EncHistoryEntry{})
 		db.AutoMigrate(&shared.Device{})
 		return db, nil
@@ -106,7 +119,6 @@ func OpenDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
-	db.AutoMigrate(&shared.HistoryEntry{})
 	db.AutoMigrate(&shared.EncHistoryEntry{})
 	db.AutoMigrate(&shared.Device{})
 	return db, nil
@@ -138,5 +150,6 @@ func main() {
 	http.HandleFunc("/api/v1/equery", apiEQueryHandler)
 	http.HandleFunc("/api/v1/ebootstrap", apiEBootstrapHandler)
 	http.HandleFunc("/api/v1/eregister", apiERegisterHandler)
+	http.HandleFunc("/api/v1/banner", apiBannerHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

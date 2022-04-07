@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/driver/sqlite"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -122,26 +123,40 @@ func Setup(args []string) error {
 	}
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
+	// Create and set the config 
 	var config ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
-
 	err := SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
 	}
 
-	_, err = http.Get(GetServerHostname() + "/api/v1/eregister?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	// Drop all existing data 
+	db, err := OpenLocalSqliteDb()
+	if err != nil {
+		return fmt.Errorf("failed to open DB: %v", err)
+	}
+	db.Exec("DELETE FROM history_entries")
+
+	// Bootstrap from remote date
+	resp, err := http.Get(GetServerHostname() + "/api/v1/eregister?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %v", err)
 	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to register device with backend, status_code=%d", resp.StatusCode)
+	}
 
-	resp, err := http.Get(GetServerHostname() + "/api/v1/ebootstrap?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	resp, err = http.Get(GetServerHostname() + "/api/v1/ebootstrap?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap device from the backend: %v", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to bootstrap device with data from existing devices, status_code=%d", resp.StatusCode)
+	}
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read bootstrap response body: %v", err)
@@ -150,10 +165,6 @@ func Setup(args []string) error {
 	err = json.Unmarshal(data, &retrievedEntries)
 	if err != nil {
 		return fmt.Errorf("failed to load JSON response: %v", err)
-	}
-	db, err := shared.OpenLocalSqliteDb()
-	if err != nil {
-		return fmt.Errorf("failed to open DB: %v", err)
 	}
 	for _, entry := range retrievedEntries {
 		decEntry, err := shared.DecryptHistoryEntry(userSecret, *entry)
@@ -389,7 +400,7 @@ func Update(url string) error {
 	}
 	err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
 	if err != nil {
-		return fmt.Errorf("Failed to unlink: %v", err)
+		return fmt.Errorf("Failed to unlink %s: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
 	}
 	cmd = exec.Command("/tmp/hishtory-client", "install")
 	err = cmd.Run()
@@ -404,4 +415,29 @@ func GetServerHostname() string {
 		return server
 	}
 	return "https://api.hishtory.dev"
+}
+
+func OpenLocalSqliteDb() (*gorm.DB, error) {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+	err = os.MkdirAll(path.Join(homedir, shared.HISHTORY_PATH), 0744)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
+	}
+	db, err := gorm.Open(sqlite.Open(path.Join(homedir, shared.HISHTORY_PATH, shared.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+	}
+	tx, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Ping()
+	if err != nil {
+		return nil, err
+	}
+	db.AutoMigrate(&shared.HistoryEntry{})
+	return db, nil
 }

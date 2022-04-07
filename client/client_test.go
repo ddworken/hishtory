@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os/exec"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
+	"fmt"
 
 	"github.com/ddworken/hishtory/shared"
 )
@@ -48,17 +50,11 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	gvm use go1.17
 	cd /home/david/code/hishtory/
 	go build -o /tmp/client client/client.go
-	/tmp/client install`)
+	/tmp/client install ` + userSecret)
 	match, err := regexp.MatchString(`Setting secret hishtory key to .*`, out)
 	shared.Check(t, err)
 	if !match {
 		t.Fatalf("unexpected output from install: %v", out)
-	}
-
-	// Set the secret key to the previous secret key
-	out = RunInteractiveBashCommands(t, `hishtory init `+userSecret)
-	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
-		t.Fatalf("Failed to re-init with the user secret: %v", out)
 	}
 
 	// Querying should show the history from the previous run
@@ -97,6 +93,13 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		t.Fatalf("unexpected output from install: %v", out)
 	}
 
+	// Run a command that shouldn't be in the hishtory later on
+	RunInteractiveBashCommands(t, `echo notinthehistory`)
+	out = RunInteractiveBashCommands(t, "hishtory query")
+	if !strings.Contains(out, "echo notinthehistory") {
+		t.Fatalf("output is missing `echo notinthehistory`")
+	}
+
 	// Set the secret key to the previous secret key
 	out = RunInteractiveBashCommands(t, `hishtory init `+userSecret)
 	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
@@ -113,6 +116,10 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
+	}
+	// But not from the previous account
+	if strings.Contains(out, "notinthehistory") {
+		t.Fatalf("output contains the unexpected item: notinthehistory")
 	}
 
 	RunInteractiveBashCommands(t, "echo mynewercommand")
@@ -141,13 +148,21 @@ func testIntegration(t *testing.T) string {
 	}
 	userSecret := matches[1]
 
-	// TODO(ddworken): Test the status subcommand
+	// Test the status subcommand
 	out = RunInteractiveBashCommands(t, `
 		hishtory status
 	`)
-	if out != "Hishtory: Offline Mode\nEnabled: true\n" {
+	if out != fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
+
+	// Test the banner 
+	os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
+	out = RunInteractiveBashCommands(t, `hishtory query`)
+	if !strings.Contains(out, "HELLO_FROM_SERVER") {
+		t.Fatalf("hishtory query didn't show the banner message! out=%#v", out)
+	}
+	os.Setenv("FORCED_BANNER", "")
 
 	// Test recording commands
 	out = RunInteractiveBashCommands(t, `
