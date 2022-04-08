@@ -14,6 +14,7 @@ trap "PreCommand" DEBUG
 
 HISHTORY_FIRST_PROMPT=1
 function PostCommand() {
+  EXIT_CODE=$?
   HISHTORY_AT_PROMPT=1
 
   if [ -n "$HISHTORY_FIRST_PROMPT" ]; then
@@ -22,6 +23,6 @@ function PostCommand() {
   fi
 
   # Run after every prompt
-  (hishtory saveHistoryEntry $? "`history 1`" $HISHTORY_START_TIME &)
+  (hishtory saveHistoryEntry $EXIT_CODE "`history 1`" $HISHTORY_START_TIME &)
 }
 PROMPT_COMMAND="PostCommand"

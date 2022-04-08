@@ -24,7 +24,7 @@ func RunInteractiveBashCommands(t *testing.T, script string) string {
 	cmd.Stdout = &out
 	var err bytes.Buffer
 	cmd.Stderr = &err
-	shared.CheckWithInfo(t, cmd.Run(), out.String()+err.String())
+	shared.CheckWithInfo(t, cmd.Run(), fmt.Sprintf("out=%#v, err=%#v", out.String(), err.String()))
 	outStr := out.String()
 	if strings.Contains(outStr, "hishtory fatal error:") {
 		t.Fatalf("Ran command, but hishtory had a fatal error! out=%#v", outStr)
@@ -53,19 +53,10 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	shared.ResetLocalState(t)
 
 	// Install it again
-	out := RunInteractiveBashCommands(t, `
-	gvm use go1.17
-	cd /home/david/code/hishtory/
-	go build -o /tmp/client client/client.go
-	/tmp/client install `+userSecret)
-	match, err := regexp.MatchString(`Setting secret hishtory key to .*`, out)
-	shared.Check(t, err)
-	if !match {
-		t.Fatalf("unexpected output from install: %v", out)
-	}
+	installHishtory(t, userSecret)
 
 	// Querying should show the history from the previous run
-	out = RunInteractiveBashCommands(t, "hishtory query")
+	out := RunInteractiveBashCommands(t, "hishtory query")
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
@@ -89,16 +80,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	shared.ResetLocalState(t)
 
 	// Install it a 3rd time
-	out = RunInteractiveBashCommands(t, `
-	gvm use go1.17
-	cd /home/david/code/hishtory/
-	go build -o /tmp/client client/client.go
-	/tmp/client install`)
-	match, err = regexp.MatchString(`Setting secret hishtory key to .*`, out)
-	shared.Check(t, err)
-	if !match {
-		t.Fatalf("unexpected output from install: %v", out)
-	}
+	installHishtory(t, "adifferentsecret")
 
 	// Run a command that shouldn't be in the hishtory later on
 	RunInteractiveBashCommands(t, `echo notinthehistory`)
@@ -163,22 +145,26 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	}
 }
 
-func testIntegration(t *testing.T) string {
-	// Test install
+func installHishtory(t *testing.T, userSecret string) string {
 	out := RunInteractiveBashCommands(t, `
 	gvm use go1.17
 	cd /home/david/code/hishtory
 	go build -o /tmp/client client/client.go
-	/tmp/client install`)
+	/tmp/client install `+userSecret)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
 		t.Fatalf("Failed to extract userSecret from output: matches=%#v", matches)
 	}
-	userSecret := matches[1]
+	return matches[1]
+}
+
+func testIntegration(t *testing.T) string {
+	// Test install
+	userSecret := installHishtory(t, "")
 
 	// Test the status subcommand
-	out = RunInteractiveBashCommands(t, `
+	out := RunInteractiveBashCommands(t, `
 		hishtory status
 	`)
 	if out != fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
@@ -242,4 +228,46 @@ func testIntegration(t *testing.T) string {
 	}
 
 	return userSecret
+}
+
+func TestAdvancedQuery(t *testing.T) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	defer shared.RunTestServer(t)()
+
+	// Install hishtory
+	installHishtory(t, "")
+
+	// Run some commands we can query for
+	RunInteractiveBashCommands(t, `
+	echo nevershouldappear
+	cd /tmp/
+	echo querybydir
+	`)
+
+	// Query based on cwd
+	out := RunInteractiveBashCommands(t, `hishtory query cwd:/tmp`)
+	if !strings.Contains(out, "echo querybydir") {
+		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
+	}
+	if strings.Contains(out, "nevershouldappear") {
+		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on cwd and another term
+	out = RunInteractiveBashCommands(t, `hishtory query cwd:/tmp querybydir`)
+	if !strings.Contains(out, "echo querybydir") {
+		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
+	}
+	if strings.Contains(out, "nevershouldappear") {
+		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// TODO: more tests for advanced queries
 }

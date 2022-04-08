@@ -136,8 +136,22 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 			splitToken := strings.SplitN(token, ":", 2)
 			field := splitToken[0]
 			val := splitToken[1]
-			// tx = tx.Where()
-			panic("TODO(ddworken): Implement better searching using " + field + val)
+			switch field {
+			case "username":
+				tx = tx.Where("local_username = ?", val)
+			case "hostname":
+				tx = tx.Where("hostname = ?", val)
+			case "cwd":
+				tx = tx.Where("instr(current_working_directory, ?) > 0", val)
+			case "exit_code":
+				tx = tx.Where("exit_code = ?", val)
+			case "before":
+				panic("TODO(ddworken): Implement before")
+			case "after":
+				panic("TODO(ddworken): Implement after")
+			default:
+				panic("TODO: probably return an error?")
+			}
 		} else if strings.HasPrefix(token, "-") {
 			panic("TODO(ddworken): Implement -foo as filtering out foo")
 		} else {
