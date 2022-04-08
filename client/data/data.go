@@ -137,7 +137,7 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 			field := splitToken[0]
 			val := splitToken[1]
 			// tx = tx.Where()
-			panic("TODO(ddworken): Use " + field + val)
+			panic("TODO(ddworken): Implement better searching using " + field + val)
 		} else if strings.HasPrefix(token, "-") {
 			panic("TODO(ddworken): Implement -foo as filtering out foo")
 		} else {
