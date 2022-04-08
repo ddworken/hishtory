@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/ddworken/hishtory/shared"
 	_ "github.com/lib/pq"
@@ -104,8 +105,12 @@ func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(forcedBanner))
 }
 
+func isTestEnvironment() bool {
+	return os.Getenv("HISHTORY_TEST") != ""
+}
+
 func OpenDB() (*gorm.DB, error) {
-	if shared.IsTestEnvironment() {
+	if isTestEnvironment() {
 		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %v", err)

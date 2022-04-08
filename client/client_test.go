@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
 )
 
@@ -139,8 +140,8 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 
 	// Manually submit an event that isn't in the local DB, and then we'll
 	// check if we see it when we do a query without ever having done an init
-	newEntry := shared.MakeFakeHistoryEntry("othercomputer")
-	encEntry, err := shared.EncryptHistoryEntry(userSecret, newEntry)
+	newEntry := data.MakeFakeHistoryEntry("othercomputer")
+	encEntry, err := data.EncryptHistoryEntry(userSecret, newEntry)
 	shared.Check(t, err)
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	shared.Check(t, err)

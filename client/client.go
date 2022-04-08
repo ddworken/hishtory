@@ -11,6 +11,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 )
@@ -67,17 +68,17 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("failed to retrieve data from backend, status_code=%d", resp.StatusCode)
 	}
-	data, err := ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read latest history entries response body: %v", err)
 	}
 	var retrievedEntries []*shared.EncHistoryEntry
-	err = json.Unmarshal(data, &retrievedEntries)
+	err = json.Unmarshal(respBody, &retrievedEntries)
 	if err != nil {
 		return fmt.Errorf("failed to load JSON response: %v", err)
 	}
 	for _, entry := range retrievedEntries {
-		decEntry, err := shared.DecryptHistoryEntry(config.UserSecret, *entry)
+		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
 		if err != nil {
 			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
 		}
@@ -91,7 +92,7 @@ func query(query string) {
 	lib.CheckFatalError(err)
 	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
 	lib.CheckFatalError(displayBannerIfSet())
-	data, err := shared.Search(db, query, 25)
+	data, err := data.Search(db, query, 25)
 	lib.CheckFatalError(err)
 	lib.DisplayResults(data, false)
 }
@@ -135,7 +136,7 @@ func saveHistoryEntry() {
 	lib.CheckFatalError(result.Error)
 
 	// Persist it remotely
-	encEntry, err := shared.EncryptHistoryEntry(config.UserSecret, *entry)
+	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
 	lib.CheckFatalError(err)
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	lib.CheckFatalError(err)
@@ -150,7 +151,7 @@ func export() {
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
 	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
-	data, err := shared.Search(db, "", 0)
+	data, err := data.Search(db, "", 0)
 	lib.CheckFatalError(err)
 	for i := len(data) - 1; i >= 0; i-- {
 		fmt.Println(data[i].Command)

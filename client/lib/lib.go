@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rodaine/table"
 
+	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
 )
 
@@ -53,8 +54,8 @@ func getCwd() (string, error) {
 	return cwd, nil
 }
 
-func BuildHistoryEntry(args []string) (*shared.HistoryEntry, error) {
-	var entry shared.HistoryEntry
+func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
+	var entry data.HistoryEntry
 
 	// exitCode
 	exitCode, err := strconv.Atoi(args[2])
@@ -141,7 +142,7 @@ func Setup(args []string) error {
 	db.Exec("DELETE FROM history_entries")
 
 	// Bootstrap from remote date
-	resp, err := http.Get(GetServerHostname() + "/api/v1/eregister?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	resp, err := http.Get(GetServerHostname() + "/api/v1/eregister?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %v", err)
 	}
@@ -149,7 +150,7 @@ func Setup(args []string) error {
 		return fmt.Errorf("failed to register device with backend, status_code=%d", resp.StatusCode)
 	}
 
-	resp, err = http.Get(GetServerHostname() + "/api/v1/ebootstrap?user_id=" + shared.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	resp, err = http.Get(GetServerHostname() + "/api/v1/ebootstrap?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap device from the backend: %v", err)
 	}
@@ -157,17 +158,17 @@ func Setup(args []string) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("failed to bootstrap device with data from existing devices, status_code=%d", resp.StatusCode)
 	}
-	data, err := ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read bootstrap response body: %v", err)
 	}
 	var retrievedEntries []*shared.EncHistoryEntry
-	err = json.Unmarshal(data, &retrievedEntries)
+	err = json.Unmarshal(respBody, &retrievedEntries)
 	if err != nil {
 		return fmt.Errorf("failed to load JSON response: %v", err)
 	}
 	for _, entry := range retrievedEntries {
-		decEntry, err := shared.DecryptHistoryEntry(userSecret, *entry)
+		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
 		if err != nil {
 			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
 		}
@@ -177,7 +178,7 @@ func Setup(args []string) error {
 	return nil
 }
 
-func AddToDbIfNew(db *gorm.DB, entry shared.HistoryEntry) {
+func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	tx := db.Where("local_username = ?", entry.LocalUsername)
 	tx = tx.Where("hostname = ?", entry.Hostname)
 	tx = tx.Where("command = ?", entry.Command)
@@ -185,14 +186,14 @@ func AddToDbIfNew(db *gorm.DB, entry shared.HistoryEntry) {
 	tx = tx.Where("exit_code = ?", entry.ExitCode)
 	tx = tx.Where("start_time = ?", entry.StartTime)
 	tx = tx.Where("end_time = ?", entry.EndTime)
-	var results []shared.HistoryEntry
+	var results []data.HistoryEntry
 	tx.Limit(1).Find(&results)
 	if len(results) == 0 {
 		db.Create(entry)
 	}
 }
 
-func DisplayResults(results []*shared.HistoryEntry, displayHostname bool) {
+func DisplayResults(results []*data.HistoryEntry, displayHostname bool) {
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
 	tbl := table.New("CWD", "Timestamp", "Runtime", "Exit Code", "Command")
 	if displayHostname {
@@ -438,6 +439,6 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.AutoMigrate(&shared.HistoryEntry{})
+	db.AutoMigrate(&data.HistoryEntry{})
 	return db, nil
 }

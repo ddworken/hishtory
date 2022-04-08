@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
 )
 
@@ -76,16 +77,16 @@ func TestPersist(t *testing.T) {
 	db, err := OpenLocalSqliteDb()
 	shared.Check(t, err)
 
-	entry := shared.MakeFakeHistoryEntry("ls ~/")
+	entry := data.MakeFakeHistoryEntry("ls ~/")
 	db.Create(entry)
-	var historyEntries []*shared.HistoryEntry
+	var historyEntries []*data.HistoryEntry
 	result := db.Find(&historyEntries)
 	shared.Check(t, result.Error)
 	if len(historyEntries) != 1 {
 		t.Fatalf("DB has %d entries, expected 1!", len(historyEntries))
 	}
 	dbEntry := historyEntries[0]
-	if !shared.EntryEquals(entry, *dbEntry) {
+	if !data.EntryEquals(entry, *dbEntry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v \ninput=%#v", *dbEntry, entry)
 	}
 }
@@ -96,21 +97,21 @@ func TestSearch(t *testing.T) {
 	shared.Check(t, err)
 
 	// Insert data
-	entry1 := shared.MakeFakeHistoryEntry("ls /foo")
+	entry1 := data.MakeFakeHistoryEntry("ls /foo")
 	db.Create(entry1)
-	entry2 := shared.MakeFakeHistoryEntry("ls /bar")
+	entry2 := data.MakeFakeHistoryEntry("ls /bar")
 	db.Create(entry2)
 
 	// Search for data
-	results, err := shared.Search(db, "ls", 5)
+	results, err := data.Search(db, "ls", 5)
 	shared.Check(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2!", len(results))
 	}
-	if !shared.EntryEquals(*results[0], entry2) {
+	if !data.EntryEquals(*results[0], entry2) {
 		t.Fatalf("Search()[0]=%#v, expected: %#v", results[0], entry2)
 	}
-	if !shared.EntryEquals(*results[1], entry1) {
+	if !data.EntryEquals(*results[1], entry1) {
 		t.Fatalf("Search()[0]=%#v, expected: %#v", results[1], entry1)
 	}
 }
