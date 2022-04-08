@@ -405,6 +405,7 @@ func Update(url string) error {
 	if err != nil {
 		return fmt.Errorf("failed to update: %v", err)
 	}
+	fmt.Println("Successfully updated hishtory!")
 	return nil
 }
 
