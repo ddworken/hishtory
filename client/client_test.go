@@ -292,5 +292,11 @@ func TestAdvancedQuery(t *testing.T) {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
-	// TODO: more tests for advanced queries
+	// Query based on exit_code and something else that matches nothing
+	out = RunInteractiveBashCommands(t, `hishtory query exit_code:127 foo`)
+	if strings.Count(out, "\n") != 1 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// TODO: test the username,hostname atoms
 }
