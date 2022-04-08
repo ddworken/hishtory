@@ -14,3 +14,8 @@ repos:
         entry: errcheck -exclude .errcheck_excludes.txt ./...
         language: system
         pass_filenames: false
+      - id: html-tidy
+        name: html-tidy
+        entry: tidy -quiet -modify -indent web/landing/www/index.html
+        language: system
+        pass_filenames: false
