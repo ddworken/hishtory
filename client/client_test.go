@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,19 +16,29 @@ import (
 )
 
 func RunInteractiveBashCommands(t *testing.T, script string) string {
-	shared.Check(t, ioutil.WriteFile("/tmp/hishtory-test-in.sh", []byte("set -euo pipefail\n"+script), 0o600))
+	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, "set -eo pipefail\n"+script)
+	if err != nil {
+		t.Fatalf("error when running command: %v", err)
+	}
+	return out
+}
+
+func RunInteractiveBashCommandsWithoutStrictMode(t *testing.T, script string) (string, error) {
 	cmd := exec.Command("bash", "-i")
 	cmd.Stdin = strings.NewReader(script)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	var err bytes.Buffer
-	cmd.Stderr = &err
-	shared.CheckWithInfo(t, cmd.Run(), fmt.Sprintf("out=%#v, err=%#v", out.String(), err.String()))
-	outStr := out.String()
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %v", stdout.String(), stderr.String(), err)
+	}
+	outStr := stdout.String()
 	if strings.Contains(outStr, "hishtory fatal error:") {
 		t.Fatalf("Ran command, but hishtory had a fatal error! out=%#v", outStr)
 	}
-	return outStr
+	return outStr, nil
 }
 
 func TestIntegration(t *testing.T) {
@@ -140,7 +149,8 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 
 	// Finally, test the export command
 	out = RunInteractiveBashCommands(t, `hishtory export`)
-	if out != fmt.Sprintf("/tmp/client install\n/tmp/client install\nhishtory status\nhishtory query\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\n/tmp/client install %s\nhishtory query\necho mynewcommand\nhishtory query\nhishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\n", userSecret, userSecret) {
+	if out != fmt.Sprintf(
+		"/tmp/client install\nset -eo pipefail\nset -eo pipefail\nhishtory status\nset -eo pipefail\nhishtory query\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -eo pipefail\nhishtory query\nset -eo pipefail\nhishtory query foo\n/tmp/client install %s\nset -eo pipefail\nhishtory query\nset -eo pipefail\necho mynewcommand\nset -eo pipefail\nhishtory query\nhishtory init %s\nset -eo pipefail\nhishtory query\nset -eo pipefail\necho mynewercommand\nset -eo pipefail\nhishtory query\nothercomputer\nset -eo pipefail\nhishtory query\nset -eo pipefail\n", userSecret, userSecret) {
 		t.Fatalf("hishtory export had unexpected output! out=%#v", out)
 	}
 }
@@ -180,7 +190,7 @@ func testIntegration(t *testing.T) string {
 	os.Setenv("FORCED_BANNER", "")
 
 	// Test recording commands
-	out = RunInteractiveBashCommands(t, `
+	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, `
 		ls /a
 		ls /bar
 		ls /foo
@@ -191,6 +201,9 @@ func testIntegration(t *testing.T) string {
 		hishtory enable
 		echo thisisrecorded
 		`)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
 		t.Fatalf("unexpected output from running commands: %#v", out)
 	}
@@ -239,8 +252,9 @@ func TestAdvancedQuery(t *testing.T) {
 	installHishtory(t, "")
 
 	// Run some commands we can query for
-	RunInteractiveBashCommands(t, `
+	_, _ = RunInteractiveBashCommandsWithoutStrictMode(t, `
 	echo nevershouldappear
+	notacommand
 	cd /tmp/
 	echo querybydir
 	`)
@@ -264,6 +278,15 @@ func TestAdvancedQuery(t *testing.T) {
 	}
 	if strings.Contains(out, "nevershouldappear") {
 		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on exit_code
+	out = RunInteractiveBashCommands(t, `hishtory query exit_code:127`)
+	if !strings.Contains(out, "notacommand") {
+		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
 	}
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
