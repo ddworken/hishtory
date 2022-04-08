@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/Bahjat/pre-commit-golang
+    rev: a4be1d0f860565649a450a8d480e541844c14a07
+    hooks:
+      - id: go-fmt-import
+      - id: go-vet
+      - id: gofumpt # requires github.com/mvdan/gofumpt
+      - id: go-static-check # install https://staticcheck.io/docs/
+      - id: golangci-lint # requires github.com/golangci/golangci-lint
+  - repo: local
+    hooks:
+      - id: go-errcheck
+        name: go-errcheck
+        entry: errcheck -exclude .errcheck_excludes.txt ./...
+        language: system
+        pass_filenames: false

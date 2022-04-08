@@ -42,7 +42,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 			panic(fmt.Errorf("DB query error: %v", result.Error))
 		}
 		if len(devices) == 0 {
-			panic(fmt.Errorf("Found no devices associated with user_id=%s, can't save history entry!", entry.UserId))
+			panic(fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", entry.UserId))
 		}
 		fmt.Printf("apiESubmitHandler: Found %d devices\n", len(devices))
 		for _, device := range devices {

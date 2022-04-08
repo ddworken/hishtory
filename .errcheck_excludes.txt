@@ -1,0 +1,5 @@
+(net/http.ResponseWriter).Write
+(*gorm.io/gorm.DB).AutoMigrate
+os.Setenv
+(*os.File).Close
+(io.ReadCloser).Close

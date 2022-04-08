@@ -115,7 +115,7 @@ func displayBannerIfSet() error {
 		return fmt.Errorf("failed to read /api/v1/banner response body: %v", err)
 	}
 	if len(data) > 0 {
-		fmt.Printf(string(data))
+		fmt.Print(string(data))
 	}
 	return nil
 }

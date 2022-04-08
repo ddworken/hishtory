@@ -16,8 +16,8 @@ func ResetLocalState(t *testing.T) {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	os.Remove(path.Join(homedir, HISHTORY_PATH, DB_PATH))
-	os.Remove(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, DB_PATH))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -26,11 +26,11 @@ func BackupAndRestore(t *testing.T) func() {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"))
-	os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"))
 	return func() {
-		os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
-		os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 	}
 }
 
@@ -68,16 +68,15 @@ func RunTestServer(t *testing.T) func() {
 	}
 	time.Sleep(time.Second * 3)
 	go func() {
-		cmd.Wait()
+		_ = cmd.Wait()
 	}()
 	return func() {
 		err := cmd.Process.Kill()
 		if err != nil {
 			t.Fatalf("failed to kill process: %v", err)
 		}
-		fmt.Println(fmt.Sprintf("stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
+		fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
 	}
-
 }
 
 func Check(t *testing.T, err error) {

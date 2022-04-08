@@ -17,7 +17,7 @@ import (
 )
 
 func RunInteractiveBashCommands(t *testing.T, script string) string {
-	shared.Check(t, ioutil.WriteFile("/tmp/hishtory-test-in.sh", []byte("set -euo pipefail\n"+script), 0600))
+	shared.Check(t, ioutil.WriteFile("/tmp/hishtory-test-in.sh", []byte("set -euo pipefail\n"+script), 0o600))
 	cmd := exec.Command("bash", "-i")
 	cmd.Stdin = strings.NewReader(script)
 	var out bytes.Buffer

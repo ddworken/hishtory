@@ -109,5 +109,4 @@ func TestESubmitThenQuery(t *testing.T) {
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
-
 }

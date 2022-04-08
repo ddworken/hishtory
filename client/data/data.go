@@ -1,11 +1,6 @@
 package data
 
 import (
-	"fmt"
-	"io"
-	"strings"
-	"time"
-
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
@@ -13,6 +8,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
+	"strings"
+	"time"
 
 	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
@@ -20,9 +19,9 @@ import (
 )
 
 const (
-	KDF_USER_ID        = "user_id"
-	KDF_DEVICE_ID      = "device_id"
-	KDF_ENCRYPTION_KEY = "encryption_key"
+	KdfUserID        = "user_id"
+	KdfDeviceID      = "device_id"
+	KdfEncryptionKey = "encryption_key"
 )
 
 type HistoryEntry struct {
@@ -42,11 +41,11 @@ func sha256hmac(key, additionalData string) []byte {
 }
 
 func UserId(key string) string {
-	return base64.URLEncoding.EncodeToString(sha256hmac(key, KDF_USER_ID))
+	return base64.URLEncoding.EncodeToString(sha256hmac(key, KdfUserID))
 }
 
 func EncryptionKey(userSecret string) []byte {
-	return sha256hmac(userSecret, KDF_ENCRYPTION_KEY)
+	return sha256hmac(userSecret, KdfEncryptionKey)
 }
 
 func makeAead(userSecret string) (cipher.AEAD, error) {
@@ -65,11 +64,11 @@ func makeAead(userSecret string) (cipher.AEAD, error) {
 func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, error) {
 	aead, err := makeAead(userSecret)
 	if err != nil {
-		return []byte{}, []byte{}, fmt.Errorf("Failed to make AEAD: %v", err)
+		return []byte{}, []byte{}, fmt.Errorf("failed to make AEAD: %v", err)
 	}
 	nonce := make([]byte, 12)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return []byte{}, []byte{}, fmt.Errorf("Failed to read a nonce: %v", err)
+		return []byte{}, []byte{}, fmt.Errorf("failed to read a nonce: %v", err)
 	}
 	ciphertext := aead.Seal(nil, nonce, data, additionalData)
 	_, err = aead.Open(nil, nonce, ciphertext, additionalData)
@@ -82,11 +81,11 @@ func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, er
 func Decrypt(userSecret string, data, additionalData, nonce []byte) ([]byte, error) {
 	aead, err := makeAead(userSecret)
 	if err != nil {
-		return []byte{}, fmt.Errorf("Failed to make AEAD: %v", err)
+		return []byte{}, fmt.Errorf("failed to make AEAD: %v", err)
 	}
 	plaintext, err := aead.Open(nil, nonce, data, additionalData)
 	if err != nil {
-		return []byte{}, fmt.Errorf("Failed to decrypt: %v", err)
+		return []byte{}, fmt.Errorf("failed to decrypt: %v", err)
 	}
 	return plaintext, nil
 }
@@ -112,7 +111,7 @@ func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (shared.EncHisto
 
 func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (HistoryEntry, error) {
 	if entry.UserId != UserId(userSecret) {
-		return HistoryEntry{}, fmt.Errorf("Refusing to decrypt history entry with mismatching UserId")
+		return HistoryEntry{}, fmt.Errorf("refusing to decrypt history entry with mismatching UserId")
 	}
 	plaintext, err := Decrypt(userSecret, entry.EncryptedData, []byte(UserId(userSecret)), entry.Nonce)
 	if err != nil {
