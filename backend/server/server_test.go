@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -111,4 +112,24 @@ func TestESubmitThenQuery(t *testing.T) {
 	}
 }
 
-// TODO: Maybe a test for updateReleaseVersion
+func TestUpdateReleaseVersion(t *testing.T) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	InitDB()
+
+	// Check that ReleaseVersion hasn't been set yet
+	if ReleaseVersion != "UNKNOWN" {
+		t.Fatalf("ReleaseVersion isn't as expected: %#v", ReleaseVersion)
+	}
+
+	// Update it
+	err := updateReleaseVersion()
+	if err != nil {
+		t.Fatalf("updateReleaseVersion failed: %v", err)
+	}
+
+	// And check that the new value looks reasonable
+	if !strings.HasPrefix(ReleaseVersion, "v0.") {
+		t.Fatalf("ReleaseVersion isn't as expected: %#v", ReleaseVersion)
+	}
+}

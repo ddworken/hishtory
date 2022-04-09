@@ -160,17 +160,17 @@ type releaseInfo struct {
 func updateReleaseVersion() error {
 	resp, err := http.Get("https://api.github.com/repos/ddworken/hishtory/releases/latest")
 	if err != nil {
-		return fmt.Errorf("failed to get latest release version: %v\n", err)
+		return fmt.Errorf("failed to get latest release version: %v", err)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read github API response body: %v\n", err)
+		return fmt.Errorf("failed to read github API response body: %v", err)
 	}
 	if resp.StatusCode == 403 && strings.Contains(string(respBody), "API rate limit exceeded for ") {
 		return nil
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to call github API, status_code=%d, body=%#v\n", resp.StatusCode, string(respBody))
+		return fmt.Errorf("failed to call github API, status_code=%d, body=%#v", resp.StatusCode, string(respBody))
 	}
 	var info releaseInfo
 	err = json.Unmarshal(respBody, &info)
