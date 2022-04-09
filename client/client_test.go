@@ -417,3 +417,5 @@ func TestGithubRedirects(t *testing.T) {
 		t.Fatalf("response is too short to be a binary, resp=%d", len(respBody))
 	}
 }
+
+// TODO: Maybe a dedicated unit test for retrieveAdditionalEntriesFromRemote

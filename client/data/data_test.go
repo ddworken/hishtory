@@ -48,3 +48,5 @@ func TestParseTimeGenerously(t *testing.T) {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 }
+
+// TODO: Maybe some dedicated unit tests for Search()

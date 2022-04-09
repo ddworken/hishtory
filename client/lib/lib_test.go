@@ -123,3 +123,31 @@ func TestSearch(t *testing.T) {
 		t.Fatalf("Search()[0]=%#v, expected: %#v", results[1], entry1)
 	}
 }
+
+func TestAddToDbIfNew(t *testing.T) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	db, err := OpenLocalSqliteDb()
+	shared.Check(t, err)
+
+	// Add duplicate entries
+	entry1 := data.MakeFakeHistoryEntry("ls /foo")
+	AddToDbIfNew(db, entry1)
+	AddToDbIfNew(db, entry1)
+	entry2 := data.MakeFakeHistoryEntry("ls /foo")
+	AddToDbIfNew(db, entry2)
+	AddToDbIfNew(db, entry2)
+	AddToDbIfNew(db, entry1)
+
+	// Check there should only be two entries
+	var entries []data.HistoryEntry
+	result := db.Find(&entries)
+	if result.Error != nil {
+		t.Fatal(result.Error)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("entries has an incorrect length: %d", len(entries))
+	}
+}
+
+// TODO: Some day find a way of testing the table display
