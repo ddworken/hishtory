@@ -125,6 +125,31 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	return decryptedEntry, nil
 }
 
+func parseTimeGenerously(input string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, input)
+	if err == nil {
+		return t, nil
+	}
+	_, offset := time.Now().Zone()
+	if offset%(60*60) != 0 {
+		panic("timezone isn't aligned on the hour! This is unimplemented!")
+	}
+	inputWithTimeZone := fmt.Sprintf("%s %03d00", input, (offset / 60 / 60))
+	t, err = time.Parse("2006-01-02T15:04:05 -0700", inputWithTimeZone)
+	if err == nil {
+		return t.Add(time.Hour), nil
+	}
+	t, err = time.Parse("2006-01-02T15:04 -0700", inputWithTimeZone)
+	if err == nil {
+		return t.Add(time.Hour), nil
+	}
+	t, err = time.Parse("2006-01-02", input)
+	if err == nil {
+		return t.Local(), nil
+	}
+	return time.Now(), fmt.Errorf("failed to parse time %#v, please format like \"2006-01-02T15:04\" or like \"2006-01-02\"", input)
+}
+
 func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 	tokens, err := tokenize(query)
 	if err != nil {
@@ -146,9 +171,17 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 			case "exit_code":
 				tx = tx.Where("exit_code = ?", val)
 			case "before":
-				panic("TODO(ddworken): Implement before")
+				t, err := parseTimeGenerously(val)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse before:%s as a timestamp: %v", val, err)
+				}
+				tx = tx.Where("CAST(strftime(\"%s\",start_time) AS INTEGER) < ?", t.Unix())
 			case "after":
-				panic("TODO(ddworken): Implement after")
+				t, err := parseTimeGenerously(val)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+				}
+				tx = tx.Where("CAST(strftime(\"%s\",start_time) AS INTEGER) > ?", t.Unix())
 			default:
 				panic("TODO: probably return an error?")
 			}

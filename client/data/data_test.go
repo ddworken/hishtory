@@ -21,3 +21,26 @@ func TestEncryptDecrypt(t *testing.T) {
 		t.Fatalf("Expected decrypt(encrypt(x)) to work, but it didn't!")
 	}
 }
+
+func TestParseTimeGenerously(t *testing.T) {
+	ts, err := parseTimeGenerously("2006-01-02T15:04:00-08:00")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02T15:04:00")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02T15:04")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02")
+	shared.Check(t, err)
+	if ts.Unix() != 1136160000 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+}

@@ -271,6 +271,15 @@ func TestAdvancedQuery(t *testing.T) {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
+	// Query based on cwd without the slash
+	out = RunInteractiveBashCommands(t, `hishtory query cwd:tmp`)
+	if !strings.Contains(out, "echo querybydir") {
+		t.Fatalf("hishtory query doesn't contain result matching cwd:tmp, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
 	// Query based on cwd and another term
 	out = RunInteractiveBashCommands(t, `hishtory query cwd:/tmp querybydir`)
 	if !strings.Contains(out, "echo querybydir") {
@@ -294,6 +303,32 @@ func TestAdvancedQuery(t *testing.T) {
 
 	// Query based on exit_code and something else that matches nothing
 	out = RunInteractiveBashCommands(t, `hishtory query exit_code:127 foo`)
+	if strings.Count(out, "\n") != 1 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on before: and cwd:
+	out = RunInteractiveBashCommands(t, `hishtory query before:2025-07-02 cwd:/tmp`)
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+	out = RunInteractiveBashCommands(t, `hishtory query before:2025-07-02 cwd:tmp`)
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+	out = RunInteractiveBashCommands(t, `hishtory query before:2025-07-02 cwd:mp`)
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on after: and cwd:
+	out = RunInteractiveBashCommands(t, `hishtory query after:2020-07-02 cwd:/tmp`)
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on after: that returns no results
+	out = RunInteractiveBashCommands(t, `hishtory query after:2120-07-02 cwd:/tmp`)
 	if strings.Count(out, "\n") != 1 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
