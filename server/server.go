@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/ddworken/hishtory/shared"
 	_ "github.com/lib/pq"
@@ -133,10 +134,45 @@ func OpenDB() (*gorm.DB, error) {
 }
 
 func init() {
-	if ReleaseVersion == "UNKNOWN" {
+	if ReleaseVersion == "UNKNOWN" && !isTestEnvironment() {
 		panic("server.go was built without a ReleaseVersion!")
 	}
+	go keepReleaseVersionUpToDate()
 	InitDB()
+}
+
+func keepReleaseVersionUpToDate() {
+	for {
+		updateReleaseVersion()
+		time.Sleep(10 * time.Minute)
+	}
+}
+
+type releaseInfo struct {
+	Name string `json:"name"`
+}
+
+func updateReleaseVersion() {
+	resp, err := http.Get("https://api.github.com/repos/ddworken/hishtory/releases/latest")
+	if err != nil {
+		fmt.Printf("failed to get latest release version: %v\n", err)
+		return
+	}
+	if resp.StatusCode != 200 {
+		fmt.Printf("failed to call github API, status_code=%d\n", resp.StatusCode)
+		return
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("failed to read github API response body: %v\n", err)
+		return
+	}
+	var info releaseInfo
+	err = json.Unmarshal(respBody, &info)
+	if err != nil {
+		fmt.Printf("failed to parse github API response: %v", err)
+	}
+	ReleaseVersion = info.Name
 }
 
 func InitDB() {
