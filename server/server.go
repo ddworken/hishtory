@@ -17,10 +17,13 @@ import (
 )
 
 const (
-	POSTGRES_DB = "postgresql://postgres:O74Ji4735C@postgres-postgresql.default.svc.cluster.local:5432/hishtory?sslmode=disable"
+	PostgresDb = "postgresql://postgres:O74Ji4735C@postgres-postgresql.default.svc.cluster.local:5432/hishtory?sslmode=disable"
 )
 
-var GLOBAL_DB *gorm.DB
+var (
+	GLOBAL_DB      *gorm.DB
+	ReleaseVersion string = "UNKNOWN"
+)
 
 func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
@@ -120,7 +123,7 @@ func OpenDB() (*gorm.DB, error) {
 		return db, nil
 	}
 
-	db, err := gorm.Open(postgres.Open(POSTGRES_DB), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(PostgresDb), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
@@ -130,6 +133,9 @@ func OpenDB() (*gorm.DB, error) {
 }
 
 func init() {
+	if ReleaseVersion == "UNKNOWN" {
+		panic("server.go was built without a ReleaseVersion!")
+	}
 	InitDB()
 }
 
@@ -149,6 +155,14 @@ func InitDB() {
 	}
 }
 
+func bindaryDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64", ReleaseVersion), http.StatusFound)
+}
+
+func attestationDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion), http.StatusFound)
+}
+
 func main() {
 	fmt.Println("Listening on localhost:8080")
 	http.HandleFunc("/api/v1/esubmit", apiESubmitHandler)
@@ -156,5 +170,7 @@ func main() {
 	http.HandleFunc("/api/v1/ebootstrap", apiEBootstrapHandler)
 	http.HandleFunc("/api/v1/eregister", apiERegisterHandler)
 	http.HandleFunc("/api/v1/banner", apiBannerHandler)
+	http.HandleFunc("/download/hishtory-linux-amd64", bindaryDownloadHandler)
+	http.HandleFunc("/download/hishtory-linux-amd64.intoto.jsonl", attestationDownloadHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
