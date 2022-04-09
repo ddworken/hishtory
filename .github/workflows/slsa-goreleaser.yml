@@ -21,7 +21,8 @@ jobs:
       - id: ldflags
         run: |
           GIT_HASH=$(git rev-list -1 HEAD)
-          echo "-X main.GitCommit=$GIT_HASH -w -extldflags \"-static\""
+          LD_FLAGS="-X main.GitCommit=$GIT_HASH -w -extldflags \"-static\""
+          echo "::set-output name=value::$LD_FLAGS"
 
   # Trusted builder.
   build:

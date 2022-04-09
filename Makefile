@@ -1,8 +1,13 @@
 test:
 	HISHTORY_TEST=1 go test -p 1 ./...
 
+release:
+	expr `cat VERSION` + 1 > VERSION
+	git tag v0.`cat VERSION`
+	git push --tags
+
 build-binary:
-	go build -trimpath -o web/landing/www/binaries/hishtory-linux -ldflags "-X main.GitCommit=`git rev-list -1 HEAD`" 
+	go build -trimpath -o web/landing/www/binaries/hishtory-linux #-ldflags "-X main.GitCommit=`git rev-list -1 HEAD`" 
 
 install: build-binary
 	web/landing/www/binaries/hishtory-linux install
