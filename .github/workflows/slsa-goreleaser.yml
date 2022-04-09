@@ -1,7 +1,6 @@
 name: SLSA go releaser
 on:
   workflow_dispatch:
-  push:
 
 permissions: read-all
       
@@ -18,7 +17,9 @@ jobs:
           fetch-depth: 0
       - id: ldflags
         run: |
-          echo "::set-output main.GitCommit=$(git rev-list -1 HEAD)"
+          GIT_HASH=$(git rev-list -1 HEAD)
+          echo "-X main.GitCommit=$GIT_HASH -w -extldflags \"-static\""
+
   # Trusted builder.
   build:
     permissions:
@@ -44,7 +45,6 @@ jobs:
           name: ${{ needs.build.outputs.go-binary-name }}.intoto.jsonl
       - name: Release
         uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             ${{ needs.build.outputs.go-binary-name }}
