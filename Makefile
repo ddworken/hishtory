@@ -3,10 +3,10 @@ test:
 
 release:
 	git tag v0.`cat VERSION`
-        expr `cat VERSION` + 1 > VERSION
+	expr `cat VERSION` + 1 > VERSION
 	git push --tags
 
-build-static: build-binary
+build-static:
 	docker build -t gcr.io/dworken-k8s/hishtory-static -f web/caddy/Dockerfile .
 
 build-api:
