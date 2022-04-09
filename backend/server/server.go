@@ -100,7 +100,7 @@ func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 func apiERegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
-	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId})
+	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: r.RemoteAddr, RegistrationDate: time.Now()})
 }
 
 func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
