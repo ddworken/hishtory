@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
       - id: ldflags
         run: |
-          echo "::set-output name=ldflags::$(./scripts/client-ldflags)"
+          echo "::set-output name=value::$(./scripts/client-ldflags)"
 
   # Trusted builder.
   build:

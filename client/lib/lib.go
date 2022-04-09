@@ -385,7 +385,7 @@ func copyFile(src, dst string) error {
 func Update(url string) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd := exec.Command("bash", "-c", "curl -o /tmp/hishtory-client "+url+"; chmod +x /tmp/hishtory-client")
+	cmd := exec.Command("bash", "-c", "curl -L -o /tmp/hishtory-client "+url+"; chmod +x /tmp/hishtory-client")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()

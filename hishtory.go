@@ -49,7 +49,7 @@ func main() {
 		fmt.Print(GitCommit)
 		fmt.Print("\n")
 	case "update":
-		lib.CheckFatalError(lib.Update("https://hishtory.dev/binaries/hishtory-linux"))
+		lib.CheckFatalError(lib.Update("https://api.hishtory.dev/download/hishtory-linux-amd64"))
 	default:
 		lib.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
