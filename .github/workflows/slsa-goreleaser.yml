@@ -2,8 +2,6 @@ name: SLSA go releaser
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "*" 
 
 permissions: read-all
       
@@ -20,7 +18,7 @@ jobs:
           fetch-depth: 0
       - id: ldflags
         run: |
-          echo "::set-output name=value::$(./scripts/version-ldflags)"
+          echo "::set-output name=value::$(git rev-list -1 HEAD)"
   # Trusted builder.
   build:
     permissions:
