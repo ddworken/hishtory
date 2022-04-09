@@ -6,8 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description" content="">
   <meta name="author" content="">
-  <title>Hishtory: Better Shell History</title><!-- Global site tag (gtag.js) - Google Analytics -->
-
+  <title>Hishtory: Better Shell History</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=UA-144207374-1"></script>
   <script>
       window.dataLayer = window.dataLayer || [];
@@ -17,13 +16,13 @@
       }
       gtag('js', new Date());
       gtag('config', 'UA-144207374-1');
-  </script><!-- Font Awesome Icons -->
-  <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css"><!-- Google Fonts -->
+  </script>
+  <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
   <link href="https://fonts.googleapis.com/css?family=Merriweather+Sans:400,700" rel="stylesheet">
   <link href='https://fonts.googleapis.com/css?family=Merriweather:400,300,300italic,400italic,700,700italic' rel='stylesheet' type=
-  'text/css'><!-- Plugin CSS -->
-  <link href="vendor/magnific-popup/magnific-popup.css" rel="stylesheet"><!-- Theme CSS - Includes Bootstrap -->
-  <link href="css/creative.min.css" rel="stylesheet"><!-- Highlight JS -->
+  'text/css'>
+  <link href="vendor/magnific-popup/magnific-popup.css" rel="stylesheet">
+  <link href="css/creative.min.css" rel="stylesheet">
   <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.8/styles/default.min.css">
   <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.8/highlight.min.js"></script>
   <style>
@@ -103,15 +102,15 @@
           <div class="tab-pane active" id="install-first" role="tabpanel" aria-labelledby="home-tab">
             <br>
             To install hishtory on your first machine:<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/binaries/hishtory-linux; chmod +x hishtory;
-            ./hishtory install</code>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64; chmod +x
+            hishtory; ./hishtory install</code>
           </div>
           <div class="tab-pane" id="install-second" role="tabpanel" aria-labelledby="profile-tab">
             <br>
             To install hishtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run
             <code>hishtory status</code> and copy your "Secret Key". Then to install it on your second machine:<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -o hishtory https://hishtory.dev/binaries/hishtory-linux; chmod +x hishtory;
-            ./hishtory install $YOUR_HISHTORY_SECRET</code>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64; chmod +x
+            hishtory; ./hishtory install $YOUR_HISHTORY_SECRET</code>
           </div>
         </div>
       </div><br>
@@ -152,8 +151,9 @@
               <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
                 <div class="card-body">
                   This is up to you to judge, but in my opinion: Yes! All data is end-to-end encrypted with a key that never leaves your
-                  computer(s). The code is OSS, so you can verify this, and the pre-built binaries are reproducibly built with the commit
-                  hash embedded in them for easy verification.
+                  computer(s). The code is OSS and verifiably built as <a href='https://slsa.dev/'>SLSA Level 3</a> so you can verify that
+                  the software you're running is the code on Github, and that it in fact does not share any of your private data. In
+                  addition, the backend server is OSS so you can verify how it works.
                 </div>
               </div>
             </div>
