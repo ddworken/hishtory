@@ -20,9 +20,7 @@ jobs:
           fetch-depth: 0
       - id: ldflags
         run: |
-          GIT_HASH=$(git rev-list -1 HEAD)
-          LD_FLAGS="-X main.GitCommit=$GIT_HASH -w -extldflags \"-static\""
-          echo "::set-output name=value::$LD_FLAGS"
+          echo "::set-output name=ldflags::$(./scripts/client-ldflags)"
 
   # Trusted builder.
   build:

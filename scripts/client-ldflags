@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+GIT_HASH=$(git rev-parse HEAD)
+echo "-X main.GitCommit=$GIT_HASH -w -extldflags \"-static\""
