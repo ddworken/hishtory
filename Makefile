@@ -10,10 +10,10 @@ release:
 	git push --tags
 
 build-static:
-	docker build -t gcr.io/dworken-k8s/hishtory-static -f web/caddy/Dockerfile .
+	docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile .
 
 build-api:
-	docker build -t gcr.io/dworken-k8s/hishtory-api -f server/Dockerfile . 
+	docker build -t gcr.io/dworken-k8s/hishtory-api -f backend/server/Dockerfile . 
 
 deploy-static: build-static
 	docker push gcr.io/dworken-k8s/hishtory-static

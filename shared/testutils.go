@@ -40,7 +40,7 @@ func buildServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to chdir: %v", err)
 	}
-	cmd := exec.Command("go", "build", "-o", "/tmp/server", "server/server.go")
+	cmd := exec.Command("go", "build", "-o", "/tmp/server", "backend/server/server.go")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
