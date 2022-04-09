@@ -36,22 +36,35 @@ func BackupAndRestore(t *testing.T) func() {
 }
 
 func buildServer(t *testing.T) {
-	err := os.Chdir("/home/david/code/hishtory/")
-	if err != nil {
-		t.Fatalf("failed to chdir: %v", err)
+	for {
+		wd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to getwd: %v", err)
+		}
+		if strings.HasSuffix(wd, "/hishtory") {
+			break
+		}
+		err = os.Chdir("../")
+		if err != nil {
+			t.Fatalf("failed to chdir: %v", err)
+		}
+		if wd == "/" {
+			t.Fatalf("failed to cd into hishtory dir!")
+		}
 	}
 	cmd := exec.Command("go", "build", "-o", "/tmp/server", "backend/server/server.go")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		t.Fatalf("failed to start to build server: %v, stderr=%#v, stdout=%#v", err, stderr.String(), stdout.String())
 	}
 	err = cmd.Wait()
 	if err != nil {
-		t.Fatalf("failed to build server: %v, stderr=%#v, stdout=%#v", err, stderr.String(), stdout.String())
+		wd, _ := os.Getwd()
+		t.Fatalf("failed to build server: %v, wd=%#v, stderr=%#v, stdout=%#v", err, wd, stderr.String(), stdout.String())
 	}
 }
 
