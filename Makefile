@@ -2,7 +2,7 @@ test:
 	HISHTORY_TEST=1 go test -p 1 ./...
 
 build-binary:
-	go build -trimpath -o web/landing/www/binaries/hishtory-linux -ldflags "-X main.GitCommit=`git rev-list -1 HEAD`" client/client.go
+	go build -trimpath -o web/landing/www/binaries/hishtory-linux -ldflags "-X main.GitCommit=`git rev-list -1 HEAD`" 
 
 install: build-binary
 	web/landing/www/binaries/hishtory-linux install

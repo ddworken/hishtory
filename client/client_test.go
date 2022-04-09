@@ -159,7 +159,7 @@ func installHishtory(t *testing.T, userSecret string) string {
 	out := RunInteractiveBashCommands(t, `
 	gvm use go1.17
 	cd /home/david/code/hishtory
-	go build -o /tmp/client client/client.go
+	go build -o /tmp/client
 	/tmp/client install `+userSecret)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
