@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - id: ldflags
         run: |
-          echo "::set-output name=value::$(git rev-list -1 HEAD)"
+          echo "::set-output main.GitCommit=$(git rev-list -1 HEAD)"
   # Trusted builder.
   build:
     permissions:
