@@ -151,7 +151,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	// Finally, test the export command
 	out = RunInteractiveBashCommands(t, `hishtory export`)
 	if out != fmt.Sprintf(
-		"/tmp/client install\nset -emo pipefail\nset -emo pipefail\nhishtory status\nset -emo pipefail\nhishtory query\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -emo pipefail\nhishtory query\nset -emo pipefail\nhishtory query foo\n/tmp/client install %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewcommand\nset -emo pipefail\nhishtory query\nhishtory init %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewercommand\nset -emo pipefail\nhishtory query\nothercomputer\nset -emo pipefail\nhishtory query\nset -emo pipefail\n", userSecret, userSecret) {
+		"/tmp/client install\nset -emo pipefail\nset -emo pipefail\nhishtory status\nset -emo pipefail\nhishtory query\nhishtory query\nset -m\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -emo pipefail\nhishtory query\nset -emo pipefail\nhishtory query foo\n/tmp/client install %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewcommand\nset -emo pipefail\nhishtory query\nhishtory init %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewercommand\nset -emo pipefail\nhishtory query\nothercomputer\nset -emo pipefail\nhishtory query\nset -emo pipefail\n", userSecret, userSecret) {
 		t.Fatalf("hishtory export had unexpected output! out=%#v", out)
 	}
 }
@@ -190,6 +190,7 @@ func testIntegration(t *testing.T) string {
 
 	// Test recording commands
 	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, `
+		set -m
 		ls /a
 		ls /bar
 		ls /foo
@@ -252,6 +253,7 @@ func TestAdvancedQuery(t *testing.T) {
 
 	// Run some commands we can query for
 	_, _ = RunInteractiveBashCommandsWithoutStrictMode(t, `
+	set -m 
 	echo nevershouldappear
 	notacommand
 	cd /tmp/

@@ -2,6 +2,7 @@ package lib
 
 import (
 	"os"
+	"os/user"
 	"path"
 	"strings"
 	"testing"
@@ -39,7 +40,11 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
-	if entry.LocalUsername != "david" {
+	user, err := user.Current()
+	if err != nil {
+		t.Fatalf("failed to retrieve user: %v", err)
+	}
+	if entry.LocalUsername != user.Username {
 		t.Fatalf("history entry has unexpected user name: %v", entry.LocalUsername)
 	}
 	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
