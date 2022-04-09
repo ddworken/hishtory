@@ -400,6 +400,7 @@ func Update(url string) error {
 	if err != nil {
 		return fmt.Errorf("failed to unlink %s: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
 	}
+	// TODO: Check the SLSA attestation before installing
 	cmd = exec.Command("/tmp/hishtory-client", "install")
 	err = cmd.Run()
 	if err != nil {

@@ -167,6 +167,7 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 			case "hostname":
 				tx = tx.Where("instr(hostname, ?) > 0", val)
 			case "cwd":
+				// TODO: Can I make this support querying via ~/ too?
 				tx = tx.Where("instr(current_working_directory, ?) > 0", val)
 			case "exit_code":
 				tx = tx.Where("exit_code = ?", val)

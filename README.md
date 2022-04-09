@@ -30,13 +30,31 @@ Now if you run `hishtory query` on first computer, you can automatically see the
 
 ## Features
 
-### Advanced Queries
+### Querying
 
-### Export
+`hishtory query` is the main interface for searching through your shell history. See some below annotated queries:
+
+| Command | Explanation |
+|---|---|
+| `hishtory query psql` | Find all commands containing `psql` |
+| `hishtory query psql db.example.com` | Find all commands containing `psql` and `db.example.com` |
+| `hishtory query docker hostname:my-server` | Find all commands containing `docker` that were run on the computer with hostname `my-server` |
+| `hishtory query nano user:root` | Find all commands containing `nano` that were run as `root` |
+| `hishtory query exit_code:127` | Find all commands that exited with code `127` |
+| `hishtory query service before:2022-02-01` | Find all commands containing `service` run before February 1st 2022 |
+| `hishtory query service after:2022-02-01` | Find all commands containing `service` run after February 1st 2022 |
+
+For true power users, you can query via SQL via `sqlite3 ~/.hishtory/.hishtory.db`. 
+
+In addition, `hishtory export` dumps all commands to stdout separated by a single line. This can be useful for certain advanced use cases. 
 
 ### Enable/Disable
 
-### update
+If you want to temporarily turn on/off hishtory recording, you can do so via `hishtory disable` (to turn off recording) and `hishtory enable` (to turn on recording). You can check whether or not `hishtory` is enabled via `hishtory status`. 
+
+### Updating
+
+To update `hishtory` to the latest version, just run `hishtory update` to transparently download and apply the latest update. 
 
 ## Design
 
@@ -51,3 +69,5 @@ Now if you run `hishtory query` on first computer, you can automatically see the
 * zsh support
 * mac support 
 * automatic test running in github actions
+* support for filtering out items in a search query via `-foo`
+* support for verifying the attestations tied to updates
