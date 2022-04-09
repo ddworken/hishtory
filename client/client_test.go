@@ -188,7 +188,7 @@ func testIntegration(t *testing.T) string {
 	out := RunInteractiveBashCommands(t, `
 		hishtory status
 	`)
-	if out != fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -363,7 +363,7 @@ func TestUpdate(t *testing.T) {
 
 	// Check the status command
 	out := RunInteractiveBashCommands(t, `hishtory status`)
-	if out != fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -372,7 +372,7 @@ func TestUpdate(t *testing.T) {
 
 	// Then check the status command again to confirm the update worked
 	out = RunInteractiveBashCommands(t, `hishtory status`)
-	if !strings.HasPrefix(out, fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: ", userSecret)) {
+	if !strings.HasPrefix(out, fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: ", userSecret)) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 	if strings.Contains(out, "\nCommit Hash: Unknown\n") {

@@ -16,7 +16,10 @@ import (
 	"github.com/ddworken/hishtory/shared"
 )
 
-var GitCommit string = "Unknown"
+var (
+	GitCommit string = "Unknown"
+	Version   string = "Unknown"
+)
 
 func main() {
 	if len(os.Args) == 1 {
@@ -41,7 +44,7 @@ func main() {
 	case "status":
 		config, err := lib.GetConfig()
 		lib.CheckFatalError(err)
-		fmt.Print("Hishtory: e2e sync\nEnabled: ")
+		fmt.Print("Hishtory: v0." + Version + "\nEnabled: ")
 		fmt.Print(config.IsEnabled)
 		fmt.Print("\nSecret Key: ")
 		fmt.Print(config.UserSecret)

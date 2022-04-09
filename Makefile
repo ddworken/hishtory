@@ -3,9 +3,9 @@ test:
 
 release:
 	expr `cat VERSION` + 1 > VERSION
-	git tag v0.`cat VERSION`
 	git add VERSION
 	git commit -m "Bump hishtory version"
+	git tag v0.`cat VERSION`
 	git push
 	git push --tags
 
