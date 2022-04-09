@@ -17,7 +17,7 @@ import (
 )
 
 func RunInteractiveBashCommands(t *testing.T, script string) string {
-	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, "set -eo pipefail\n"+script)
+	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, "set -emo pipefail\n"+script)
 	if err != nil {
 		t.Fatalf("error when running command: %v", err)
 	}
@@ -151,14 +151,13 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	// Finally, test the export command
 	out = RunInteractiveBashCommands(t, `hishtory export`)
 	if out != fmt.Sprintf(
-		"/tmp/client install\nset -eo pipefail\nset -eo pipefail\nhishtory status\nset -eo pipefail\nhishtory query\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -eo pipefail\nhishtory query\nset -eo pipefail\nhishtory query foo\n/tmp/client install %s\nset -eo pipefail\nhishtory query\nset -eo pipefail\necho mynewcommand\nset -eo pipefail\nhishtory query\nhishtory init %s\nset -eo pipefail\nhishtory query\nset -eo pipefail\necho mynewercommand\nset -eo pipefail\nhishtory query\nothercomputer\nset -eo pipefail\nhishtory query\nset -eo pipefail\n", userSecret, userSecret) {
+		"/tmp/client install\nset -emo pipefail\nset -emo pipefail\nhishtory status\nset -emo pipefail\nhishtory query\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -emo pipefail\nhishtory query\nset -emo pipefail\nhishtory query foo\n/tmp/client install %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewcommand\nset -emo pipefail\nhishtory query\nhishtory init %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewercommand\nset -emo pipefail\nhishtory query\nothercomputer\nset -emo pipefail\nhishtory query\nset -emo pipefail\n", userSecret, userSecret) {
 		t.Fatalf("hishtory export had unexpected output! out=%#v", out)
 	}
 }
 
 func installHishtory(t *testing.T, userSecret string) string {
 	out := RunInteractiveBashCommands(t, `
-	gvm use go1.17
 	go build -o /tmp/client
 	/tmp/client install `+userSecret)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
