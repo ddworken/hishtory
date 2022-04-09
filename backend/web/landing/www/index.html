@@ -102,15 +102,17 @@
           <div class="tab-pane active" id="install-first" role="tabpanel" aria-labelledby="home-tab">
             <br>
             To install hishtory on your first machine:<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64; chmod +x
-            hishtory; ./hishtory install</code>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;chmod +x hishtory<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;./hishtory install</code>
           </div>
           <div class="tab-pane" id="install-second" role="tabpanel" aria-labelledby="profile-tab">
             <br>
             To install hishtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run
             <code>hishtory status</code> and copy your "Secret Key". Then to install it on your second machine:<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <code>curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64; chmod +x
-            hishtory; ./hishtory install $YOUR_HISHTORY_SECRET</code>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;chmod +x hishtory<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;./hishtory install $YOUR_HISHTORY_SECRET</code>
           </div>
         </div>
       </div><br>
@@ -151,9 +153,10 @@
               <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
                 <div class="card-body">
                   This is up to you to judge, but in my opinion: Yes! All data is end-to-end encrypted with a key that never leaves your
-                  computer(s). The code is OSS and verifiably built as <a href='https://slsa.dev/'>SLSA Level 3</a> so you can verify that
-                  the software you're running is the code on Github, and that it in fact does not share any of your private data. In
-                  addition, the backend server is OSS so you can verify how it works.
+                  computer(s). The code is <a href='https://github.com/ddworken/hishtory'>OSS</a> and verifiably built as <a href=
+                  'https://slsa.dev/'>SLSA Level 3</a> so you can verify that the software you're running is the code on Github, and that
+                  it in fact does not share any of your private data. In addition, the backend server is OSS so you can verify how it
+                  works.
                 </div>
               </div>
             </div>
@@ -177,7 +180,8 @@
               </div>
               <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
                 <div class="card-body">
-                  Yes! This is just a hobby project for me that I use, and I hope other people get some use out of.
+                  Yes! This is just a hobby project for me that I use, and I hope other people get some use out of. It is also <a href=
+                  'https://github.com/ddworken/hishtory'>OSS</a>, so feel free to fork it and self-host!
                 </div>
               </div>
             </div>
@@ -208,6 +212,7 @@
   <footer class="bg-light py-5">
     <div class="container">
       <div class="small text-center text-muted">
+        <a href='https://github.com/ddworken/hishtory'>github.com/ddworken/hishtory</a><br>
         Copyright © 2022 - David Dworken
       </div>
     </div>
