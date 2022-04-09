@@ -162,10 +162,10 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 			field := splitToken[0]
 			val := splitToken[1]
 			switch field {
-			case "username":
+			case "user":
 				tx = tx.Where("local_username = ?", val)
 			case "hostname":
-				tx = tx.Where("hostname = ?", val)
+				tx = tx.Where("instr(hostname, ?) > 0", val)
 			case "cwd":
 				tx = tx.Where("instr(current_working_directory, ?) > 0", val)
 			case "exit_code":
