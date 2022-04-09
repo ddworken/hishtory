@@ -110,3 +110,5 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
 }
+
+// TODO: Maybe a test for updateReleaseVersion

@@ -145,7 +145,10 @@ func init() {
 
 func keepReleaseVersionUpToDate() {
 	for {
-		updateReleaseVersion()
+		err := updateReleaseVersion()
+		if err != nil {
+			fmt.Println(err)
+		}
 		time.Sleep(10 * time.Minute)
 	}
 }
@@ -154,31 +157,28 @@ type releaseInfo struct {
 	Name string `json:"name"`
 }
 
-func updateReleaseVersion() {
+func updateReleaseVersion() error {
 	resp, err := http.Get("https://api.github.com/repos/ddworken/hishtory/releases/latest")
 	if err != nil {
-		fmt.Printf("failed to get latest release version: %v\n", err)
-		return
+		return fmt.Errorf("failed to get latest release version: %v\n", err)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("failed to read github API response body: %v\n", err)
-		return
+		return fmt.Errorf("failed to read github API response body: %v\n", err)
 	}
 	if resp.StatusCode == 403 && strings.Contains(string(respBody), "API rate limit exceeded for ") {
-		// cannot update ReleaseVersion because we exceeded the rate limit, fail silently
-		return
+		return nil
 	}
 	if resp.StatusCode != 200 {
-		fmt.Printf("failed to call github API, status_code=%d, body=%#v\n", resp.StatusCode, string(respBody))
-		return
+		return fmt.Errorf("failed to call github API, status_code=%d, body=%#v\n", resp.StatusCode, string(respBody))
 	}
 	var info releaseInfo
 	err = json.Unmarshal(respBody, &info)
 	if err != nil {
-		fmt.Printf("failed to parse github API response: %v", err)
+		return fmt.Errorf("failed to parse github API response: %v", err)
 	}
 	ReleaseVersion = info.Name
+	return nil
 }
 
 func InitDB() {
