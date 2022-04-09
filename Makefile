@@ -6,6 +6,7 @@ release:
 	git tag v0.`cat VERSION`
 	git add VERSION
 	git commit -m "Bump hishtory version"
+	git push
 	git push --tags
 
 build-static:
