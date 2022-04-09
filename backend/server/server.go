@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
@@ -159,13 +160,17 @@ func updateReleaseVersion() {
 		fmt.Printf("failed to get latest release version: %v\n", err)
 		return
 	}
-	if resp.StatusCode != 200 {
-		fmt.Printf("failed to call github API, status_code=%d\n", resp.StatusCode)
-		return
-	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("failed to read github API response body: %v\n", err)
+		return
+	}
+	if resp.StatusCode == 403 && strings.Contains(string(respBody), "API rate limit exceeded for ") {
+		// cannot update ReleaseVersion because we exceeded the rate limit, fail silently
+		return
+	}
+	if resp.StatusCode != 200 {
+		fmt.Printf("failed to call github API, status_code=%d, body=%#v\n", resp.StatusCode, string(respBody))
 		return
 	}
 	var info releaseInfo

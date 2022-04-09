@@ -53,8 +53,11 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if entry.Command != "ls /" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
 	}
-	if entry.StartTime.Format(time.RFC3339) != "2022-01-09T16:35:58-08:00" {
-		t.Fatalf("history entry has incorrect start time: %v", entry.StartTime.Format(time.RFC3339))
+	if !strings.HasPrefix(entry.StartTime.Format(time.RFC3339), "2022-01-09T") {
+		t.Fatalf("history entry has incorrect date in the start time: %v", entry.StartTime.Format(time.RFC3339))
+	}
+	if entry.StartTime.Unix() != 1641774958 {
+		t.Fatalf("history entry has incorrect Unix time in the start time: %v", entry.StartTime.Unix())
 	}
 }
 

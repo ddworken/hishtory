@@ -349,6 +349,31 @@ func TestAdvancedQuery(t *testing.T) {
 	// TODO: test the username,hostname atoms
 }
 
+func TestUpdate(t *testing.T) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	defer shared.RunTestServer(t)()
+	userSecret := installHishtory(t, "")
+
+	// Check the status command
+	out := RunInteractiveBashCommands(t, `hishtory status`)
+	if out != fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+		t.Fatalf("status command has unexpected output: %#v", out)
+	}
+
+	// Update
+	RunInteractiveBashCommands(t, `hishtory update`)
+
+	// Then check the status command again to confirm the update worked
+	out = RunInteractiveBashCommands(t, `hishtory status`)
+	if !strings.HasPrefix(out, fmt.Sprintf("Hishtory: e2e sync\nEnabled: true\nSecret Key: %s\nCommit Hash: ", userSecret)) {
+		t.Fatalf("status command has unexpected output: %#v", out)
+	}
+	if strings.Contains(out, "\nCommit Hash: Unknown\n") {
+		t.Fatalf("status command has unexpected output: %#v", out)
+	}
+}
+
 func TestGithubRedirects(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
