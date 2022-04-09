@@ -190,22 +190,15 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
-func DisplayResults(results []*data.HistoryEntry, displayHostname bool) {
+func DisplayResults(results []*data.HistoryEntry) {
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
-	tbl := table.New("CWD", "Timestamp", "Runtime", "Exit Code", "Command")
-	if displayHostname {
-		tbl = table.New("Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command")
-	}
+	tbl := table.New("Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command")
 	tbl.WithHeaderFormatter(headerFmt)
 
 	for _, result := range results {
 		timestamp := result.StartTime.Format("Jan 2 2006 15:04:05 MST")
 		duration := result.EndTime.Sub(result.StartTime).Round(time.Millisecond).String()
-		if displayHostname {
-			tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
-		} else {
-			tbl.AddRow(result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
-		}
+		tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
 	}
 
 	tbl.Print()

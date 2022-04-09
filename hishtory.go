@@ -97,7 +97,7 @@ func query(query string) {
 	lib.CheckFatalError(displayBannerIfSet())
 	data, err := data.Search(db, query, 25)
 	lib.CheckFatalError(err)
-	lib.DisplayResults(data, false)
+	lib.DisplayResults(data)
 }
 
 func displayBannerIfSet() error {
