@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -145,15 +144,8 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	// Manually submit an event that isn't in the local DB, and then we'll
 	// check if we see it when we do a query without ever having done an init
 	newEntry := data.MakeFakeHistoryEntry("othercomputer")
-	encEntry, err := data.EncryptHistoryEntry(userSecret, newEntry)
-	shared.Check(t, err)
-	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	shared.Check(t, err)
-	resp, err := http.Post("http://localhost:8080/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
-	shared.Check(t, err)
-	if resp.StatusCode != 200 {
-		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
-	}
+	manuallySubmitHistoryEntry(t, userSecret, newEntry)
+
 	// Now check if that is in there when we do hishtory query
 	out = RunInteractiveBashCommands(t, `hishtory query`)
 	if !strings.Contains(out, "othercomputer") {
@@ -261,7 +253,7 @@ func TestAdvancedQuery(t *testing.T) {
 	defer shared.RunTestServer(t)()
 
 	// Install hishtory
-	installHishtory(t, "")
+	userSecret := installHishtory(t, "")
 
 	// Run some commands we can query for
 	_, _ = RunInteractiveBashCommandsWithoutStrictMode(t, `
@@ -346,7 +338,35 @@ func TestAdvancedQuery(t *testing.T) {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
-	// TODO: test the username,hostname atoms
+	// Manually submit an entry with a different hostname and username so we can test those atoms
+	entry := data.MakeFakeHistoryEntry("cmd_with_diff_hostname_and_username")
+	entry.LocalUsername = "otheruser"
+	entry.Hostname = "otherhostname"
+	manuallySubmitHistoryEntry(t, userSecret, entry)
+
+	// Query based on the username that exists
+	out = RunInteractiveBashCommands(t, `hishtory query user:otheruser`)
+	if !strings.Contains(out, "cmd_with_diff_hostname_and_username") {
+		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on the username that doesn't exist
+	out = RunInteractiveBashCommands(t, `hishtory query user:noexist`)
+	if strings.Count(out, "\n") != 1 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Query based on the hostname
+	out = RunInteractiveBashCommands(t, `hishtory query hostname:otherhostname`)
+	if !strings.Contains(out, "cmd_with_diff_hostname_and_username") {
+		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
 }
 
 func TestUpdate(t *testing.T) {
@@ -380,42 +400,16 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
-// TODO: move this to server_test.go
-func TestGithubRedirects(t *testing.T) {
-	// Set up
-	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
+// TODO: Maybe a dedicated unit test for retrieveAdditionalEntriesFromRemote
 
-	// Check the redirects
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-	resp, err := client.Get("http://localhost:8080/download/hishtory-linux-amd64")
+func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.HistoryEntry) {
+	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
 	shared.Check(t, err)
-	if resp.StatusCode != 302 {
-		t.Fatalf("expected endpoint to return redirect")
-	}
-	locationHeader := resp.Header.Get("location")
-	if !strings.Contains(locationHeader, "https://github.com/ddworken/hishtory/releases/download/v") {
-		t.Fatalf("expected location header to point to github")
-	}
-	if !strings.HasSuffix(locationHeader, "/hishtory-linux-amd64") {
-		t.Fatalf("expected location header to point to binary")
-	}
-
-	// And retrieve it and check we can do that
-	resp, err = http.Get("http://localhost:8080/download/hishtory-linux-amd64")
+	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	shared.Check(t, err)
+	resp, err := http.Post("http://localhost:8080/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
 	shared.Check(t, err)
 	if resp.StatusCode != 200 {
-		t.Fatalf("didn't return a 200 status code, status_code=%d", resp.StatusCode)
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	shared.Check(t, err)
-	if len(respBody) < 5_000_000 {
-		t.Fatalf("response is too short to be a binary, resp=%d", len(respBody))
+		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
 	}
 }
-
-// TODO: Maybe a dedicated unit test for retrieveAdditionalEntriesFromRemote

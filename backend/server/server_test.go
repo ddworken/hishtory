@@ -133,3 +133,40 @@ func TestUpdateReleaseVersion(t *testing.T) {
 		t.Fatalf("ReleaseVersion isn't as expected: %#v", ReleaseVersion)
 	}
 }
+
+func TestGithubRedirects(t *testing.T) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	defer shared.RunTestServer(t)()
+
+	// Check the redirects
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Get("http://localhost:8080/download/hishtory-linux-amd64")
+	shared.Check(t, err)
+	if resp.StatusCode != 302 {
+		t.Fatalf("expected endpoint to return redirect")
+	}
+	locationHeader := resp.Header.Get("location")
+	if !strings.Contains(locationHeader, "https://github.com/ddworken/hishtory/releases/download/v") {
+		t.Fatalf("expected location header to point to github")
+	}
+	if !strings.HasSuffix(locationHeader, "/hishtory-linux-amd64") {
+		t.Fatalf("expected location header to point to binary")
+	}
+
+	// And retrieve it and check we can do that
+	resp, err = http.Get("http://localhost:8080/download/hishtory-linux-amd64")
+	shared.Check(t, err)
+	if resp.StatusCode != 200 {
+		t.Fatalf("didn't return a 200 status code, status_code=%d", resp.StatusCode)
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	shared.Check(t, err)
+	if len(respBody) < 5_000_000 {
+		t.Fatalf("response is too short to be a binary, resp=%d", len(respBody))
+	}
+}
