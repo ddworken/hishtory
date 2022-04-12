@@ -73,7 +73,7 @@ func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, er
 	ciphertext := aead.Seal(nil, nonce, data, additionalData)
 	_, err = aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
-		panic(err)
+		return []byte{}, []byte{}, fmt.Errorf("failed to open AEAD: %v", err)
 	}
 	return ciphertext, nonce, nil
 }
@@ -132,7 +132,7 @@ func parseTimeGenerously(input string) (time.Time, error) {
 	}
 	_, offset := time.Now().Zone()
 	if offset%(60*60) != 0 {
-		panic("timezone isn't aligned on the hour! This is unimplemented!")
+		return time.Now(), fmt.Errorf("timezone offset=%d isn't aligned on the hour, this is unimplemented", offset)
 	}
 	inputWithTimeZone := fmt.Sprintf("%s %03d00", input, (offset / 60 / 60))
 	t, err = time.Parse("2006-01-02T15:04:05 -0700", inputWithTimeZone)
@@ -147,7 +147,7 @@ func parseTimeGenerously(input string) (time.Time, error) {
 	if err == nil {
 		return t.Local(), nil
 	}
-	return time.Now(), fmt.Errorf("failed to parse time %#v, please format like \"2006-01-02T15:04\" or like \"2006-01-02\"", input)
+	return time.Now(), fmt.Errorf("failed to parse time %#v (attempted to parse as %#v or %#v), please format like \"2006-01-02T15:04\" or like \"2006-01-02\"", input, input, inputWithTimeZone)
 }
 
 func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {

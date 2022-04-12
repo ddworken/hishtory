@@ -1,7 +1,6 @@
 package data
 
 import (
-	"os"
 	"testing"
 
 	"github.com/ddworken/hishtory/shared"
@@ -29,18 +28,15 @@ func TestParseTimeGenerously(t *testing.T) {
 	if ts.Unix() != 1136243040 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
-	// TODO: debug why these tests fail on github actions, I probably have broken logic for timezones?
-	if os.Getenv("GITHUB_ACTIONS") == "" {
-		ts, err = parseTimeGenerously("2006-01-02T15:04:00")
-		shared.Check(t, err)
-		if ts.Unix() != 1136243040 {
-			t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-		}
-		ts, err = parseTimeGenerously("2006-01-02T15:04")
-		shared.Check(t, err)
-		if ts.Unix() != 1136243040 {
-			t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-		}
+	ts, err = parseTimeGenerously("2006-01-02T15:04:00")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02T15:04")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02")
 	shared.Check(t, err)

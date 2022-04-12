@@ -41,6 +41,8 @@ func main() {
 		lib.CheckFatalError(lib.Enable())
 	case "disable":
 		lib.CheckFatalError(lib.Disable())
+	case "version":
+		fallthrough
 	case "status":
 		config, err := lib.GetConfig()
 		lib.CheckFatalError(err)
