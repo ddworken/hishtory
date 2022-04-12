@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -126,36 +127,7 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 }
 
 func parseTimeGenerously(input string) (time.Time, error) {
-	t, err := time.Parse(time.RFC3339, input)
-	if err == nil {
-		return t, nil
-	}
-	_, offset := time.Now().Zone()
-	if offset%(60*60) != 0 {
-		return time.Now(), fmt.Errorf("timezone offset=%d isn't aligned on the hour, this is unimplemented", offset)
-	}
-	inputWithTimeZone := fmt.Sprintf("%s %03d00", input, (offset / 60 / 60))
-	t, err = time.Parse("2006-01-02T15:04:05 -0700", inputWithTimeZone)
-	if err == nil {
-		return t.Add(time.Hour), nil
-	}
-	t, err = time.Parse("2006-01-02T15:04 -0700", inputWithTimeZone)
-	if err == nil {
-		return t.Add(time.Hour), nil
-	}
-	t, err = time.Parse("2006-01-02T15:04:05 1700", inputWithTimeZone)
-	if err == nil {
-		return t.Add(time.Hour), nil
-	}
-	t, err = time.Parse("2006-01-02T15:04 1700", inputWithTimeZone)
-	if err == nil {
-		return t.Add(time.Hour), nil
-	}
-	t, err = time.Parse("2006-01-02", input)
-	if err == nil {
-		return t.Local(), nil
-	}
-	return time.Now(), fmt.Errorf("failed to parse time %#v (attempted to parse as %#v or %#v), please format like \"2006-01-02T15:04\" or like \"2006-01-02\"", input, input, inputWithTimeZone)
+	return dateparse.ParseLocal(input)
 }
 
 func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {

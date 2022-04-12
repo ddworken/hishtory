@@ -40,7 +40,7 @@ func TestParseTimeGenerously(t *testing.T) {
 	}
 	ts, err = parseTimeGenerously("2006-01-02")
 	shared.Check(t, err)
-	if ts.Unix() != 1136160000 {
+	if ts.Unix() != 1136188800 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 }
