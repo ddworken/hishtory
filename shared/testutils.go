@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -98,12 +99,14 @@ func RunTestServer(t *testing.T) func() {
 
 func Check(t *testing.T, err error) {
 	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+		_, filename, line, _ := runtime.Caller(1)
+		t.Fatalf("Unexpected error at %s:%d: %v", filename, line, err)
 	}
 }
 
 func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
 	if err != nil {
-		t.Fatalf("Unexpected error: %v! Additional info: %v", err, additionalInfo)
+		_, filename, line, _ := runtime.Caller(1)
+		t.Fatalf("Unexpected error: %v at %s:%d! Additional info: %v", err, filename, line, additionalInfo)
 	}
 }

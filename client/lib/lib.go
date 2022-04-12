@@ -2,7 +2,6 @@ package lib
 
 import (
 	"bytes"
-	_ "embed" // for embedding config.sh
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,10 +13,13 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	_ "embed" // for embedding config.sh
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -276,7 +278,8 @@ func Disable() error {
 
 func CheckFatalError(err error) {
 	if err != nil {
-		log.Fatalf("hishtory fatal error: %v", err)
+		_, filename, line, _ := runtime.Caller(1)
+		log.Fatalf("hishtory fatal error at %s:%d: %v", filename, line, err)
 	}
 }
 

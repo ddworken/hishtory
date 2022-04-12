@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,7 +19,8 @@ import (
 func RunInteractiveBashCommands(t *testing.T, script string) string {
 	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, "set -emo pipefail\n"+script)
 	if err != nil {
-		t.Fatalf("error when running command: %v", err)
+		_, filename, line, _ := runtime.Caller(1)
+		t.Fatalf("error when running command at %s:%d: %v", filename, line, err)
 	}
 	return out
 }
@@ -262,6 +264,7 @@ func TestAdvancedQuery(t *testing.T) {
 	notacommand
 	cd /tmp/
 	echo querybydir
+	hishtory disable
 	`)
 
 	// Query based on cwd
@@ -365,6 +368,48 @@ func TestAdvancedQuery(t *testing.T) {
 		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
 	}
 	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Test filtering out a search item
+	out = RunInteractiveBashCommands(t, `hishtory query`)
+	if !strings.Contains(out, "cmd_with_diff_hostname_and_username") {
+		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
+	}
+	out = RunInteractiveBashCommands(t, `hishtory query -cmd_with_diff_hostname_and_username`)
+	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
+		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
+	}
+	out = RunInteractiveBashCommands(t, `hishtory query -echo`)
+	if strings.Contains(out, "echo") {
+		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 7 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Test filtering out with an atom
+	out = RunInteractiveBashCommands(t, `hishtory query -hostname:otherhostname`)
+	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
+		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
+	}
+	out = RunInteractiveBashCommands(t, `hishtory query -user:otheruser`)
+	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
+		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
+	}
+	out = RunInteractiveBashCommands(t, `hishtory query -exit_code:0`)
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+
+	// Test filtering out a search item that also looks like it could be a search for a flag
+	entry = data.MakeFakeHistoryEntry("foo -echo")
+	manuallySubmitHistoryEntry(t, userSecret, entry)
+	out = RunInteractiveBashCommands(t, `hishtory query -echo`)
+	if strings.Contains(out, "echo") {
+		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 7 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 }

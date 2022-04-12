@@ -157,40 +157,32 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 	}
 	tx := db.Where("true")
 	for _, token := range tokens {
-		if strings.Contains(token, ":") {
-			splitToken := strings.SplitN(token, ":", 2)
-			field := splitToken[0]
-			val := splitToken[1]
-			switch field {
-			case "user":
-				tx = tx.Where("local_username = ?", val)
-			case "hostname":
-				tx = tx.Where("instr(hostname, ?) > 0", val)
-			case "cwd":
-				// TODO: Can I make this support querying via ~/ too?
-				tx = tx.Where("instr(current_working_directory, ?) > 0", val)
-			case "exit_code":
-				tx = tx.Where("exit_code = ?", val)
-			case "before":
-				t, err := parseTimeGenerously(val)
+		if strings.HasPrefix(token, "-") {
+			if strings.Contains(token, ":") {
+				query, val, err := parseAtomizedToken(token[1:])
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse before:%s as a timestamp: %v", val, err)
+					return nil, err
 				}
-				tx = tx.Where("CAST(strftime(\"%s\",start_time) AS INTEGER) < ?", t.Unix())
-			case "after":
-				t, err := parseTimeGenerously(val)
+				tx = tx.Where("NOT "+query, val)
+			} else {
+				query, v1, v2, v3, err := parseNonAtomizedToken(token[1:])
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+					return nil, err
 				}
-				tx = tx.Where("CAST(strftime(\"%s\",start_time) AS INTEGER) > ?", t.Unix())
-			default:
-				panic("TODO: probably return an error?")
+				tx = tx.Where("NOT "+query, v1, v2, v3)
 			}
-		} else if strings.HasPrefix(token, "-") {
-			panic("TODO(ddworken): Implement -foo as filtering out foo")
+		} else if strings.Contains(token, ":") {
+			query, val, err := parseAtomizedToken(token)
+			if err != nil {
+				return nil, err
+			}
+			tx = tx.Where(query, val)
 		} else {
-			wildcardedToken := "%" + token + "%"
-			tx = tx.Where("(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken)
+			query, v1, v2, v3, err := parseNonAtomizedToken(token)
+			if err != nil {
+				return nil, err
+			}
+			tx = tx.Where(query, v1, v2, v3)
 		}
 	}
 	tx = tx.Order("end_time DESC")
@@ -203,6 +195,42 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 		return nil, fmt.Errorf("DB query error: %v", result.Error)
 	}
 	return historyEntries, nil
+}
+
+func parseNonAtomizedToken(token string) (string, interface{}, interface{}, interface{}, error) {
+	wildcardedToken := "%" + token + "%"
+	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
+}
+
+func parseAtomizedToken(token string) (string, interface{}, error) {
+	splitToken := strings.SplitN(token, ":", 2)
+	field := splitToken[0]
+	val := splitToken[1]
+	switch field {
+	case "user":
+		return "(local_username = ?)", val, nil
+	case "hostname":
+		return "(instr(hostname, ?) > 0)", val, nil
+	case "cwd":
+		// TODO: Can I make this support querying via ~/ too?
+		return "(instr(current_working_directory, ?) > 0)", val, nil
+	case "exit_code":
+		return "(exit_code = ?)", val, nil
+	case "before":
+		t, err := parseTimeGenerously(val)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to parse before:%s as a timestamp: %v", val, err)
+		}
+		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) < ?)", t.Unix(), nil
+	case "after":
+		t, err := parseTimeGenerously(val)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+		}
+		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) > ?)", t.Unix(), nil
+	default:
+		return "", nil, fmt.Errorf("search query contains unknown search atom %s", field)
+	}
 }
 
 func tokenize(query string) ([]string, error) {
