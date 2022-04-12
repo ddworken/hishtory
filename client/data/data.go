@@ -143,6 +143,14 @@ func parseTimeGenerously(input string) (time.Time, error) {
 	if err == nil {
 		return t.Add(time.Hour), nil
 	}
+	t, err = time.Parse("2006-01-02T15:04:05 1700", inputWithTimeZone)
+	if err == nil {
+		return t.Add(time.Hour), nil
+	}
+	t, err = time.Parse("2006-01-02T15:04 1700", inputWithTimeZone)
+	if err == nil {
+		return t.Add(time.Hour), nil
+	}
 	t, err = time.Parse("2006-01-02", input)
 	if err == nil {
 		return t.Local(), nil
