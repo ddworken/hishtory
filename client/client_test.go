@@ -420,11 +420,11 @@ func TestAdvancedQuery(t *testing.T) {
 	// Test filtering out a search item that also looks like it could be a search for a flag
 	entry = data.MakeFakeHistoryEntry("foo -echo")
 	manuallySubmitHistoryEntry(t, userSecret, entry)
-	out = RunInteractiveBashCommands(t, `hishtory query -echo`)
+	out = RunInteractiveBashCommands(t, `hishtory query -echo -install`)
 	if strings.Contains(out, "echo") {
 		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
 	}
-	if strings.Count(out, "\n") != 7 {
+	if strings.Count(out, "\n") != 5 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 }

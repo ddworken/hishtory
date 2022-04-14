@@ -119,7 +119,7 @@ func TestUpdateReleaseVersion(t *testing.T) {
 
 	// Check that ReleaseVersion hasn't been set yet
 	if ReleaseVersion != "UNKNOWN" {
-		t.Fatalf("ReleaseVersion isn't as expected: %#v", ReleaseVersion)
+		t.Fatalf("initial ReleaseVersion isn't as expected: %#v", ReleaseVersion)
 	}
 
 	// Update it
@@ -130,7 +130,7 @@ func TestUpdateReleaseVersion(t *testing.T) {
 
 	// And check that the new value looks reasonable
 	if !strings.HasPrefix(ReleaseVersion, "v0.") {
-		t.Fatalf("ReleaseVersion isn't as expected: %#v", ReleaseVersion)
+		t.Fatalf("ReleaseVersion wasn't updated to contain a version: %#v", ReleaseVersion)
 	}
 }
 

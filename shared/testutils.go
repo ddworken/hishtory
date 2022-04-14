@@ -81,6 +81,7 @@ func RunTestServer(t *testing.T) func() {
 	if err != nil {
 		t.Fatalf("failed to start server: %v", err)
 	}
+	// TODO: Optimize this by streaming stdout and waiting until we see the "listening ..." message
 	time.Sleep(time.Second * 3)
 	go func() {
 		_ = cmd.Wait()

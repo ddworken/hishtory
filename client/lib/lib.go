@@ -342,6 +342,12 @@ func installBinary(homedir string) (string, error) {
 	if err != nil {
 		clientPath = path.Join(homedir, shared.HISHTORY_PATH, "hishtory")
 	}
+	if _, err := os.Stat(clientPath); err == nil {
+		err = syscall.Unlink(clientPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to unlink %s for install: %v", clientPath, err)
+		}
+	}
 	err = copyFile(os.Args[0], clientPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to copy hishtory binary to $PATH: %v", err)
@@ -394,7 +400,7 @@ func Update(url string) error {
 	}
 	err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
 	if err != nil {
-		return fmt.Errorf("failed to unlink %s: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
+		return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
 	}
 	// TODO: Check the SLSA attestation before installing
 	cmd = exec.Command("/tmp/hishtory-client", "install")
