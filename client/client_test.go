@@ -44,12 +44,6 @@ func RunInteractiveBashCommandsWithoutStrictMode(t *testing.T, script string) (s
 }
 
 func TestIntegration(t *testing.T) {
-	if os.Getenv("GITHUB_ACTIONS") != "" {
-		// TODO: debug why these tests fail on github actions, the error message is:
-		// `bash: cannot set terminal process group (683): Inappropriate ioctl for device\nbash: no job control in this shell`
-		t.Skip()
-	}
-
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	defer shared.RunTestServer(t)()
@@ -179,9 +173,7 @@ func testIntegration(t *testing.T) string {
 	userSecret := installHishtory(t, "")
 
 	// Test the status subcommand
-	out := RunInteractiveBashCommands(t, `
-		hishtory status
-	`)
+	out := RunInteractiveBashCommands(t, `hishtory status`)
 	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
@@ -195,18 +187,16 @@ func testIntegration(t *testing.T) string {
 	os.Setenv("FORCED_BANNER", "")
 
 	// Test recording commands
-	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, `
-		set -m
-		ls /a
-		ls /bar
-		ls /foo
-		echo foo
-		echo bar
-		hishtory disable
-		echo thisisnotrecorded
-		hishtory enable
-		echo thisisrecorded
-		`)
+	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, `set -m
+ls /a
+ls /bar
+ls /foo
+echo foo
+echo bar
+hishtory disable
+echo thisisnotrecorded
+hishtory enable
+echo thisisrecorded`)
 	if err != nil {
 		t.Fatal(err)
 	}
