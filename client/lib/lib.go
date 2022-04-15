@@ -23,6 +23,7 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -34,6 +35,9 @@ import (
 
 //go:embed config.sh
 var ConfigShContents string
+
+//go:embed test_config.sh
+var TestConfigShContents string
 
 func getCwd() (string, error) {
 	cwd, err := os.Getwd()
@@ -219,7 +223,16 @@ func GetConfig() (ClientConfig, error) {
 	}
 	data, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
 	if err != nil {
-		return ClientConfig{}, fmt.Errorf("failed to read config file: %v", err)
+		files, err := ioutil.ReadDir(path.Join(homedir, shared.HISHTORY_PATH))
+		if err != nil {
+			return ClientConfig{}, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
+		}
+		filenames := ""
+		for _, file := range files {
+			filenames += file.Name()
+			filenames += ", "
+		}
+		return ClientConfig{}, fmt.Errorf("failed to read config file (files in ~/.hishtory/: %s): %v", filenames, err)
 	}
 	var config ClientConfig
 	err = json.Unmarshal(data, &config)
@@ -312,7 +325,11 @@ func Install() error {
 func configureBashrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
 	bashConfigPath := path.Join(filepath.Dir(binaryPath), "config.sh")
-	err := ioutil.WriteFile(bashConfigPath, []byte(ConfigShContents), 0o644)
+	configContents := ConfigShContents
+	if os.Getenv("HISHTORY_TEST") != "" {
+		configContents = TestConfigShContents
+	}
+	err := ioutil.WriteFile(bashConfigPath, []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.sh file: %v", err)
 	}
@@ -428,7 +445,17 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
 	}
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, shared.HISHTORY_PATH, shared.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true})
+	newLogger := logger.New(
+		// TODO: change this back to warn, but have it go to a file?
+		log.New(os.Stdout, "\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Silent,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  false,
+		},
+	)
+	db, err := gorm.Open(sqlite.Open(path.Join(homedir, shared.HISHTORY_PATH, shared.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}

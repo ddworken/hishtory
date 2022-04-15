@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -127,7 +128,9 @@ func displayBannerIfSet() error {
 
 func saveHistoryEntry() {
 	config, err := lib.GetConfig()
-	lib.CheckFatalError(err)
+	if err != nil {
+		log.Fatalf("hishtory cannot save an entry because the hishtory config file does not exist, try running `hishtory init` (err=%v)", err)
+	}
 	if !config.IsEnabled {
 		return
 	}

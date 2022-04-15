@@ -20,6 +20,8 @@ func ResetLocalState(t *testing.T) {
 
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, DB_PATH))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "hishtory"))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.sh"))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -30,9 +32,13 @@ func BackupAndRestore(t *testing.T) func() {
 
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory.bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh.bak"))
 	return func() {
 		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
 		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory.bak"), path.Join(homedir, HISHTORY_PATH, "hishtory"))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh.bak"), path.Join(homedir, HISHTORY_PATH, "config.sh"))
 	}
 }
 
@@ -88,7 +94,7 @@ func RunTestServer(t *testing.T) func() {
 	}()
 	return func() {
 		err := cmd.Process.Kill()
-		if err != nil {
+		if err != nil && err.Error() != "os: process already finished" {
 			t.Fatalf("failed to kill process: %v", err)
 		}
 		if strings.Contains(stderr.String()+stdout.String(), "failed to") {

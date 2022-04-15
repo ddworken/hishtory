@@ -128,7 +128,11 @@ func TestUpdateReleaseVersion(t *testing.T) {
 		t.Fatalf("updateReleaseVersion failed: %v", err)
 	}
 
-	// And check that the new value looks reasonable
+	// If ReleaseVersion is still unknown, skip because we're getting rate limited
+	if ReleaseVersion == "UNKNOWN" {
+		t.Skip()
+	}
+	// Otherwise, check that the new value looks reasonable
 	if !strings.HasPrefix(ReleaseVersion, "v0.") {
 		t.Fatalf("ReleaseVersion wasn't updated to contain a version: %#v", ReleaseVersion)
 	}
@@ -151,6 +155,10 @@ func TestGithubRedirects(t *testing.T) {
 		t.Fatalf("expected endpoint to return redirect")
 	}
 	locationHeader := resp.Header.Get("location")
+	if strings.Contains(locationHeader, "https://github.com/ddworken/hishtory/releases/download/UNKNOWN") {
+		// Getting rate limited, skip the test
+		t.Skip()
+	}
 	if !strings.Contains(locationHeader, "https://github.com/ddworken/hishtory/releases/download/v") {
 		t.Fatalf("expected location header to point to github")
 	}
