@@ -136,6 +136,9 @@ func saveHistoryEntry() {
 	}
 	entry, err := lib.BuildHistoryEntry(os.Args)
 	lib.CheckFatalError(err)
+	if entry == nil {
+		return
+	}
 
 	// Persist it locally
 	db, err := lib.OpenLocalSqliteDb()

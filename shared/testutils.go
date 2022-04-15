@@ -2,7 +2,6 @@ package shared
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -100,7 +99,7 @@ func RunTestServer(t *testing.T) func() {
 		if strings.Contains(stderr.String()+stdout.String(), "failed to") {
 			t.Fatalf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String())
 		}
-		fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
+		// fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
 	}
 }
 

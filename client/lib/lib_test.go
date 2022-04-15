@@ -35,6 +35,8 @@ func TestBuildHistoryEntry(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	defer shared.RunTestServer(t)()
 	shared.Check(t, Setup([]string{}))
+
+	// Test building an actual entry
 	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
 	shared.Check(t, err)
 	if entry.ExitCode != 120 {
@@ -59,6 +61,9 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if entry.StartTime.Unix() != 1641774958 {
 		t.Fatalf("history entry has incorrect Unix time in the start time: %v", entry.StartTime.Unix())
 	}
+
+	// Test the behavior when the command is prefixed with a space
+	// TODO: write a test for this
 }
 
 func TestGetUserSecret(t *testing.T) {

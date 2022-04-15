@@ -96,6 +96,17 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to build history entry: %v", err)
 	}
+	shouldBeSkipped, err := shouldSkipHiddenCommand(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
+	}
+	if shouldBeSkipped {
+		return nil, nil
+	}
+	if strings.HasPrefix(cmd, " ") {
+		// Don't save commands that start with a space
+		return nil, nil
+	}
 	entry.Command = cmd
 
 	// hostname
@@ -109,7 +120,23 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 }
 
 func getLastCommand(history string) (string, error) {
-	return strings.TrimSpace(strings.SplitN(strings.TrimSpace(history), " ", 2)[1]), nil
+	return strings.SplitN(strings.TrimSpace(history), " ", 2)[1][1:], nil
+}
+
+func shouldSkipHiddenCommand(historyLine string) (bool, error) {
+	config, err := GetConfig()
+	if err != nil {
+		return false, err
+	}
+	if config.LastSavedHistoryLine == historyLine {
+		return true, nil
+	}
+	config.LastSavedHistoryLine = historyLine
+	err = SetConfig(config)
+	if err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func GetUserSecret() (string, error) {
@@ -211,9 +238,10 @@ func DisplayResults(results []*data.HistoryEntry) {
 }
 
 type ClientConfig struct {
-	UserSecret string `json:"user_secret"`
-	IsEnabled  bool   `json:"is_enabled"`
-	DeviceId   string `json:"device_id"`
+	UserSecret           string `json:"user_secret"`
+	IsEnabled            bool   `json:"is_enabled"`
+	DeviceId             string `json:"device_id"`
+	LastSavedHistoryLine string `json:"last_saved_history_line"`
 }
 
 func GetConfig() (ClientConfig, error) {

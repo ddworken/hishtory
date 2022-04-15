@@ -19,6 +19,8 @@ import (
 	"github.com/ddworken/hishtory/shared"
 )
 
+// TODO: Change this to only start the server once for this entire file
+
 func RunInteractiveBashCommands(t *testing.T, script string) string {
 	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, "set -emo pipefail\n"+script)
 	if err != nil {
@@ -532,6 +534,41 @@ hishtory enable`, i))
 
 	out := RunInteractiveBashCommands(t, "hishtory export")
 	expectedOutput := "set -emo pipefail\necho mycommand-0\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-0\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-1\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-1\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-2\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-2\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-3\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-3\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-4\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-4\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-5\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-5\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-6\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-6\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-7\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-7\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-8\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-8\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-9\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-9\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-10\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-10\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-11\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-11\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-12\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-12\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-13\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-13\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-14\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-14\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-15\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-15\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-16\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-16\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-17\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-17\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-18\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-18\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-19\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-19\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-20\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-20\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-21\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-21\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-22\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-22\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-23\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-23\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mycommand-24\nhishtory enable\nset -emo pipefail\nhishtory query mycommand-24\nset -emo pipefail\nhishtory query\nset -emo pipefail\n"
+	if out != expectedOutput {
+		t.Fatalf("hishtory export has unexpected output=%#v", out)
+	}
+}
+
+func TestExcludeHiddenCommand(t *testing.T) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	defer shared.RunTestServer(t)()
+	installHishtory(t, "")
+
+	RunInteractiveBashCommands(t, `echo hello1
+ echo hidden
+echo hello2
+ echo hidden`)
+	RunInteractiveBashCommands(t, " echo hidden")
+	out := hishtoryQuery(t, "")
+	if strings.Count(out, "\n") != 6 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+	if strings.Count(out, "echo hello") != 2 {
+		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
+	}
+	if strings.Count(out, "echo hello1") != 1 {
+		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
+	}
+	if strings.Count(out, "echo hello2") != 1 {
+		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
+	}
+	if strings.Contains(out, "hidden") {
+		t.Fatalf("hishtory query contains a result that should not have been recorded, out=%#v", out)
+	}
+
+	out = RunInteractiveBashCommands(t, "hishtory export")
+	expectedOutput := "set -emo pipefail\necho hello1\necho hello2\nset -emo pipefail\nset -emo pipefail\nhishtory query\nset -emo pipefail\n"
 	if out != expectedOutput {
 		t.Fatalf("hishtory export has unexpected output=%#v", out)
 	}
