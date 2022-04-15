@@ -551,7 +551,7 @@ echo hello2
  echo hidden`)
 	RunInteractiveBashCommands(t, " echo hidden")
 	out := hishtoryQuery(t, "")
-	if strings.Count(out, "\n") == 5 || strings.Count(out, "\n") == 6 {
+	if strings.Count(out, "\n") != 5 && strings.Count(out, "\n") != 6 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	if strings.Count(out, "echo hello") != 2 {
