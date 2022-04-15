@@ -21,6 +21,11 @@ import (
 
 // TODO: Change this to only start the server once for this entire file
 
+func TestMain(m *testing.M) {
+	defer shared.RunTestServer()()
+	m.Run()
+}
+
 func RunInteractiveBashCommands(t *testing.T, script string) string {
 	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, "set -emo pipefail\n"+script)
 	if err != nil {
@@ -51,7 +56,6 @@ func RunInteractiveBashCommandsWithoutStrictMode(t *testing.T, script string) (s
 func TestIntegration(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 
 	// Run the test
 	testIntegration(t)
@@ -60,7 +64,6 @@ func TestIntegration(t *testing.T) {
 func TestIntegrationWithNewDevice(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 
 	// Run the test
 	userSecret := testIntegration(t)
@@ -148,7 +151,6 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	}
 
 	// Finally, test the export command
-	waitForBackgroundSavesToComplete(t)
 	out = RunInteractiveBashCommands(t, `hishtory export`)
 	if strings.Contains(out, "thisisnotrecorded") {
 		t.Fatalf("hishtory export contains a command that should not have been recorded, out=%#v", out)
@@ -246,7 +248,6 @@ echo thisisrecorded`)
 func TestAdvancedQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 
 	// Install hishtory
 	userSecret := installHishtory(t, "")
@@ -421,7 +422,6 @@ hishtory disable`)
 func TestUpdate(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 	userSecret := installHishtory(t, "")
 
 	// Check the status command
@@ -446,7 +446,6 @@ func TestUpdate(t *testing.T) {
 func TestRepeatedCommandThenQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 	userSecret := installHishtory(t, "")
 
 	// Check the status command
@@ -483,7 +482,6 @@ echo mycommand-3`)
 func TestRepeatedCommandAndQuery(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 	userSecret := installHishtory(t, "")
 
 	// Check the status command
@@ -509,7 +507,6 @@ func TestRepeatedCommandAndQuery(t *testing.T) {
 func TestRepeatedEnableDisable(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 	installHishtory(t, "")
 
 	// Run a command many times
@@ -542,7 +539,6 @@ hishtory enable`, i))
 func TestExcludeHiddenCommand(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 	installHishtory(t, "")
 
 	RunInteractiveBashCommands(t, `echo hello1
@@ -595,7 +591,6 @@ func waitForBackgroundSavesToComplete(t *testing.T) {
 }
 
 func hishtoryQuery(t *testing.T, query string) string {
-	waitForBackgroundSavesToComplete(t)
 	return RunInteractiveBashCommands(t, "hishtory query "+query)
 }
 
@@ -616,7 +611,6 @@ func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.Hist
 func TestHishtoryBackgroundSaving(t *testing.T) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
 
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := RunInteractiveBashCommands(t, `unset HISHTORY_TEST
@@ -650,6 +644,7 @@ echo foo`)
 	}
 
 	// Test querying for all commands
+	waitForBackgroundSavesToComplete(t)
 	out = hishtoryQuery(t, "")
 	expected := []string{"echo foo", "ls /a"}
 	for _, item := range expected {
@@ -659,6 +654,7 @@ echo foo`)
 	}
 
 	// Test querying for a specific command
+	waitForBackgroundSavesToComplete(t)
 	out = hishtoryQuery(t, "foo")
 	if !strings.Contains(out, "echo foo") {
 		t.Fatalf("output doesn't contain the expected item, out=%#v", out)

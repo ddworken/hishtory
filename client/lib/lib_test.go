@@ -14,7 +14,7 @@ import (
 
 func TestSetup(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
+	defer shared.RunTestServer()()
 	homedir, err := os.UserHomeDir()
 	shared.Check(t, err)
 	if _, err := os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)); err == nil {
@@ -33,7 +33,7 @@ func TestSetup(t *testing.T) {
 
 func TestBuildHistoryEntry(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
+	defer shared.RunTestServer()()
 	shared.Check(t, Setup([]string{}))
 
 	// Test building an actual entry
@@ -68,7 +68,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 func TestGetUserSecret(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
+	defer shared.RunTestServer()()
 	shared.Check(t, Setup([]string{}))
 	secret1, err := GetUserSecret()
 	shared.Check(t, err)

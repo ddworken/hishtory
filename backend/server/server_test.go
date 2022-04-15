@@ -141,7 +141,7 @@ func TestUpdateReleaseVersion(t *testing.T) {
 func TestGithubRedirects(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer(t)()
+	defer shared.RunTestServer()()
 
 	// Check the redirects
 	client := &http.Client{

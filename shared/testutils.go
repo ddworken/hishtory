@@ -2,6 +2,7 @@ package shared
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -41,21 +42,21 @@ func BackupAndRestore(t *testing.T) func() {
 	}
 }
 
-func buildServer(t *testing.T) {
+func buildServer() {
 	for {
 		wd, err := os.Getwd()
 		if err != nil {
-			t.Fatalf("failed to getwd: %v", err)
+			panic(fmt.Sprintf("failed to getwd: %v", err))
 		}
 		if strings.HasSuffix(wd, "/hishtory") {
 			break
 		}
 		err = os.Chdir("../")
 		if err != nil {
-			t.Fatalf("failed to chdir: %v", err)
+			panic(fmt.Sprintf("failed to chdir: %v", err))
 		}
 		if wd == "/" {
-			t.Fatalf("failed to cd into hishtory dir!")
+			panic("failed to cd into hishtory dir!")
 		}
 	}
 	cmd := exec.Command("go", "build", "-o", "/tmp/server", "backend/server/server.go")
@@ -65,18 +66,18 @@ func buildServer(t *testing.T) {
 	cmd.Stderr = &stderr
 	err := cmd.Start()
 	if err != nil {
-		t.Fatalf("failed to start to build server: %v, stderr=%#v, stdout=%#v", err, stderr.String(), stdout.String())
+		panic(fmt.Sprintf("failed to start to build server: %v, stderr=%#v, stdout=%#v", err, stderr.String(), stdout.String()))
 	}
 	err = cmd.Wait()
 	if err != nil {
 		wd, _ := os.Getwd()
-		t.Fatalf("failed to build server: %v, wd=%#v, stderr=%#v, stdout=%#v", err, wd, stderr.String(), stdout.String())
+		panic(fmt.Sprintf("failed to build server: %v, wd=%#v, stderr=%#v, stdout=%#v", err, wd, stderr.String(), stdout.String()))
 	}
 }
 
-func RunTestServer(t *testing.T) func() {
+func RunTestServer() func() {
 	os.Setenv("HISHTORY_SERVER", "http://localhost:8080")
-	buildServer(t)
+	buildServer()
 	cmd := exec.Command("/tmp/server")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -84,20 +85,19 @@ func RunTestServer(t *testing.T) func() {
 	cmd.Stderr = &stderr
 	err := cmd.Start()
 	if err != nil {
-		t.Fatalf("failed to start server: %v", err)
+		panic(fmt.Sprintf("failed to start server: %v", err))
 	}
-	// TODO: Optimize this by streaming stdout and waiting until we see the "listening ..." message
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 5)
 	go func() {
 		_ = cmd.Wait()
 	}()
 	return func() {
 		err := cmd.Process.Kill()
 		if err != nil && err.Error() != "os: process already finished" {
-			t.Fatalf("failed to kill process: %v", err)
+			panic(fmt.Sprintf("failed to kill server process: %v", err))
 		}
 		if strings.Contains(stderr.String()+stdout.String(), "failed to") {
-			t.Fatalf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String())
+			panic(fmt.Sprintf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
 		// fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
 	}
