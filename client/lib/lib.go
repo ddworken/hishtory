@@ -419,16 +419,28 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func Update(url string) error {
+func Update() error {
+	// Download the binary
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd := exec.Command("bash", "-c", "curl -L -o /tmp/hishtory-client "+url+"; chmod +x /tmp/hishtory-client")
+	cmd := exec.Command("bash", "-c", `
+	curl -L -o /tmp/hishtory-client.intoto.jsonl https://api.hishtory.dev/download/hishtory-linux-amd64.intoto.jsonl; 
+	curl -L -o /tmp/hishtory-client https://api.hishtory.dev/download/hishtory-linux-amd64; 
+	chmod +x /tmp/hishtory-client`)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to download update: %v, stdout=%#v, stderr=%#v", err, stdout.String(), stderr.String())
 	}
+
+	// Verify the SLSA attestation
+	err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl")
+	if err != nil {
+		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update: %v", err)
+	}
+
+	// Unlink the existing binary
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
@@ -437,7 +449,7 @@ func Update(url string) error {
 	if err != nil {
 		return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
 	}
-	// TODO: Check the SLSA attestation before installing
+	// Install the new one
 	cmd = exec.Command("/tmp/hishtory-client", "install")
 	err = cmd.Run()
 	if err != nil {
