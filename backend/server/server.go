@@ -239,6 +239,19 @@ func InitDB() {
 	}
 }
 
+func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	updateInfo := shared.UpdateInfo{
+		LinuxAmd64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64", ReleaseVersion),
+		LinuxAmd64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion),
+		Version:                  ReleaseVersion,
+	}
+	resp, err := json.Marshal(updateInfo)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(resp)
+}
+
 func bindaryDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64", ReleaseVersion), http.StatusFound)
 }
@@ -313,6 +326,7 @@ func main() {
 	http.Handle("/api/v1/eregister", withLogging(apiERegisterHandler))
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
+	http.Handle("/api/v1/download", withLogging(apiDownloadHandler))
 	http.Handle("/download/hishtory-linux-amd64", withLogging(bindaryDownloadHandler))
 	http.Handle("/download/hishtory-linux-amd64.intoto.jsonl", withLogging(attestationDownloadHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))

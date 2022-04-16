@@ -25,6 +25,12 @@ type Device struct {
 	RegistrationDate time.Time `json:"registration_date"`
 }
 
+type UpdateInfo struct {
+	LinuxAmd64Url            string `json:"linux_amd_64_url"`
+	LinuxAmd64AttestationUrl string `json:"linux_amd_64_attestation_url"`
+	Version                  string `json:"version"`
+}
+
 const (
 	CONFIG_PATH   = ".hishtory.config"
 	HISHTORY_PATH = ".hishtory"
