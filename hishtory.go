@@ -63,7 +63,7 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	respBody, err := lib.ApiGet("/api/v1/equery?device_id=" + config.DeviceId)
+	respBody, err := lib.ApiGet("/api/v1/equery?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
 	if err != nil {
 		return err
 	}
@@ -131,6 +131,7 @@ func saveHistoryEntry() {
 	// Persist it remotely
 	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
 	lib.CheckFatalError(err)
+	encEntry.DeviceId = config.DeviceId
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	lib.CheckFatalError(err)
 	_, err = lib.ApiPost("/api/v1/esubmit", "application/json", jsonValue)

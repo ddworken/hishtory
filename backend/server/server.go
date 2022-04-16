@@ -28,6 +28,22 @@ var (
 	ReleaseVersion string = "UNKNOWN"
 )
 
+type UsageData struct {
+	UserId   string    `json:"user_id" gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
+	DeviceId string    `json:"device_id"  gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
+	LastUsed time.Time `json:"last_used"`
+}
+
+func updateUsageData(userId, deviceId string) {
+	var usageData []UsageData
+	GLOBAL_DB.Where("user_id = ? AND device_id = ?", userId, deviceId).Find(&usageData)
+	if len(usageData) == 0 {
+		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now()})
+	} else {
+		GLOBAL_DB.Model(&UsageData{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("last_used", time.Now())
+	}
+}
+
 func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -40,6 +56,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("apiESubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	for _, entry := range entries {
+		updateUsageData(entry.UserId, entry.DeviceId)
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
 		var devices []*shared.Device
 		result := tx.Find(&devices)
@@ -61,7 +78,9 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
+	updateUsageData(userId, deviceId)
 	// Increment the count
 	GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
 
@@ -83,6 +102,8 @@ func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: bootstrap is a janky solution for the initial version of this. Long term, need to support deleting entries from the DB which means replacing bootstrap with a queued message sent to any live instances.
 func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
+	deviceId := r.URL.Query().Get("device_id")
+	updateUsageData(userId, deviceId)
 	tx := GLOBAL_DB.Where("user_id = ?", userId)
 	var historyEntries []*shared.EncHistoryEntry
 	result := tx.Find(&historyEntries)
@@ -100,6 +121,7 @@ func apiERegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
 	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: r.RemoteAddr, RegistrationDate: time.Now()})
+	updateUsageData(userId, deviceId)
 }
 
 func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,6 +144,7 @@ func OpenDB() (*gorm.DB, error) {
 		}
 		db.AutoMigrate(&shared.EncHistoryEntry{})
 		db.AutoMigrate(&shared.Device{})
+		db.AutoMigrate(&UsageData{})
 		return db, nil
 	}
 
@@ -131,6 +154,7 @@ func OpenDB() (*gorm.DB, error) {
 	}
 	db.AutoMigrate(&shared.EncHistoryEntry{})
 	db.AutoMigrate(&shared.Device{})
+	db.AutoMigrate(&UsageData{})
 	return db, nil
 }
 
@@ -138,13 +162,17 @@ func init() {
 	if ReleaseVersion == "UNKNOWN" && !isTestEnvironment() {
 		panic("server.go was built without a ReleaseVersion!")
 	}
-	go keepReleaseVersionUpToDate()
 	InitDB()
+	go runBackgroundJobs()
 }
 
-func keepReleaseVersionUpToDate() {
+func runBackgroundJobs() {
 	for {
 		err := updateReleaseVersion()
+		if err != nil {
+			fmt.Println(err)
+		}
+		err = cleanDatabase()
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -251,6 +279,14 @@ func byteCountToString(b int) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMG"[exp])
+}
+
+func cleanDatabase() error {
+	result := GLOBAL_DB.Exec("DELETE FROM enc_history_entries WHERE read_count > 10")
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
 
 func main() {
