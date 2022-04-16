@@ -19,8 +19,6 @@ import (
 	"github.com/ddworken/hishtory/shared"
 )
 
-// TODO: Change this to only start the server once for this entire file
-
 func TestMain(m *testing.M) {
 	defer shared.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -244,6 +242,19 @@ echo thisisrecorded`)
 		if strings.Contains(out, item) {
 			t.Fatalf("output is containing unexpected item %#v: %#v", item, out)
 		}
+	}
+
+	// Add a complex command
+	complexCommand := "echo hello | grep complex | sed s/h/i/g; echo bar && echo \"fo 'o\""
+	_, _ = RunInteractiveBashCommandsWithoutStrictMode(t, complexCommand)
+
+	// Query for it
+	out = hishtoryQuery(t, "complex")
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+	if !strings.Contains(out, complexCommand) {
+		t.Fatalf("hishtory query doesn't contain the expected complex command, out=%#v", out)
 	}
 
 	return userSecret
@@ -573,8 +584,6 @@ echo hello2
 		t.Fatalf("hishtory export has unexpected output=%#v", out)
 	}
 }
-
-// TODO: A test that has a complex bash pipeline
 
 func waitForBackgroundSavesToComplete(t *testing.T) {
 	for i := 0; i < 20; i++ {
