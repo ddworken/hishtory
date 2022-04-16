@@ -61,9 +61,6 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if entry.StartTime.Unix() != 1641774958 {
 		t.Fatalf("history entry has incorrect Unix time in the start time: %v", entry.StartTime.Unix())
 	}
-
-	// Test the behavior when the command is prefixed with a space
-	// TODO: write a test for this
 }
 
 func TestGetUserSecret(t *testing.T) {

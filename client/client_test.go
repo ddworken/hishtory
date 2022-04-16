@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"runtime"
 	"strings"
@@ -185,6 +186,19 @@ func testIntegration(t *testing.T) string {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
+	// Assert that hishtory is correctly using the dev config.sh
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("failed to get homedir: %v", err)
+	}
+	dat, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, "config.sh"))
+	if err != nil {
+		t.Fatalf("failed to read config.sh: %v", err)
+	}
+	if !strings.Contains(string(dat), "except it doesn't run the save process in the background") {
+		t.Fatalf("config.sh is the prod version when it shouldn't be, config.sh=%#v", dat)
+	}
+
 	// Test the banner
 	os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
 	out = hishtoryQuery(t, "")
@@ -194,7 +208,7 @@ func testIntegration(t *testing.T) string {
 	os.Setenv("FORCED_BANNER", "")
 
 	// Test recording commands
-	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, `set -m
+	out, err = RunInteractiveBashCommandsWithoutStrictMode(t, `set -m
 ls /a
 ls /bar
 ls /foo
@@ -639,7 +653,17 @@ go build -o /tmp/client
 	userSecret := matches[1]
 
 	// Assert that config.sh isn't the dev version
-	// TODO: do ^
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("failed to get homedir: %v", err)
+	}
+	dat, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, "config.sh"))
+	if err != nil {
+		t.Fatalf("failed to read config.sh: %v", err)
+	}
+	if strings.Contains(string(dat), "except it doesn't run the save process in the background") {
+		t.Fatalf("config.sh is the testing version when it shouldn't be, config.sh=%#v", dat)
+	}
 
 	// Test the status subcommand
 	out = RunInteractiveBashCommands(t, `hishtory status`)
@@ -648,7 +672,7 @@ go build -o /tmp/client
 	}
 
 	// Test recording commands
-	out, err := RunInteractiveBashCommandsWithoutStrictMode(t, `set -m
+	out, err = RunInteractiveBashCommandsWithoutStrictMode(t, `set -m
 ls /a
 echo foo`)
 	if err != nil {
