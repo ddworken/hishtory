@@ -166,17 +166,32 @@ func init() {
 	go runBackgroundJobs()
 }
 
+func cron() error {
+	err := updateReleaseVersion()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = cleanDatabase()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return nil
+}
+
 func runBackgroundJobs() {
 	for {
-		err := updateReleaseVersion()
+		err := cron()
 		if err != nil {
-			fmt.Println(err)
-		}
-		err = cleanDatabase()
-		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Cron failure: %v", err)
 		}
 		time.Sleep(10 * time.Minute)
+	}
+}
+
+func triggerCronHandler(w http.ResponseWriter, r *http.Request) {
+	err := cron()
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -297,6 +312,7 @@ func main() {
 	http.Handle("/api/v1/ebootstrap", withLogging(apiEBootstrapHandler))
 	http.Handle("/api/v1/eregister", withLogging(apiERegisterHandler))
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
+	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/download/hishtory-linux-amd64", withLogging(bindaryDownloadHandler))
 	http.Handle("/download/hishtory-linux-amd64.intoto.jsonl", withLogging(attestationDownloadHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))
