@@ -205,14 +205,26 @@ func attestationDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion), http.StatusFound)
 }
 
+func withLogging(h func(rw http.ResponseWriter, r *http.Request)) http.Handler {
+	logFn := func(rw http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		h(rw, r)
+
+		duration := time.Since(start)
+		fmt.Printf("%s %s %#v %s\n", r.RemoteAddr, r.Method, r.RequestURI, duration.String())
+	}
+	return http.HandlerFunc(logFn)
+}
+
 func main() {
 	fmt.Println("Listening on localhost:8080")
-	http.HandleFunc("/api/v1/esubmit", apiESubmitHandler)
-	http.HandleFunc("/api/v1/equery", apiEQueryHandler)
-	http.HandleFunc("/api/v1/ebootstrap", apiEBootstrapHandler)
-	http.HandleFunc("/api/v1/eregister", apiERegisterHandler)
-	http.HandleFunc("/api/v1/banner", apiBannerHandler)
-	http.HandleFunc("/download/hishtory-linux-amd64", bindaryDownloadHandler)
-	http.HandleFunc("/download/hishtory-linux-amd64.intoto.jsonl", attestationDownloadHandler)
+	http.Handle("/api/v1/esubmit", withLogging(apiESubmitHandler))
+	http.Handle("/api/v1/equery", withLogging(apiEQueryHandler))
+	http.Handle("/api/v1/ebootstrap", withLogging(apiEBootstrapHandler))
+	http.Handle("/api/v1/eregister", withLogging(apiERegisterHandler))
+	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
+	http.Handle("/download/hishtory-linux-amd64", withLogging(bindaryDownloadHandler))
+	http.Handle("/download/hishtory-linux-amd64.intoto.jsonl", withLogging(attestationDownloadHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
