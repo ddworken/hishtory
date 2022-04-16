@@ -99,7 +99,7 @@ func RunTestServer() func() {
 		if strings.Contains(stderr.String()+stdout.String(), "failed to") {
 			panic(fmt.Sprintf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
-		// fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
+		fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
 	}
 }
 

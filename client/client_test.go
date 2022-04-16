@@ -563,12 +563,14 @@ echo hello2
 		t.Fatalf("hishtory query contains a result that should not have been recorded, out=%#v", out)
 	}
 
-	out = RunInteractiveBashCommands(t, "hishtory export")
-	expectedOutput := "set -emo pipefail\necho hello1\necho hello2\nset -emo pipefail\nset -emo pipefail\nhishtory query\nset -emo pipefail\n"
+	out = RunInteractiveBashCommands(t, "hishtory export | grep -v pipefail")
+	expectedOutput := "echo hello1\necho hello2\nhishtory query\n"
 	if out != expectedOutput {
 		t.Fatalf("hishtory export has unexpected output=%#v", out)
 	}
 }
+
+// TODO: A test that has a complex bash pipeline
 
 func waitForBackgroundSavesToComplete(t *testing.T) {
 	for i := 0; i < 20; i++ {
