@@ -151,5 +151,3 @@ func TestAddToDbIfNew(t *testing.T) {
 		t.Fatalf("entries has an incorrect length: %d", len(entries))
 	}
 }
-
-// TODO: Some day find a way of testing the table display

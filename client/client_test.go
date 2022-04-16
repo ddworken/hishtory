@@ -702,3 +702,28 @@ echo foo`)
 		t.Fatalf("output contains unexpected item, out=%#v", out)
 	}
 }
+
+func TestDisplayTable(t *testing.T) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	userSecret := installHishtory(t, "")
+
+	// Submit two fake entries
+	entry1 := data.MakeFakeHistoryEntry("table_cmd1")
+	entry1.StartTime = time.Unix(1650096186, 0)
+	entry1.EndTime = time.Unix(1650096190, 0)
+	manuallySubmitHistoryEntry(t, userSecret, entry1)
+	entry2 := data.MakeFakeHistoryEntry("table_cmd2")
+	entry2.StartTime = time.Unix(1650096196, 0)
+	entry2.EndTime = time.Unix(1650096220, 0)
+	entry2.CurrentWorkingDirectory = "~/foo/"
+	entry2.ExitCode = 3
+	manuallySubmitHistoryEntry(t, userSecret, entry2)
+
+	// Query and check the table
+	out := RunInteractiveBashCommands(t, "hishtory query table")
+	expectedOutput := "Hostname   CWD     Timestamp                   Runtime  Exit Code  Command     \nlocalhost  ~/foo/  Apr 16 2022 01:03:16 -0700  24s      3          table_cmd2  \nlocalhost  /tmp/   Apr 16 2022 01:03:06 -0700  4s       2          table_cmd1  \n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory query table test mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
