@@ -66,7 +66,7 @@ func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 	GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
 
 	// Then retrieve, to avoid a race condition
-	tx := GLOBAL_DB.Where("device_id = ?", deviceId)
+	tx := GLOBAL_DB.Where("device_id = ? AND read_count < 5", deviceId)
 	var historyEntries []*shared.EncHistoryEntry
 	result := tx.Find(&historyEntries)
 	if result.Error != nil {
