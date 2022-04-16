@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -172,25 +173,14 @@ func Setup(args []string) error {
 	db.Exec("DELETE FROM history_entries")
 
 	// Bootstrap from remote date
-	resp, err := http.Get(GetServerHostname() + "/api/v1/eregister?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	_, err = ApiGet("/api/v1/eregister?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %v", err)
 	}
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to register device with backend, status_code=%d", resp.StatusCode)
-	}
 
-	resp, err = http.Get(GetServerHostname() + "/api/v1/ebootstrap?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	respBody, err := ApiGet("/api/v1/ebootstrap?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap device from the backend: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to bootstrap device with data from existing devices, status_code=%d", resp.StatusCode)
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read bootstrap response body: %v", err)
 	}
 	var retrievedEntries []*shared.EncHistoryEntry
 	err = json.Unmarshal(respBody, &retrievedEntries)
@@ -457,11 +447,32 @@ func Update(url string) error {
 	return nil
 }
 
-func GetServerHostname() string {
+func getServerHostname() string {
 	if server := os.Getenv("HISHTORY_SERVER"); server != "" {
 		return server
 	}
 	return "https://api.hishtory.dev"
+}
+
+var (
+	hishtoryLogger *log.Logger
+	getLoggerOnce  sync.Once
+)
+
+func getLogger() *log.Logger {
+	getLoggerOnce.Do(func() {
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			panic(fmt.Errorf("failed to get user's home directory: %v", err))
+		}
+		f, err := os.OpenFile(path.Join(homedir, shared.HISHTORY_PATH, "hishtory.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o660)
+		if err != nil {
+			panic(fmt.Errorf("failed to open hishtory.log: %v", err))
+		}
+		// Purposefully not closing the file. Yes, this is a dangling file handle. But hishtory is short lived so this is okay.
+		hishtoryLogger = log.New(f, "\n", log.LstdFlags|log.Lshortfile)
+	})
+	return hishtoryLogger
 }
 
 func OpenLocalSqliteDb() (*gorm.DB, error) {
@@ -473,13 +484,13 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
 	}
+	hishtoryLogger := getLogger()
 	newLogger := logger.New(
-		// TODO: change this back to warn, but have it go to a file?
-		log.New(os.Stdout, "\n", log.LstdFlags),
+		hishtoryLogger,
 		logger.Config{
-			SlowThreshold:             200 * time.Millisecond,
-			LogLevel:                  logger.Silent,
-			IgnoreRecordNotFoundError: true,
+			SlowThreshold:             100 * time.Millisecond,
+			LogLevel:                  logger.Warn,
+			IgnoreRecordNotFoundError: false,
 			Colorful:                  false,
 		},
 	)
@@ -497,4 +508,42 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	}
 	db.AutoMigrate(&data.HistoryEntry{})
 	return db, nil
+}
+
+func ApiGet(path string) ([]byte, error) {
+	start := time.Now()
+	resp, err := http.Get(getServerHostname() + path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to GET %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to GET %s: status_code=%d", path, resp.StatusCode)
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body from GET %s: %v", path, err)
+	}
+	duration := time.Since(start)
+	getLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
+	return respBody, nil
+}
+
+func ApiPost(path, contentType string, data []byte) ([]byte, error) {
+	start := time.Now()
+	resp, err := http.Post(getServerHostname()+path, contentType, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to POST %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to POST %s: status_code=%d", path, resp.StatusCode)
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
+	}
+	duration := time.Since(start)
+	getLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
+	return respBody, nil
 }

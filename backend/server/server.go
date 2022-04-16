@@ -38,7 +38,6 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
 	}
-	GLOBAL_DB.Where("user_id = ?")
 	fmt.Printf("apiESubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	for _, entry := range entries {
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
@@ -205,16 +204,53 @@ func attestationDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion), http.StatusFound)
 }
 
-func withLogging(h func(rw http.ResponseWriter, r *http.Request)) http.Handler {
+type loggedResponseData struct {
+	size int
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	responseData *loggedResponseData
+}
+
+func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+	return size, err
+}
+
+func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+func withLogging(h func(http.ResponseWriter, *http.Request)) http.Handler {
 	logFn := func(rw http.ResponseWriter, r *http.Request) {
+		var responseData loggedResponseData
+		lrw := loggingResponseWriter{
+			ResponseWriter: rw,
+			responseData:   &responseData,
+		}
 		start := time.Now()
 
-		h(rw, r)
+		h(&lrw, r)
 
 		duration := time.Since(start)
-		fmt.Printf("%s %s %#v %s\n", r.RemoteAddr, r.Method, r.RequestURI, duration.String())
+		fmt.Printf("%s %s %#v %s %s\n", r.RemoteAddr, r.Method, r.RequestURI, duration.String(), byteCountToString(responseData.size))
 	}
 	return http.HandlerFunc(logFn)
+}
+
+func byteCountToString(b int) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMG"[exp])
 }
 
 func main() {

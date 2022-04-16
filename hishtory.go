@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
@@ -66,17 +63,9 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Get(lib.GetServerHostname() + "/api/v1/equery?device_id=" + config.DeviceId)
+	respBody, err := lib.ApiGet("/api/v1/equery?device_id=" + config.DeviceId)
 	if err != nil {
-		return fmt.Errorf("failed to pull latest history entries from the backend: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to retrieve data from backend, status_code=%d", resp.StatusCode)
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read latest history entries response body: %v", err)
+		return err
 	}
 	var retrievedEntries []*shared.EncHistoryEntry
 	err = json.Unmarshal(respBody, &retrievedEntries)
@@ -108,20 +97,13 @@ func displayBannerIfSet() error {
 	if err != nil {
 		return fmt.Errorf("failed to get config: %v", err)
 	}
-	url := lib.GetServerHostname() + "/api/v1/banner?commit_hash=" + GitCommit + "&device_id=" + config.DeviceId + "&forced_banner=" + os.Getenv("FORCED_BANNER")
-	resp, err := http.Get(url)
+	url := "/api/v1/banner?commit_hash=" + GitCommit + "&device_id=" + config.DeviceId + "&forced_banner=" + os.Getenv("FORCED_BANNER")
+	respBody, err := lib.ApiGet(url)
 	if err != nil {
-		return fmt.Errorf("failed to call /api/v1/banner: %v", err)
+		return err
 	}
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to call %s, status_code=%d", url, resp.StatusCode)
-	}
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read /api/v1/banner response body: %v", err)
-	}
-	if len(data) > 0 {
-		fmt.Print(string(data))
+	if len(respBody) > 0 {
+		fmt.Println(string(respBody))
 	}
 	return nil
 }
@@ -151,11 +133,8 @@ func saveHistoryEntry() {
 	lib.CheckFatalError(err)
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	lib.CheckFatalError(err)
-	resp, err := http.Post(lib.GetServerHostname()+"/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
+	_, err = lib.ApiPost("/api/v1/esubmit", "application/json", jsonValue)
 	lib.CheckFatalError(err)
-	if resp.StatusCode != 200 {
-		lib.CheckFatalError(fmt.Errorf("failed to submit result to backend, status_code=%d", resp.StatusCode))
-	}
 }
 
 func export() {
