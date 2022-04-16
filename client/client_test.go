@@ -23,6 +23,11 @@ import (
 
 func TestMain(m *testing.M) {
 	defer shared.RunTestServer()()
+	cmd := exec.Command("go", "build", "-o", "/tmp/client")
+	err := cmd.Run()
+	if err != nil {
+		panic(fmt.Sprintf("failed to build client: %v", err))
+	}
 	m.Run()
 }
 
@@ -163,8 +168,7 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 }
 
 func installHishtory(t *testing.T, userSecret string) string {
-	out := RunInteractiveBashCommands(t, `go build -o /tmp/client
-/tmp/client install `+userSecret)
+	out := RunInteractiveBashCommands(t, `/tmp/client install `+userSecret)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {

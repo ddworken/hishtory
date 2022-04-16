@@ -1,8 +1,12 @@
 forcetest:
 	go clean -testcache
 	HISHTORY_TEST=1 go test -p 1 ./...
+
 test:
 	HISHTORY_TEST=1 go test -p 1 ./...
+
+acttest:
+	act push -j test
 
 release:
 	expr `cat VERSION` + 1 > VERSION
