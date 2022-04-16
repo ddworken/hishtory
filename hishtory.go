@@ -44,13 +44,13 @@ func main() {
 	case "status":
 		config, err := lib.GetConfig()
 		lib.CheckFatalError(err)
-		fmt.Print("Hishtory: v0." + Version + "\nEnabled: ")
-		fmt.Print(config.IsEnabled)
-		fmt.Print("\nSecret Key: ")
-		fmt.Print(config.UserSecret)
-		fmt.Print("\nCommit Hash: ")
-		fmt.Print(GitCommit)
-		fmt.Print("\n")
+		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", Version, config.IsEnabled)
+		fmt.Printf("Secret Key: %s\n", config.UserSecret)
+		if len(os.Args) == 3 && os.Args[2] == "-v" {
+			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))
+			fmt.Printf("Device ID: %s\n", config.DeviceId)
+		}
+		fmt.Printf("Commit Hash: %s\n", GitCommit)
 	case "update":
 		lib.CheckFatalError(lib.Update("https://api.hishtory.dev/download/hishtory-linux-amd64"))
 	default:

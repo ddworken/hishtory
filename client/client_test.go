@@ -709,13 +709,17 @@ func TestDisplayTable(t *testing.T) {
 	userSecret := installHishtory(t, "")
 
 	// Submit two fake entries
+	tmz, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("failed to load timezone: %v", err)
+	}
 	entry1 := data.MakeFakeHistoryEntry("table_cmd1")
-	entry1.StartTime = time.Unix(1650096186, 0)
-	entry1.EndTime = time.Unix(1650096190, 0)
+	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
+	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
 	manuallySubmitHistoryEntry(t, userSecret, entry1)
 	entry2 := data.MakeFakeHistoryEntry("table_cmd2")
-	entry2.StartTime = time.Unix(1650096196, 0)
-	entry2.EndTime = time.Unix(1650096220, 0)
+	entry2.StartTime = time.Unix(1650096196, 0).In(tmz)
+	entry2.EndTime = time.Unix(1650096220, 0).In(tmz)
 	entry2.CurrentWorkingDirectory = "~/foo/"
 	entry2.ExitCode = 3
 	manuallySubmitHistoryEntry(t, userSecret, entry2)
