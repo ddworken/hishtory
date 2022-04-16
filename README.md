@@ -81,6 +81,4 @@ When the user runs `hishtory query`, it retrieves all unread blobs from the back
 
 * zsh support
 * mac support 
-* automatic test running in github actions
-* support for filtering out items in a search query via `-foo`
 * support for verifying the attestations tied to updates
