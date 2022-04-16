@@ -158,10 +158,10 @@ func TestIntegrationWithNewDevice(t *testing.T) {
 	if strings.Contains(out, "thisisnotrecorded") {
 		t.Fatalf("hishtory export contains a command that should not have been recorded, out=%#v", out)
 	}
-	expectedOutputWithoutKey := "set -emo pipefail\nhishtory status\nset -emo pipefail\nhishtory query\nset -m\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -emo pipefail\nhishtory query\nset -emo pipefail\nhishtory query foo\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewcommand\nset -emo pipefail\nhishtory query\nhishtory init %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewercommand\nset -emo pipefail\nhishtory query\nothercomputer\nset -emo pipefail\nhishtory query\nset -emo pipefail\n"
+	expectedOutputWithoutKey := "set -emo pipefail\nhishtory status\nset -emo pipefail\nhishtory query\nset -m\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nset -emo pipefail\nhishtory query\nset -emo pipefail\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\"\nset -emo pipefail\nhishtory query complex\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewcommand\nset -emo pipefail\nhishtory query\nhishtory init %s\nset -emo pipefail\nhishtory query\nset -emo pipefail\necho mynewercommand\nset -emo pipefail\nhishtory query\nothercomputer\nset -emo pipefail\nhishtory query\nset -emo pipefail\n"
 	expectedOutput := fmt.Sprintf(expectedOutputWithoutKey, userSecret)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
 
@@ -245,7 +245,7 @@ echo thisisrecorded`)
 	}
 
 	// Add a complex command
-	complexCommand := "echo hello | grep complex | sed s/h/i/g; echo bar && echo \"fo 'o\""
+	complexCommand := "echo hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\""
 	_, _ = RunInteractiveBashCommandsWithoutStrictMode(t, complexCommand)
 
 	// Query for it
