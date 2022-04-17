@@ -151,3 +151,20 @@ func TestAddToDbIfNew(t *testing.T) {
 		t.Fatalf("entries has an incorrect length: %d", len(entries))
 	}
 }
+
+func TestParseCrossPlatformInt(t *testing.T) {
+	res, err := parseCrossPlatformInt("123")
+	if err != nil {
+		t.Fatalf("failed to parse int: %v", err)
+	}
+	if res != 123 {
+		t.Fatalf("failed to parse cross platform int %d", res)
+	}
+	res, err = parseCrossPlatformInt("123N")
+	if err != nil {
+		t.Fatalf("failed to parse int: %v", err)
+	}
+	if res != 123 {
+		t.Fatalf("failed to parse cross platform int %d", res)
+	}
+}

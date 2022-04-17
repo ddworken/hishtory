@@ -85,7 +85,7 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.CurrentWorkingDirectory = cwd
 
 	// start time
-	nanos, err := strconv.ParseInt(args[4], 10, 64)
+	nanos, err := parseCrossPlatformInt(args[4])
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[4], err)
 	}
@@ -120,6 +120,11 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.Hostname = hostname
 
 	return &entry, nil
+}
+
+func parseCrossPlatformInt(data string) (int64, error) {
+	data = strings.TrimSuffix(data, "N")
+	return strconv.ParseInt(data, 10, 64)
 }
 
 func getLastCommand(history string) (string, error) {
