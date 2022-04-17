@@ -241,12 +241,12 @@ func InitDB() {
 
 func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	updateInfo := shared.UpdateInfo{
-		LinuxAmd64Url:             fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64", ReleaseVersion),
-		LinuxAmd64AttestationUrl:  fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion),
-		DarwinAmd64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-amd64", ReleaseVersion),
-		DarwinAmd64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-amd64.intoto.jsonl", ReleaseVersion),
-		DarwinArm64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-arm64", ReleaseVersion),
-		DarwinArm64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-arm64.intoto.jsonl", ReleaseVersion),
+		LinuxAmd64Url:             fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-linux-amd64/hishtory-linux-amd64", ReleaseVersion),
+		LinuxAmd64AttestationUrl:  fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-linux-amd64/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion),
+		DarwinAmd64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-amd64/hishtory-darwin-amd64", ReleaseVersion),
+		DarwinAmd64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-amd64/hishtory-darwin-amd64.intoto.jsonl", ReleaseVersion),
+		DarwinArm64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-arm64/hishtory-darwin-arm64", ReleaseVersion),
+		DarwinArm64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-arm64/hishtory-darwin-arm64.intoto.jsonl", ReleaseVersion),
 		Version:                   ReleaseVersion,
 	}
 	resp, err := json.Marshal(updateInfo)
@@ -254,14 +254,6 @@ func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	w.Write(resp)
-}
-
-func bindaryDownloadHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64", ReleaseVersion), http.StatusFound)
-}
-
-func attestationDownloadHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion), http.StatusFound)
 }
 
 type loggedResponseData struct {
@@ -331,7 +323,5 @@ func main() {
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/api/v1/download", withLogging(apiDownloadHandler))
-	http.Handle("/download/hishtory-linux-amd64", withLogging(bindaryDownloadHandler))
-	http.Handle("/download/hishtory-linux-amd64.intoto.jsonl", withLogging(attestationDownloadHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
