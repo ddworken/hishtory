@@ -441,17 +441,13 @@ func Update() error {
 		fmt.Printf("Latest version (v0.%s) is already installed\n", Version)
 		return nil
 	}
-	err = downloadFile("/tmp/hishtory-client", downloadData.LinuxAmd64Url)
-	if err != nil {
-		return err
-	}
-	err = downloadFile("/tmp/hishtory-client.intoto.jsonl", downloadData.LinuxAmd64AttestationUrl)
+	err = downloadFiles(downloadData)
 	if err != nil {
 		return err
 	}
 
 	// Verify the SLSA attestation
-	err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
+	err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version+"-"+runtime.GOOS+"-"+runtime.GOARCH)
 	if err != nil {
 		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update: %v", err)
 	}
@@ -478,6 +474,32 @@ func Update() error {
 		return fmt.Errorf("failed to update: %v", err)
 	}
 	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", Version, downloadData.Version)
+	return nil
+}
+
+func downloadFiles(updateInfo shared.UpdateInfo) error {
+	clientUrl := ""
+	clientProvenanceUrl := ""
+	if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
+		clientUrl = updateInfo.LinuxAmd64Url
+		clientProvenanceUrl = updateInfo.LinuxAmd64AttestationUrl
+	} else if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
+		clientUrl = updateInfo.DarwinAmd64Url
+		clientProvenanceUrl = updateInfo.DarwinAmd64AttestationUrl
+	} else if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+		clientUrl = updateInfo.DarwinArm64Url
+		clientProvenanceUrl = updateInfo.DarwinArm64AttestationUrl
+	} else {
+		return fmt.Errorf("no update info found for GOOS=%s, GOARCH=%s", runtime.GOOS, runtime.GOARCH)
+	}
+	err := downloadFile("/tmp/hishtory-client", clientUrl)
+	if err != nil {
+		return err
+	}
+	err = downloadFile("/tmp/hishtory-client.intoto.jsonl", clientProvenanceUrl)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
