@@ -453,6 +453,9 @@ func TestUpdate(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	userSecret := installHishtory(t, "")
 
+	// Record a command before the update
+	RunInteractiveBashCommands(t, "echo hello")
+
 	// Check the status command
 	out := RunInteractiveBashCommands(t, `hishtory status`)
 	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
@@ -460,8 +463,20 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Update
-	RunInteractiveBashCommands(t, `hishtory update`)
-	// TODO: assert on the output of ^
+	out = RunInteractiveBashCommands(t, `hishtory update`)
+	isExpected, err := regexp.MatchString(`Verified against tlog entry \d+\nSuccessfully updated hishtory from v0[.]Unknown to v0.\d+\n`, out)
+	if err != nil {
+		t.Fatalf("regex failure: %v", err)
+	}
+	if !isExpected {
+		t.Fatalf("hishtory update returned unexpected out=%#v", out)
+	}
+
+	// Update again and assert that it skipped the update
+	out = RunInteractiveBashCommands(t, `hishtory update`)
+	if strings.Count(out, "\n") != 1 || !strings.Contains(out, "is already installed") {
+		t.Fatalf("repeated hishtory update didn't skip the update, out=%#v", out)
+	}
 
 	// Then check the status command again to confirm the update worked
 	out = RunInteractiveBashCommands(t, `hishtory status`)
@@ -470,6 +485,13 @@ func TestUpdate(t *testing.T) {
 	}
 	if strings.Contains(out, "\nCommit Hash: Unknown\n") {
 		t.Fatalf("status command has unexpected output: %#v", out)
+	}
+
+	// Check that the history was preserved after the update
+	out = RunInteractiveBashCommands(t, "hishtory export")
+	expectedOutput := "set -emo pipefail\necho hello\nset -emo pipefail\nhishtory status\nset -emo pipefail\nhishtory update\nset -emo pipefail\nhishtory update\nset -emo pipefail\nhishtory status\nset -emo pipefail\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
 
