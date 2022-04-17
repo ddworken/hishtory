@@ -432,7 +432,7 @@ func Update() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse update info: %v", err)
 	}
-	if downloadData.Version == Version {
+	if downloadData.Version == "v0."+Version {
 		fmt.Printf("Latest version (v0.%s) is already installed\n", Version)
 	}
 	err = downloadFile("/tmp/hishtory-client", downloadData.LinuxAmd64Url)
