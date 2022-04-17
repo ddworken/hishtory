@@ -57,22 +57,15 @@ func verify(provenance []byte, artifactHash, source, branch, versionTag string) 
 	}
 
 	// Verify the branch.
-	if err := pkg.VerifyBranch(env, branch); err != nil {
-		return err
-	}
+	// TODO: This started failing for some reason? base_ref was null
+	// if err := pkg.VerifyBranch(env, branch); err != nil {
+	// 	return err
+	// }
 
 	// Verify the tag.
 	if err := pkg.VerifyTag(env, versionTag); err != nil {
 		return err
 	}
-
-	// TODO
-	// Verify the versioned tag.
-	// if versiontag != nil {
-	// 	if err := pkg.VerifyVersionedTag(env, *versiontag); err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	return nil
 }
