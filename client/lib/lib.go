@@ -446,7 +446,7 @@ func Update() error {
 	}
 
 	// Verify the SLSA attestation
-	err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl")
+	err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 	if err != nil {
 		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update: %v", err)
 	}

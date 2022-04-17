@@ -17,7 +17,7 @@ var defaultRekorAddr = "https://rekor.sigstore.dev"
 // Verify SLSA provenance of the downloaded binary
 // Copied from https://github.com/slsa-framework/slsa-verifier/blob/aee753f/main.go
 // Once the slsa-verifier supports being used as a library, this can be removed
-func verify(provenance []byte, artifactHash, source, branch string) error {
+func verify(provenance []byte, artifactHash, source, branch, versionTag string) error {
 	rClient, err := rekor.NewClient(defaultRekorAddr)
 	if err != nil {
 		return err
@@ -61,13 +61,10 @@ func verify(provenance []byte, artifactHash, source, branch string) error {
 		return err
 	}
 
-	// TODO
 	// Verify the tag.
-	// if tag != nil {
-	// 	if err := pkg.VerifyTag(env, *tag); err != nil {
-	// 		return err
-	// 	}
-	// }
+	if err := pkg.VerifyTag(env, versionTag); err != nil {
+		return err
+	}
 
 	// TODO
 	// Verify the versioned tag.
@@ -80,7 +77,7 @@ func verify(provenance []byte, artifactHash, source, branch string) error {
 	return nil
 }
 
-func verifyBinary(binaryPath, attestationPath string) error {
+func verifyBinary(binaryPath, attestationPath, versionTag string) error {
 	// TODO: Also verify that the version is newer and this isn't a downgrade
 	attestation, err := os.ReadFile(attestationPath)
 	if err != nil {
@@ -99,5 +96,5 @@ func verifyBinary(binaryPath, attestationPath string) error {
 	}
 	hash := hex.EncodeToString(hasher.Sum(nil))
 
-	return verify(attestation, hash, "github.com/ddworken/hishtory", "master")
+	return verify(attestation, hash, "github.com/ddworken/hishtory", "master", versionTag)
 }
