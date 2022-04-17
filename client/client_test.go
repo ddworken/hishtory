@@ -350,21 +350,21 @@ hishtory disable`)
 	}
 
 	// Query based on before: and cwd:
-	out = hishtoryQuery(t, `before:2025-07-02 cwd:/tmp`)
+	out = hishtoryQuery(t, `before:2125-07-02 cwd:/tmp`)
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
-	out = hishtoryQuery(t, `before:2025-07-02 cwd:tmp`)
+	out = hishtoryQuery(t, `before:2125-07-02 cwd:tmp`)
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
-	out = hishtoryQuery(t, `before:2025-07-02 cwd:mp`)
+	out = hishtoryQuery(t, `before:2125-07-02 cwd:mp`)
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on after: and cwd:
-	out = hishtoryQuery(t, `after:2020-07-02 cwd:/tmp`)
+	out = hishtoryQuery(t, `after:1980-07-02 cwd:/tmp`)
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
@@ -449,6 +449,11 @@ hishtory disable`)
 }
 
 func TestUpdate(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		// TODO: Once updates work for non-linux platforms, remove this
+		t.Skip()
+	}
+
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	userSecret := installHishtory(t, "")
@@ -622,9 +627,17 @@ echo hello2
 	}
 }
 
+func getPidofCommand() string {
+	if runtime.GOOS == "darwin" {
+		// MacOS doesn't have pidof by default
+		return "pgrep"
+	}
+	return "pidof"
+}
+
 func waitForBackgroundSavesToComplete(t *testing.T) {
 	for i := 0; i < 20; i++ {
-		cmd := exec.Command("pidof", "hishtory")
+		cmd := exec.Command(getPidofCommand(), "hishtory")
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Stdout = &stdout
