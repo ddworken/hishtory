@@ -434,6 +434,7 @@ func Update() error {
 	}
 	if downloadData.Version == "v0."+Version {
 		fmt.Printf("Latest version (v0.%s) is already installed\n", Version)
+		return nil
 	}
 	err = downloadFile("/tmp/hishtory-client", downloadData.LinuxAmd64Url)
 	if err != nil {
