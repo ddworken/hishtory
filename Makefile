@@ -9,12 +9,32 @@ acttest:
 	act push -j test
 
 release:
+	# Bump the version
 	expr `cat VERSION` + 1 > VERSION
 	git add VERSION
-	git commit -m "Bump hishtory version to v0.`cat VERSION`"
-	git tag v0.`cat VERSION`
-	git push
-	git push --tags
+	git commit -m "Release: start releasing v0.`cat VERSION`" --no-verify
+	# Release linux-amd64
+	cp .slsa-goreleaser-linux-amd64.yml .slsa-goreleaser.yml 
+	git add .slsa-goreleaser.yml 
+	git commit -m "Release linux-amd64 v0.`cat VERSION`" --no-verify
+	git tag v0.`cat VERSION`-linux-amd64
+	# Release darwin-amd64
+	cp .slsa-goreleaser-darwin-amd64.yml .slsa-goreleaser.yml 
+	git add .slsa-goreleaser.yml 
+	git commit -m "Release darwin-amd64 v0.`cat VERSION`" --no-verify
+	git tag v0.`cat VERSION`-darwin-amd64
+	# Release darwin-arm64
+	cp .slsa-goreleaser-darwin-arm64.yml .slsa-goreleaser.yml 
+	git add .slsa-goreleaser.yml 
+	git commit -m "Release darwin-arm64 v0.`cat VERSION`" --no-verify
+	git tag v0.`cat VERSION`-darwin-arm64
+	# Clean up by removing .slsa-goreleaser.yml 
+	rm .slsa-goreleaser.yml 
+	git add .slsa-goreleaser.yml 
+	git commit -m "Release: finish releasing v0.`cat VERSION`" --no-verify
+	# Push to trigger the releases
+	#git push
+	#git push --tags
 
 build-static:
 	docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile .

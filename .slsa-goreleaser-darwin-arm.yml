@@ -1,0 +1,12 @@
+version: 1
+
+flags:
+  - -trimpath
+
+goos: darwin
+goarch: arm
+
+binary: hishtory-{{ .OS }}-{{ .Arch }}
+
+ldflags:
+  - '{{ .Env.VERSION_LDFLAGS }}'
