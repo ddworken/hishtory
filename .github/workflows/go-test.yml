@@ -19,5 +19,3 @@ jobs:
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: make test
-    - name: Build docker contains
-      run: make build-api build-static
