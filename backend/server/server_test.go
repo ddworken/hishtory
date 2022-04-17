@@ -43,8 +43,7 @@ func TestESubmitThenQuery(t *testing.T) {
 
 	// Query for device id 1
 	w := httptest.NewRecorder()
-	// TODO: update this to include the user ID
-	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1, nil)
+	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	apiEQueryHandler(w, searchReq)
 	res := w.Result()
 	defer res.Body.Close()
@@ -73,8 +72,7 @@ func TestESubmitThenQuery(t *testing.T) {
 
 	// Same for device id 2
 	w = httptest.NewRecorder()
-	// TODO: update this to include the user ID
-	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2, nil)
+	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
 	apiEQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
@@ -102,8 +100,7 @@ func TestESubmitThenQuery(t *testing.T) {
 
 	// Bootstrap handler should return 2 entries, one for each device
 	w = httptest.NewRecorder()
-	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+data.UserId("key"), nil)
-	// TODO: update to include device_id
+	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+data.UserId("key")+"&device_id="+devId1, nil)
 	apiEBootstrapHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
