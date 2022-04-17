@@ -33,8 +33,8 @@ release:
 	git add .slsa-goreleaser.yml 
 	git commit -m "Release: finish releasing v0.`cat VERSION`" --no-verify
 	# Push to trigger the releases
-	#git push
-	#git push --tags
+	git push
+	git push --tags
 
 build-static:
 	docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile .

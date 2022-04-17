@@ -26,9 +26,13 @@ type Device struct {
 }
 
 type UpdateInfo struct {
-	LinuxAmd64Url            string `json:"linux_amd_64_url"`
-	LinuxAmd64AttestationUrl string `json:"linux_amd_64_attestation_url"`
-	Version                  string `json:"version"`
+	LinuxAmd64Url             string `json:"linux_amd_64_url"`
+	LinuxAmd64AttestationUrl  string `json:"linux_amd_64_attestation_url"`
+	DarwinAmd64Url            string `json:"darwin_amd_64_url"`
+	DarwinAmd64AttestationUrl string `json:"darwin_amd_64_attestation_url"`
+	DarwinArm64Url            string `json:"darwin_arm_64_url"`
+	DarwinArm64AttestationUrl string `json:"darwin_arm_64_attestation_url"`
+	Version                   string `json:"version"`
 }
 
 const (

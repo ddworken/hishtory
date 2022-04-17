@@ -33,4 +33,5 @@ jobs:
     - name: Autobuild
       uses: github/codeql-action/autobuild@v2
     - name: Perform CodeQL Analysis
+      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       uses: github/codeql-action/analyze@v2
