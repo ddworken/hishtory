@@ -14,10 +14,7 @@ import (
 	"github.com/ddworken/hishtory/shared"
 )
 
-var (
-	GitCommit string = "Unknown"
-	Version   string = "Unknown"
-)
+var GitCommit string = "Unknown"
 
 func main() {
 	if len(os.Args) == 1 {
@@ -44,7 +41,7 @@ func main() {
 	case "status":
 		config, err := lib.GetConfig()
 		lib.CheckFatalError(err)
-		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", Version, config.IsEnabled)
+		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
 		fmt.Printf("Secret Key: %s\n", config.UserSecret)
 		if len(os.Args) == 3 && os.Args[2] == "-v" {
 			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))

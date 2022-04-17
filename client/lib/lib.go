@@ -40,6 +40,8 @@ var ConfigShContents string
 //go:embed test_config.sh
 var TestConfigShContents string
 
+var Version string = "Unknown"
+
 func getCwd() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -421,17 +423,25 @@ func copyFile(src, dst string) error {
 
 func Update() error {
 	// Download the binary
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command("bash", "-c", `
-	curl -L -o /tmp/hishtory-client.intoto.jsonl https://api.hishtory.dev/download/hishtory-linux-amd64.intoto.jsonl; 
-	curl -L -o /tmp/hishtory-client https://api.hishtory.dev/download/hishtory-linux-amd64; 
-	chmod +x /tmp/hishtory-client`)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
+	respBody, err := ApiGet("/api/v1/download")
 	if err != nil {
-		return fmt.Errorf("failed to download update: %v, stdout=%#v, stderr=%#v", err, stdout.String(), stderr.String())
+		return fmt.Errorf("failed to download update info: %v", err)
+	}
+	var downloadData shared.UpdateInfo
+	err = json.Unmarshal(respBody, &downloadData)
+	if err != nil {
+		return fmt.Errorf("failed to parse update info: %v", err)
+	}
+	if downloadData.Version == Version {
+		fmt.Printf("Latest version (v0.%s) is already installed\n", Version)
+	}
+	err = downloadFile("/tmp/hishtory-client", downloadData.LinuxAmd64Url)
+	if err != nil {
+		return err
+	}
+	err = downloadFile("/tmp/hishtory-client.intoto.jsonl", downloadData.LinuxAmd64AttestationUrl)
+	if err != nil {
+		return err
 	}
 
 	// Verify the SLSA attestation
@@ -440,7 +450,7 @@ func Update() error {
 		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update: %v", err)
 	}
 
-	// Unlink the existing binary
+	// Unlink the existing binary so we can overwrite it even though it is still running
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
@@ -449,14 +459,37 @@ func Update() error {
 	if err != nil {
 		return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
 	}
+
 	// Install the new one
+	cmd := exec.Command("chmod", "+x", "/tmp/hishtory-client")
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed to chmod +x the update: %v", err)
+	}
 	cmd = exec.Command("/tmp/hishtory-client", "install")
 	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to update: %v", err)
 	}
-	fmt.Println("Successfully updated hishtory!")
+	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", Version, downloadData.Version)
 	return nil
+}
+
+func downloadFile(filename, url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to download file at %s to %s: %v", url, filename, err)
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to save file to %s: %v", filename, err)
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 func getServerHostname() string {

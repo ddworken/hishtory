@@ -461,6 +461,7 @@ func TestUpdate(t *testing.T) {
 
 	// Update
 	RunInteractiveBashCommands(t, `hishtory update`)
+	// TODO: assert on the output of ^
 
 	// Then check the status command again to confirm the update worked
 	out = RunInteractiveBashCommands(t, `hishtory status`)
