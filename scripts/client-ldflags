@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 GIT_HASH=$(git rev-parse HEAD)
-echo "-X main.GitCommit=$GIT_HASH -X client.lib.Version=`cat VERSION` -w -extldflags \"-static\""
+echo "-X main.GitCommit=$GIT_HASH -X lib.Version=`cat VERSION` -w -extldflags \"-static\""
