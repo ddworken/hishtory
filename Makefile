@@ -11,7 +11,7 @@ acttest:
 release:
 	expr `cat VERSION` + 1 > VERSION
 	git add VERSION
-	git commit -m "Bump hishtory version to `cat VERSION`"
+	git commit -m "Bump hishtory version to v0.`cat VERSION`"
 	git tag v0.`cat VERSION`
 	git push
 	git push --tags
