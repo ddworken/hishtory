@@ -3,7 +3,9 @@ version: 1
 flags:
   - -trimpath
 
-goos: linux
+goos: 
+  - linux
+  - darwin 
 goarch: amd64
 
 binary: hishtory-{{ .OS }}-{{ .Arch }}

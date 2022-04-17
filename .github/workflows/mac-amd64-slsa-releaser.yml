@@ -32,7 +32,6 @@ jobs:
     with:
       go-version: 1.17
       env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
-      env: "GOOS=darwin"
   # Upload to GitHub release.
   upload:
     permissions:
