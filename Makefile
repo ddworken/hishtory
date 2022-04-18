@@ -6,7 +6,7 @@ test:
 	HISHTORY_TEST=1 go test -p 1 ./...
 
 acttest:
-	act push -j test
+	act push -j test -e .github/push_event.json
 
 release:
 	# Bump the version

@@ -1,0 +1,13 @@
+{
+  "push": {
+    "head": {
+      "ref": "users/foo/update-action"
+    },
+    "base": {
+      "ref": "users/foo/update-action"
+    }
+  },
+  "head_commit": {
+      "message": "build latest"
+  }
+}
