@@ -80,5 +80,4 @@ When the user runs `hishtory query`, it retrieves all unread blobs from the back
 ## Pending Features
 
 * zsh support
-* mac support 
-* support for verifying the attestations tied to updates
+* easier install flow that is cross-platform

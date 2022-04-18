@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -40,6 +39,9 @@ var ConfigShContents string
 //go:embed test_config.sh
 var TestConfigShContents string
 
+//go:embed config.zsh
+var ConfigZshContents string
+
 var Version string = "Unknown"
 
 func getCwd() (string, error) {
@@ -61,10 +63,11 @@ func getCwd() (string, error) {
 }
 
 func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
+	shell := args[2]
 	var entry data.HistoryEntry
 
 	// exitCode
-	exitCode, err := strconv.Atoi(args[2])
+	exitCode, err := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, fmt.Errorf("failed to build history entry: %v", err)
 	}
@@ -85,9 +88,9 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.CurrentWorkingDirectory = cwd
 
 	// start time
-	nanos, err := parseCrossPlatformInt(args[4])
+	nanos, err := parseCrossPlatformInt(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[4], err)
+		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[5], err)
 	}
 	entry.StartTime = time.Unix(0, nanos)
 
@@ -95,22 +98,29 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.EndTime = time.Now()
 
 	// command
-	cmd, err := getLastCommand(args[3])
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	if shell == "bash" {
+		cmd, err := getLastCommand(args[4])
+		if err != nil {
+			return nil, fmt.Errorf("failed to build history entry: %v", err)
+		}
+		shouldBeSkipped, err := shouldSkipHiddenCommand(args[4])
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
+		}
+		if shouldBeSkipped {
+			return nil, nil
+		}
+		if strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return nil, nil
+		}
+		entry.Command = cmd
+	} else if shell == "zsh" {
+		// TODO: skip commands that start with a space
+		entry.Command = strings.TrimSpace(args[4])
+	} else {
+		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
 	}
-	shouldBeSkipped, err := shouldSkipHiddenCommand(args[3])
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
-	}
-	if shouldBeSkipped {
-		return nil, nil
-	}
-	if strings.HasPrefix(cmd, " ") {
-		// Don't save commands that start with a space
-		return nil, nil
-	}
-	entry.Command = cmd
 
 	// hostname
 	hostname, err := os.Hostname()
@@ -128,7 +138,7 @@ func parseCrossPlatformInt(data string) (int64, error) {
 }
 
 func getLastCommand(history string) (string, error) {
-	return strings.SplitN(strings.TrimSpace(history), " ", 2)[1][1:], nil
+	return strings.TrimSpace(strings.SplitN(strings.TrimSpace(history), " ", 2)[1]), nil
 }
 
 func shouldSkipHiddenCommand(historyLine string) (bool, error) {
@@ -339,6 +349,10 @@ func Install() error {
 	if err != nil {
 		return err
 	}
+	err = configureZshrc(homedir, path)
+	if err != nil {
+		return err
+	}
 	_, err = GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
@@ -347,9 +361,37 @@ func Install() error {
 	return nil
 }
 
+func configureZshrc(homedir, binaryPath string) error {
+	// Create the file we're going to source in our zshrc. Do this no matter what in case there are updates to it.
+	zshConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.zsh")
+	err := ioutil.WriteFile(zshConfigPath, []byte(ConfigZshContents), 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to write config.zsh file: %v", err)
+	}
+	// Check if we need to configure the zshrc
+	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".zshrc"))
+	if err != nil {
+		return fmt.Errorf("failed to read zshrc: %v", err)
+	}
+	if strings.Contains(string(bashrc), "# Hishtory Config:") {
+		return nil
+	}
+	// Add to zshrc
+	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to append to zshrc: %v", err)
+	}
+	defer f.Close()
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, shared.HISHTORY_PATH) + "\"\nsource " + zshConfigPath + "\n")
+	if err != nil {
+		return fmt.Errorf("failed to append to zshrc: %v", err)
+	}
+	return nil
+}
+
 func configureBashrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
-	bashConfigPath := path.Join(filepath.Dir(binaryPath), "config.sh")
+	bashConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.sh")
 	configContents := ConfigShContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		configContents = TestConfigShContents
@@ -372,7 +414,7 @@ func configureBashrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + filepath.Dir(binaryPath) + "\"\nsource " + bashConfigPath + "\n")
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, shared.HISHTORY_PATH) + "\"\nsource " + bashConfigPath + "\n")
 	if err != nil {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}

@@ -36,8 +36,8 @@ func TestBuildHistoryEntry(t *testing.T) {
 	defer shared.RunTestServer()()
 	shared.Check(t, Setup([]string{}))
 
-	// Test building an actual entry
-	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "120", " 123  ls /  ", "1641774958326745663"})
+	// Test building an actual entry for bash
+	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958326745663"})
 	shared.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
@@ -52,7 +52,29 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
 		t.Fatalf("history entry has unexpected cwd: %v", entry.CurrentWorkingDirectory)
 	}
-	if entry.Command != "ls /" {
+	if entry.Command != "ls /foo" {
+		t.Fatalf("history entry has unexpected command: %v", entry.Command)
+	}
+	if !strings.HasPrefix(entry.StartTime.Format(time.RFC3339), "2022-01-09T") && !strings.HasPrefix(entry.StartTime.Format(time.RFC3339), "2022-01-10T") {
+		t.Fatalf("history entry has incorrect date in the start time: %v", entry.StartTime.Format(time.RFC3339))
+	}
+	if entry.StartTime.Unix() != 1641774958 {
+		t.Fatalf("history entry has incorrect Unix time in the start time: %v", entry.StartTime.Unix())
+	}
+
+	// Test building an entry for zsh
+	entry, err = BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "zsh", "120", "ls /foo\n", "1641774958326745663"})
+	shared.Check(t, err)
+	if entry.ExitCode != 120 {
+		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
+	}
+	if entry.LocalUsername != user.Username {
+		t.Fatalf("history entry has unexpected user name: %v", entry.LocalUsername)
+	}
+	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
+		t.Fatalf("history entry has unexpected cwd: %v", entry.CurrentWorkingDirectory)
+	}
+	if entry.Command != "ls /foo" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
 	}
 	if !strings.HasPrefix(entry.StartTime.Format(time.RFC3339), "2022-01-09T") && !strings.HasPrefix(entry.StartTime.Format(time.RFC3339), "2022-01-10T") {

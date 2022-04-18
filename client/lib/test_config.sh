@@ -24,6 +24,6 @@ function PostCommand() {
   fi
 
   # Run after every prompt
-  hishtory saveHistoryEntry $EXIT_CODE "`history 1`" $HISHTORY_START_TIME
+  hishtory saveHistoryEntry bash $EXIT_CODE "`history 1`" $HISHTORY_START_TIME
 }
 PROMPT_COMMAND="PostCommand"

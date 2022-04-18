@@ -22,6 +22,7 @@ func ResetLocalState(t *testing.T) {
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "hishtory"))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.sh"))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.zsh"))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -34,11 +35,13 @@ func BackupAndRestore(t *testing.T) func() {
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory.bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh.bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh.bak"))
 	return func() {
 		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
 		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory.bak"), path.Join(homedir, HISHTORY_PATH, "hishtory"))
 		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh.bak"), path.Join(homedir, HISHTORY_PATH, "config.sh"))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh.bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh"))
 	}
 }
 
