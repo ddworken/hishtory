@@ -674,10 +674,6 @@ hishtory enable`, i))
 }
 
 func testExcludeHiddenCommand(t *testing.T, tester shellTester) {
-	if tester.ShellName() == "zsh" {
-		t.Skip()
-		// TODO
-	}
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -687,8 +683,8 @@ func testExcludeHiddenCommand(t *testing.T, tester shellTester) {
 echo hello2
  echo hidden`)
 	tester.RunInteractiveShell(t, " echo hidden")
-	out := hishtoryQuery(t, tester, "")
-	if strings.Count(out, "\n") != 5 && strings.Count(out, "\n") != 6 {
+	out := hishtoryQuery(t, tester, "-pipefail")
+	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	if strings.Count(out, "echo hello") != 2 {
@@ -705,7 +701,7 @@ echo hello2
 	}
 
 	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
-	expectedOutput := "echo hello1\necho hello2\nhishtory query\n"
+	expectedOutput := "echo hello1\necho hello2\n"
 	if out != expectedOutput {
 		t.Fatalf("hishtory export has unexpected output=%#v", out)
 	}

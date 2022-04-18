@@ -108,16 +108,17 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
 		}
 		if shouldBeSkipped {
-			return nil, nil
-		}
-		if strings.HasPrefix(cmd, " ") {
 			// Don't save commands that start with a space
 			return nil, nil
 		}
 		entry.Command = cmd
 	} else if shell == "zsh" {
-		// TODO: skip commands that start with a space
-		entry.Command = strings.TrimSpace(args[4])
+		cmd := strings.TrimSuffix(strings.TrimSuffix(args[4], "\n"), " ")
+		if strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return nil, nil
+		}
+		entry.Command = cmd
 	} else {
 		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
 	}

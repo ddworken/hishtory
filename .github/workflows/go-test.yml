@@ -20,4 +20,5 @@ jobs:
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           sudo apt-get install -y zsh || true
+          touch ~/.zshrc
           make test
