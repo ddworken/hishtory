@@ -528,7 +528,6 @@ func testUpdate(t *testing.T, tester shellTester) {
 		// TODO: Once updates work for non-linux platforms, remove this
 		t.Skip()
 	}
-	t.Skip() // TODO: currently failing because of the change in API
 
 	// Set up
 	defer shared.BackupAndRestore(t)()
@@ -572,7 +571,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 	if tester.ShellName() == "bash" {
 		// TODO
 		out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
-		expectedOutput := "echo hello\nhishtory status\n"
+		expectedOutput := "echo hello\nhishtory status\nhishtory update\nhishtory update\nhishtory status\n"
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 		}
