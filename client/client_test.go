@@ -351,8 +351,7 @@ func testAdvancedQuery(t *testing.T, tester shellTester) {
 	userSecret := installHishtory(t, tester, "")
 
 	// Run some commands we can query for
-	_, err := tester.RunInteractiveShellRelaxed(t, `set -m 
-echo nevershouldappear
+	_, err := tester.RunInteractiveShellRelaxed(t, `echo nevershouldappear
 notacommand
 cd /tmp/
 echo querybydir
@@ -490,11 +489,8 @@ hishtory disable`)
 	if strings.Contains(out, "echo") {
 		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
 	}
-	if tester.ShellName() == "bash" {
-		// TODO
-		if strings.Count(out, "\n") != 5 {
-			t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
-		}
+	if strings.Count(out, "\n") != 4 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Test filtering out with an atom
@@ -518,7 +514,7 @@ hishtory disable`)
 	if strings.Contains(out, "echo") {
 		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
 	}
-	if strings.Count(out, "\n") != 5 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 }
