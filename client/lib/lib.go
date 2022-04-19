@@ -139,7 +139,7 @@ func parseCrossPlatformInt(data string) (int64, error) {
 }
 
 func getLastCommand(history string) (string, error) {
-	return strings.TrimSpace(strings.SplitN(strings.TrimSpace(history), " ", 2)[1]), nil
+	return strings.SplitN(strings.SplitN(strings.TrimSpace(history), " ", 2)[1], " ", 2)[1][1:], nil
 }
 
 func shouldSkipHiddenCommand(historyLine string) (bool, error) {
