@@ -773,6 +773,37 @@ func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 	}
 }
 
+func testTableDisplayCwd(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Record a command
+	out := tester.RunInteractiveShell(t, `cd ~/.hishtory/
+echo hello
+cd /tmp/
+echo other`)
+	if out != "hello\nother\n" {
+		t.Fatalf("running echo hello had unexpected out=%#v", out)
+	}
+
+	// Query for it and check that the directory gets recorded correctly
+	out = hishtoryQuery(t, tester, "echo hello")
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
+	}
+	if !strings.Contains(out, "~/.hishtory/") {
+		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
+	}
+	out = hishtoryQuery(t, tester, "echo other")
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
+	}
+	if !strings.Contains(out, "/tmp/") {
+		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
+	}
+}
+
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	// Setup
 	defer shared.BackupAndRestore(t)()

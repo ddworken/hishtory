@@ -37,7 +37,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 	shared.Check(t, Setup([]string{}))
 
 	// Test building an actual entry for bash
-	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958326745663"})
+	entry, err := BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958"})
 	shared.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
