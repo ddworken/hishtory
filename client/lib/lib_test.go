@@ -63,7 +63,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 	}
 
 	// Test building an entry for zsh
-	entry, err = BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "zsh", "120", "ls /foo\n", "1641774958326745663"})
+	entry, err = BuildHistoryEntry([]string{"unused", "saveHistoryEntry", "zsh", "120", "ls /foo\n", "1641774958"})
 	shared.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
