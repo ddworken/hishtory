@@ -107,7 +107,7 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
 		}
-		if shouldBeSkipped {
+		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
 			// Don't save commands that start with a space
 			return nil, nil
 		}
