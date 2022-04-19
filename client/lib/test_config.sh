@@ -9,7 +9,7 @@ function PreCommand() {
   unset HISHTORY_AT_PROMPT
 
   # Run before every command
-  HISHTORY_START_TIME=`date +%s%N`
+  HISHTORY_START_TIME=`date +%s`
 }
 trap "PreCommand" DEBUG
 

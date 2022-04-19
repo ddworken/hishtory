@@ -88,11 +88,11 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.CurrentWorkingDirectory = cwd
 
 	// start time
-	nanos, err := parseCrossPlatformInt(args[5])
+	seconds, err := parseCrossPlatformInt(args[5])
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[5], err)
 	}
-	entry.StartTime = time.Unix(0, nanos)
+	entry.StartTime = time.Unix(seconds, 0)
 
 	// end time
 	entry.EndTime = time.Now()
