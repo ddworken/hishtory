@@ -121,6 +121,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testIntegrationWithNewDevice/"+tester.ShellName(), func(t *testing.T) { testIntegrationWithNewDevice(t, tester) })
 		t.Run("testHishtoryBackgroundSaving/"+tester.ShellName(), func(t *testing.T) { testHishtoryBackgroundSaving(t, tester) })
 		t.Run("testDisplayTable/"+tester.ShellName(), func(t *testing.T) { testDisplayTable(t, tester) })
+		t.Run("testTableDisplayCwd/"+tester.ShellName(), func(t *testing.T) { testTableDisplayCwd(t, tester) })
 		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) })
 	}
 }
@@ -433,12 +434,9 @@ hishtory disable`)
 	}
 
 	// Query based on after: and cwd:
-	// TODO: This fails on macos for some reason
-	if !(runtime.GOOS == "darwin" && os.Getenv("GITHUB_ACTIONS") != "") {
-		out = hishtoryQuery(t, tester, `after:1980-07-02 cwd:/tmp`)
-		if strings.Count(out, "\n") != 3 {
-			t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
-		}
+	out = hishtoryQuery(t, tester, `after:1980-07-02 cwd:/tmp`)
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on after: that returns no results
@@ -521,11 +519,6 @@ hishtory disable`)
 }
 
 func testUpdate(t *testing.T, tester shellTester) {
-	if runtime.GOOS != "linux" {
-		// TODO: Once updates work for non-linux platforms, remove this
-		t.Skip()
-	}
-
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -565,13 +558,10 @@ func testUpdate(t *testing.T, tester shellTester) {
 	}
 
 	// Check that the history was preserved after the update
-	if tester.ShellName() == "bash" {
-		// TODO
-		out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
-		expectedOutput := "echo hello\nhishtory status\nhishtory update\nhishtory update\nhishtory status\n"
-		if diff := cmp.Diff(expectedOutput, out); diff != "" {
-			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
-		}
+	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
+	expectedOutput := "echo hello\nhishtory status\nhishtory update\nhishtory update\nhishtory status\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
 
@@ -702,8 +692,6 @@ echo hello2
 		t.Fatalf("hishtory export has unexpected output=%#v", out)
 	}
 }
-
-// TODO: Timestamps for bash on macos appear to be currently broken, debug this. Example: https://github.com/ddworken/hishtory/runs/6059464342?check_suite_focus=true
 
 func getPidofCommand() string {
 	if runtime.GOOS == "darwin" {
