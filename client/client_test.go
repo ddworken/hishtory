@@ -121,6 +121,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testIntegrationWithNewDevice/"+tester.ShellName(), func(t *testing.T) { testIntegrationWithNewDevice(t, tester) })
 		t.Run("testHishtoryBackgroundSaving/"+tester.ShellName(), func(t *testing.T) { testHishtoryBackgroundSaving(t, tester) })
 		t.Run("testDisplayTable/"+tester.ShellName(), func(t *testing.T) { testDisplayTable(t, tester) })
+		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) })
 	}
 }
 
@@ -747,6 +748,28 @@ func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.Hist
 	shared.Check(t, err)
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
+	}
+}
+
+func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Record a command
+	out := tester.RunInteractiveShell(t, "echo hello")
+	if out != "hello\n" {
+		t.Fatalf("running echo hello had unexpected out=%#v", out)
+	}
+
+	// Query for it and check that the timestamp that gets recorded looks reasonable
+	out = hishtoryQuery(t, tester, "echo hello")
+	if strings.Count(out, "\n") != 2 {
+		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
+	}
+	expectedDate := time.Now().Format("Jan 2 2006")
+	if !strings.Contains(out, expectedDate) {
+		t.Fatalf("hishtory query has an incorrect date: out=%#v", out)
 	}
 }
 
