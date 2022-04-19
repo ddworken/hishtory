@@ -680,7 +680,7 @@ echo hello2
 	tester.RunInteractiveShell(t, " echo hidden")
 	out := hishtoryQuery(t, tester, "-pipefail")
 	if strings.Count(out, "\n") != 3 {
-		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v, bash hishtory file=%#v", strings.Count(out, "\n"), out, tester.RunInteractiveShell(t, "cat ~/.bash_history"))
 	}
 	if strings.Count(out, "echo hello") != 2 {
 		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
@@ -701,6 +701,8 @@ echo hello2
 		t.Fatalf("hishtory export has unexpected output=%#v", out)
 	}
 }
+
+// TODO: Timestamps for bash on macos appear to be currently broken, debug this. Example: https://github.com/ddworken/hishtory/runs/6059464342?check_suite_focus=true
 
 func getPidofCommand() string {
 	if runtime.GOOS == "darwin" {

@@ -552,6 +552,9 @@ func downloadFile(filename, url string) error {
 		return fmt.Errorf("failed to download file at %s to %s: %v", url, filename, err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to download file at %s due to resp_code=%d", url, resp.StatusCode)
+	}
 
 	out, err := os.Create(filename)
 	if err != nil {
@@ -560,6 +563,7 @@ func downloadFile(filename, url string) error {
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
+
 	return err
 }
 
