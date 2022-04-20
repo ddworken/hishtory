@@ -30,4 +30,5 @@ with open('/tmp/hishtory-client', 'wb') as f:
     f.write(hishtory_binary)
 os.system('chmod +x /tmp/hishtory-client')
 os.system('/tmp/hishtory-client install')
-print('Succesfully installed hishtory! Try running a command and then running `hishtory query`.')
+# TODO: Detect if ^ failed
+print('Succesfully installed hishtory! Open a new terminal, try running a command, and then running `hishtory query`.')
