@@ -102,17 +102,14 @@
           <div class="tab-pane active" id="install-first" role="tabpanel" aria-labelledby="home-tab">
             <br>
             To install hishtory on your first machine:<br>
-            <code>&nbsp;&nbsp;&nbsp;&nbsp;curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;chmod +x hishtory<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;./hishtory install</code>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;curl https://hishtory.dev/install | python3 -<br></code>
           </div>
           <div class="tab-pane" id="install-second" role="tabpanel" aria-labelledby="profile-tab">
             <br>
             To install hishtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run
-            <code>hishtory status</code> and copy your "Secret Key". Then to install it on your second machine:<br>
-            <code>&nbsp;&nbsp;&nbsp;&nbsp;curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;chmod +x hishtory<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;./hishtory install $YOUR_HISHTORY_SECRET</code>
+            <code>hishtory status</code>&nbsp;and copy your "Secret Key". Then to install it on your second machine:<br>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;curl https://hishtory.dev/install | python3 -<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;hishtory init $YOUR_HISHTORY_SECRET</code>
           </div>
         </div>
       </div><br>

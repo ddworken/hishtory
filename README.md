@@ -9,10 +9,7 @@
 To install `hishtory` on your first machine:
 
 ```bash
-curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64
-# Optional: Verify the binarie's SLSA L3 attestations from https://api.hishtory.dev/download/hishtory-linux-amd64.intoto.jsonl
-chmod +x hishtory
-./hishtory install
+curl https://hishtory.dev/install.py | python3 -
 ```
 
 At this point, `hishtory` is already persisting your shell history. Give it a try with `hishtory query` and see below for more details on the advanced query features. 
@@ -20,10 +17,8 @@ At this point, `hishtory` is already persisting your shell history. Give it a tr
 Then to install `hishtory` on your other computers, you need your secret key. Get this by running `hishtory status`. Once you have it, you follow similar steps to install hishtory on your other computers:
 
 ```bash
-curl -L -o hishtory https://api.hishtory.dev/download/hishtory-linux-amd64
-# Optional: Verify the binarie's SLSA L3 attestations from https://api.hishtory.dev/download/hishtory-linux-amd64.intoto.jsonl
-chmod +x hishtory
-./hishtory install $SECRET_KEY
+curl https://hishtory.dev/install.py | python3 -
+hishtory init $YOUR_HISHTORY_SECRET
 ```
 
 Now if you run `hishtory query` on first computer, you can automatically see the commands you've run on all your other computers!
