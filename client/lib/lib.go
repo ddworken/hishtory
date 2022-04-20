@@ -3,6 +3,7 @@ package lib
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -370,15 +371,15 @@ func configureZshrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
 	}
 	// Check if we need to configure the zshrc
-	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".zshrc"))
+	zshIsConfigured, err := isZshConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to read zshrc: %v", err)
+		return fmt.Errorf("failed to check ~/.zshrc: %v", err)
 	}
-	if strings.Contains(string(bashrc), "# Hishtory Config:") {
+	if zshIsConfigured {
 		return nil
 	}
 	// Add to zshrc
-	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
@@ -388,6 +389,18 @@ func configureZshrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
 	return nil
+}
+
+func isZshConfigured(homedir string) (bool, error) {
+	_, err := os.Stat(path.Join(homedir, ".zshrc"))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".zshrc"))
+	if err != nil {
+		return false, fmt.Errorf("failed to read zshrc: %v", err)
+	}
+	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
 }
 
 func configureBashrc(homedir, binaryPath string) error {
@@ -402,15 +415,15 @@ func configureBashrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to write config.sh file: %v", err)
 	}
 	// Check if we need to configure the bashrc
-	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
+	bashIsConfigured, err := isBashConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to read bashrc: %v", err)
+		return fmt.Errorf("failed to check ~/.bashrc: %v", err)
 	}
-	if strings.Contains(string(bashrc), "# Hishtory Config:") {
+	if bashIsConfigured {
 		return nil
 	}
 	// Add to bashrc
-	f, err := os.OpenFile(path.Join(homedir, ".bashrc"), os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path.Join(homedir, ".bashrc"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
@@ -420,6 +433,18 @@ func configureBashrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
 	return nil
+}
+
+func isBashConfigured(homedir string) (bool, error) {
+	_, err := os.Stat(path.Join(homedir, ".bashrc"))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
+	if err != nil {
+		return false, fmt.Errorf("failed to read bashrc: %v", err)
+	}
+	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
 }
 
 func installBinary(homedir string) (string, error) {

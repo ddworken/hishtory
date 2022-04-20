@@ -62,12 +62,16 @@ func buildServer() {
 			panic("failed to cd into hishtory dir!")
 		}
 	}
-	cmd := exec.Command("go", "build", "-o", "/tmp/server", "backend/server/server.go")
+	version, err := os.ReadFile("VERSION")
+	if err != nil {
+		panic(fmt.Sprintf("failed to read VERSION file: %v", err))
+	}
+	cmd := exec.Command("go", "build", "-o", "/tmp/server", "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		panic(fmt.Sprintf("failed to start to build server: %v, stderr=%#v, stdout=%#v", err, stderr.String(), stdout.String()))
 	}

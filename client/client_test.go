@@ -20,8 +20,6 @@ import (
 	"github.com/ddworken/hishtory/shared"
 )
 
-// TODO: Go through all the set -m that are sprinkled around and clean those up
-
 func TestMain(m *testing.M) {
 	defer shared.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -228,7 +226,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	if strings.Contains(out, "thisisnotrecorded") {
 		t.Fatalf("hishtory export contains a command that should not have been recorded, out=%#v", out)
 	}
-	expectedOutputWithoutKey := "hishtory status\nhishtory query\nset -m\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\"\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nhishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\n"
+	expectedOutputWithoutKey := "hishtory status\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\"\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nhishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\n"
 	expectedOutput := fmt.Sprintf(expectedOutputWithoutKey, userSecret)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -277,8 +275,7 @@ func testBasicUserFlow(t *testing.T, tester shellTester) string {
 	os.Setenv("FORCED_BANNER", "")
 
 	// Test recording commands
-	out, err = tester.RunInteractiveShellRelaxed(t, `set -m
-ls /a
+	out, err = tester.RunInteractiveShellRelaxed(t, `ls /a
 ls /bar
 ls /foo
 echo foo
@@ -827,8 +824,7 @@ go build -o /tmp/client
 	}
 
 	// Test recording commands
-	out, err = tester.RunInteractiveShellRelaxed(t, `set -m
-ls /a
+	out, err = tester.RunInteractiveShellRelaxed(t, `ls /a
 echo foo`)
 	if err != nil {
 		t.Fatal(err)
