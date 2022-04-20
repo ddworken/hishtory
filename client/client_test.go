@@ -780,14 +780,14 @@ echo other`)
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
-	if !strings.Contains(out, "~/.hishtory/") {
+	if !strings.Contains(out, "~/.hishtory") {
 		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
 	}
 	out = hishtoryQuery(t, tester, "echo other")
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
-	if !strings.Contains(out, "/tmp/") {
+	if !strings.Contains(out, "/tmp") {
 		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
 	}
 }
