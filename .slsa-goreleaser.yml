@@ -1,0 +1,12 @@
+version: 1
+
+flags:
+  - -trimpath
+
+goos: linux
+goarch: amd64
+
+binary: hishtory-{{ .OS }}-{{ .Arch }}
+
+ldflags:
+  - '{{ .Env.VERSION_LDFLAGS }}'
