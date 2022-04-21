@@ -521,20 +521,26 @@ func Update() error {
 	}
 
 	// Unlink the existing binary so we can overwrite it even though it is still running
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
-	}
-	err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
-	if err != nil {
-		return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
+	if runtime.GOOS == "linux" {
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to get user's home directory: %v", err)
+		}
+		err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
+		if err != nil {
+			return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
+		}
 	}
 
 	// Install the new one
 	cmd := exec.Command("chmod", "+x", "/tmp/hishtory-client")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to chmod +x the update: %v", err)
+		return fmt.Errorf("failed to chmod +x the update (out=%#v, err=%#v): %v", stdout.String(), stderr.String(), err)
 	}
 	cmd = exec.Command("/tmp/hishtory-client", "install")
 	err = cmd.Run()
