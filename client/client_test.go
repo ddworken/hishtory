@@ -881,8 +881,9 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// Query and check the table
 	out := hishtoryQuery(t, tester, "table")
-	expectedOutput := "Hostname   CWD     Timestamp                   Runtime  Exit Code  Command     \nlocalhost  ~/foo/  Apr 16 2022 01:03:16 -0700  24s      3          table_cmd2  \nlocalhost  /tmp/   Apr 16 2022 01:03:06 -0700  4s       2          table_cmd1  \n"
-	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory query table test mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	expectedOutput1 := "Hostname   CWD     Timestamp                   Runtime  Exit Code  Command     \nlocalhost  ~/foo/  Apr 16 2022 01:03:16 -0700  24s      3          table_cmd2  \nlocalhost  /tmp/   Apr 16 2022 01:03:06 -0700  4s       2          table_cmd1  \n"
+	expectedOutput2 := "Hostname   CWD     Timestamp                 Runtime  Exit Code  Command     \nlocalhost  ~/foo/  Apr 16 2022 01:03:16 PDT  24s      3          table_cmd2  \nlocalhost  /tmp/   Apr 16 2022 01:03:06 PDT  4s       2          table_cmd1  \n"
+	if out != expectedOutput1 && out != expectedOutput2 {
+		t.Fatalf("hishtory query table test mismatch out=%#v", out)
 	}
 }

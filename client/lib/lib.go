@@ -658,6 +658,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 		return nil, err
 	}
 	db.AutoMigrate(&data.HistoryEntry{})
+	db.Exec("PRAGMA journal_mode = WAL")
 	return db, nil
 }
 
