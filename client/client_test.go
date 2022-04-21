@@ -516,6 +516,9 @@ hishtory disable`)
 }
 
 func testUpdate(t *testing.T, tester shellTester) {
+	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
+		t.Skip("skipping on linux/arm64 which is unsupported")
+	}
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -710,7 +713,8 @@ func waitForBackgroundSavesToComplete(t *testing.T) {
 			t.Fatalf("failed to check if hishtory was running: %v, stdout=%#v, stderr=%#v", err, stdout.String(), stderr.String())
 		}
 		if !strings.Contains(stdout.String(), "\n") {
-			// pidof had no output, so hishtory isn't running and we're done waitng
+			// pidof had no output, so hishtory isn't running and we're done waiting
+			time.Sleep(1000 * time.Millisecond)
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
