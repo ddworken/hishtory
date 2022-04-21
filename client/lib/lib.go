@@ -22,7 +22,7 @@ import (
 
 	_ "embed" // for embedding config.sh
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite" // an alternate non-cgo-requiring sqlite driver
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
