@@ -550,9 +550,11 @@ func Update() error {
 		return fmt.Errorf("failed to chmod +x the update (out=%#v, err=%#v): %v", stdout.String(), stderr.String(), err)
 	}
 	cmd = exec.Command("/tmp/hishtory-client", "install")
+	stdout = bytes.Buffer{}
+	stderr = bytes.Buffer{}
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to update: %v", err)
+		return fmt.Errorf("failed to install update (out=%#v, err=%#v): %v", stdout.String(), stderr.String(), err)
 	}
 	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", Version, downloadData.Version)
 	return nil
