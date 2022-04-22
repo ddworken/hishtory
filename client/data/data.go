@@ -189,6 +189,8 @@ func parseAtomizedToken(token string) (string, interface{}, error) {
 	switch field {
 	case "user":
 		return "(local_username = ?)", val, nil
+	case "host":
+		fallthrough
 	case "hostname":
 		return "(instr(hostname, ?) > 0)", val, nil
 	case "cwd":
