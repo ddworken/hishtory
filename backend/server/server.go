@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -219,7 +220,43 @@ func updateReleaseVersion() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse github API response: %v", err)
 	}
-	ReleaseVersion = info.Name
+	latestVersionTag := info.Name
+	ReleaseVersion = decrementVersionIfInvalid(latestVersionTag)
+	return nil
+}
+
+func decrementVersionIfInvalid(initialVersion string) string {
+	// Decrements the version up to 5 times if the version doesn't have valid binaries yet.
+	version := initialVersion
+	for i := 0; i < 5; i++ {
+		updateInfo := buildUpdateInfo(version)
+		err := assertValidUpdate(updateInfo)
+		if err == nil {
+			fmt.Printf("Found a valid version: %v\n", version)
+			return version
+		}
+		fmt.Printf("Found %s to be an invalid version: %v\n", version, err)
+		version, err = decrementVersion(version)
+		if err != nil {
+			fmt.Printf("Failed to decrement version after finding the latest version was invalid: %v\n", err)
+			return initialVersion
+		}
+	}
+	fmt.Printf("Decremented the version 5 times and failed to find a valid version version number, initial version number: %v, last checked version number: %v\n", initialVersion, version)
+	return initialVersion
+}
+
+func assertValidUpdate(updateInfo shared.UpdateInfo) error {
+	urls := []string{updateInfo.LinuxAmd64Url, updateInfo.LinuxAmd64AttestationUrl, updateInfo.DarwinAmd64Url, updateInfo.DarwinAmd64AttestationUrl, updateInfo.DarwinArm64Url, updateInfo.DarwinArm64AttestationUrl}
+	for _, url := range urls {
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve URL %#v: %v", url, err)
+		}
+		if resp.StatusCode == 404 {
+			return fmt.Errorf("URL %#v returned 404", url)
+		}
+	}
 	return nil
 }
 
@@ -239,16 +276,35 @@ func InitDB() {
 	}
 }
 
-func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
-	updateInfo := shared.UpdateInfo{
-		LinuxAmd64Url:             fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-linux-amd64/hishtory-linux-amd64", ReleaseVersion),
-		LinuxAmd64AttestationUrl:  fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-linux-amd64/hishtory-linux-amd64.intoto.jsonl", ReleaseVersion),
-		DarwinAmd64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-amd64/hishtory-darwin-amd64", ReleaseVersion),
-		DarwinAmd64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-amd64/hishtory-darwin-amd64.intoto.jsonl", ReleaseVersion),
-		DarwinArm64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-arm64/hishtory-darwin-arm64", ReleaseVersion),
-		DarwinArm64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-arm64/hishtory-darwin-arm64.intoto.jsonl", ReleaseVersion),
-		Version:                   ReleaseVersion,
+func decrementVersion(version string) (string, error) {
+	if version == "UNKNOWN" {
+		return "", fmt.Errorf("cannot decrement UNKNOWN")
 	}
+	parts := strings.Split(version, ".")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid version: %s", version)
+	}
+	versionNumber, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", fmt.Errorf("invalid version: %s", version)
+	}
+	return parts[0] + "." + strconv.Itoa(versionNumber-1), nil
+}
+
+func buildUpdateInfo(version string) shared.UpdateInfo {
+	return shared.UpdateInfo{
+		LinuxAmd64Url:             fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-linux-amd64/hishtory-linux-amd64", version),
+		LinuxAmd64AttestationUrl:  fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-linux-amd64/hishtory-linux-amd64.intoto.jsonl", version),
+		DarwinAmd64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-amd64/hishtory-darwin-amd64", version),
+		DarwinAmd64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-amd64/hishtory-darwin-amd64.intoto.jsonl", version),
+		DarwinArm64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-arm64/hishtory-darwin-arm64", version),
+		DarwinArm64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s-darwin-arm64/hishtory-darwin-arm64.intoto.jsonl", version),
+		Version:                   version,
+	}
+}
+
+func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	updateInfo := buildUpdateInfo(ReleaseVersion)
 	resp, err := json.Marshal(updateInfo)
 	if err != nil {
 		panic(err)
