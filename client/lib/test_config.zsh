@@ -1,3 +1,5 @@
+# This is the same as config.zsh, except it doesn't run the save process in the background. This is crucial to making tests reproducible. 
+
 autoload -U add-zsh-hook
 add-zsh-hook zshaddhistory _hishtory_add
 add-zsh-hook precmd _hishtory_precmd
@@ -19,5 +21,5 @@ function _hishtory_precmd() {
         unset _hishtory_first_prompt
         return
     fi
-    (hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &)
+    hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time
 }

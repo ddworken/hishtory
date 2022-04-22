@@ -839,6 +839,7 @@ echo foo`)
 
 	// Test querying for all commands
 	waitForBackgroundSavesToComplete(t)
+	time.Sleep(time.Second)
 	out = hishtoryQuery(t, tester, "")
 	expected := []string{"echo foo", "ls /a"}
 	for _, item := range expected {

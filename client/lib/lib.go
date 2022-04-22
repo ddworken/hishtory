@@ -43,6 +43,9 @@ var TestConfigShContents string
 //go:embed config.zsh
 var ConfigZshContents string
 
+//go:embed test_config.zsh
+var TestConfigZshContents string
+
 var Version string = "Unknown"
 
 func getCwd() (string, error) {
@@ -366,7 +369,11 @@ func Install() error {
 func configureZshrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our zshrc. Do this no matter what in case there are updates to it.
 	zshConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.zsh")
-	err := ioutil.WriteFile(zshConfigPath, []byte(ConfigZshContents), 0o644)
+	configContents := ConfigZshContents
+	if os.Getenv("HISHTORY_TEST") != "" {
+		configContents = TestConfigZshContents
+	}
+	err := ioutil.WriteFile(zshConfigPath, []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
 	}
