@@ -21,7 +21,7 @@ jobs:
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
         run: |
-          echo $MACOS_CERTIFICATE | base64 —decode > certificate.p12
+          echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
           security create-keychain build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain build.keychain
