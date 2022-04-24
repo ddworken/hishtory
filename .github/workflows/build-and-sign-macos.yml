@@ -10,17 +10,13 @@ jobs:
     runs-on: macos-11.0
     steps:
       - uses: actions/checkout@v2
-
-      - name: Download latest executable executable
-        run: |
-          brew install jq 
-          export TAG_NAME=`curl https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
-          curl -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
-          curl -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
-      - name: Codesign executable
+      - name: Download and sign the latest executables
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
         run: |
+          export TAG_NAME=`curl https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
+          curl -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
+          curl -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
           echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
           security create-keychain build.keychain
           security default-keychain -s build.keychain
