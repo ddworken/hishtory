@@ -4,6 +4,7 @@ on:
     workflows: ["SLSA go releaser"]
     types:
       - completed
+  workflow_dispatch:
 jobs:
   macos:
     runs-on: macos-11.0
@@ -24,6 +25,6 @@ jobs:
           security create-keychain build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain build.keychain
-          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+          security import certificate.p12 -k build.keychain -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s  build.keychain
           /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-arm64 -v
