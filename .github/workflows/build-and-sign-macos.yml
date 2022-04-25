@@ -18,7 +18,7 @@ jobs:
           export TAG_NAME=`curl https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
           curl -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
           curl -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
-          echo $MACOS_CERTIFICATE | base64 —decode > certificate.p12
+          echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
           security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
