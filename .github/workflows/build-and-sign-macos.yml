@@ -13,14 +13,16 @@ jobs:
       - name: Download and sign the latest executables
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
           export TAG_NAME=`curl https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
           curl -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
           curl -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
-          echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
-          security create-keychain build.keychain
+          echo $MACOS_CERTIFICATE | base64 —decode > certificate.p12
+          security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain build.keychain
-          security import certificate.p12 -k build.keychain -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s  build.keychain
+          security unlock-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
+          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_CERTIFICATE_PWD build.keychain
           /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-arm64 -v
+          /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-amd64 -v
