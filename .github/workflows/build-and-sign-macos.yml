@@ -1,4 +1,4 @@
-name: Build and Sign macOS
+name: Sign macOS binaries
 on:
   workflow_run:
     workflows: ["SLSA go releaser"]
