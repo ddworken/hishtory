@@ -9,8 +9,8 @@ jobs:
   macos:
     runs-on: macos-11.0
     steps:
-      - uses: actions/checkout@v2
       - name: Download and sign the latest executables
+        uses: actions/checkout@v2
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
@@ -35,3 +35,19 @@ jobs:
           sha1sum hishtory-*
           echo "xattr:"
           xattr hishtory-darwin-arm64
+          echo "Exporting xattr"
+          xattr -p com.apple.cs.CodeDirectory hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
+          xattr -p com.apple.cs.CodeRequirements hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
+          xattr -p com.apple.cs.CodeRequirements-1 hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
+          xattr -p com.apple.cs.CodeSignature hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
+          xattr -p com.apple.cs.CodeDirectory hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
+          xattr -p com.apple.cs.CodeRequirements hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
+          xattr -p com.apple.cs.CodeRequirements-1 hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
+          xattr -p com.apple.cs.CodeSignature hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: 
+            - hishtory-darwin-arm64.xattr
+            - hishtory-darwin-amd64.xattr
