@@ -36,17 +36,10 @@ jobs:
           echo "xattr:"
           xattr hishtory-darwin-arm64
           echo "Exporting xattr"
-          xattr -p com.apple.cs.CodeDirectory hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
-          xattr -p com.apple.cs.CodeRequirements hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
-          xattr -p com.apple.cs.CodeRequirements-1 hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
-          xattr -p com.apple.cs.CodeSignature hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
-          xattr -p com.apple.cs.CodeDirectory hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
-          xattr -p com.apple.cs.CodeRequirements hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
-          xattr -p com.apple.cs.CodeRequirements-1 hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
-          xattr -p com.apple.cs.CodeSignature hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
+          xattr -lp hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
+          xattr -lp hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             hishtory-darwin-arm64.xattr
