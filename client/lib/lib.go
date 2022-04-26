@@ -2,7 +2,6 @@ package lib
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +13,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -23,6 +21,8 @@ import (
 	"time"
 
 	_ "embed" // for embedding config.sh
+
+	"golang.org/x/sys/unix"
 
 	"github.com/glebarez/sqlite" // an alternate non-cgo-requiring sqlite driver
 	"gorm.io/gorm"
@@ -719,52 +719,42 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	return respBody, nil
 }
 
-func parseXattr(xattrDump string) (map[string][]byte, error) {
-	m := make(map[string][]byte)
-	nextLineIsAttrName := true
-	attrName := ""
-	attrValue := make([]byte, 0)
-	for _, line := range strings.Split(xattrDump, "\n") {
-		if nextLineIsAttrName {
-			attrName = line[:len(line)-1]
-			nextLineIsAttrName = false
-		} else {
-			r := regexp.MustCompile("\\d{8}  (?P<hex>([A-Z0-9]{2} )+)\\s+\\|[^\\s]+\\|")
-			match := r.FindStringSubmatch(line)
-			if match != nil {
-				for i, name := range r.SubexpNames() {
-					if name == "hex" {
-						bytes, err := hex.DecodeString(strings.ReplaceAll(match[i], " ", ""))
-						if err != nil {
-							return nil, fmt.Errorf("failed to decode hex string %#v in xattr file: %v", match[i], err)
-						}
-						attrValue = append(attrValue, bytes...)
-					}
-				}
-			} else {
-				if strings.Contains(line, "|") {
-					return nil, fmt.Errorf("entered confusing state in xattr file on line %#v, file=%#v", line, xattrDump)
-				} else {
-					nextLineIsAttrName = true
-					m[attrName] = attrValue
-					attrValue = make([]byte, 0)
-				}
-			}
-		}
+type darwinCodeSignature struct {
+	Cd  string `json:"cd"`
+	Cr  string `json:"cr"`
+	Cr1 string `json:"cr1"`
+	Cs  string `json:"cs"`
+}
+
+func parseXattr(xattrDump string) (darwinCodeSignature, error) {
+	var xattr darwinCodeSignature
+	err := json.Unmarshal([]byte(xattrDump), &xattr)
+	if err != nil {
+		return xattr, fmt.Errorf("failed to parse xattr: %v", err)
 	}
-	return m, nil
+	return xattr, nil
 }
 
 func setXattr(filename, xattrDump string) {
-	m, err := parseXattr(xattrDump)
+	x, err := parseXattr(xattrDump)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse xattr file: %v", err))
 	}
-	for k, v := range m {
-		err := syscall.Setxattr(filename, k, v, 0)
-		if err != nil {
-			panic(fmt.Errorf("failed to set xattr %#v on file %#v: %v", k, filename, err))
-		}
+	err = unix.Setxattr(filename, "com.apple.cs.CodeDirectory", []byte(x.Cd), 0)
+	if err != nil {
+		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeDirectory on file %#v: %v", filename, err))
+	}
+	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements", []byte(x.Cr), 0)
+	if err != nil {
+		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements on file %#v: %v", filename, err))
+	}
+	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements-1", []byte(x.Cr1), 0)
+	if err != nil {
+		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements-1 on file %#v: %v", filename, err))
+	}
+	err = unix.Setxattr(filename, "com.apple.cs.CodeSignature", []byte(x.Cs), 0)
+	if err != nil {
+		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeSignature on file %#v: %v", filename, err))
 	}
 }
 
