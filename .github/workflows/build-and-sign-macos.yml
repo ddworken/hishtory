@@ -36,6 +36,8 @@ jobs:
           echo "xattr:"
           xattr hishtory-darwin-arm64
           xattr -lp hishtory-darwin-arm64
+          xattr -p com.apple.cs.CodeSignature hishtory-darwin-arm64
+          man xattr 
           echo "Exporting xattr"
           xattr -lp hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
           xattr -lp hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
