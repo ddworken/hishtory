@@ -32,6 +32,7 @@ release:
 	rm .slsa-goreleaser.yml 
 	git add .slsa-goreleaser.yml 
 	git commit -m "Release: finish releasing v0.`cat VERSION`" --no-verify
+	git tag v0.`cat VERSION`-xattr
 	# Tag the release
 	gh release create v0.`cat VERSION` --generate-notes
 	# Push to trigger the releases
