@@ -770,9 +770,17 @@ func setCodesigningXattrs(downloadInfo shared.UpdateInfo, filename string) error
 	} else {
 		return fmt.Errorf("setCodesigningXattrs only supports arm64 and amd64: %#v", runtime.GOARCH)
 	}
-	xattrDump, err := ApiGet(url)
+	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to get xattr dump: %v", err)
+		return fmt.Errorf("failed to GET %s: %v", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to GET %s: status_code=%d", url, resp.StatusCode)
+	}
+	xattrDump, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body from GET %s: %v", url, err)
 	}
 	setXattr(filename, string(xattrDump))
 	return nil
