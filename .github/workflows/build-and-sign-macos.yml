@@ -21,8 +21,6 @@ jobs:
           curl -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
           echo "Signing the binaries:"
           sha1sum hishtory-*
-          echo "xattr:"
-          xattr hishtory-darwin-arm64
           echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
           security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
           security default-keychain -s build.keychain
@@ -35,16 +33,32 @@ jobs:
           sha1sum hishtory-*
           echo "xattr:"
           xattr hishtory-darwin-arm64
-          xattr -p -l hishtory-darwin-arm64
-          xattr -p com.apple.cs.CodeSignature hishtory-darwin-arm64
-          man xattr 
-          echo "Exporting xattr"
-          xattr -p -l hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
-          xattr -p -l hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
+          echo "Exporting xattr for hishtory-darwin-arm64"
+          export CD=`xattr -p com.apple.cs.CodeDirectory hishtory-darwin-arm64`
+          export CR=`xattr -p com.apple.cs.CodeRequirements hishtory-darwin-arm64`
+          export CR1=`xattr -p com.apple.cs.CodeRequirements-1 hishtory-darwin-arm64`
+          export CS=`xattr -p com.apple.cs.CodeSignature hishtory-darwin-arm64`
+          jq --null-input \
+            --arg cd "$CD" \
+            --arg cr "$CR" \
+            --arg cr1 "$CR1" \
+            --arg cs "$CS" \
+            '{"cd": $cd, "cr": $cr, "cr1": $cr1, "cs": $cs}' > hishtory-darwin-arm64-xattr.json
+          echo "Exporting xattr for hishtory-darwin-amd64"
+          export CD=`xattr -p com.apple.cs.CodeDirectory hishtory-darwin-amd64`
+          export CR=`xattr -p com.apple.cs.CodeRequirements hishtory-darwin-amd64`
+          export CR1=`xattr -p com.apple.cs.CodeRequirements-1 hishtory-darwin-amd64`
+          export CS=`xattr -p com.apple.cs.CodeSignature hishtory-darwin-amd64`
+          jq --null-input \
+            --arg cd "$CD" \
+            --arg cr "$CR" \
+            --arg cr1 "$CR1" \
+            --arg cs "$CS" \
+            '{"cd": $cd, "cr": $cr, "cr1": $cr1, "cs": $cs}' > hishtory-darwin-amd64-xattr.json
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            hishtory-darwin-arm64.xattr
-            hishtory-darwin-amd64.xattr
+            hishtory-darwin-arm64-xattr.json
+            hishtory-darwin-amd64-xattr.json
