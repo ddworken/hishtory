@@ -5,6 +5,9 @@ on:
     types:
       - completed
   workflow_dispatch:
+  push:
+    tags:
+      - "*" 
 jobs:
   macos:
     runs-on: macos-11.0
@@ -15,6 +18,7 @@ jobs:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
+          sleep 900
           brew install md5sha1sum
           export TAG_NAME=`curl https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
           curl -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
