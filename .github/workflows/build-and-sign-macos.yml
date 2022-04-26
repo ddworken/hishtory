@@ -40,6 +40,7 @@ jobs:
           xattr -lp hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
       - name: Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             hishtory-darwin-arm64.xattr
