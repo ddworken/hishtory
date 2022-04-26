@@ -35,6 +35,7 @@ jobs:
           sha1sum hishtory-*
           echo "xattr:"
           xattr hishtory-darwin-arm64
+          xattr -lp hishtory-darwin-arm64
           echo "Exporting xattr"
           xattr -lp hishtory-darwin-arm64 >> hishtory-darwin-arm64.xattr
           xattr -lp hishtory-darwin-amd64 >> hishtory-darwin-amd64.xattr
