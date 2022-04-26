@@ -30,8 +30,10 @@ type UpdateInfo struct {
 	LinuxAmd64AttestationUrl  string `json:"linux_amd_64_attestation_url"`
 	DarwinAmd64Url            string `json:"darwin_amd_64_url"`
 	DarwinAmd64AttestationUrl string `json:"darwin_amd_64_attestation_url"`
+	DarwinAmd64Xattr          string `json:"darwin_amd_64_xattr_url"`
 	DarwinArm64Url            string `json:"darwin_arm_64_url"`
 	DarwinArm64AttestationUrl string `json:"darwin_arm_64_attestation_url"`
+	DarwinArm64Xattr          string `json:"darwin_arm_64_xattr_url"`
 	Version                   string `json:"version"`
 }
 
