@@ -133,7 +133,7 @@ func saveHistoryEntry() {
 	lib.CheckFatalError(err)
 	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
 	if err != nil {
-		if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") {
+		if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") || strings.Contains(err.Error(), "read: connection reset by peer") {
 			// TODO: Somehow handle this and don't completely lose it
 			lib.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
 		} else {
