@@ -140,6 +140,30 @@ func saveHistoryEntry() {
 			lib.CheckFatalError(err)
 		}
 	}
+
+	// Check if there is a pending dump request and reply to it if so
+	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
+	lib.CheckFatalError(err)
+	var dumpRequests []*shared.DumpRequest
+	err = json.Unmarshal(resp, &dumpRequests)
+	lib.CheckFatalError(err)
+	if len(dumpRequests) > 0 {
+		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
+		entries, err := data.Search(db, "", 0)
+		lib.CheckFatalError(err)
+		var encEntries []*shared.EncHistoryEntry
+		for _, entry := range entries {
+			enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+			lib.CheckFatalError(err)
+			encEntries = append(encEntries, &enc)
+		}
+		reqBody, err := json.Marshal(encEntries)
+		lib.CheckFatalError(err)
+		for _, dumpRequest := range dumpRequests {
+			_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId, "application/json", reqBody)
+			lib.CheckFatalError(err)
+		}
+	}
 }
 
 func export() {

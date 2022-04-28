@@ -134,7 +134,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err := ioutil.ReadAll(res.Body)
 	shared.Check(t, err)
-	var dumpRequests []*DumpRequest
+	var dumpRequests []*shared.DumpRequest
 	shared.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
@@ -154,7 +154,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
 	shared.Check(t, err)
-	dumpRequests = make([]*DumpRequest, 0)
+	dumpRequests = make([]*shared.DumpRequest, 0)
 	shared.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
@@ -219,7 +219,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
 	shared.Check(t, err)
-	dumpRequests = make([]*DumpRequest, 0)
+	dumpRequests = make([]*shared.DumpRequest, 0)
 	shared.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)

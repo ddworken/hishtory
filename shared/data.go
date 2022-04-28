@@ -25,6 +25,12 @@ type Device struct {
 	RegistrationDate time.Time `json:"registration_date"`
 }
 
+type DumpRequest struct {
+	UserId             string    `json:"user_id"`
+	RequestingDeviceId string    `json:"requesting_device_id"`
+	RequestTime        time.Time `json:"request_time"`
+}
+
 type UpdateInfo struct {
 	LinuxAmd64Url             string `json:"linux_amd_64_url"`
 	LinuxAmd64AttestationUrl  string `json:"linux_amd_64_attestation_url"`

@@ -46,12 +46,6 @@ func updateUsageData(userId, deviceId string) {
 	}
 }
 
-type DumpRequest struct {
-	UserId             string    `json:"user_id"`
-	RequestingDeviceId string    `json:"requesting_device_id"`
-	RequestTime        time.Time `json:"request_time"`
-}
-
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -128,14 +122,16 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
 	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: r.RemoteAddr, RegistrationDate: time.Now()})
-	GLOBAL_DB.Create(&DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
+	GLOBAL_DB.Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
 	updateUsageData(userId, deviceId)
 }
 
 func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
-	var dumpRequests []*DumpRequest
-	result := GLOBAL_DB.Where("user_id = ?", userId).Find(&dumpRequests)
+	deviceId := r.URL.Query().Get("device_id")
+	var dumpRequests []*shared.DumpRequest
+	// Filter out ones requested by the hishtory instance that sent this request
+	result := GLOBAL_DB.Where("user_id = ? AND requesting_device_id != ?", userId, deviceId).Find(&dumpRequests)
 	if result.Error != nil {
 		panic(fmt.Errorf("DB query error: %v", result.Error))
 	}
@@ -175,7 +171,7 @@ func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(fmt.Errorf("failed to execute transaction to add dumped DB: %v", err))
 	}
-	result := GLOBAL_DB.Delete(&DumpRequest{}, "user_id = ? AND requesting_device_id = ?", userId, requestingDeviceId)
+	result := GLOBAL_DB.Delete(&shared.DumpRequest{}, "user_id = ? AND requesting_device_id = ?", userId, requestingDeviceId)
 	if result.Error != nil {
 		panic(fmt.Errorf("failed to clear the dump request: %v", err))
 	}
@@ -206,7 +202,7 @@ func OpenDB() (*gorm.DB, error) {
 		db.AutoMigrate(&shared.EncHistoryEntry{})
 		db.AutoMigrate(&shared.Device{})
 		db.AutoMigrate(&UsageData{})
-		db.AutoMigrate(&DumpRequest{})
+		db.AutoMigrate(&shared.DumpRequest{})
 		db.Exec("PRAGMA journal_mode = WAL")
 		return db, nil
 	}
@@ -218,7 +214,7 @@ func OpenDB() (*gorm.DB, error) {
 	db.AutoMigrate(&shared.EncHistoryEntry{})
 	db.AutoMigrate(&shared.Device{})
 	db.AutoMigrate(&UsageData{})
-	db.AutoMigrate(&DumpRequest{})
+	db.AutoMigrate(&shared.DumpRequest{})
 	return db, nil
 }
 
