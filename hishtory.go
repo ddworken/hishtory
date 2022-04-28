@@ -132,7 +132,14 @@ func saveHistoryEntry() {
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	lib.CheckFatalError(err)
 	_, err = lib.ApiPost("/api/v1/esubmit", "application/json", jsonValue)
-	lib.CheckFatalError(err)
+	if err != nil {
+		if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") {
+			// TODO: Somehow handle this
+			lib.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
+		} else {
+			lib.CheckFatalError(err)
+		}
+	}
 }
 
 func export() {

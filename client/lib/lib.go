@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -629,7 +630,7 @@ var (
 	getLoggerOnce  sync.Once
 )
 
-func getLogger() *log.Logger {
+func GetLogger() *log.Logger {
 	getLoggerOnce.Do(func() {
 		homedir, err := os.UserHomeDir()
 		if err != nil {
@@ -654,7 +655,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
 	}
-	hishtoryLogger := getLogger()
+	hishtoryLogger := GetLogger()
 	newLogger := logger.New(
 		hishtoryLogger,
 		logger.Config{
@@ -696,7 +697,7 @@ func ApiGet(path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from GET %s: %v", path, err)
 	}
 	duration := time.Since(start)
-	getLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
+	GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -715,7 +716,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
 	}
 	duration := time.Since(start)
-	getLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
+	GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -735,24 +736,34 @@ func parseXattr(xattrDump string) (darwinCodeSignature, error) {
 	return xattr, nil
 }
 
+func parseHex(input string) []byte {
+	input = strings.ReplaceAll(input, " ", "")
+	input = strings.ReplaceAll(input, "\n", "")
+	data, err := hex.DecodeString(input)
+	if err != nil {
+		panic("TODO: wire this up")
+	}
+	return data
+}
+
 func setXattr(filename, xattrDump string) {
 	x, err := parseXattr(xattrDump)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse xattr file: %v", err))
 	}
-	err = unix.Setxattr(filename, "com.apple.cs.CodeDirectory", []byte(x.Cd), 0)
+	err = unix.Setxattr(filename, "com.apple.cs.CodeDirectory", parseHex(x.Cd), 0)
 	if err != nil {
 		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeDirectory on file %#v: %v", filename, err))
 	}
-	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements", []byte(x.Cr), 0)
+	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements", parseHex(x.Cr), 0)
 	if err != nil {
 		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements on file %#v: %v", filename, err))
 	}
-	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements-1", []byte(x.Cr1), 0)
+	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements-1", parseHex(x.Cr1), 0)
 	if err != nil {
 		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements-1 on file %#v: %v", filename, err))
 	}
-	err = unix.Setxattr(filename, "com.apple.cs.CodeSignature", []byte(x.Cs), 0)
+	err = unix.Setxattr(filename, "com.apple.cs.CodeSignature", parseHex(x.Cs), 0)
 	if err != nil {
 		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeSignature on file %#v: %v", filename, err))
 	}
