@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/user"
 	"strconv"
 	"strings"
 	"time"
@@ -45,7 +46,13 @@ func updateUsageData(userId, deviceId string) {
 	}
 }
 
-func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
+type DumpRequest struct {
+	UserId             string    `json:"user_id"`
+	RequestingDeviceId string    `json:"requesting_device_id"`
+	RequestTime        time.Time `json:"request_time"`
+}
+
+func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
@@ -55,7 +62,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
 	}
-	fmt.Printf("apiESubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
+	fmt.Printf("apiSubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	for _, entry := range entries {
 		updateUsageData(entry.UserId, entry.DeviceId)
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
@@ -67,7 +74,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 		if len(devices) == 0 {
 			panic(fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", entry.UserId))
 		}
-		fmt.Printf("apiESubmitHandler: Found %d devices\n", len(devices))
+		fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
 		for _, device := range devices {
 			entry.DeviceId = device.DeviceId
 			result := GLOBAL_DB.Create(&entry)
@@ -78,7 +85,7 @@ func apiESubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
+func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
 	updateUsageData(userId, deviceId)
@@ -92,7 +99,7 @@ func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		panic(fmt.Errorf("DB query error: %v", result.Error))
 	}
-	fmt.Printf("apiEQueryHandler: Found %d entries\n", len(historyEntries))
+	fmt.Printf("apiQueryHandler: Found %d entries\n", len(historyEntries))
 	resp, err := json.Marshal(historyEntries)
 	if err != nil {
 		panic(err)
@@ -100,29 +107,61 @@ func apiEQueryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-// TODO: bootstrap is a janky solution for the initial version of this. Long term, need to support deleting entries from the DB which means replacing bootstrap with a queued message sent to any live instances.
-func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
-	userId := r.URL.Query().Get("user_id")
-	deviceId := r.URL.Query().Get("device_id")
-	updateUsageData(userId, deviceId)
-	tx := GLOBAL_DB.Where("user_id = ?", userId)
-	var historyEntries []*shared.EncHistoryEntry
-	result := tx.Find(&historyEntries)
-	if result.Error != nil {
-		panic(fmt.Errorf("DB query error: %v", result.Error))
-	}
-	resp, err := json.Marshal(historyEntries)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(resp)
-}
-
-func apiERegisterHandler(w http.ResponseWriter, r *http.Request) {
+func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
 	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: r.RemoteAddr, RegistrationDate: time.Now()})
+	GLOBAL_DB.Create(&DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
 	updateUsageData(userId, deviceId)
+}
+
+func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+	var dumpRequests []*DumpRequest
+	result := GLOBAL_DB.Where("user_id = ?", userId).Find(&dumpRequests)
+	if result.Error != nil {
+		panic(fmt.Errorf("DB query error: %v", result.Error))
+	}
+	respBody, err := json.Marshal(dumpRequests)
+	if err != nil {
+		panic(fmt.Errorf("failed to JSON marshall the dump requests: %v", err))
+	}
+	w.Write(respBody)
+}
+
+func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+	requestingDeviceId := r.URL.Query().Get("requesting_device_id")
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	var entries []shared.EncHistoryEntry
+	err = json.Unmarshal(data, &entries)
+	if err != nil {
+		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
+	}
+	fmt.Printf("apiSubmitDumpHandler: received request containg %d EncHistoryEntry\n", len(entries))
+	err = GLOBAL_DB.Transaction(func(tx *gorm.DB) error {
+		for _, entry := range entries {
+			entry.DeviceId = requestingDeviceId
+			if entry.UserId != userId {
+				return fmt.Errorf("batch contains an entry with UserId=%#v, when the query param contained the user_id=%#v", entry.UserId, userId)
+			}
+			result := tx.Create(&entry)
+			if result.Error != nil {
+				return fmt.Errorf("failed to create entry: %v", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to execute transaction to add dumped DB: %v", err))
+	}
+	result := GLOBAL_DB.Delete(&DumpRequest{}, "user_id = ? AND requesting_device_id = ?", userId, requestingDeviceId)
+	if result.Error != nil {
+		panic(fmt.Errorf("failed to clear the dump request: %v", err))
+	}
 }
 
 func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +173,11 @@ func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func isTestEnvironment() bool {
-	return os.Getenv("HISHTORY_TEST") != ""
+	u, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	return os.Getenv("HISHTORY_TEST") != "" || u.Username == "david"
 }
 
 func OpenDB() (*gorm.DB, error) {
@@ -146,6 +189,8 @@ func OpenDB() (*gorm.DB, error) {
 		db.AutoMigrate(&shared.EncHistoryEntry{})
 		db.AutoMigrate(&shared.Device{})
 		db.AutoMigrate(&UsageData{})
+		db.AutoMigrate(&DumpRequest{})
+		db.Exec("PRAGMA journal_mode = WAL")
 		return db, nil
 	}
 
@@ -156,6 +201,7 @@ func OpenDB() (*gorm.DB, error) {
 	db.AutoMigrate(&shared.EncHistoryEntry{})
 	db.AutoMigrate(&shared.Device{})
 	db.AutoMigrate(&UsageData{})
+	db.AutoMigrate(&DumpRequest{})
 	return db, nil
 }
 
@@ -180,6 +226,7 @@ func cron() error {
 }
 
 func runBackgroundJobs() {
+	time.Sleep(5 * time.Second)
 	for {
 		err := cron()
 		if err != nil {
@@ -374,12 +421,13 @@ func cleanDatabase() error {
 
 func main() {
 	fmt.Println("Listening on localhost:8080")
-	http.Handle("/api/v1/esubmit", withLogging(apiESubmitHandler))
-	http.Handle("/api/v1/equery", withLogging(apiEQueryHandler))
-	http.Handle("/api/v1/ebootstrap", withLogging(apiEBootstrapHandler))
-	http.Handle("/api/v1/eregister", withLogging(apiERegisterHandler))
+	http.Handle("/api/v1/submit", withLogging(apiSubmitHandler))
+	http.Handle("/api/v1/get-dump-requests", withLogging(apiGetPendingDumpRequestsHandler))
+	http.Handle("/api/v1/submit-dump", withLogging(apiSubmitDumpHandler))
+	http.Handle("/api/v1/query", withLogging(apiQueryHandler))
+	http.Handle("/api/v1/register", withLogging(apiRegisterHandler))
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
-	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/api/v1/download", withLogging(apiDownloadHandler))
+	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

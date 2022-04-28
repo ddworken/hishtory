@@ -60,7 +60,7 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	respBody, err := lib.ApiGet("/api/v1/equery?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
+	respBody, err := lib.ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
 	if err != nil {
 		return err
 	}
@@ -131,10 +131,10 @@ func saveHistoryEntry() {
 	encEntry.DeviceId = config.DeviceId
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	lib.CheckFatalError(err)
-	_, err = lib.ApiPost("/api/v1/esubmit", "application/json", jsonValue)
+	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
 	if err != nil {
 		if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") {
-			// TODO: Somehow handle this
+			// TODO: Somehow handle this and don't completely lose it
 			lib.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
 		} else {
 			lib.CheckFatalError(err)
