@@ -97,6 +97,19 @@ func TestESubmitThenQuery(t *testing.T) {
 	if !data.EntryEquals(decEntry, entry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, entry)
 	}
+
+	// Bootstrap handler should return 2 entries, one for each device
+	w = httptest.NewRecorder()
+	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+data.UserId("key")+"&device_id="+devId1, nil)
+	apiEBootstrapHandler(w, searchReq)
+	res = w.Result()
+	defer res.Body.Close()
+	respBody, err = ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	if len(retrievedEntries) != 2 {
+		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
+	}
 }
 
 func TestDumpRequestAndResponse(t *testing.T) {

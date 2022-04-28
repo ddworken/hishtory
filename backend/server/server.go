@@ -85,6 +85,23 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+	deviceId := r.URL.Query().Get("device_id")
+	updateUsageData(userId, deviceId)
+	tx := GLOBAL_DB.Where("user_id = ?", userId)
+	var historyEntries []*shared.EncHistoryEntry
+	result := tx.Find(&historyEntries)
+	if result.Error != nil {
+		panic(fmt.Errorf("DB query error: %v", result.Error))
+	}
+	resp, err := json.Marshal(historyEntries)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(resp)
+}
+
 func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
