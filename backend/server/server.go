@@ -85,7 +85,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func apiEBootstrapHandler(w http.ResponseWriter, r *http.Request) {
+func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
 	updateUsageData(userId, deviceId)
@@ -442,6 +442,7 @@ func main() {
 	http.Handle("/api/v1/get-dump-requests", withLogging(apiGetPendingDumpRequestsHandler))
 	http.Handle("/api/v1/submit-dump", withLogging(apiSubmitDumpHandler))
 	http.Handle("/api/v1/query", withLogging(apiQueryHandler))
+	http.Handle("/api/v1/bootstrap", withLogging(apiBootstrapHandler))
 	http.Handle("/api/v1/register", withLogging(apiRegisterHandler))
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
 	http.Handle("/api/v1/download", withLogging(apiDownloadHandler))

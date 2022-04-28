@@ -101,7 +101,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	// Bootstrap handler should return 2 entries, one for each device
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+data.UserId("key")+"&device_id="+devId1, nil)
-	apiEBootstrapHandler(w, searchReq)
+	apiBootstrapHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
@@ -264,6 +264,10 @@ func TestDumpRequestAndResponse(t *testing.T) {
 }
 
 func TestUpdateReleaseVersion(t *testing.T) {
+	if !shared.IsOnline() {
+		t.Skip("skipping because we're currently offline")
+	}
+
 	// Set up
 	defer shared.BackupAndRestore(t)()
 	InitDB()

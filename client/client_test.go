@@ -514,6 +514,9 @@ hishtory disable`)
 }
 
 func testUpdate(t *testing.T, tester shellTester) {
+	if !shared.IsOnline() {
+		t.Skip("skipping because we're currently offline")
+	}
 	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
 		t.Skip("skipping on linux/arm64 which is unsupported")
 	}
@@ -731,7 +734,7 @@ func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.Hist
 	shared.Check(t, err)
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	shared.Check(t, err)
-	resp, err := http.Post("http://localhost:8080/api/v1/esubmit", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post("http://localhost:8080/api/v1/submit", "application/json", bytes.NewBuffer(jsonValue))
 	shared.Check(t, err)
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
@@ -792,6 +795,10 @@ echo other`)
 }
 
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+		t.Skip("skip testing background saving since it is too flakey on M1")
+	}
+
 	// Setup
 	defer shared.BackupAndRestore(t)()
 

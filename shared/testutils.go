@@ -3,6 +3,7 @@ package shared
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -103,7 +104,7 @@ func RunTestServer() func() {
 		if err != nil && err.Error() != "os: process already finished" {
 			panic(fmt.Sprintf("failed to kill server process: %v", err))
 		}
-		if strings.Contains(stderr.String()+stdout.String(), "failed to") {
+		if strings.Contains(stderr.String()+stdout.String(), "failed to") && IsOnline() {
 			panic(fmt.Sprintf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
 		if strings.Contains(stderr.String()+stdout.String(), "ERROR:") {
@@ -125,4 +126,9 @@ func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
 		_, filename, line, _ := runtime.Caller(1)
 		t.Fatalf("Unexpected error: %v at %s:%d! Additional info: %v", err, filename, line, additionalInfo)
 	}
+}
+
+func IsOnline() bool {
+	_, err := http.Get("https://hishtory.dev")
+	return err == nil
 }
