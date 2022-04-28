@@ -328,8 +328,6 @@ echo thisisrecorded`)
 	complexCommand := "echo hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\""
 	_, _ = tester.RunInteractiveShellRelaxed(t, complexCommand)
 
-	// TODO: add a test here that includes a double quote
-
 	// Query for it
 	out = hishtoryQuery(t, tester, "complex")
 	if strings.Count(out, "\n") != 2 {
