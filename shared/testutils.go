@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+const (
+	DB_WAL_PATH = DB_PATH + "-wal"
+	DB_SHM_PATH = DB_PATH + "-shm"
+)
+
 func ResetLocalState(t *testing.T) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
@@ -20,6 +25,7 @@ func ResetLocalState(t *testing.T) {
 	}
 
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, DB_PATH))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "hishtory"))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.sh"))
@@ -27,22 +33,30 @@ func ResetLocalState(t *testing.T) {
 }
 
 func BackupAndRestore(t *testing.T) func() {
+	return BackupAndRestoreWithId(t, "")
+}
+
+func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory.bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh.bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh.bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh"+id+"bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"))
 	return func() {
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory.bak"), path.Join(homedir, HISHTORY_PATH, "hishtory"))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh.bak"), path.Join(homedir, HISHTORY_PATH, "config.sh"))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh.bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh"))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "hishtory"))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.sh"))
+		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh"))
 	}
 }
 

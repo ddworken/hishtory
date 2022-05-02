@@ -118,6 +118,8 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+// TODO: Add a helper to get query params and require them since most of these are meant to be mandatory
+
 func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
@@ -183,6 +185,13 @@ func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 	forcedBanner := r.URL.Query().Get("forced_banner")
 	fmt.Printf("apiBannerHandler: commit_hash=%#v, device_id=%#v, forced_banner=%#v\n", commitHash, deviceId, forcedBanner)
 	w.Write([]byte(forcedBanner))
+}
+
+func wipeDbHandler(w http.ResponseWriter, r *http.Request) {
+	result := GLOBAL_DB.Exec("DELETE FROM enc_history_entries")
+	if result.Error != nil {
+		panic(result.Error)
+	}
 }
 
 func isTestEnvironment() bool {
@@ -443,5 +452,8 @@ func main() {
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
 	http.Handle("/api/v1/download", withLogging(apiDownloadHandler))
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
+	if isTestEnvironment() {
+		http.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
+	}
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

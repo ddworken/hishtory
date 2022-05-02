@@ -137,6 +137,13 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	}
 	entry.Hostname = hostname
 
+	// device ID
+	config, err := GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device ID when building history entry: %v", err)
+	}
+	entry.DeviceId = config.DeviceId
+
 	return &entry, nil
 }
 
@@ -686,15 +693,15 @@ func ApiGet(path string) ([]byte, error) {
 	start := time.Now()
 	resp, err := http.Get(getServerHostname() + path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to GET %s: %v", path, err)
+		return nil, fmt.Errorf("failed to GET %s%s: %v", getServerHostname(), path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to GET %s: status_code=%d", path, resp.StatusCode)
+		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", getServerHostname(), path, resp.StatusCode)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from GET %s: %v", path, err)
+		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
 	}
 	duration := time.Since(start)
 	GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
@@ -795,4 +802,8 @@ func setCodesigningXattrs(downloadInfo shared.UpdateInfo, filename string) error
 	}
 	setXattr(filename, string(xattrDump))
 	return nil
+}
+
+func IsOfflineError(err error) bool {
+	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") || strings.Contains(err.Error(), "read: connection reset by peer")
 }

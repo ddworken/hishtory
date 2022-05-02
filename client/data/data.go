@@ -33,6 +33,7 @@ type HistoryEntry struct {
 	ExitCode                int       `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
 	StartTime               time.Time `json:"start_time" gorm:"uniqueIndex:compositeindex"`
 	EndTime                 time.Time `json:"end_time" gorm:"uniqueIndex:compositeindex"`
+	DeviceId                string    `json:"device_id" gorm:"uniqueIndex:compositeindex"`
 }
 
 func sha256hmac(key, additionalData string) []byte {

@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 )
 
@@ -121,6 +122,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testDisplayTable/"+tester.ShellName(), func(t *testing.T) { testDisplayTable(t, tester) })
 		t.Run("testTableDisplayCwd/"+tester.ShellName(), func(t *testing.T) { testTableDisplayCwd(t, tester) })
 		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) })
+		t.Run("testRequestAndReceiveDbDump/"+tester.ShellName(), func(t *testing.T) { testRequestAndReceiveDbDump(t, tester) })
 	}
 }
 
@@ -893,3 +895,91 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 		t.Fatalf("hishtory query table test mismatch out=%#v", out)
 	}
 }
+
+func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+	secretKey := installHishtory(t, tester, "")
+
+	// Record two commands and then query for them
+	out := tester.RunInteractiveShell(t, `echo hello
+echo other
+echo tododeleteme`)
+	// if out != "hello\nother\n" {
+	// 	t.Fatalf("running echo had unexpected out=%#v", out)
+	// } // todo
+
+	// Query for it and check that the directory gets recorded correctly
+	time.Sleep(5 * time.Second)                                   // todo: delete this
+	fmt.Println(tester.RunInteractiveShell(t, `hishtory export`)) // todo: delete
+	out = hishtoryQuery(t, tester, "echo")
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
+	}
+	if !strings.Contains(out, "echo hello") {
+		t.Fatalf("hishtory query doesn't contain expected command, out=%#v", out)
+	}
+	if !strings.Contains(out, "echo other") {
+		t.Fatalf("hishtory query doesn't contain expected command, out=%#v", out)
+	}
+
+	// Back up this copy
+	restoreFirstInstallation := shared.BackupAndRestoreWithId(t, "-install1")
+
+	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
+	_, err := lib.ApiGet("/api/v1/wipe-db")
+	if err != nil {
+		t.Fatalf("failed to wipe the DB: %v", err)
+	}
+
+	// Install a new one (with the same secret key but a diff device id)
+	installHishtory(t, tester, secretKey)
+
+	// Check that the new one doesn't have the commands yet
+	out = hishtoryQuery(t, tester, "echo")
+	if strings.Count(out, "\n") != 1 {
+		t.Fatalf("hishtory query has unexpected number of lines, should contain no entries: out=%#v", out)
+	}
+	if strings.Contains(out, "echo hello") || strings.Contains("echo other", out) {
+		t.Fatalf("hishtory query contains unexpected command, out=%#v", out)
+	}
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	if out != "hishtory query echo\n" {
+		t.Fatalf("hishtory export has unexpected out=%#v", out)
+	}
+
+	// Restore the first copy
+	restoreSecondInstallation := shared.BackupAndRestoreWithId(t, "-install2")
+	restoreFirstInstallation()
+
+	// Confirm it still has the correct entries via hishtory export (and this runs a command to trigger it to dump the DB)
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	if out != "echo hello\necho other\nhishtory query echo\nhishtory query echo\n" {
+		t.Fatalf("running hishtory export had unexpected out=%#v", out)
+	}
+
+	// Restore the second copy and confirm it has the commands
+	restoreSecondInstallation()
+	fmt.Println(tester.RunInteractiveShell(t, `hishtory status -v`)) // todo: delete this
+	out = hishtoryQuery(t, tester, "ech")
+	if strings.Count(out, "\n") != 5 {
+		t.Fatalf("hishtory query has unexpected number of lines=%d: out=%#v", strings.Count(out, "\n"), out)
+	}
+	expected := []string{"echo hello", "echo other"}
+	for _, item := range expected {
+		if !strings.Contains(out, item) {
+			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+		if strings.Count(out, item) != 1 {
+			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
+		}
+	}
+
+	// And check hishtory export too for good measure
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	if out != "echo hello\necho other\nhishtory query echo\nhishtory query echo\nhishtory query ech\n" {
+		t.Fatalf("running hishtory export had unexpected out=%#v", out)
+	}
+}
+
+// TODO: write a test that runs hishtroy export | grep -v pipefail and then see if that shows up in query/export, I think there is weird behavior here

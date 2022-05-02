@@ -46,6 +46,7 @@ func main() {
 		if len(os.Args) == 3 && os.Args[2] == "-v" {
 			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))
 			fmt.Printf("Device ID: %s\n", config.DeviceId)
+			printDumpStatus(config)
 		}
 		fmt.Printf("Commit Hash: %s\n", GitCommit)
 	case "update":
@@ -53,6 +54,17 @@ func main() {
 	default:
 		lib.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
+}
+
+func printDumpStatus(config lib.ClientConfig) {
+	respBody, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret))
+	if err != nil {
+		lib.CheckFatalError(err)
+	}
+	var dumpRequests []*shared.DumpRequest
+	err = json.Unmarshal(respBody, &dumpRequests)
+	lib.CheckFatalError(err)
+	fmt.Printf("Dump Requests: %#v\n", dumpRequests)
 }
 
 func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
@@ -69,11 +81,13 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to load JSON response: %v", err)
 	}
+	// fmt.Printf("this device id=%s, user id=%s\n", config.DeviceId, data.UserId(config.UserSecret))
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
 		if err != nil {
 			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
 		}
+		// fmt.Printf("received entry: %#v\n", decEntry)
 		lib.AddToDbIfNew(db, decEntry)
 	}
 	return nil
@@ -82,7 +96,14 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 func query(query string) {
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
-	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
+	err = retrieveAdditionalEntriesFromRemote(db)
+	if err != nil {
+		if lib.IsOfflineError(err) {
+			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
+		} else {
+			lib.CheckFatalError(err)
+		}
+	}
 	lib.CheckFatalError(displayBannerIfSet())
 	data, err := data.Search(db, query, 25)
 	lib.CheckFatalError(err)
@@ -133,7 +154,7 @@ func saveHistoryEntry() {
 	lib.CheckFatalError(err)
 	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
 	if err != nil {
-		if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") || strings.Contains(err.Error(), "read: connection reset by peer") {
+		if lib.IsOfflineError(err) {
 			// TODO: Somehow handle this and don't completely lose it
 			lib.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
 		} else {
@@ -143,7 +164,14 @@ func saveHistoryEntry() {
 
 	// Check if there is a pending dump request and reply to it if so
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
-	lib.CheckFatalError(err)
+	if err != nil {
+		if lib.IsOfflineError(err) {
+			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
+			resp = []byte("[]")
+		} else {
+			lib.CheckFatalError(err)
+		}
+	}
 	var dumpRequests []*shared.DumpRequest
 	err = json.Unmarshal(resp, &dumpRequests)
 	lib.CheckFatalError(err)
@@ -160,7 +188,7 @@ func saveHistoryEntry() {
 		reqBody, err := json.Marshal(encEntries)
 		lib.CheckFatalError(err)
 		for _, dumpRequest := range dumpRequests {
-			_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId, "application/json", reqBody)
+			_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
 			lib.CheckFatalError(err)
 		}
 	}
@@ -169,7 +197,14 @@ func saveHistoryEntry() {
 func export() {
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
-	lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
+	err = retrieveAdditionalEntriesFromRemote(db)
+	if err != nil {
+		if lib.IsOfflineError(err) {
+			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
+		} else {
+			lib.CheckFatalError(err)
+		}
+	}
 	data, err := data.Search(db, "", 0)
 	lib.CheckFatalError(err)
 	for i := len(data) - 1; i >= 0; i-- {
