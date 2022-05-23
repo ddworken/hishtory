@@ -901,17 +901,23 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	defer shared.BackupAndRestore(t)()
 	secretKey := installHishtory(t, tester, "")
 
+	// Confirm there are no pending dump requests
+	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey))
+	if err != nil {
+		t.Fatalf("failed to get pending dump requests: %v", err)
+	}
+	if string(resp) != "[]" {
+		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
+	}
+
 	// Record two commands and then query for them
 	out := tester.RunInteractiveShell(t, `echo hello
-echo other
-echo tododeleteme`)
-	// if out != "hello\nother\n" {
-	// 	t.Fatalf("running echo had unexpected out=%#v", out)
-	// } // todo
+echo other`)
+	if out != "hello\nother\n" {
+		t.Fatalf("running echo had unexpected out=%#v", out)
+	}
 
 	// Query for it and check that the directory gets recorded correctly
-	time.Sleep(5 * time.Second)                                   // todo: delete this
-	fmt.Println(tester.RunInteractiveShell(t, `hishtory export`)) // todo: delete
 	out = hishtoryQuery(t, tester, "echo")
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
@@ -927,13 +933,22 @@ echo tododeleteme`)
 	restoreFirstInstallation := shared.BackupAndRestoreWithId(t, "-install1")
 
 	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
-	_, err := lib.ApiGet("/api/v1/wipe-db")
+	_, err = lib.ApiGet("/api/v1/wipe-db")
 	if err != nil {
 		t.Fatalf("failed to wipe the DB: %v", err)
 	}
 
 	// Install a new one (with the same secret key but a diff device id)
 	installHishtory(t, tester, secretKey)
+
+	// Confirm there are pending dump requests
+	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey))
+	if err != nil {
+		t.Fatalf("failed to get pending dump requests: %v", err)
+	}
+	if string(resp) == "[]" {
+		t.Fatalf("There are no pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
+	}
 
 	// Check that the new one doesn't have the commands yet
 	out = hishtoryQuery(t, tester, "echo")
@@ -954,13 +969,22 @@ echo tododeleteme`)
 
 	// Confirm it still has the correct entries via hishtory export (and this runs a command to trigger it to dump the DB)
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	if out != "echo hello\necho other\nhishtory query echo\nhishtory query echo\n" {
-		t.Fatalf("running hishtory export had unexpected out=%#v", out)
+	expectedOutput := "echo hello\necho other\nhishtory query echo\nhishtory query echo\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Confirm there are no pending dump requests
+	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey))
+	if err != nil {
+		t.Fatalf("failed to get pending dump requests: %v", err)
+	}
+	if string(resp) != "[]" {
+		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
 
 	// Restore the second copy and confirm it has the commands
 	restoreSecondInstallation()
-	fmt.Println(tester.RunInteractiveShell(t, `hishtory status -v`)) // todo: delete this
 	out = hishtoryQuery(t, tester, "ech")
 	if strings.Count(out, "\n") != 5 {
 		t.Fatalf("hishtory query has unexpected number of lines=%d: out=%#v", strings.Count(out, "\n"), out)
@@ -977,8 +1001,9 @@ echo tododeleteme`)
 
 	// And check hishtory export too for good measure
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	if out != "echo hello\necho other\nhishtory query echo\nhishtory query echo\nhishtory query ech\n" {
-		t.Fatalf("running hishtory export had unexpected out=%#v", out)
+	expectedOutput = "echo hello\necho other\nhishtory query echo\nhishtory query echo\nhishtory query ech\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
 

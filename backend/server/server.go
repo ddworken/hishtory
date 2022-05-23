@@ -123,8 +123,16 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	deviceId := r.URL.Query().Get("device_id")
+	var existingDevicesCount int64 = -1
+	result := GLOBAL_DB.Model(&shared.Device{}).Where("user_id = ?", userId).Count(&existingDevicesCount)
+	fmt.Printf("apiRegisterHandler: existingDevicesCount=%d\n", existingDevicesCount)
+	if result.Error != nil {
+		panic(result.Error)
+	}
 	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: r.RemoteAddr, RegistrationDate: time.Now()})
-	GLOBAL_DB.Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
+	if existingDevicesCount > 0 {
+		GLOBAL_DB.Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
+	}
 	updateUsageData(userId, deviceId)
 }
 

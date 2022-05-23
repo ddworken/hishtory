@@ -120,11 +120,17 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	// Register a first device for two different users
 	userId := data.UserId("dkey")
 	devId1 := uuid.Must(uuid.NewRandom()).String()
+	devId2 := uuid.Must(uuid.NewRandom()).String()
 	otherUser := data.UserId("dOtherkey")
 	otherDev1 := uuid.Must(uuid.NewRandom()).String()
+	otherDev2 := uuid.Must(uuid.NewRandom()).String()
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	apiRegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
+	apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev1+"&user_id="+otherUser, nil)
+	apiRegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev2+"&user_id="+otherUser, nil)
 	apiRegisterHandler(nil, deviceReq)
 
 	// Query for dump requests, there should be one for userId
@@ -140,7 +146,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
 	dumpRequest := dumpRequests[0]
-	if dumpRequest.RequestingDeviceId != devId1 {
+	if dumpRequest.RequestingDeviceId != devId2 {
 		t.Fatalf("unexpected device ID")
 	}
 	if dumpRequest.UserId != userId {
@@ -160,7 +166,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
 	dumpRequest = dumpRequests[0]
-	if dumpRequest.RequestingDeviceId != otherDev1 {
+	if dumpRequest.RequestingDeviceId != otherDev2 {
 		t.Fatalf("unexpected device ID")
 	}
 	if dumpRequest.UserId != otherUser {
@@ -189,6 +195,17 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
 	}
 
+	// And none for a missing user ID
+	w = httptest.NewRecorder()
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=", nil))
+	res = w.Result()
+	defer res.Body.Close()
+	respBody, err = ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	if string(respBody) != "[]" {
+		t.Fatalf("got unexpected respBody: %#v", string(respBody))
+	}
+
 	// Now submit a dump for userId
 	entry1Dec := data.MakeFakeHistoryEntry("ls ~/")
 	entry1, err := data.EncryptHistoryEntry("dkey", entry1Dec)
@@ -198,7 +215,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	shared.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{entry1, entry2})
 	shared.Check(t, err)
-	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId1, bytes.NewReader(reqBody))
+	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2, bytes.NewReader(reqBody))
 	apiSubmitDumpHandler(nil, submitReq)
 
 	// Check that the dump request is no longer there for userId
@@ -225,7 +242,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
 	dumpRequest = dumpRequests[0]
-	if dumpRequest.RequestingDeviceId != otherDev1 {
+	if dumpRequest.RequestingDeviceId != otherDev2 {
 		t.Fatalf("unexpected device ID")
 	}
 	if dumpRequest.UserId != otherUser {
@@ -234,7 +251,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 
 	// And finally, query to ensure that the dumped entries are in the DB
 	w = httptest.NewRecorder()
-	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
 	apiQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
@@ -246,7 +263,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
 	for _, dbEntry := range retrievedEntries {
-		if dbEntry.DeviceId != devId1 {
+		if dbEntry.DeviceId != devId2 {
 			t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 		}
 		if dbEntry.UserId != userId {

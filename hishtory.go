@@ -57,14 +57,23 @@ func main() {
 }
 
 func printDumpStatus(config lib.ClientConfig) {
-	respBody, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret))
+	dumpRequests, err := getDumpRequests(config)
+	lib.CheckFatalError(err)
+	fmt.Printf("Dump Requests: ")
+	for _, d := range dumpRequests {
+		fmt.Printf("%#v, ", *d)
+	}
+	fmt.Print("\n")
+}
+
+func getDumpRequests(config lib.ClientConfig) ([]*shared.DumpRequest, error) {
+	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
-		lib.CheckFatalError(err)
+		return nil, err
 	}
 	var dumpRequests []*shared.DumpRequest
-	err = json.Unmarshal(respBody, &dumpRequests)
-	lib.CheckFatalError(err)
-	fmt.Printf("Dump Requests: %#v\n", dumpRequests)
+	err = json.Unmarshal(resp, &dumpRequests)
+	return dumpRequests, err
 }
 
 func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
@@ -132,11 +141,13 @@ func saveHistoryEntry() {
 		log.Fatalf("hishtory cannot save an entry because the hishtory config file does not exist, try running `hishtory init` (err=%v)", err)
 	}
 	if !config.IsEnabled {
+		lib.GetLogger().Printf("Skipping saving a history entry because hishtory is disabled\n")
 		return
 	}
 	entry, err := lib.BuildHistoryEntry(os.Args)
 	lib.CheckFatalError(err)
 	if entry == nil {
+		lib.GetLogger().Printf("Skipping saving a history entry because we failed to build a history entry (was the command prefixed with a space?)\n")
 		return
 	}
 
@@ -163,18 +174,16 @@ func saveHistoryEntry() {
 	}
 
 	// Check if there is a pending dump request and reply to it if so
-	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
+	dumpRequests, err := getDumpRequests(config)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
-			resp = []byte("[]")
+			dumpRequests = []*shared.DumpRequest{}
+			lib.GetLogger().Printf("Failed to check for dump requests because the device is offline!")
 		} else {
 			lib.CheckFatalError(err)
 		}
 	}
-	var dumpRequests []*shared.DumpRequest
-	err = json.Unmarshal(resp, &dumpRequests)
-	lib.CheckFatalError(err)
 	if len(dumpRequests) > 0 {
 		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
 		entries, err := data.Search(db, "", 0)

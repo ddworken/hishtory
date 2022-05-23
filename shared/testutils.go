@@ -3,6 +3,7 @@ package shared
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -47,16 +48,23 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh"+id+"bak"))
+	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"))
 	return func() {
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "hishtory"))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.sh"))
-		_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh"))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH)))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH)))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH)))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH)))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "hishtory")))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.sh")))
+		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh")))
+	}
+}
+
+func checkError(err error) {
+	if err != nil {
+		_, filename, line, _ := runtime.Caller(1)
+		log.Fatalf("testutils fatal error at %s:%d: %v", filename, line, err)
 	}
 }
 
