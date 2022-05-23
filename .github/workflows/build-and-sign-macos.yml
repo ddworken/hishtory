@@ -16,15 +16,15 @@ jobs:
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
           brew install md5sha1sum
-          export TAG_NAME=`curl -L https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
+          export TAG_NAME=`curl -L https://api.github.com/repos/ddworken/hishtory/releases/latest  --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}'| jq -r .tag_name`
           if [ $TAG_NAME == "null" ]; then
-            echo "$TAG_NAME is null, this shouldn't happen!"
+            echo "TAG_NAME is null, this shouldn't happen!"
             curl -L https://api.github.com/repos/ddworken/hishtory/releases/latest
             exit 1 
           fi
           echo "Signing binaries for $TAG_NAME"
-          curl -L -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
-          curl -L -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-amd64/hishtory-darwin-amd64
+          curl -L -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64 --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}'
+          curl -L -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-amd64/hishtory-darwin-amd64 --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}'
           echo "Signing the binaries:"
           file hishtory-*
           sha1sum hishtory-*
