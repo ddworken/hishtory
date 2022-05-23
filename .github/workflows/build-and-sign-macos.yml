@@ -28,6 +28,17 @@ jobs:
           echo "Signing the binaries:"
           file hishtory-*
           sha1sum hishtory-*
+          if [[ `file hishtory-darwin-arm64` == *"ASCII text"* ]]; then
+            echo "hishtory-darwin-arm64 is ASCII text???"
+            cat hishtory-darwin-arm64
+            exit 1
+          fi
+          if [[ `file hishtory-darwin-amd64` == *"ASCII text"* ]]; then
+            echo "hishtory-darwin-amd64 is ASCII text???"
+            cat hishtory-darwin-amd64
+            exit 1
+          fi
+
           echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
           security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
           security default-keychain -s build.keychain
