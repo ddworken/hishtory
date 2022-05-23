@@ -19,7 +19,7 @@ jobs:
           export TAG_NAME=`curl -L https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
           echo "Signing binaries for $TAG_NAME"
           curl -L -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
-          curl -L -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
+          curl -L -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-amd64/hishtory-darwin-amd64
           echo "Signing the binaries:"
           file hishtory-*
           sha1sum hishtory-*
