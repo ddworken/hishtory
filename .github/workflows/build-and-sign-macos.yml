@@ -5,9 +5,6 @@ on:
     types:
       - completed
   workflow_dispatch:
-  push:
-    tags:
-      - "*" 
 jobs:
   macos:
     runs-on: macos-11.0
@@ -18,12 +15,12 @@ jobs:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
-          sleep 1200
           brew install md5sha1sum
           export TAG_NAME=`curl -L https://api.github.com/repos/ddworken/hishtory/releases/latest | jq -r .tag_name`
           curl -L -o hishtory-darwin-arm64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-arm64
           curl -L -o hishtory-darwin-amd64 https://github.com/ddworken/hishtory/releases/download/$TAG_NAME-darwin-arm64/hishtory-darwin-amd64
           echo "Signing the binaries:"
+          file hishtory-*
           sha1sum hishtory-*
           echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
           security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
