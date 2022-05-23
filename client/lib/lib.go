@@ -740,6 +740,9 @@ func parseXattr(xattrDump string) (darwinCodeSignature, error) {
 	if err != nil {
 		return xattr, fmt.Errorf("failed to parse xattr: %v", err)
 	}
+	if xattr.Cd == "" || xattr.Cr == "" || xattr.Cr1 == "" || xattr.Cs == "" {
+		return xattr, fmt.Errorf("xattr=%#v has empty attributes, failed to set code signatures", xattr)
+	}
 	return xattr, nil
 }
 
@@ -753,27 +756,28 @@ func parseHex(input string) []byte {
 	return data
 }
 
-func setXattr(filename, xattrDump string) {
+func setXattr(filename, xattrDump string) error {
 	x, err := parseXattr(xattrDump)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse xattr file: %v", err))
+		return fmt.Errorf("failed to parse xattr file: %v", err)
 	}
 	err = unix.Setxattr(filename, "com.apple.cs.CodeDirectory", parseHex(x.Cd), 0)
 	if err != nil {
-		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeDirectory on file %#v: %v", filename, err))
+		return fmt.Errorf("failed to set xattr com.apple.cs.CodeDirectory on file %#v: %v", filename, err)
 	}
 	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements", parseHex(x.Cr), 0)
 	if err != nil {
-		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements on file %#v: %v", filename, err))
+		return fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements on file %#v: %v", filename, err)
 	}
 	err = unix.Setxattr(filename, "com.apple.cs.CodeRequirements-1", parseHex(x.Cr1), 0)
 	if err != nil {
-		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements-1 on file %#v: %v", filename, err))
+		return fmt.Errorf("failed to set xattr com.apple.cs.CodeRequirements-1 on file %#v: %v", filename, err)
 	}
 	err = unix.Setxattr(filename, "com.apple.cs.CodeSignature", parseHex(x.Cs), 0)
 	if err != nil {
-		panic(fmt.Errorf("failed to set xattr com.apple.cs.CodeSignature on file %#v: %v", filename, err))
+		return fmt.Errorf("failed to set xattr com.apple.cs.CodeSignature on file %#v: %v", filename, err)
 	}
+	return nil
 }
 
 func setCodesigningXattrs(downloadInfo shared.UpdateInfo, filename string) error {
@@ -800,8 +804,7 @@ func setCodesigningXattrs(downloadInfo shared.UpdateInfo, filename string) error
 	if err != nil {
 		return fmt.Errorf("failed to read response body from GET %s: %v", url, err)
 	}
-	setXattr(filename, string(xattrDump))
-	return nil
+	return setXattr(filename, string(xattrDump))
 }
 
 func IsOfflineError(err error) bool {
