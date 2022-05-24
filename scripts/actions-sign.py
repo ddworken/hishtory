@@ -37,7 +37,7 @@ def notAscii(fn):
     if "ASCII text" in out:
         raise Exception(f"fn={fn} is of type {out}")
 
-def waitUntilPublished(url) -> None:
+def waitUntilPublished(url, output) -> None:
     startTime = time.time()
     while True:
         r = requests.get(url, headers={'authorization': f'bearer {os.environ["GITHUB_TOKEN"]}'})
