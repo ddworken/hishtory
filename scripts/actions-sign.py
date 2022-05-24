@@ -15,8 +15,8 @@ def main():
     print("file:")
     os.system("file hishtory-*")
 
-    assert notAscii("hishtory-darwin-arm64")
-    assert notAscii("hishtory-darwin-amd64")
+    notAscii("hishtory-darwin-arm64")
+    notAscii("hishtory-darwin-amd64")
 
     print("signing...")
     os.system("""
