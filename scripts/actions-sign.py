@@ -44,7 +44,7 @@ def waitUntilPublished(url, output) -> None:
         if r.status_code == 200:
             break 
         if (time.time() - startTime)/60 > 20:
-            raise Exception("failed to get url={url} (startTime={startTime}, endTime={time.time()}), status_code=" + str(r.status_code) + " body=" + str(r.content))
+            raise Exception(f"failed to get url={url} (startTime={startTime}, endTime={time.time()}), status_code=" + str(r.status_code) + " body=" + str(r.content))
         time.sleep(5)
     with open(output, 'wb') as f:
         f.write(r.content)
