@@ -55,7 +55,7 @@ jobs:
             hishtory-darwin-arm64-signed.json
             hishtory-darwin-amd64-signed.json
 
-  Upload to GitHub release.
+  # Upload to GitHub release.
   upload:
     permissions:
       contents: write
