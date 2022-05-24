@@ -43,8 +43,8 @@ def waitUntilPublished(url, output) -> None:
         r = requests.get(url, headers={'authorization': f'bearer {os.environ["GITHUB_TOKEN"]}'})
         if r.status_code == 200:
             break 
-        if (time.time() - startTime)/60 > 10:
-            raise Exception("failed to get url, status_code=" + str(r.status_code) + " body=" + str(r.content))
+        if (time.time() - startTime)/60 > 20:
+            raise Exception("failed to get url={url} (startTime={startTime}, endTime={time.time()}), status_code=" + str(r.status_code) + " body=" + str(r.content))
         time.sleep(5)
     with open(output, 'wb') as f:
         f.write(r.content)
