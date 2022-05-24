@@ -3,31 +3,34 @@ import requests
 import time 
 import subprocess
 
-version = os.environ['GITHUB_REF'].split('/')
-print("Downloading binaries (this may pause for a while)")
-waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-arm64/hishtory-darwin-arm64", "hishtory-darwin-arm64")
-waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-amd64/hishtory-darwin-amd64", "hishtory-darwin-amd64")
+def main():
+    version = os.environ['GITHUB_REF'].split('/')
+    print("Downloading binaries (this may pause for a while)")
+    waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-arm64/hishtory-darwin-arm64", "hishtory-darwin-arm64")
+    waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-amd64/hishtory-darwin-amd64", "hishtory-darwin-amd64")
 
-print("sha1sum:")
-os.system("sha1sum hishtory-*")
+    print("sha1sum:")
+    os.system("sha1sum hishtory-*")
 
-print("file:")
-os.system("file hishtory-*")
+    print("file:")
+    os.system("file hishtory-*")
 
-assert notAscii("hishtory-darwin-arm64")
-assert notAscii("hishtory-darwin-amd64")
+    assert notAscii("hishtory-darwin-arm64")
+    assert notAscii("hishtory-darwin-amd64")
 
-print("signing...")
-os.system("""
-echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
-security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
-security default-keychain -s build.keychain
-security unlock-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
-security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
-security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_CERTIFICATE_PWD build.keychain
-/usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-arm64 -v
-/usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-amd64 -v
-""")
+    print("signing...")
+    os.system("""
+    echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
+    security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
+    security default-keychain -s build.keychain
+    security unlock-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
+    security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_CERTIFICATE_PWD build.keychain
+    /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-arm64 -v
+    /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-amd64 -v
+    """)
+
+
 
 def notAscii(fn):
     out = subprocess.check_output(["file", fn]).decode('utf-8')
@@ -46,3 +49,5 @@ def waitUntilPublished(url) -> None:
     with open(output, 'wb') as f:
         f.write(r.content)
 
+if __name__ == '__main__':
+    main()
