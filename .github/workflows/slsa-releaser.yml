@@ -55,8 +55,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            hishtory-darwin-arm64-signed.json
-            hishtory-darwin-amd64-signed.json
+            hishtory-darwin-arm64
+            hishtory-darwin-amd64
 
   # Upload to GitHub release.
   upload:

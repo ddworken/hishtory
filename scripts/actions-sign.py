@@ -10,10 +10,10 @@ def main():
     waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-amd64/hishtory-darwin-amd64", "hishtory-darwin-amd64")
 
     print("sha1sum:")
-    os.system("sha1sum hishtory-*")
+    os.system("sha1sum hishtory-* 2>&1")
 
     print("file:")
-    os.system("file hishtory-*")
+    os.system("file hishtory-* 2>&1")
 
     notAscii("hishtory-darwin-arm64")
     notAscii("hishtory-darwin-amd64")
