@@ -21,6 +21,7 @@ def main():
     print("signing...")
     os.system("""
     cp hishtory-darwin-arm64 hishtory-darwin-arm64-unsigned
+    cp hishtory-darwin-amd64 hishtory-darwin-amd64-unsigned
     echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
     security create-keychain -p $MACOS_CERTIFICATE_PWD build.keychain
     security default-keychain -s build.keychain
