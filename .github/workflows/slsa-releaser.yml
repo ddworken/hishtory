@@ -38,6 +38,8 @@ jobs:
     runs-on: macos-11.0
     needs: 
       - upload 
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v2
       - name: Download and sign the latest executables
