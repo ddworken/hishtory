@@ -9,7 +9,7 @@ def main():
     waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-arm64/hishtory-darwin-arm64", "hishtory-darwin-arm64")
     waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-amd64/hishtory-darwin-amd64", "hishtory-darwin-amd64")
 
-    print("sha1sum:")
+    print("before sha1sum:")
     os.system("sha1sum hishtory-* 2>&1")
 
     print("file:")
@@ -29,6 +29,9 @@ def main():
     /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-arm64 -v
     /usr/bin/codesign --force -s 6D4E1575A0D40C370E294916A8390797106C8A6E hishtory-darwin-amd64 -v
     """)
+
+    print("after sha1sum:")
+    os.system("sha1sum hishtory-* 2>&1")
 
 
 

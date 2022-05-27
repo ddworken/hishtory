@@ -49,9 +49,8 @@ jobs:
         run: |
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           pip3 install requests
+          brew install md5sha1sum
           python3 scripts/actions-sign.py
-          echo $GITHUB_REF
-          export VERSION=${GITHUB_REF##*/}
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
