@@ -71,23 +71,35 @@ func verify(provenance []byte, artifactHash, source, branch, versionTag string) 
 }
 
 func verifyBinary(binaryPath, attestationPath, versionTag string) error {
+	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
+		return nil
+	}
+
 	// TODO: Also verify that the version is newer and this isn't a downgrade
 	attestation, err := os.ReadFile(attestationPath)
 	if err != nil {
 		return fmt.Errorf("failed to read attestation file: %v", err)
 	}
 
+	hash, err := getFileHash(binaryPath)
+	if err != nil {
+		return err
+	}
+
+	return verify(attestation, hash, "github.com/ddworken/hishtory", "master", versionTag)
+}
+
+func getFileHash(binaryPath string) (string, error) {
 	binaryFile, err := os.Open(binaryPath)
 	if err != nil {
-		return fmt.Errorf("failed to read binary for verification purposes: %v", err)
+		return "", fmt.Errorf("failed to read binary for verification purposes: %v", err)
 	}
 	defer binaryFile.Close()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, binaryFile); err != nil {
-		return fmt.Errorf("failed to hash binary: %v", err)
+		return "", fmt.Errorf("failed to hash binary: %v", err)
 	}
 	hash := hex.EncodeToString(hasher.Sum(nil))
-
-	return verify(attestation, hash, "github.com/ddworken/hishtory", "master", versionTag)
+	return hash, nil
 }
