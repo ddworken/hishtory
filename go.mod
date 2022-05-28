@@ -3,10 +3,15 @@ module github.com/ddworken/hishtory
 go 1.17
 
 require (
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/fatih/color v1.13.0
+	github.com/glebarez/sqlite v1.4.1
+	github.com/google/go-cmp v0.5.7
 	github.com/google/uuid v1.3.0
 	github.com/lib/pq v1.10.4
 	github.com/rodaine/table v1.0.1
+	github.com/sigstore/cosign v1.7.2
+	github.com/slsa-framework/slsa-verifier v0.0.0-20220414171409-a53fa7eba452
 	gorm.io/driver/postgres v1.3.1
 	gorm.io/driver/sqlite v1.2.6
 	gorm.io/gorm v1.23.3
@@ -35,7 +40,6 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
-	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
@@ -73,7 +77,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/glebarez/go-sqlite v1.15.1 // indirect
-	github.com/glebarez/sqlite v1.4.1 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-logr/logr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.21.2 // indirect
@@ -95,7 +98,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/go-containerregistry v0.8.1-0.20220209165246-a44adc326839 // indirect
 	github.com/google/go-github/v42 v42.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -175,13 +177,11 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.3.1 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
-	github.com/sigstore/cosign v1.7.2 // indirect
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7 // indirect
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3 // indirect
 	github.com/sigstore/sigstore v1.2.1-0.20220401110139-0e610e39782f // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
-	github.com/slsa-framework/slsa-verifier v0.0.0-20220414171409-a53fa7eba452 // indirect
 	github.com/spf13/afero v1.8.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.4.0 // indirect
