@@ -64,7 +64,8 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 func checkError(err error) {
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
-		log.Fatalf("testutils fatal error at %s:%d: %v", filename, line, err)
+		_, cf, cl, _ := runtime.Caller(1)
+		log.Fatalf("testutils fatal error at %s:%d (caller: %s:%d): %v", filename, line, cf, cl, err)
 	}
 }
 
