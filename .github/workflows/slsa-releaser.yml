@@ -33,7 +33,7 @@ jobs:
       go-version: 1.17
       env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       
-  # Sign the binaries (if this is a macos build)
+  # Sign the binaries (if this is a macos build) and upload the signed binaries
   macos_signer:
     runs-on: macos-11.0
     needs: 
@@ -60,6 +60,9 @@ jobs:
             hishtory-darwin-arm64-unsigned
             hishtory-darwin-amd64
             hishtory-darwin-amd64-unsigned
+      - name: Trigger the backend API service so it knows a release is finished
+        run: |
+          curl https://api.hishtory.dev/api/v1/trigger-cron
 
   # Upload to GitHub release.
   upload:
