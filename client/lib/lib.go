@@ -67,7 +67,12 @@ func getCwd() (string, error) {
 }
 
 func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
+	if len(args) < 6 {
+		GetLogger().Printf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
+		return nil, nil
+	}
 	shell := args[2]
+
 	var entry data.HistoryEntry
 
 	// exitCode
