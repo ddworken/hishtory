@@ -33,14 +33,13 @@ jobs:
       config-file: .slsa-goreleaser-linux-amd64.yml
       go-version: 1.17
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
-  build:
+  build-darwin-amd64:
     permissions:
       id-token: write
       contents: write
     needs: args
     uses: slsa-framework/slsa-github-generator-go/.github/workflows/slsa3_builder.yml@4d76ac56607d5364b3a48bd0a1680259be09e3a9 
     with:
-      config-file: .slsa-goreleaser-darwin-amd64.yml
       go-version: 1.17
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
   build-darwin-arm64:
@@ -92,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: 
       - build-linux-amd64 
-      - build 
+      - build-darwin-amd64 
       - build-darwin-arm64 
     steps:
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
