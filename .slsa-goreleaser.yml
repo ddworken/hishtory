@@ -7,7 +7,7 @@ flags:
   - -trimpath
 
 goos: darwin
-goarch: amd64
+goarch: arm64
 
 binary: hishtory-{{ .Os }}-{{ .Arch }}
 
