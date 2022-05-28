@@ -33,7 +33,7 @@ jobs:
       config-file: .slsa-goreleaser-linux-amd64.yml
       go-version: 1.17
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
-  build-darwin-amd64:
+  build:
     permissions:
       id-token: write
       contents: write
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: 
       - build-linux-amd64 
-      - build-darwin-amd64 
+      - build 
       - build-darwin-arm64 
     steps:
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
