@@ -629,7 +629,7 @@ func assertIdenticalBinaries(bin1Path, bin2Path string) error {
 		return fmt.Errorf("unsigned binaries have different lengths (len(%s)=%d, len(%s)=%d)", bin1Path, len(bin1), bin2Path, len(bin2))
 	}
 	differences := make([]string, 0)
-	for i, _ := range bin1 {
+	for i := range bin1 {
 		b1 := bin1[i]
 		b2 := bin2[i]
 		if b1 != b2 {
@@ -640,7 +640,7 @@ func assertIdenticalBinaries(bin1Path, bin2Path string) error {
 	for _, d := range differences {
 		logger.Printf("comparing binaries: %#v\n", d)
 	}
-	if len(differences) > 2 {
+	if len(differences) > 5 {
 		return fmt.Errorf("found %d differences in the binary", len(differences))
 	}
 	return nil
@@ -810,13 +810,6 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	duration := time.Since(start)
 	GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
 	return respBody, nil
-}
-
-type darwinCodeSignature struct {
-	Cd  string `json:"cd"`
-	Cr  string `json:"cr"`
-	Cr1 string `json:"cr1"`
-	Cs  string `json:"cs"`
 }
 
 func IsOfflineError(err error) bool {
