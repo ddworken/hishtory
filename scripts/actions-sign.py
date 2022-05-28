@@ -6,8 +6,8 @@ import subprocess
 def main():
     version = os.environ['GITHUB_REF'].split('/')[-1].split("-")[0]
     print("Downloading binaries (this may pause for a while)")
-    waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-arm64/hishtory-darwin-arm64", "hishtory-darwin-arm64")
-    waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}-darwin-amd64/hishtory-darwin-amd64", "hishtory-darwin-amd64")
+    waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}/hishtory-darwin-arm64", "hishtory-darwin-arm64")
+    waitUntilPublished(f"https://github.com/ddworken/hishtory/releases/download/{version}/hishtory-darwin-amd64", "hishtory-darwin-amd64")
 
     print("before sha1sum:")
     os.system("sha1sum hishtory-* 2>&1")
