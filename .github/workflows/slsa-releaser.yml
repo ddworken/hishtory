@@ -26,7 +26,7 @@ jobs:
   build:
     permissions:
       id-token: write
-      contents: read
+      contents: write
     needs: args
     uses: slsa-framework/slsa-github-generator-go/.github/workflows/slsa3_builder.yml@4d76ac56607d5364b3a48bd0a1680259be09e3a9 
     with:
