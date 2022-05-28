@@ -9,7 +9,7 @@ flags:
 goos: linux
 goarch: amd64
 
-binary: hishtory-{{ .OS }}-{{ .Arch }}
+binary: hishtory-{{ .Os }}-{{ .Arch }}
 
 ldflags:
   - '{{ .Env.VERSION_LDFLAGS }}'
