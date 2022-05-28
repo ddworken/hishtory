@@ -6,7 +6,7 @@ env:
 flags:
   - -trimpath
 
-goos: linux
+goos: darwin
 goarch: amd64
 
 binary: hishtory-{{ .Os }}-{{ .Arch }}
