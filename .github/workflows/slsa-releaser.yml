@@ -37,16 +37,22 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    needs: args
+    needs: 
+      - args 
+      - build-linux-amd64
     uses: slsa-framework/slsa-github-generator-go/.github/workflows/slsa3_builder.yml@4d76ac56607d5364b3a48bd0a1680259be09e3a9 
     with:
+      config-file: .slsa-goreleaser-darwin-amd64.yml
       go-version: 1.17
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
   build-darwin-arm64:
     permissions:
       id-token: write
       contents: write
-    needs: args
+    needs: 
+      - args 
+      - build-linux-amd64
+      - build-darwin-amd64
     uses: slsa-framework/slsa-github-generator-go/.github/workflows/slsa3_builder.yml@4d76ac56607d5364b3a48bd0a1680259be09e3a9 
     with:
       config-file: .slsa-goreleaser-darwin-arm64.yml
