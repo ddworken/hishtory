@@ -37,23 +37,24 @@ func verify(provenance []byte, artifactHash, source, branch, versionTag string) 
 	// Verify the provenance and return the signing certificate.
 	cert, err := pkg.FindSigningCertificate(context.Background(), uuids, *env, rClient)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to locate signing certificate: %v", err)
 	}
 
 	// Get the workflow info given the certificate information.
 	workflowInfo, err := pkg.GetWorkflowInfoFromCertificate(cert)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to verify workflow info: %v", err)
 	}
 
 	// Unpack and verify info in the provenance, including the Subject Digest.
 	if err := pkg.VerifyProvenance(env, artifactHash); err != nil {
-		return err
+		return fmt.Errorf("failed to verify provenance: %v", err)
 	}
 
 	// Verify the workflow identity.
+	fmt.Printf("source=%#v, workflowInfo=%#v\n", source, workflowInfo)
 	if err := pkg.VerifyWorkflowIdentity(workflowInfo, source); err != nil {
-		return err
+		return fmt.Errorf("failed to verify workflow identity: %v", err)
 	}
 
 	// Verify the branch.
@@ -64,7 +65,7 @@ func verify(provenance []byte, artifactHash, source, branch, versionTag string) 
 
 	// Verify the tag.
 	if err := pkg.VerifyTag(env, versionTag); err != nil {
-		return err
+		return fmt.Errorf("failed to verify tag: %v", err)
 	}
 
 	return nil
