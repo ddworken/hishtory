@@ -123,6 +123,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testTableDisplayCwd/"+tester.ShellName(), func(t *testing.T) { testTableDisplayCwd(t, tester) })
 		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) })
 		t.Run("testRequestAndReceiveDbDump/"+tester.ShellName(), func(t *testing.T) { testRequestAndReceiveDbDump(t, tester) })
+		t.Run("testInstallViaPythonScript/"+tester.ShellName(), func(t *testing.T) { testInstallViaPythonScript(t, tester) })
 	}
 }
 
@@ -1008,6 +1009,40 @@ echo other`)
 	expectedOutput = "echo hello\necho other\nhishtory query echo\nhishtory query echo\nhishtory query ech\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
+func testInstallViaPythonScript(t *testing.T, tester shellTester) {
+	// Set up
+	defer shared.BackupAndRestore(t)()
+
+	// Install via the python script
+	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`)
+	if !strings.Contains(out, "Succesfully installed hishtory") {
+		t.Fatalf("unexpected output when installing hishtory, out=%#v", out)
+	}
+	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
+	matches := r.FindStringSubmatch(out)
+	if len(matches) != 2 {
+		t.Fatalf("Failed to extract userSecret from output: matches=%#v", matches)
+	}
+	userSecret := matches[1]
+
+	// Test the status subcommand
+	downloadData, err := lib.GetDownloadData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = tester.RunInteractiveShell(t, `hishtory status`)
+	expectedOut := fmt.Sprintf("Hishtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)
+	if !strings.Contains(out, expectedOut) {
+		t.Fatalf("status command has unexpected output: actual=%#v, expected=%#v", out, expectedOut)
+	}
+
+	// And test that it recorded that command
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	if out != "hishtory status\n" {
+		t.Fatalf("unexpected output from hishtory export=%#v", out)
 	}
 }
 

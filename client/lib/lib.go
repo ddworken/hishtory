@@ -514,16 +514,24 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func Update() error {
-	// Download the binary
+func GetDownloadData() (shared.UpdateInfo, error) {
 	respBody, err := ApiGet("/api/v1/download")
 	if err != nil {
-		return fmt.Errorf("failed to download update info: %v", err)
+		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %v", err)
 	}
 	var downloadData shared.UpdateInfo
 	err = json.Unmarshal(respBody, &downloadData)
 	if err != nil {
-		return fmt.Errorf("failed to parse update info: %v", err)
+		return shared.UpdateInfo{}, fmt.Errorf("failed to parse update info: %v", err)
+	}
+	return downloadData, nil
+}
+
+func Update() error {
+	// Download the binary
+	downloadData, err := GetDownloadData()
+	if err != nil {
+		return err
 	}
 	if downloadData.Version == "v0."+Version {
 		fmt.Printf("Latest version (v0.%s) is already installed\n", Version)
