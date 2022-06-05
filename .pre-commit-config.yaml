@@ -6,6 +6,7 @@ repos:
       - id: go-vet
       - id: gofumpt # requires github.com/mvdan/gofumpt
       - id: go-static-check # install https://staticcheck.io/docs/
+        exclude: /vndor/
       - id: golangci-lint # requires github.com/golangci/golangci-lint
   - repo: local
     hooks:
