@@ -603,7 +603,7 @@ func verifyBinaryMac(binaryPath string, downloadData shared.UpdateInfo) error {
 	} else if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 		err = downloadFile(unsignedBinaryPath, downloadData.DarwinArm64UnsignedUrl)
 	} else {
-		panic("TODO: better error message")
+		err = fmt.Errorf("verifyBinaryMac() called for the unhandled branch GOOS=%s, GOARCH=%s", runtime.GOOS, runtime.GOARCH)
 	}
 	if err != nil {
 		return err
