@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -819,4 +820,32 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 
 func IsOfflineError(err error) bool {
 	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") || strings.Contains(err.Error(), "read: connection reset by peer")
+}
+
+func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
+	var err error = nil
+	i := 0
+	for i = 0; i < 10; i++ {
+		result := db.Create(entry)
+		err = result.Error
+		if err != nil {
+			errMsg := err.Error()
+			if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
+				time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
+				continue
+			}
+			if strings.Contains(errMsg, "constraint failed: UNIQUE constraint failed") {
+				if i == 0 {
+					return err
+				} else {
+					return nil
+				}
+			}
+			return err
+		}
+		if err != nil && err.Error() != "database is locked (5) (SQLITE_BUSY)" {
+			return err
+		}
+	}
+	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
 }

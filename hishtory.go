@@ -152,9 +152,8 @@ func saveHistoryEntry() {
 	// Persist it locally
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
-	result := db.Create(entry)
-	lib.CheckFatalError(result.Error)
-	// TODO: ^ sometimes fails with the error "database is locked (261)". Fix this by retrying.
+	err = lib.ReliableDbCreate(db, entry)
+	lib.CheckFatalError(err)
 
 	// Persist it remotely
 	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
