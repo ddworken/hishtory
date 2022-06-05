@@ -51,6 +51,10 @@ If you want to temporarily turn on/off hishtory recording, you can do so via `hi
 
 To update `hishtory` to the latest version, just run `hishtory update` to transparently download and apply the latest update. 
 
+### Multi-Shell Support
+
+`hishtory` supports `zsh` and `bash`. If you'd like support for another shell (e.g. `fish`), please open an issue!
+
 ## Design
 
 The `hishtory` CLI is written in Go. It hooks into the shell in order to track information about all commands that are run (specifically in bash this is done via `trap DEBUG` and overriding `$PROMPT_COMMAND`). It takes this data and saves it in a local SQLite DB managed via [GORM](https://gorm.io/). When the user runs `hishtory query`, a SQL query is run to find matching entries in the local SQLite DB. 
