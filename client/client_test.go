@@ -730,8 +730,6 @@ func hishtoryQuery(t *testing.T, tester shellTester, query string) string {
 	return tester.RunInteractiveShell(t, "hishtory query "+query)
 }
 
-// TODO: Maybe a dedicated unit test for retrieveAdditionalEntriesFromRemote
-
 func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.HistoryEntry) {
 	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
 	shared.Check(t, err)
