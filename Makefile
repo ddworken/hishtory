@@ -12,32 +12,8 @@ release:
 	# Bump the version
 	expr `cat VERSION` + 1 > VERSION
 	git add VERSION
-	git commit -m "Release: start releasing v0.`cat VERSION`" --no-verify
-	git push && git push --tags
-	# Release linux-amd64
-	cp .slsa-goreleaser-linux-amd64.yml .slsa-goreleaser.yml 
-	git add .slsa-goreleaser.yml 
-	git commit -m "Release linux-amd64 v0.`cat VERSION`" --no-verify
-	git tag v0.`cat VERSION`-linux-amd64
-	git push && git push --tags
-	# Release darwin-amd64
-	cp .slsa-goreleaser-darwin-amd64.yml .slsa-goreleaser.yml 
-	git add .slsa-goreleaser.yml 
-	git commit -m "Release darwin-amd64 v0.`cat VERSION`" --no-verify
-	git tag v0.`cat VERSION`-darwin-amd64
-	git push && git push --tags
-	# Release darwin-arm64
-	cp .slsa-goreleaser-darwin-arm64.yml .slsa-goreleaser.yml 
-	git add .slsa-goreleaser.yml 
-	git commit -m "Release darwin-arm64 v0.`cat VERSION`" --no-verify
-	git tag v0.`cat VERSION`-darwin-arm64
-	git push && git push --tags
-	# Clean up by removing .slsa-goreleaser.yml 
-	rm .slsa-goreleaser.yml 
-	git add .slsa-goreleaser.yml 
-	git commit -m "Release: finish releasing v0.`cat VERSION`" --no-verify
-	git push && git push --tags
-	# Tag the release
+	git commit -m "Release v0.`cat VERSION`" --no-verify
+	git push 
 	gh release create v0.`cat VERSION` --generate-notes
 	git push && git push --tags
 
