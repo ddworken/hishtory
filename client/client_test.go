@@ -537,7 +537,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 
 	// Update
 	out = tester.RunInteractiveShell(t, `hishtory update`)
-	isExpected, err := regexp.MatchString(`Verified against tlog entry \d+\nSuccessfully updated hishtory from v0[.]Unknown to v0.\d+\n`, out)
+	isExpected, err := regexp.MatchString(`Successfully updated hishtory from v0[.]Unknown to v0.\d+`, out)
 	if err != nil {
 		t.Fatalf("regex failure: %v", err)
 	}

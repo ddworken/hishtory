@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/ddworken/hishtory/client/vndor/slsa_verifier"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -69,12 +71,30 @@ func verify(provenance []byte, artifactHash, source, branch, versionTag string) 
 	return nil
 }
 
+func checkForDowngrade(currentVersionS, newVersionS string) error {
+	currentVersion, err := strconv.Atoi(strings.TrimPrefix(currentVersionS, "v0."))
+	if err != nil {
+		return fmt.Errorf("failed to parse current version %#v", currentVersionS)
+	}
+	newVersion, err := strconv.Atoi(strings.TrimPrefix(newVersionS, "v0."))
+	if err != nil {
+		return fmt.Errorf("failed to parse updated version %#v", newVersionS)
+	}
+	if currentVersion > newVersion {
+		return fmt.Errorf("failed to update because the new version (%#v) is a downgrade compared to the current version (%#v)", newVersionS, currentVersionS)
+	}
+	return nil
+}
+
 func verifyBinary(binaryPath, attestationPath, versionTag string) error {
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
 
-	// TODO: Also verify that the version is newer and this isn't a downgrade
+	if err := checkForDowngrade(Version, versionTag); err != nil && os.Getenv("HISHTORY_ALLOW_DOWNGRADE") == "true" {
+		return err
+	}
+
 	attestation, err := os.ReadFile(attestationPath)
 	if err != nil {
 		return fmt.Errorf("failed to read attestation file: %v", err)
