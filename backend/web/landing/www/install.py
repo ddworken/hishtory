@@ -29,6 +29,7 @@ with urllib.request.urlopen(download_url) as response:
 with open('/tmp/hishtory-client', 'wb') as f:
     f.write(hishtory_binary)
 os.system('chmod +x /tmp/hishtory-client')
-os.system('/tmp/hishtory-client install')
-# TODO: Detect if ^ failed
+exitCode = os.system('/tmp/hishtory-client install')
+if exitCode != 0:
+    raise Exception("failed to install downloaded hishtory client via `/tmp/hishtory-client install`!")
 print('Succesfully installed hishtory! Open a new terminal, try running a command, and then running `hishtory query`.')
