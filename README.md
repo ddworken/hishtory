@@ -53,8 +53,7 @@ To update `hishtory` to the latest version, just run `hishtory update` to transp
 
 ## Design
 
-
-The `hishtory` CLI is written in Go. It hooks into the shell in order to track information about all commands that are run (specifically in bash this is done via `trap DEBUG` and overriding `$PROMPT_COMMAND`). It takes this data and saves it in a local SQLite DB managed via GORM. When the user runs `hishtory query`, a SQL query is run to find matching entries in the local SQLite DB. 
+The `hishtory` CLI is written in Go. It hooks into the shell in order to track information about all commands that are run (specifically in bash this is done via `trap DEBUG` and overriding `$PROMPT_COMMAND`). It takes this data and saves it in a local SQLite DB managed via [GORM](https://gorm.io/). When the user runs `hishtory query`, a SQL query is run to find matching entries in the local SQLite DB. 
 
 ### Syncing Design 
 
@@ -64,15 +63,20 @@ When `hishtory` is installed, it generates a random secret key. Computers that s
 2. `DeviceId = HMAC(SecretKey, "device_id")`
 3. `EncryptionKey = HMAC(SecretKey, "encryption_key")`
 
-At installation time, `hishtory` registers itself with the backend which stores the tuple `(UserId, DeviceId)` which represents a one-to-many relationship between user and devices. 
+At installation time, `hishtory` registers itself with the backend which stores the tuple `(UserId, DeviceId)` which represents a one-to-many relationship between user and devices. In addition, it creates a `DumpRequest` specific that a new device was created and it needs a copy of the existing bash history. 
 
-When a command is run, `hishtory` encrypts (via AES-GCM with `EncryptionKey`) the command (and all the metadata) and sends it to the backend along with the `UserId` to persist it for. The backend retrieves a list of all associated `DeviceId`s and stores a copy of the encrypted blob for each device associated with that user. Once a given device has read an encrypted blob, that entry can be deleted in order to save space (in essence this is a per-device queue, but implemented on top of postgres because this is small scale and I already am running a postgres instance). 
+When a command is run:
+
+1. `hishtory` encrypts (via AES-GCM with `EncryptionKey`) the command (and all the metadata) and sends it to the backend along with the `UserId` to persist it for. The backend retrieves a list of all associated `DeviceId`s and stores a copy of the encrypted blob for each device associated with that user. Once a given device has read an encrypted blob, that entry can be deleted in order to save space (in essence this is a per-device queue, but implemented on top of postgres because this is small scale and I already am running a postgres instance). 
+2. `hishtory` checks for any pending `DumpRequest`s, and if there are any sends a complete (encrypted) copy of the local SQLite DB to be shared with the requesting device. 
 
 When the user runs `hishtory query`, it retrieves all unread blobs from the backend, decrypts them, and adds them to the local SQLite DB. 
 
 ## Security
 
-## Pending Features
+Hishtory is designed to ensure that the backend cannot read your shell history. This is achieved by:
 
-* zsh support
-* easier install flow that is cross-platform
+1. Encrypting history entries with a secret key that the backend never sees
+2. Using [SLSA](https://slsa.dev/) to support secure updates that guarantee that you're running the code contained in this repo
+
+If you find any security issues in hishtory, please reach out to `david@daviddworken.com`. 
