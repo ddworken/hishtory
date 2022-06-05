@@ -2,6 +2,8 @@ package slsa_verifier
 
 // Copied from https://raw.githubusercontent.com/slsa-framework/slsa-verifier/c80938e29877e4c71984f626dc102b79667f4fe6/pkg/provenance.go
 // Apache 2.0 licensed: https://github.com/slsa-framework/slsa-verifier/blob/c80938e29877e4c71984f626dc102b79667f4fe6/LICENSE
+// This has the small tweak to make it possible to use the SLSA generator from non-head. To ensure this isn't a
+// security vulnerability we hardcode the hash that we expect.
 
 import (
 	"bytes"
@@ -432,18 +434,19 @@ func verifyTrustedBuilderRef(id *WorkflowIdentity, ref string) error {
 		return nil
 	}
 
-	if !strings.HasPrefix(ref, "refs/tags/") {
+	// if !strings.HasPrefix(ref, "refs/tags/") {
+	if ref != "b18a9ec9f79bb22067a9e91d3ddf170e7d9884f8" {
 		return fmt.Errorf("%w: %s: not of the form 'refs/tags/name'", errorInvalidRef, ref)
 	}
 
 	// Valid semver of the form vX.Y.Z with no metadata.
-	pin := strings.TrimPrefix(ref, "refs/tags/")
-	if !(semver.IsValid(pin) &&
-		len(strings.Split(pin, ".")) == 3 &&
-		semver.Prerelease(pin) == "" &&
-		semver.Build(pin) == "") {
-		return fmt.Errorf("%w: %s: not of the form vX.Y.Z", errorInvalidRef, pin)
-	}
+	// pin := strings.TrimPrefix(ref, "refs/tags/")
+	// if !(semver.IsValid(pin) &&
+	// 	len(strings.Split(pin, ".")) == 3 &&
+	// 	semver.Prerelease(pin) == "" &&
+	// 	semver.Build(pin) == "") {
+	// 	return fmt.Errorf("%w: %s: not of the form vX.Y.Z", errorInvalidRef, pin)
+	// }
 	return nil
 }
 

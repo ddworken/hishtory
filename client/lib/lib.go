@@ -537,7 +537,7 @@ func Update() error {
 	if runtime.GOOS == "darwin" {
 		err = verifyBinaryMac("/tmp/hishtory-client", downloadData)
 	} else {
-		err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version+"-"+runtime.GOOS+"-"+runtime.GOARCH)
+		err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update: %v", err)
@@ -618,7 +618,7 @@ func verifyBinaryMac(binaryPath string, downloadData shared.UpdateInfo) error {
 	}
 
 	// Step 4: Use SLSA to verify the unsigned binary
-	return verifyBinary(unsignedBinaryPath, "/tmp/hishtory-client.intoto.jsonl", downloadData.Version+"-"+runtime.GOOS+"-"+runtime.GOARCH)
+	return verifyBinary(unsignedBinaryPath, "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 }
 
 func assertIdenticalBinaries(bin1Path, bin2Path string) error {

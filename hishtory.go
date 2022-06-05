@@ -90,13 +90,11 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to load JSON response: %v", err)
 	}
-	// fmt.Printf("this device id=%s, user id=%s\n", config.DeviceId, data.UserId(config.UserSecret))
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
 		if err != nil {
 			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
 		}
-		// fmt.Printf("received entry: %#v\n", decEntry)
 		lib.AddToDbIfNew(db, decEntry)
 	}
 	return nil

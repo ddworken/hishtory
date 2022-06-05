@@ -52,16 +52,14 @@ func verify(provenance []byte, artifactHash, source, branch, versionTag string) 
 	}
 
 	// Verify the workflow identity.
-	fmt.Printf("source=%#v, workflowInfo=%#v\n", source, workflowInfo)
 	if err := slsa_verifier.VerifyWorkflowIdentity(workflowInfo, source); err != nil {
 		return fmt.Errorf("failed to verify workflow identity: %v", err)
 	}
 
 	// Verify the branch.
-	// TODO: This started failing for some reason? base_ref was null
-	// if err := pkg.VerifyBranch(env, branch); err != nil {
-	// 	return err
-	// }
+	if err := slsa_verifier.VerifyBranch(env, branch); err != nil {
+		return err
+	}
 
 	// Verify the tag.
 	if err := slsa_verifier.VerifyTag(env, versionTag); err != nil {
