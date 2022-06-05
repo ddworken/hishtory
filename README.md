@@ -1,6 +1,6 @@
 # hishtory: Better Shell Hishtory
 
-`hishtory` is a CLI tool to better manage your shell history. It hooks into your shell to store the commands you run along with metadata about those commands (what directory you ran it in, whether it succeeded or failed, how long it took, etc). This is all stored in a local SQLite DB, and then e2e encrypted while synced to local SQLite DBs running on all your other computers. All of this is easily queryable via the `hishtory` CLI. This means from your laptop, you can easily find that complex bash pipeline you wrote on your server, and see the context in which you ran it. 
+`hishtory` is a better shell history. It stores your shell history in context (what directory you ran the command it, whether it succeeded or failed, how long it took, etc). This is all stored in a local SQLite DB and e2e encrypted while synced to local SQLite DBs running on all your other computers. All of this is easily queryable via the `hishtory` CLI. This means from your laptop, you can easily find that complex bash pipeline you wrote on your server, and see the context in which you ran it. 
 
 `hishtory` is written in Go and uses AES-GCM for end-to-end encrypting your hishtory entries while syncing them. The binary is reproducibly built and [SLSA Level 3](https://slsa.dev/) to make it easy to verify you're getting the code contained in this repository. 
 
