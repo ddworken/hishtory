@@ -135,7 +135,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 
 	// Query for dump requests, there should be one for userId
 	w := httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId, nil))
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := ioutil.ReadAll(res.Body)
@@ -155,7 +155,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 
 	// And one for otherUser
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser, nil))
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
@@ -173,20 +173,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("unexpected user ID")
 	}
 
-	// And none if we query without a user ID
-	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/", nil))
-	res = w.Result()
-	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
-
 	// And none if we query for a user ID that doesn't exit
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=foo", nil))
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=foo&device_id=bar", nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
@@ -197,7 +186,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 
 	// And none for a missing user ID
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=", nil))
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=%20&device_id=%20", nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
@@ -218,9 +207,19 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2, bytes.NewReader(reqBody))
 	apiSubmitDumpHandler(nil, submitReq)
 
-	// Check that the dump request is no longer there for userId
+	// Check that the dump request is no longer there for userId for either device ID
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId, nil))
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
+	res = w.Result()
+	defer res.Body.Close()
+	respBody, err = ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	if string(respBody) != "[]" {
+		t.Fatalf("got unexpected respBody: %#v", string(respBody))
+	}
+	w = httptest.NewRecorder()
+	// The other user
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId2, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
@@ -231,7 +230,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 
 	// But it is there for the other user
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser, nil))
+	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)

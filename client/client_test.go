@@ -905,7 +905,12 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	secretKey := installHishtory(t, tester, "")
 
 	// Confirm there are no pending dump requests
-	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey))
+	config, err := lib.GetConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	deviceId1 := config.DeviceId
+	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
 	if err != nil {
 		t.Fatalf("failed to get pending dump requests: %v", err)
 	}
@@ -944,8 +949,8 @@ echo other`)
 	// Install a new one (with the same secret key but a diff device id)
 	installHishtory(t, tester, secretKey)
 
-	// Confirm there are pending dump requests
-	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey))
+	// Confirm there is now a pending dump requests that the first device should respond to
+	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
 	if err != nil {
 		t.Fatalf("failed to get pending dump requests: %v", err)
 	}
@@ -977,8 +982,8 @@ echo other`)
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 
-	// Confirm there are no pending dump requests
-	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey))
+	// Confirm there are no pending dump requests for the first device
+	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
 	if err != nil {
 		t.Fatalf("failed to get pending dump requests: %v", err)
 	}
