@@ -76,8 +76,7 @@ type zshTester struct {
 }
 
 func (z zshTester) RunInteractiveShell(t *testing.T, script string) string {
-	// TODO: make this strict
-	res, err := z.RunInteractiveShellRelaxed(t, script)
+	res, err := z.RunInteractiveShellRelaxed(t, "set -eo pipefail\n"+script)
 	if err != nil {
 		t.Fatal(err)
 	}
