@@ -196,7 +196,7 @@ func parseAtomizedToken(token string) (string, interface{}, error) {
 		return "(instr(hostname, ?) > 0)", val, nil
 	case "cwd":
 		// TODO: Can I make this support querying via ~/ too?
-		return "(instr(current_working_directory, ?) > 0)", val, nil
+		return "(instr(current_working_directory, ?) > 0)", strings.TrimSuffix(val, "/"), nil
 	case "exit_code":
 		return "(exit_code = ?)", val, nil
 	case "before":

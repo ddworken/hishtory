@@ -27,7 +27,7 @@ func main() {
 	case "query":
 		query(strings.Join(os.Args[2:], " "))
 	case "export":
-		export()
+		export(strings.Join(os.Args[2:], " "))
 	case "init":
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
@@ -122,7 +122,7 @@ func displayBannerIfSet() error {
 	if err != nil {
 		return fmt.Errorf("failed to get config: %v", err)
 	}
-	url := "/api/v1/banner?commit_hash=" + GitCommit + "&device_id=" + config.DeviceId + "&forced_banner=" + os.Getenv("FORCED_BANNER")
+	url := "/api/v1/banner?commit_hash=" + GitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + lib.Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	respBody, err := lib.ApiGet(url)
 	if err != nil {
 		return err
@@ -201,7 +201,7 @@ func saveHistoryEntry() {
 	}
 }
 
-func export() {
+func export(query string) {
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
 	err = retrieveAdditionalEntriesFromRemote(db)
@@ -212,7 +212,7 @@ func export() {
 			lib.CheckFatalError(err)
 		}
 	}
-	data, err := data.Search(db, "", 0)
+	data, err := data.Search(db, query, 0)
 	lib.CheckFatalError(err)
 	for i := len(data) - 1; i >= 0; i-- {
 		fmt.Println(data[i].Command)

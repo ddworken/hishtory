@@ -123,6 +123,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) })
 		t.Run("testRequestAndReceiveDbDump/"+tester.ShellName(), func(t *testing.T) { testRequestAndReceiveDbDump(t, tester) })
 		t.Run("testInstallViaPythonScript/"+tester.ShellName(), func(t *testing.T) { testInstallViaPythonScript(t, tester) })
+		t.Run("testExportWithQuery/"+tester.ShellName(), func(t *testing.T) { testExportWithQuery(t, tester) })
 	}
 }
 
@@ -302,6 +303,7 @@ echo thisisrecorded`)
 			t.Fatalf("output is missing expected item %#v: %#v", item, out)
 		}
 	}
+	// TODO
 	// match, err = regexp.MatchString(`.*~/.*\s+[a-zA-Z]{3} \d+ 2022 \d\d:\d\d:\d\d PST\s+\d{1,2}ms\s+0\s+echo thisisrecorded.*`, out)
 	// shared.Check(t, err)
 	// if !match {
@@ -370,6 +372,17 @@ hishtory disable`)
 
 	// Query based on cwd
 	out = hishtoryQuery(t, tester, `cwd:/tmp`)
+	if !strings.Contains(out, "echo querybydir") {
+		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
+	}
+	if strings.Contains(out, "nevershouldappear") {
+		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
+	}
+	if strings.Count(out, "\n") != 3 {
+		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
+	}
+	// And again, but with a strailing slash
+	out = hishtoryQuery(t, tester, `cwd:/tmp/`)
 	if !strings.Contains(out, "echo querybydir") {
 		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
 	}
@@ -1045,6 +1058,70 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
 	if out != "hishtory status\n" {
 		t.Fatalf("unexpected output from hishtory export=%#v", out)
+	}
+}
+
+func testExportWithQuery(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Test recording commands
+	out, err := tester.RunInteractiveShellRelaxed(t, `ls /a
+ls /bar
+ls /foo
+echo foo
+echo bar
+hishtory disable
+echo thisisnotrecorded
+sleep 0.5
+cd /tmp/
+hishtory enable
+echo thisisrecorded`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
+		t.Fatalf("unexpected output from running commands: %#v", out)
+	}
+
+	// Test querying for all commands
+	out = hishtoryQuery(t, tester, "")
+	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
+	for _, item := range expected {
+		if !strings.Contains(out, item) {
+			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+	}
+
+	// Test querying for a specific command
+	out = hishtoryQuery(t, tester, "foo")
+	expected = []string{"echo foo", "ls /foo"}
+	unexpected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "ls /bar", "ls /a"}
+	for _, item := range expected {
+		if !strings.Contains(out, item) {
+			t.Fatalf("output is missing expected item %#v: %#v", item, out)
+		}
+		if strings.Count(out, item) != 1 {
+			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
+		}
+	}
+	for _, item := range unexpected {
+		if strings.Contains(out, item) {
+			t.Fatalf("output is containing unexpected item %#v: %#v", item, out)
+		}
+	}
+
+	// Test using export with a query
+	out = tester.RunInteractiveShell(t, `hishtory export foo`)
+	if out != "ls /foo\necho foo\nhishtory query foo\n" {
+		t.Fatalf("expected hishtory export to equal out=%#v", out)
+	}
+
+	// Test a more complex query with export
+	out = tester.RunInteractiveShell(t, `hishtory export cwd:/tmp/`)
+	if out != "hishtory enable\necho thisisrecorded\n" {
+		t.Fatalf("expected hishtory export to equal out=%#v", out)
 	}
 }
 
