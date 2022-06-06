@@ -51,6 +51,31 @@ func main() {
 		fmt.Printf("Commit Hash: %s\n", GitCommit)
 	case "update":
 		lib.CheckFatalError(lib.Update())
+	case "-h":
+		fallthrough
+	case "help":
+		fmt.Print(`hishtory: Better shell history
+
+Supported commands:
+    'hishtory query': Query for matching commands and display them in a table. Examples:
+		'hishtory query apt-get'  			# Find shell commands containing 'apt-get'
+		'hishtory query apt-get install'  	# Find shell commands containing 'apt-get' and 'install'
+		'hishtory query curl cwd:/tmp/'  	# Find shell commands containing 'curl' run in '/tmp/'
+		'hishtory query curl user:david'	# Find shell commands containing 'curl' run by 'david'
+		'hishtory query curl host:x1'		# Find shell commands containing 'curl' run on 'x1'
+		'hishtory query exit_code:1'		# Find shell commands that exited with status code 1
+		'hishtory query before:2022-02-01'	# Find shell commands run before 2022-02-01
+	'hishtory export': Query for matching commands and display them in list without any other 
+		metadata. Supports the same query format as 'hishtory query'. 
+	'hishtory update': Securely update hishtory to the latest version. 
+	'hishtory disable': Stop recording shell commands 
+	'hishtory enable': Start recording shell commands 
+	'hishtory status': View status info including the secret key which is needed to sync shell
+		history from another machine. 
+	'hishtory init': Set the secret key to enable syncing shell commands from another 
+		machine with a matching secret key. 
+	'hishtory help': View this help page
+`)
 	default:
 		lib.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}

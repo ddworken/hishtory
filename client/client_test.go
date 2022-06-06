@@ -124,6 +124,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testRequestAndReceiveDbDump/"+tester.ShellName(), func(t *testing.T) { testRequestAndReceiveDbDump(t, tester) })
 		t.Run("testInstallViaPythonScript/"+tester.ShellName(), func(t *testing.T) { testInstallViaPythonScript(t, tester) })
 		t.Run("testExportWithQuery/"+tester.ShellName(), func(t *testing.T) { testExportWithQuery(t, tester) })
+		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
 	}
 }
 
@@ -1122,6 +1123,22 @@ echo thisisrecorded`)
 	out = tester.RunInteractiveShell(t, `hishtory export cwd:/tmp/`)
 	if out != "hishtory enable\necho thisisrecorded\n" {
 		t.Fatalf("expected hishtory export to equal out=%#v", out)
+	}
+}
+
+func testHelpCommand(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Test the help command
+	out := tester.RunInteractiveShell(t, `hishtory help`)
+	if !strings.HasPrefix(out, "hishtory: Better shell history\n\nSupported commands:\n") {
+		t.Fatalf("expected hishtory help to contain intro, actual=%#v", out)
+	}
+	out2 := tester.RunInteractiveShell(t, `hishtory -h`)
+	if out != out2 {
+		t.Fatalf("expected hishtory -h to equal help")
 	}
 }
 
