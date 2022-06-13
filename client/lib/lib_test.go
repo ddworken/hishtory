@@ -52,7 +52,6 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
 		t.Fatalf("history entry has unexpected cwd: %v", entry.CurrentWorkingDirectory)
 	}
-	// TODO: test relative_cwd
 	if entry.Command != "ls /foo" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
 	}
@@ -75,7 +74,6 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
 		t.Fatalf("history entry has unexpected cwd: %v", entry.CurrentWorkingDirectory)
 	}
-	// TODO: test relative_cwd
 	if entry.Command != "ls /foo" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
 	}

@@ -26,15 +26,14 @@ const (
 )
 
 type HistoryEntry struct {
-	LocalUsername                       string    `json:"local_username" gorm:"uniqueIndex:compositeindex"`
-	Hostname                            string    `json:"hostname" gorm:"uniqueIndex:compositeindex"`
-	Command                             string    `json:"command" gorm:"uniqueIndex:compositeindex"`
-	CurrentWorkingDirectory             string    `json:"current_working_directory" gorm:"uniqueIndex:compositeindex"`
-	HomeRelativeCurrentWorkingDirectory string    `json:"relative_cwd" gorm:"uniqueIndex:compositeindex"`
-	ExitCode                            int       `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
-	StartTime                           time.Time `json:"start_time" gorm:"uniqueIndex:compositeindex"`
-	EndTime                             time.Time `json:"end_time" gorm:"uniqueIndex:compositeindex"`
-	DeviceId                            string    `json:"device_id" gorm:"uniqueIndex:compositeindex"`
+	LocalUsername           string    `json:"local_username" gorm:"uniqueIndex:compositeindex"`
+	Hostname                string    `json:"hostname" gorm:"uniqueIndex:compositeindex"`
+	Command                 string    `json:"command" gorm:"uniqueIndex:compositeindex"`
+	CurrentWorkingDirectory string    `json:"current_working_directory" gorm:"uniqueIndex:compositeindex"`
+	ExitCode                int       `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
+	StartTime               time.Time `json:"start_time" gorm:"uniqueIndex:compositeindex"`
+	EndTime                 time.Time `json:"end_time" gorm:"uniqueIndex:compositeindex"`
+	DeviceId                string    `json:"device_id" gorm:"uniqueIndex:compositeindex"`
 }
 
 func sha256hmac(key, additionalData string) []byte {
@@ -181,7 +180,7 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 
 func parseNonAtomizedToken(token string) (string, interface{}, interface{}, interface{}, error) {
 	wildcardedToken := "%" + token + "%"
-	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ? OR relative_cwd LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
+	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
 }
 
 func parseAtomizedToken(token string) (string, interface{}, error) {
@@ -197,8 +196,7 @@ func parseAtomizedToken(token string) (string, interface{}, error) {
 		return "(instr(hostname, ?) > 0)", val, nil
 	case "cwd":
 		// TODO: Can I make this support querying via ~/ too?
-		trimmed := strings.TrimSuffix(val, "/")
-		return "((instr(current_working_directory, ?) > 0) OR (instr(relative_cwd, ?) > 0))", trimmed, trimmed, nil
+		return "(instr(current_working_directory, ?) > 0)", strings.TrimSuffix(val, "/"), nil
 	case "exit_code":
 		return "(exit_code = ?)", val, nil
 	case "before":
@@ -230,7 +228,6 @@ func EntryEquals(entry1, entry2 HistoryEntry) bool {
 		entry1.Hostname == entry2.Hostname &&
 		entry1.Command == entry2.Command &&
 		entry1.CurrentWorkingDirectory == entry2.CurrentWorkingDirectory &&
-		entry1.HomeRelativeCurrentWorkingDirectory == entry2.HomeRelativeCurrentWorkingDirectory &&
 		entry1.ExitCode == entry2.ExitCode &&
 		entry1.StartTime.Format(time.RFC3339) == entry2.StartTime.Format(time.RFC3339) &&
 		entry1.EndTime.Format(time.RFC3339) == entry2.EndTime.Format(time.RFC3339)
@@ -238,13 +235,12 @@ func EntryEquals(entry1, entry2 HistoryEntry) bool {
 
 func MakeFakeHistoryEntry(command string) HistoryEntry {
 	return HistoryEntry{
-		LocalUsername:                       "david",
-		Hostname:                            "localhost",
-		Command:                             command,
-		CurrentWorkingDirectory:             "/tmp/",
-		HomeRelativeCurrentWorkingDirectory: "/tmp/",
-		ExitCode:                            2,
-		StartTime:                           time.Now(),
-		EndTime:                             time.Now(),
+		LocalUsername:           "david",
+		Hostname:                "localhost",
+		Command:                 command,
+		CurrentWorkingDirectory: "/tmp/",
+		ExitCode:                2,
+		StartTime:               time.Now(),
+		EndTime:                 time.Now(),
 	}
 }
