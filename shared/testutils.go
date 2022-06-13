@@ -61,6 +61,13 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	}
 }
 
+func BackupAndRestoreEnv(k string) func() {
+	origValue := os.Getenv(k)
+	return func() {
+		os.Setenv(k, origValue)
+	}
+}
+
 func checkError(err error) {
 	if err != nil && os.Getenv("GITHUB_ACTION") == "" {
 		_, filename, line, _ := runtime.Caller(1)

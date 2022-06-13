@@ -125,6 +125,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testInstallViaPythonScript/"+tester.ShellName(), func(t *testing.T) { testInstallViaPythonScript(t, tester) })
 		t.Run("testExportWithQuery/"+tester.ShellName(), func(t *testing.T) { testExportWithQuery(t, tester) })
 		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
+		t.Run("testStripBashTimePrefix/"+tester.ShellName(), func(t *testing.T) { testStripBashTimePrefix(t, tester) })
 	}
 }
 
@@ -1139,6 +1140,66 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 	out2 := tester.RunInteractiveShell(t, `hishtory -h`)
 	if out != out2 {
 		t.Fatalf("expected hishtory -h to equal help")
+	}
+}
+
+func testStripBashTimePrefix(t *testing.T, tester shellTester) {
+	if tester.ShellName() != "bash" {
+		t.Skip()
+	}
+
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Add a HISTTIMEFORMAT to the bashrc
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.OpenFile(path.Join(homedir, ".hishtory", "config.sh"),
+		os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	_, err = f.WriteString("\nexport HISTTIMEFORMAT='%F %T '\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Record a command
+	tester.RunInteractiveShell(t, `ls -Slah`)
+
+	// Check it shows up correctly
+	out := tester.RunInteractiveShell(t, "hishtory export ls")
+	if out != "ls -Slah\n" {
+		t.Fatalf("hishtory had unexpected output=%#v", out)
+	}
+
+	// Update it to another complex one
+	homedir, err = os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err = os.OpenFile(path.Join(homedir, ".hishtory", "config.sh"),
+		os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	_, err = f.WriteString("\nexport HISTTIMEFORMAT='[%c] '\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Record a command
+	tester.RunInteractiveShell(t, `echo foo`)
+
+	// Check it shows up correctly
+	out = tester.RunInteractiveShell(t, "hishtory export echo")
+	if out != "echo foo\n" {
+		t.Fatalf("hishtory had unexpected output=%#v", out)
 	}
 }
 

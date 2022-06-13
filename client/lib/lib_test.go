@@ -190,3 +190,36 @@ func TestParseCrossPlatformInt(t *testing.T) {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
 }
+
+func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
+	defer shared.BackupAndRestoreEnv("HISTTIMEFORMAT")()
+
+	testcases := []struct {
+		env, cmdLine, expected string
+	}{
+		{"%F %T ", "2019-07-12 13:02:31 sudo apt update", "sudo apt update"},
+		{"%F %T ", "2019-07-12 13:02:31 ls a b", "ls a b"},
+		{"%F %T ", "2019-07-12 13:02:31 ls a ", "ls a "},
+		{"%F %T ", "2019-07-12 13:02:31 ls a", "ls a"},
+		{"%F %T ", "2019-07-12 13:02:31 ls", "ls"},
+		{"%F %T ", "2019-07-12 13:02:31 ls -Slah", "ls -Slah"},
+		{"%F ", "2019-07-12 ls -Slah", "ls -Slah"},
+		{"%F  ", "2019-07-12  ls -Slah", "ls -Slah"},
+		{"", "ls -Slah", "ls -Slah"},
+		{"[%F %T] ", "[2019-07-12 13:02:31] sudo apt update", "sudo apt update"},
+		{"[%F a %T] ", "[2019-07-12 a 13:02:31] sudo apt update", "sudo apt update"},
+		{"aaa ", "aaa sudo apt update", "sudo apt update"},
+		{"%c ", "Sun Aug 19 02:56:02 2012 sudo apt update", "sudo apt update"},
+		{"%c ", "Sun Aug 19 02:56:02 2012 ls", "ls"},
+		{"[%c] ", "[Sun Aug 19 02:56:02 2012] ls", "ls"},
+		{"[%c %t] ", "[Sun Aug 19 02:56:02 2012 aaaa] ls", "ls"},
+		{"[%c %t] ", "[Sun Aug 19 02:56:02 2012 aaaa] ls -Slah", "ls -Slah"},
+	}
+
+	for _, tc := range testcases {
+		os.Setenv("HISTTIMEFORMAT", tc.env)
+		if stripped := maybeSkipBashHistTimePrefix(tc.cmdLine); stripped != tc.expected {
+			t.Fatalf("skipping the time prefix returned %#v (expected=%#v for %#v)", stripped, tc.expected, tc.cmdLine)
+		}
+	}
+}

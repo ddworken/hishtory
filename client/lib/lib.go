@@ -121,7 +121,7 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 			// Don't save commands that start with a space
 			return nil, nil
 		}
-		entry.Command = cmd
+		entry.Command = maybeSkipBashHistTimePrefix(cmd)
 	} else if shell == "zsh" {
 		cmd := strings.TrimSuffix(strings.TrimSuffix(args[4], "\n"), " ")
 		if strings.HasPrefix(cmd, " ") {
@@ -148,6 +148,23 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.DeviceId = config.DeviceId
 
 	return &entry, nil
+}
+
+func maybeSkipBashHistTimePrefix(cmdLine string) string {
+	format := os.Getenv("HISTTIMEFORMAT")
+	if format == "" {
+		return cmdLine
+	}
+	if !strings.HasSuffix(format, " ") {
+		GetLogger().Printf("bash has HISTTIMEFORMAT set, but it doesn't end in a space so we can't strip the timestamp")
+		return cmdLine
+	}
+	// TODO: could we handle things like `export HISTTIMEFORMAT='%c:'`?
+	numSpaces := strings.Count(format, " ")
+	numC := strings.Count(format, "%c")
+	numSpaces += (4 * numC)
+	split := strings.SplitN(cmdLine, " ", numSpaces+1)
+	return split[len(split)-1]
 }
 
 func parseCrossPlatformInt(data string) (int64, error) {
