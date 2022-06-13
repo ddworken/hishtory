@@ -49,22 +49,22 @@ var TestConfigZshContents string
 
 var Version string = "Unknown"
 
-func getCwd() (string, error) {
+func getCwds() (string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("failed to get cwd for last command: %v", err)
+		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
 	}
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get user's home directory: %v", err)
+		return "", "", fmt.Errorf("failed to get user's home directory: %v", err)
 	}
 	if cwd == homedir {
-		return "~/", nil
+		return cwd, "~/" nil
 	}
 	if strings.HasPrefix(cwd, homedir) {
-		return strings.Replace(cwd, homedir, "~", 1), nil
+		return cwd, strings.Replace(cwd, homedir, "~", 1), nil
 	}
-	return cwd, nil
+	return cwd, cwd, nil
 }
 
 func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
@@ -91,11 +91,12 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.LocalUsername = user.Username
 
 	// cwd
-	cwd, err := getCwd()
+	cwd, relativeCwd, err := getCwds()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build history entry: %v", err)
 	}
 	entry.CurrentWorkingDirectory = cwd
+	entry.HomeRelativeCurrentWorkingDirectory = relativeCwd
 
 	// start time
 	seconds, err := parseCrossPlatformInt(args[5])
@@ -238,6 +239,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	tx = tx.Where("hostname = ?", entry.Hostname)
 	tx = tx.Where("command = ?", entry.Command)
 	tx = tx.Where("current_working_directory = ?", entry.CurrentWorkingDirectory)
+	tx = tx.Where("relative_cwd = ?", entry.HomeRelativeCurrentWorkingDirectory)
 	tx = tx.Where("exit_code = ?", entry.ExitCode)
 	tx = tx.Where("start_time = ?", entry.StartTime)
 	tx = tx.Where("end_time = ?", entry.EndTime)
@@ -256,7 +258,7 @@ func DisplayResults(results []*data.HistoryEntry) {
 	for _, result := range results {
 		timestamp := result.StartTime.Format("Jan 2 2006 15:04:05 MST")
 		duration := result.EndTime.Sub(result.StartTime).Round(time.Millisecond).String()
-		tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
+		tbl.AddRow(result.Hostname, result.HomeRelativeCurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
 	}
 
 	tbl.Print()

@@ -1142,4 +1142,6 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 	}
 }
 
+// TODO: test for relative CWD and for non-relative CWD
+
 // TODO: write a test that runs hishtroy export | grep -v pipefail and then see if that shows up in query/export, I think there is weird behavior here
