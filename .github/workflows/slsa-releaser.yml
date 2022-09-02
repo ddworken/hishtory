@@ -28,7 +28,7 @@ jobs:
       id-token: write
       contents: write
     needs: args
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@b18a9ec9f79bb22067a9e91d3ddf170e7d9884f8
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@0b0bdb0d3c3749ea188cf7f53b76c082509fc97a
     with:
       config-file: .slsa-goreleaser-linux-amd64.yml
       go-version: 1.17
@@ -40,7 +40,7 @@ jobs:
     needs: 
       - args 
       - build-linux-amd64
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@b18a9ec9f79bb22067a9e91d3ddf170e7d9884f8
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@0b0bdb0d3c3749ea188cf7f53b76c082509fc97a
     with:
       config-file: .slsa-goreleaser-darwin-amd64.yml
       go-version: 1.17
@@ -53,7 +53,7 @@ jobs:
       - args 
       - build-linux-amd64
       - build-darwin-amd64
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@b18a9ec9f79bb22067a9e91d3ddf170e7d9884f8
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@0b0bdb0d3c3749ea188cf7f53b76c082509fc97a
     with:
       config-file: .slsa-goreleaser-darwin-arm64.yml
       go-version: 1.17
