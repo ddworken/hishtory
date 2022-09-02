@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -150,21 +151,79 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	return &entry, nil
 }
 
+func buildRegexFromTimeFormat(timeFormat string) string {
+	expectedRegex := ""
+	lastCharWasPercent := false
+	for _, char := range timeFormat {
+		if lastCharWasPercent {
+			if char == '%' {
+				expectedRegex += regexp.QuoteMeta(string(char))
+				lastCharWasPercent = false
+				continue
+			} else if char == 't' {
+				expectedRegex += "\t"
+			} else if char == 'F' {
+				expectedRegex += buildRegexFromTimeFormat("%Y-%m-%d")
+			} else if char == 'Y' {
+				expectedRegex += "[0-9]{4}"
+			} else if char == 'G' {
+				expectedRegex += "[0-9]{4}"
+			} else if char == 'g' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'C' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'm' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'd' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'D' {
+				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
+			} else if char == 'T' {
+				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
+			} else if char == 'H' || char == 'I' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'M' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'j' {
+				expectedRegex += "[0-9]{3}"
+			} else if char == 'S' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'c' {
+				// Note: Specific to the POSIX locale
+				expectedRegex += buildRegexFromTimeFormat("%a %b %e %H:%M:%S %Y")
+			} else if char == 'a' {
+				// Note: Specific to the POSIX locale
+				expectedRegex += "(Sun|Mon|Tue|Wed|Thu|Fri|Sat)"
+			} else if char == 'b' || char == 'h' {
+				// Note: Specific to the POSIX locale
+				expectedRegex += "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+			} else if char == 'e' {
+				expectedRegex += "[0-9 ]{2}"
+			} else {
+				// TODO: Add more of the options from https://man7.org/linux/man-pages/man3/strftime.3.html (currently going through j)
+				panic(fmt.Sprintf("buildRegexFromTimeFormat doesn't support %%%v, please open a bug against github.com/ddworken/hishtory", string(char)))
+			}
+		} else if char != '%' {
+			expectedRegex += regexp.QuoteMeta(string(char))
+		}
+		lastCharWasPercent = false
+		if char == '%' {
+			lastCharWasPercent = true
+		}
+	}
+	return expectedRegex
+}
+
 func maybeSkipBashHistTimePrefix(cmdLine string) string {
 	format := os.Getenv("HISTTIMEFORMAT")
 	if format == "" {
 		return cmdLine
 	}
-	if !strings.HasSuffix(format, " ") {
-		GetLogger().Printf("bash has HISTTIMEFORMAT set, but it doesn't end in a space so we can't strip the timestamp")
-		return cmdLine
+	re, err := regexp.Compile("^" + buildRegexFromTimeFormat(format))
+	if err != nil {
+		panic("TODO: bubble up this error")
 	}
-	// TODO: could we handle things like `export HISTTIMEFORMAT='%c:'`?
-	numSpaces := strings.Count(format, " ")
-	numC := strings.Count(format, "%c")
-	numSpaces += (4 * numC)
-	split := strings.SplitN(cmdLine, " ", numSpaces+1)
-	return split[len(split)-1]
+	return re.ReplaceAllLiteralString(cmdLine, "")
 }
 
 func parseCrossPlatformInt(data string) (int64, error) {

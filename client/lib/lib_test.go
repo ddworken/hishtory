@@ -191,6 +191,26 @@ func TestParseCrossPlatformInt(t *testing.T) {
 	}
 }
 
+func TestBuildRegexFromTimeFormat(t *testing.T) {
+	testcases := []struct {
+		formatString, regex string
+	}{
+		{"%Y ", "[0-9]{4} "},
+		{"%F %T ", "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} "},
+		{"%F%T", "[0-9]{4}-[0-9]{2}-[0-9]{2}[0-9]{2}:[0-9]{2}:[0-9]{2}"},
+		{"%%", "%"},
+		{"%%%%", "%%"},
+		{"%%%Y", "%[0-9]{4}"},
+		{"%%%F%T", "%[0-9]{4}-[0-9]{2}-[0-9]{2}[0-9]{2}:[0-9]{2}:[0-9]{2}"},
+	}
+
+	for _, tc := range testcases {
+		if regex := buildRegexFromTimeFormat(tc.formatString); regex != tc.regex {
+			t.Fatalf("building a regex for %#v returned %#v (expected=%#v)", tc.formatString, regex, tc.regex)
+		}
+	}
+}
+
 func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 	defer shared.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 
@@ -205,6 +225,9 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 		{"%F %T ", "2019-07-12 13:02:31 ls -Slah", "ls -Slah"},
 		{"%F ", "2019-07-12 ls -Slah", "ls -Slah"},
 		{"%F  ", "2019-07-12  ls -Slah", "ls -Slah"},
+		{"%Y", "2019ls -Slah", "ls -Slah"},
+		{"%Y%Y", "20192020ls -Slah", "ls -Slah"},
+		{"%Y%Y", "20192020ls -Slah20192020", "ls -Slah20192020"},
 		{"", "ls -Slah", "ls -Slah"},
 		{"[%F %T] ", "[2019-07-12 13:02:31] sudo apt update", "sudo apt update"},
 		{"[%F a %T] ", "[2019-07-12 a 13:02:31] sudo apt update", "sudo apt update"},
@@ -212,8 +235,10 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 		{"%c ", "Sun Aug 19 02:56:02 2012 sudo apt update", "sudo apt update"},
 		{"%c ", "Sun Aug 19 02:56:02 2012 ls", "ls"},
 		{"[%c] ", "[Sun Aug 19 02:56:02 2012] ls", "ls"},
-		{"[%c %t] ", "[Sun Aug 19 02:56:02 2012 aaaa] ls", "ls"},
-		{"[%c %t] ", "[Sun Aug 19 02:56:02 2012 aaaa] ls -Slah", "ls -Slah"},
+		{"[%c %t] ", "[Sun Aug 19 02:56:02 2012 	] ls", "ls"},
+		{"[%c %t]", "[Sun Aug 19 02:56:02 2012 	]ls", "ls"},
+		{"[%c %t]", "[Sun Aug 19 02:56:02 2012 	]foo", "foo"},
+		{"[%c %t", "[Sun Aug 19 02:56:02 2012 	foo", "foo"},
 	}
 
 	for _, tc := range testcases {
