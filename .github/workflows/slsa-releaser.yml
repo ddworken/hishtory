@@ -31,7 +31,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.0
     with:
       config-file: .slsa-goreleaser-linux-amd64.yml
-      go-version: 1.17
+      go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
   build-darwin-amd64:
     permissions:
@@ -43,7 +43,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.0
     with:
       config-file: .slsa-goreleaser-darwin-amd64.yml
-      go-version: 1.17
+      go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
   build-darwin-arm64:
     permissions:
@@ -56,7 +56,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.0
     with:
       config-file: .slsa-goreleaser-darwin-arm64.yml
-      go-version: 1.17
+      go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       
   # Sign the binaries and upload the signed binaries

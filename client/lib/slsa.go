@@ -10,65 +10,20 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ddworken/hishtory/client/vndor/slsa_verifier"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
+	"github.com/slsa-framework/slsa-verifier/options"
+	"github.com/slsa-framework/slsa-verifier/verifiers"
 )
 
-var defaultRekorAddr = "https://rekor.sigstore.dev"
-
-// Verify SLSA provenance of the downloaded binary
-// Copied from https://github.com/slsa-framework/slsa-verifier/blob/aee753f/main.go
-// Once the slsa-verifier supports being used as a library, this can be removed
 func verify(provenance []byte, artifactHash, source, branch, versionTag string) error {
-	rClient, err := rekor.NewClient(defaultRekorAddr)
-	if err != nil {
-		return err
+	provenanceOpts := &options.ProvenanceOpts{
+		ExpectedSourceURI:    source,
+		ExpectedBranch:       &branch,
+		ExpectedDigest:       artifactHash,
+		ExpectedVersionedTag: &versionTag,
 	}
-
-	// Get Rekor entries corresponding to the binary artifact in the provenance.
-	uuids, err := slsa_verifier.GetRekorEntries(rClient, artifactHash)
-	if err != nil {
-		return err
-	}
-
-	env, err := slsa_verifier.EnvelopeFromBytes(provenance)
-	if err != nil {
-		return err
-	}
-
-	// Verify the provenance and return the signing certificate.
-	cert, err := slsa_verifier.FindSigningCertificate(context.Background(), uuids, *env, rClient)
-	if err != nil {
-		return fmt.Errorf("failed to locate signing certificate: %v", err)
-	}
-
-	// Get the workflow info given the certificate information.
-	workflowInfo, err := slsa_verifier.GetWorkflowInfoFromCertificate(cert)
-	if err != nil {
-		return fmt.Errorf("failed to verify workflow info: %v", err)
-	}
-
-	// Unpack and verify info in the provenance, including the Subject Digest.
-	if err := slsa_verifier.VerifyProvenance(env, artifactHash); err != nil {
-		return fmt.Errorf("failed to verify provenance: %v", err)
-	}
-
-	// Verify the workflow identity.
-	if err := slsa_verifier.VerifyWorkflowIdentity(workflowInfo, source); err != nil {
-		return fmt.Errorf("failed to verify workflow identity: %v", err)
-	}
-
-	// Verify the branch.
-	if err := slsa_verifier.VerifyBranch(env, branch); err != nil {
-		return err
-	}
-
-	// Verify the tag.
-	if err := slsa_verifier.VerifyTag(env, versionTag); err != nil {
-		return fmt.Errorf("failed to verify tag: %v", err)
-	}
-
-	return nil
+	builderOpts := &options.BuilderOpts{}
+	_, _, err := verifiers.Verify(context.TODO(), provenance, artifactHash, provenanceOpts, builderOpts)
+	return err
 }
 
 func checkForDowngrade(currentVersionS, newVersionS string) error {
