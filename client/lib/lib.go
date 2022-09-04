@@ -320,7 +320,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	var results []data.HistoryEntry
 	tx.Limit(1).Find(&results)
 	if len(results) == 0 {
-		db.Create(&entry)
+		db.Create(entry)
 	}
 }
 
@@ -859,53 +859,9 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = migrateDbToAddIdColumn(db)
-	if err != nil {
-		return nil, err
-	}
-	// db.AutoMigrate(&data.HistoryEntry{})
+	db.AutoMigrate(&data.HistoryEntry{})
 	db.Exec("PRAGMA journal_mode = WAL")
 	return db, nil
-}
-
-func migrateDbToAddIdColumn(db *gorm.DB) error {
-	if !db.Migrator().HasTable(&data.HistoryEntry{}) {
-		return nil
-	}
-	if db.Migrator().HasTable("history_entry_tmp") {
-		err := db.Migrator().RenameTable("history_entry_tmp", &data.HistoryEntry{})
-		if err != nil {
-			return fmt.Errorf("DB Migration failed: Failed to rename an existing tmp table: %v", err)
-		}
-	}
-	if db.Migrator().HasColumn(&data.HistoryEntry{}, "local_id") {
-		return nil
-	}
-	err := db.Migrator().DropIndex(&data.HistoryEntry{}, "compositeindex")
-	if err != nil {
-		return fmt.Errorf("DB Migration failed: Failed to delete the index: %v", err)
-	}
-	err = db.Migrator().RenameTable(&data.HistoryEntry{}, "history_entry_tmp")
-	if err != nil {
-		return fmt.Errorf("DB Migration failed: Failed to rename the history table to a tmp table: %v", err)
-	}
-	err = db.Migrator().CreateTable(&data.HistoryEntry{})
-	if err != nil {
-		return fmt.Errorf("DB Migration failed: Failed to create a new history table: %v", err)
-	}
-	rawDb, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("DB Migration failed: Failed to retrieve a raw DB pointer: %v", err)
-	}
-	_, err = rawDb.Exec("INSERT INTO history_entries SELECT ROW_NUMBER() OVER(ORDER BY CAST(strftime(\"%s\",start_time) AS INTEGER)) as local_id, * FROM history_entry_tmp")
-	if err != nil {
-		return fmt.Errorf("DB Migration failed: Failed to insert into a new history table: %v", err)
-	}
-	err = db.Migrator().DropTable("history_entry_tmp")
-	if err != nil {
-		return fmt.Errorf("DB Migration failed: Failed to delete the tmp table: %v", err)
-	}
-	return nil
 }
 
 func ApiGet(path string) ([]byte, error) {

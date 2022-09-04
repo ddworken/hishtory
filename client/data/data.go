@@ -26,7 +26,6 @@ const (
 )
 
 type HistoryEntry struct {
-	Local_Id                int       `json:"local_id" gorm:"type:int;autoIncrement:true"`
 	LocalUsername           string    `json:"local_username" gorm:"uniqueIndex:compositeindex"`
 	Hostname                string    `json:"hostname" gorm:"uniqueIndex:compositeindex"`
 	Command                 string    `json:"command" gorm:"uniqueIndex:compositeindex"`
