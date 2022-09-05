@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -23,6 +24,7 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "saveHistoryEntry":
+		lib.CheckFatalError(maybeUploadSkippedHistoryEntries())
 		saveHistoryEntry()
 	case "query":
 		query(strings.Join(os.Args[2:], " "))
@@ -158,6 +160,48 @@ func displayBannerIfSet() error {
 	return nil
 }
 
+func maybeUploadSkippedHistoryEntries() error {
+	config, err := lib.GetConfig()
+	if err != nil {
+		return err
+	}
+	if !config.HaveMissedUploads {
+		return nil
+	}
+
+	// Upload the missing entries
+	db, err := lib.OpenLocalSqliteDb()
+	if err != nil {
+		return nil
+	}
+	query := fmt.Sprintf("after:%s", time.Unix(config.MissedUploadTimestamp, 0).Format("2006-01-02"))
+	entries, err := data.Search(db, query, 0)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
+	}
+	lib.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
+	for _, entry := range entries {
+		jsonValue, err := lib.EncryptAndMarshal(config, entry)
+		if err != nil {
+			return err
+		}
+		_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
+		if err != nil {
+			// Failed to upload the history entry, so we must still be offline. So just return nil and we'll try again later.
+			return nil
+		}
+	}
+
+	// Mark down that we persisted it
+	config.HaveMissedUploads = false
+	config.MissedUploadTimestamp = 0
+	err = lib.SetConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to mark a history entry as uploaded: %v", err)
+	}
+	return nil
+}
+
 func saveHistoryEntry() {
 	config, err := lib.GetConfig()
 	if err != nil {
@@ -181,16 +225,17 @@ func saveHistoryEntry() {
 	lib.CheckFatalError(err)
 
 	// Persist it remotely
-	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-	lib.CheckFatalError(err)
-	encEntry.DeviceId = config.DeviceId
-	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	jsonValue, err := lib.EncryptAndMarshal(config, entry)
 	lib.CheckFatalError(err)
 	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
 	if err != nil {
 		if lib.IsOfflineError(err) {
-			// TODO: Somehow handle this and don't completely lose it
 			lib.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
+			if !config.HaveMissedUploads {
+				config.HaveMissedUploads = true
+				config.MissedUploadTimestamp = time.Now().Unix()
+				lib.CheckFatalError(lib.SetConfig(config))
+			}
 		} else {
 			lib.CheckFatalError(err)
 		}

@@ -339,10 +339,14 @@ func DisplayResults(results []*data.HistoryEntry) {
 }
 
 type ClientConfig struct {
-	UserSecret           string `json:"user_secret"`
-	IsEnabled            bool   `json:"is_enabled"`
-	DeviceId             string `json:"device_id"`
+	UserSecret string `json:"user_secret"`
+	IsEnabled  bool   `json:"is_enabled"`
+	DeviceId   string `json:"device_id"`
+	// Used for skipping history entries prefixed with a space in bash
 	LastSavedHistoryLine string `json:"last_saved_history_line"`
+	// Used for uploading history entries that we failed to upload due to a missing network connection
+	HaveMissedUploads     bool  `json:"have_missed_uploads"`
+	MissedUploadTimestamp int64 `json:"missed_upload_timestamp"`
 }
 
 func GetConfig() (ClientConfig, error) {
@@ -865,6 +869,9 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 }
 
 func ApiGet(path string) ([]byte, error) {
+	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
+		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
+	}
 	start := time.Now()
 	resp, err := http.Get(getServerHostname() + path)
 	if err != nil {
@@ -884,6 +891,9 @@ func ApiGet(path string) ([]byte, error) {
 }
 
 func ApiPost(path, contentType string, data []byte) ([]byte, error) {
+	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
+		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
+	}
 	start := time.Now()
 	resp, err := http.Post(getServerHostname()+path, contentType, bytes.NewBuffer(data))
 	if err != nil {
@@ -932,4 +942,17 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 		}
 	}
 	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
+}
+
+func EncryptAndMarshal(config ClientConfig, entry *data.HistoryEntry) ([]byte, error) {
+	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt history entry")
+	}
+	encEntry.DeviceId = config.DeviceId
+	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	if err != nil {
+		return jsonValue, fmt.Errorf("failed to marshal encrypted history entry: %v", err)
+	}
+	return jsonValue, nil
 }

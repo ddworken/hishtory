@@ -126,6 +126,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testExportWithQuery/"+tester.ShellName(), func(t *testing.T) { testExportWithQuery(t, tester) })
 		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
 		t.Run("testStripBashTimePrefix/"+tester.ShellName(), func(t *testing.T) { testStripBashTimePrefix(t, tester) })
+		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
 	}
 }
 
@@ -1200,6 +1201,53 @@ func testStripBashTimePrefix(t *testing.T, tester shellTester) {
 	out = tester.RunInteractiveShell(t, "hishtory export echo")
 	if out != "echo foo\n" {
 		t.Fatalf("hishtory had unexpected output=%#v", out)
+	}
+}
+
+func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+
+	// Init an initial device
+	userSecret := installHishtory(t, tester, "")
+
+	// Set up a second device
+	restoreFirstProfile := shared.BackupAndRestoreWithId(t, "-install1")
+	installHishtory(t, tester, userSecret)
+
+	// Device 2: Record a command
+	tester.RunInteractiveShell(t, `echo 1`)
+
+	// Device 2: Record a command with a simulated network error
+	tester.RunInteractiveShell(t, `echo 2; export HISHTORY_SIMULATE_NETWORK_ERROR=1; echo 3`)
+
+	// Device 1: Run an export and confirm that the network only contains the first command
+	restoreSecondProfile := shared.BackupAndRestoreWithId(t, "-install2")
+	restoreFirstProfile()
+	out := tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
+	expectedOutput := "echo 1\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Device 2: Run another command but with the network re-enabled
+	restoreFirstProfile = shared.BackupAndRestoreWithId(t, "-install1")
+	restoreSecondProfile()
+	tester.RunInteractiveShell(t, `unset HISHTORY_SIMULATE_NETWORK_ERROR; echo 4`)
+
+	// Device 2: Run export which contains all results (as it did all along since it is stored offline)
+	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
+	expectedOutput = "echo 1\necho 2; export HISHTORY_SIMULATE_NETWORK_ERROR=1; echo 3\nunset HISHTORY_SIMULATE_NETWORK_ERROR; echo 4\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Device 1: Now it too sees all the results
+	restoreFirstProfile()
+	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
+	expectedOutput = "echo 1\necho 2; export HISHTORY_SIMULATE_NETWORK_ERROR=1; echo 3\nunset HISHTORY_SIMULATE_NETWORK_ERROR; echo 4\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
 
