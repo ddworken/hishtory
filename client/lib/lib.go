@@ -177,6 +177,8 @@ func buildRegexFromTimeFormat(timeFormat string) string {
 				expectedRegex += "[0-9]{2}"
 			} else if char == 'C' {
 				expectedRegex += "[0-9]{2}"
+			} else if char == 'u' || char == 'w' {
+				expectedRegex += "[0-9]"
 			} else if char == 'm' {
 				expectedRegex += "[0-9]{2}"
 			} else if char == 'd' {
@@ -185,13 +187,13 @@ func buildRegexFromTimeFormat(timeFormat string) string {
 				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
 			} else if char == 'T' {
 				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
-			} else if char == 'H' || char == 'I' {
+			} else if char == 'H' || char == 'I' || char == 'U' || char == 'V' || char == 'W' || char == 'y' || char == 'Y' {
 				expectedRegex += "[0-9]{2}"
 			} else if char == 'M' {
 				expectedRegex += "[0-9]{2}"
 			} else if char == 'j' {
 				expectedRegex += "[0-9]{3}"
-			} else if char == 'S' {
+			} else if char == 'S' || char == 'm' {
 				expectedRegex += "[0-9]{2}"
 			} else if char == 'c' {
 				// Note: Specific to the POSIX locale
@@ -202,10 +204,27 @@ func buildRegexFromTimeFormat(timeFormat string) string {
 			} else if char == 'b' || char == 'h' {
 				// Note: Specific to the POSIX locale
 				expectedRegex += "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
-			} else if char == 'e' {
+			} else if char == 'e' || char == 'k' || char == 'l' {
 				expectedRegex += "[0-9 ]{2}"
+			} else if char == 'n' {
+				expectedRegex += "\n"
+			} else if char == 'p' {
+				expectedRegex += "(AM|PM)"
+			} else if char == 'P' {
+				expectedRegex += "(am|pm)"
+			} else if char == 's' {
+				expectedRegex += "\\d+"
+			} else if char == 'z' {
+				expectedRegex += "[+-][0-9]{4}"
+			} else if char == 'r' {
+				expectedRegex += buildRegexFromTimeFormat("%I:%M:%S %p")
+			} else if char == 'R' {
+				expectedRegex += buildRegexFromTimeFormat("%H:%M")
+			} else if char == 'x' {
+				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
+			} else if char == 'X' {
+				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
 			} else {
-				// TODO: Add more of the options from https://man7.org/linux/man-pages/man3/strftime.3.html (currently going through j)
 				panic(fmt.Sprintf("buildRegexFromTimeFormat doesn't support %%%v, please open a bug against github.com/ddworken/hishtory", string(char)))
 			}
 		} else if char != '%' {
