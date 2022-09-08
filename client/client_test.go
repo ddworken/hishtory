@@ -529,6 +529,24 @@ hishtory disable`)
 	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
+
+	// Search for a cwd based on the home directory
+	entry = data.MakeFakeHistoryEntry("foobar")
+	entry.HomeDirectory = "/home/david/"
+	entry.CurrentWorkingDirectory = "~/dir/"
+	manuallySubmitHistoryEntry(t, userSecret, entry)
+	out = tester.RunInteractiveShell(t, `hishtory export cwd:~/dir`)
+	expectedOutput := "foobar\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// And search with the fully expanded path
+	out = tester.RunInteractiveShell(t, `hishtory export cwd:/home/david/dir`)
+	expectedOutput = "foobar\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
 }
 
 func testUpdate(t *testing.T, tester shellTester) {

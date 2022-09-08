@@ -50,22 +50,22 @@ var TestConfigZshContents string
 
 var Version string = "Unknown"
 
-func getCwd() (string, error) {
+func getCwd() (string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("failed to get cwd for last command: %v", err)
+		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
 	}
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get user's home directory: %v", err)
+		return "", "", fmt.Errorf("failed to get user's home directory: %v", err)
 	}
 	if cwd == homedir {
-		return "~/", nil
+		return "~/", homedir, nil
 	}
 	if strings.HasPrefix(cwd, homedir) {
-		return strings.Replace(cwd, homedir, "~", 1), nil
+		return strings.Replace(cwd, homedir, "~", 1), homedir, nil
 	}
-	return cwd, nil
+	return cwd, homedir, nil
 }
 
 func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
@@ -91,12 +91,13 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	}
 	entry.LocalUsername = user.Username
 
-	// cwd
-	cwd, err := getCwd()
+	// cwd and homedir
+	cwd, homedir, err := getCwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build history entry: %v", err)
 	}
 	entry.CurrentWorkingDirectory = cwd
+	entry.HomeDirectory = homedir
 
 	// start time
 	seconds, err := parseCrossPlatformInt(args[5])
@@ -122,7 +123,11 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 			// Don't save commands that start with a space
 			return nil, nil
 		}
-		entry.Command = maybeSkipBashHistTimePrefix(cmd)
+		cmd, err = maybeSkipBashHistTimePrefix(cmd)
+		if err != nil {
+			return nil, err
+		}
+		entry.Command = cmd
 	} else if shell == "zsh" {
 		cmd := strings.TrimSuffix(strings.TrimSuffix(args[4], "\n"), " ")
 		if strings.HasPrefix(cmd, " ") {
@@ -214,16 +219,16 @@ func buildRegexFromTimeFormat(timeFormat string) string {
 	return expectedRegex
 }
 
-func maybeSkipBashHistTimePrefix(cmdLine string) string {
+func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
 	format := os.Getenv("HISTTIMEFORMAT")
 	if format == "" {
-		return cmdLine
+		return cmdLine, nil
 	}
 	re, err := regexp.Compile("^" + buildRegexFromTimeFormat(format))
 	if err != nil {
-		panic("TODO: bubble up this error")
+		return "", fmt.Errorf("failed to parse regex for HISTTIMEFORMAT variable: %v", err)
 	}
-	return re.ReplaceAllLiteralString(cmdLine, "")
+	return re.ReplaceAllLiteralString(cmdLine, ""), nil
 }
 
 func parseCrossPlatformInt(data string) (int64, error) {
@@ -314,6 +319,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	tx = tx.Where("hostname = ?", entry.Hostname)
 	tx = tx.Where("command = ?", entry.Command)
 	tx = tx.Where("current_working_directory = ?", entry.CurrentWorkingDirectory)
+	tx = tx.Where("home_directory = ?", entry.HomeDirectory)
 	tx = tx.Where("exit_code = ?", entry.ExitCode)
 	tx = tx.Where("start_time = ?", entry.StartTime)
 	tx = tx.Where("end_time = ?", entry.EndTime)

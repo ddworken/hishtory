@@ -52,6 +52,9 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
 		t.Fatalf("history entry has unexpected cwd: %v", entry.CurrentWorkingDirectory)
 	}
+	if !strings.HasPrefix(entry.HomeDirectory, "/") {
+		t.Fatalf("history entry has unexpected home directory: %v", entry.HomeDirectory)
+	}
 	if entry.Command != "ls /foo" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
 	}
@@ -73,6 +76,9 @@ func TestBuildHistoryEntry(t *testing.T) {
 	}
 	if !strings.HasPrefix(entry.CurrentWorkingDirectory, "/") && !strings.HasPrefix(entry.CurrentWorkingDirectory, "~/") {
 		t.Fatalf("history entry has unexpected cwd: %v", entry.CurrentWorkingDirectory)
+	}
+	if !strings.HasPrefix(entry.HomeDirectory, "/") {
+		t.Fatalf("history entry has unexpected home directory: %v", entry.HomeDirectory)
 	}
 	if entry.Command != "ls /foo" {
 		t.Fatalf("history entry has unexpected command: %v", entry.Command)
@@ -243,7 +249,11 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 
 	for _, tc := range testcases {
 		os.Setenv("HISTTIMEFORMAT", tc.env)
-		if stripped := maybeSkipBashHistTimePrefix(tc.cmdLine); stripped != tc.expected {
+		stripped, err := maybeSkipBashHistTimePrefix(tc.cmdLine)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if stripped != tc.expected {
 			t.Fatalf("skipping the time prefix returned %#v (expected=%#v for %#v)", stripped, tc.expected, tc.cmdLine)
 		}
 	}
