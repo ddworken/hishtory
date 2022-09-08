@@ -39,7 +39,6 @@ jobs:
       contents: write
     needs: 
       - args 
-      - build-linux-amd64
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.0
     with:
       config-file: .slsa-goreleaser-darwin-amd64.yml
@@ -51,8 +50,6 @@ jobs:
       contents: write
     needs: 
       - args 
-      - build-linux-amd64
-      - build-darwin-amd64
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.0
     with:
       config-file: .slsa-goreleaser-darwin-arm64.yml
