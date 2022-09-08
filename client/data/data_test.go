@@ -29,12 +29,37 @@ func TestParseTimeGenerously(t *testing.T) {
 	if ts.Unix() != 1136243040 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
+	ts, err = parseTimeGenerously("2006-01-02 T15:04:00 -08:00")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02_T15:04:00_-08:00")
+	shared.Check(t, err)
+	if ts.Unix() != 1136243040 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
 	ts, err = parseTimeGenerously("2006-01-02T15:04:00")
 	shared.Check(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
+	ts, err = parseTimeGenerously("2006-01-02_T15:04:00")
+	shared.Check(t, err)
+	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02_15:04:00")
+	shared.Check(t, err)
+	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
 	ts, err = parseTimeGenerously("2006-01-02T15:04")
+	shared.Check(t, err)
+	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
+		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("2006-01-02_15:04")
 	shared.Check(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())

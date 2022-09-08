@@ -128,6 +128,7 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 }
 
 func parseTimeGenerously(input string) (time.Time, error) {
+	input = strings.ReplaceAll(input, "_", " ")
 	return dateparse.ParseLocal(input)
 }
 
@@ -206,7 +207,6 @@ func parseAtomizedToken(token string) (string, interface{}, error) {
 		}
 		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) < ?)", t.Unix(), nil
 	case "after":
-		// TODO: This doesn't support precise timestamps containg a space. Can we do better here?
 		t, err := parseTimeGenerously(val)
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
