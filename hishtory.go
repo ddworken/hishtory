@@ -34,6 +34,7 @@ func main() {
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
 		lib.CheckFatalError(lib.Install())
+		// TODO: Can I have this import from .bash_history when first installed?
 	case "enable":
 		lib.CheckFatalError(lib.Enable())
 	case "disable":
