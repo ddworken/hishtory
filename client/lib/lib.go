@@ -529,6 +529,9 @@ func parseBashHistory(homedir string) ([]string, error) {
 }
 
 func readFileToArray(path string) ([]string, error) {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return []string{}, nil
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
