@@ -317,11 +317,19 @@ echo thisisrecorded`)
 	datetimeMatcher := `[a-zA-Z]{3}\s\d{2}\s\d{4}\s[0-9:]+\s[A-Z]{3}`
 	runtimeMatcher := `[0-9.ms]+`
 	exitCodeMatcher := `0`
-	cmdMatcher := `echo thisisrecorded`
-	match, err := regexp.MatchString(hostnameMatcher+tableDividerMatcher+pathMatcher+tableDividerMatcher+datetimeMatcher+tableDividerMatcher+runtimeMatcher+tableDividerMatcher+exitCodeMatcher+tableDividerMatcher+cmdMatcher+tableDividerMatcher+`\n`, out)
+	pipefailMatcher := `set -em?o pipefail`
+	line1Matcher := `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command` + tableDividerMatcher + `\n`
+	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
+	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
+	match, err := regexp.MatchString(line3Matcher, out)
 	shared.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
+	}
+	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher, out)
+	shared.Check(t, err)
+	if !match {
+		t.Fatalf("output doesn't match the expected table: %v", out)
 	}
 
 	// Test querying for a specific command
