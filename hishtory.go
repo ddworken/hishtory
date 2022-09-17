@@ -35,13 +35,17 @@ func main() {
 	case "install":
 		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_TEST") == "" {
-			lib.CheckFatalError(lib.ImportHistory())
+			numImported, err := lib.ImportHistory()
+			lib.CheckFatalError(err)
+			fmt.Printf("Imported %v history entries from your existing shell history", numImported)
 		}
 	case "import":
 		if os.Getenv("HISHTORY_TEST") == "" {
 			lib.CheckFatalError(fmt.Errorf("the hishtory import command is only meant to be for testing purposes"))
 		}
-		lib.CheckFatalError(lib.ImportHistory())
+		numImported, err := lib.ImportHistory()
+		lib.CheckFatalError(err)
+		fmt.Printf("Imported %v history entries from your existing shell history", numImported)
 	case "enable":
 		lib.CheckFatalError(lib.Enable())
 	case "disable":

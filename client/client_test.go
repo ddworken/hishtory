@@ -10,11 +10,13 @@ import (
 	"path"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/lib"
@@ -92,7 +94,7 @@ func (z zshTester) RunInteractiveShellRelaxed(t *testing.T, script string) (stri
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %v", stdout.String(), stderr.String(), err)
+		return "", fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %v", script, stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
 	if strings.Contains(outStr, "hishtory fatal error") {
@@ -127,6 +129,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
 		t.Run("testStripBashTimePrefix/"+tester.ShellName(), func(t *testing.T) { testStripBashTimePrefix(t, tester) })
 		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
+		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
 	}
 }
 
@@ -1264,6 +1267,49 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	restoreFirstProfile()
 	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
 	expectedOutput = "echo 1\necho 2; export HISHTORY_SIMULATE_NETWORK_ERROR=1; echo 3\nunset HISHTORY_SIMULATE_NETWORK_ERROR; echo 4\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
+func testInitialHistoryImport(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+
+	// Record some commands before installing hishtory
+	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
+	randomCmd := fmt.Sprintf(`echo %v-foo
+echo %v-bar`, randomCmdUuid, randomCmdUuid)
+	tester.RunInteractiveShell(t, randomCmd)
+
+	// Install hishtory
+	installHishtory(t, tester, "")
+
+	// Check that hishtory export doesn't have the commands yet
+	out := tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid)
+	expectedOutput := ""
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Trigger an import
+	out = tester.RunInteractiveShell(t, "hishtory import")
+	r := regexp.MustCompile(`Imported (.+) history entries from your existing shell history`)
+	matches := r.FindStringSubmatch(out)
+	if len(matches) != 2 {
+		t.Fatalf("Failed to extract history entries count from output: matches=%#v, out=%#v", matches, out)
+	}
+	num, err := strconv.Atoi(matches[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if num <= 2 {
+		t.Fatalf("hishtory didn't import enough entries, only found %v entries", num)
+	}
+
+	// Check that the previously recorded commands are in hishtory
+	out = tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid)
+	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\nhishtory export %s\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}

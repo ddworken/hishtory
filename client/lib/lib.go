@@ -464,39 +464,39 @@ func CheckFatalError(err error) {
 	}
 }
 
-func ImportHistory() error {
+func ImportHistory() (int, error) {
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if config.HaveCompletedInitialImport {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
-		return nil
+		return 0, nil
 	}
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
+		return 0, fmt.Errorf("failed to get user's home directory: %v", err)
 	}
 	historyEntries, err := parseBashHistory(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to parse bash history: %v", err)
+		return 0, fmt.Errorf("failed to parse bash history: %v", err)
 	}
 	extraEntries, err := parseZshHistory(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to parse zsh history: %v", err)
+		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
 	db, err := OpenLocalSqliteDb()
 	if err != nil {
-		return nil
+		return 0, nil
 	}
 	currentUser, err := user.Current()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	hostname, err := os.Hostname()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	for _, cmd := range historyEntries {
 		startTime := time.Now()
@@ -513,15 +513,15 @@ func ImportHistory() error {
 			DeviceId:                config.DeviceId,
 		})
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	config.HaveCompletedInitialImport = true
 	err = SetConfig(config)
 	if err != nil {
-		return fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
+		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
 	}
-	return nil
+	return len(historyEntries), nil
 }
 
 func parseBashHistory(homedir string) ([]string, error) {
