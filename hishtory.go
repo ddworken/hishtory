@@ -34,7 +34,14 @@ func main() {
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
 		lib.CheckFatalError(lib.Install())
-		// TODO: Can I have this import from .bash_history when first installed?
+		if os.Getenv("HISHTORY_TEST") == "" {
+			lib.CheckFatalError(lib.ImportHistory())
+		}
+	case "import":
+		if os.Getenv("HISHTORY_TEST") == "" {
+			lib.CheckFatalError(fmt.Errorf("the hishtory import command is only meant to be for testing purposes"))
+		}
+		lib.CheckFatalError(lib.ImportHistory())
 	case "enable":
 		lib.CheckFatalError(lib.Enable())
 	case "disable":

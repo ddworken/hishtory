@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -49,6 +51,9 @@ var ConfigZshContents string
 var TestConfigZshContents string
 
 var Version string = "Unknown"
+
+// 256KB ought to be enough for any reasonable cmd
+var maxSupportedLineLengthForImport = 256_000
 
 func getCwd() (string, string, error) {
 	cwd, err := os.Getwd()
@@ -364,14 +369,19 @@ func DisplayResults(results []*data.HistoryEntry) {
 }
 
 type ClientConfig struct {
+	// The user secret that is used to derive encryption keys for syncing history entries
 	UserSecret string `json:"user_secret"`
-	IsEnabled  bool   `json:"is_enabled"`
-	DeviceId   string `json:"device_id"`
+	// Whether hishtory recording is enabled
+	IsEnabled bool `json:"is_enabled"`
+	// A device ID used to track which history entry came from which device for remote syncing
+	DeviceId string `json:"device_id"`
 	// Used for skipping history entries prefixed with a space in bash
 	LastSavedHistoryLine string `json:"last_saved_history_line"`
 	// Used for uploading history entries that we failed to upload due to a missing network connection
 	HaveMissedUploads     bool  `json:"have_missed_uploads"`
 	MissedUploadTimestamp int64 `json:"missed_upload_timestamp"`
+	// Used for avoiding double imports of .bash_history
+	HaveCompletedInitialImport bool `json:"have_completed_initial_import"`
 }
 
 func GetConfig() (ClientConfig, error) {
@@ -452,6 +462,100 @@ func CheckFatalError(err error) {
 		_, filename, line, _ := runtime.Caller(1)
 		log.Fatalf("hishtory fatal error at %s:%d: %v", filename, line, err)
 	}
+}
+
+func ImportHistory() error {
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+	if config.HaveCompletedInitialImport {
+		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
+		return nil
+	}
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+	historyEntries, err := parseBashHistory(homedir)
+	if err != nil {
+		return fmt.Errorf("failed to parse bash history: %v", err)
+	}
+	extraEntries, err := parseZshHistory(homedir)
+	if err != nil {
+		return fmt.Errorf("failed to parse zsh history: %v", err)
+	}
+	historyEntries = append(historyEntries, extraEntries...)
+	db, err := OpenLocalSqliteDb()
+	if err != nil {
+		return nil
+	}
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	for _, cmd := range historyEntries {
+		startTime := time.Now()
+		endTime := time.Now()
+		err = ReliableDbCreate(db, data.HistoryEntry{
+			LocalUsername:           currentUser.Name,
+			Hostname:                hostname,
+			Command:                 cmd,
+			CurrentWorkingDirectory: "Unknown",
+			HomeDirectory:           homedir,
+			ExitCode:                0, // Unknown, but assumed
+			StartTime:               startTime,
+			EndTime:                 endTime,
+			DeviceId:                config.DeviceId,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	config.HaveCompletedInitialImport = true
+	err = SetConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
+	}
+	return nil
+}
+
+func parseBashHistory(homedir string) ([]string, error) {
+	return readFileToArray(filepath.Join(homedir, ".bash_history"))
+}
+
+func readFileToArray(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, maxSupportedLineLengthForImport)
+	scanner.Buffer(buf, maxSupportedLineLengthForImport)
+	lines := make([]string, 0)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return lines, nil
+}
+
+func parseZshHistory(homedir string) ([]string, error) {
+	histfile := os.Getenv("HISTFILE")
+	if histfile == "" {
+		histfile = filepath.Join(homedir, ".zsh_history")
+	}
+	return readFileToArray(histfile)
 }
 
 func Install() error {
@@ -777,7 +881,7 @@ func stripCodeSignature(inPath, outPath string) error {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to use codesign_allocate to strip signatures on binary (stdout=%#v, stderr%#v): %v", stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to use codesign_allocate to strip signatures on binary=%v (stdout=%#v, stderr%#v): %v", inPath, stdout.String(), stderr.String(), err)
 	}
 	return nil
 }
@@ -809,6 +913,7 @@ func downloadFiles(updateInfo shared.UpdateInfo) error {
 }
 
 func downloadFile(filename, url string) error {
+	// Download the data
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to download file at %s to %s: %v", url, filename, err)
@@ -818,6 +923,15 @@ func downloadFile(filename, url string) error {
 		return fmt.Errorf("failed to download file at %s due to resp_code=%d", url, resp.StatusCode)
 	}
 
+	// Delete the file if it already exists. This is necessary due to https://openradar.appspot.com/FB8735191
+	if _, err := os.Stat(filename); err == nil {
+		err = os.Remove(filename)
+		if err != nil {
+			return fmt.Errorf("failed to delete file %v when trying to download a new version", filename)
+		}
+	}
+
+	// Create the file
 	out, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to save file to %s: %v", filename, err)
