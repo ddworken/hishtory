@@ -309,12 +309,20 @@ echo thisisrecorded`)
 			t.Fatalf("output is missing expected item %#v: %#v", item, out)
 		}
 	}
-	// TODO
-	// match, err = regexp.MatchString(`.*~/.*\s+[a-zA-Z]{3} \d+ 2022 \d\d:\d\d:\d\d PST\s+\d{1,2}ms\s+0\s+echo thisisrecorded.*`, out)
-	// shared.Check(t, err)
-	// if !match {
-	// 	t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
-	// }
+
+	// Test the actual table output
+	hostnameMatcher := `\S+`
+	tableDividerMatcher := `\s+`
+	pathMatcher := `~/[a-zA-Z_0-9/-]+`
+	datetimeMatcher := `[a-zA-Z]{3}\s\d{2}\s\d{4}\s[0-9:]+\s[A-Z]{3}`
+	runtimeMatcher := `[0-9ms]+`
+	exitCodeMatcher := `0`
+	cmdMatcher := `echo thisisrecorded`
+	match, err := regexp.MatchString(hostnameMatcher+tableDividerMatcher+pathMatcher+tableDividerMatcher+datetimeMatcher+tableDividerMatcher+runtimeMatcher+tableDividerMatcher+exitCodeMatcher+tableDividerMatcher+cmdMatcher+tableDividerMatcher+`\n`, out)
+	shared.Check(t, err)
+	if !match {
+		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
+	}
 
 	// Test querying for a specific command
 	out = hishtoryQuery(t, tester, "foo")
