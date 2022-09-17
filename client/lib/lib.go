@@ -654,7 +654,7 @@ func Update() error {
 		err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update: %v", err)
+		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update (to bypass, set `export HISHTORY_DISABLE_SLSA_ATTESTATION=true`): %v", err)
 	}
 
 	// Unlink the existing binary so we can overwrite it even though it is still running
