@@ -1326,5 +1326,3 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
-
-// TODO: write a test that runs hishtroy export | grep -v pipefail and then see if that shows up in query/export, I think there is weird behavior here
