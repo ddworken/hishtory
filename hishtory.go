@@ -37,7 +37,9 @@ func main() {
 		if os.Getenv("HISHTORY_TEST") == "" {
 			numImported, err := lib.ImportHistory()
 			lib.CheckFatalError(err)
-			fmt.Printf("Imported %v history entries from your existing shell history", numImported)
+			if numImported > 0 {
+				fmt.Printf("Imported %v history entries from your existing shell history", numImported)
+			}
 		}
 	case "import":
 		if os.Getenv("HISHTORY_TEST") == "" {
@@ -45,7 +47,9 @@ func main() {
 		}
 		numImported, err := lib.ImportHistory()
 		lib.CheckFatalError(err)
-		fmt.Printf("Imported %v history entries from your existing shell history", numImported)
+		if numImported > 0 {
+			fmt.Printf("Imported %v history entries from your existing shell history", numImported)
+		}
 	case "enable":
 		lib.CheckFatalError(lib.Enable())
 	case "disable":
