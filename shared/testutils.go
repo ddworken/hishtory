@@ -64,6 +64,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		path.Join(homedir, ".bashrc"),
 	}
 	for _, file := range copyFiles {
+		touchFile(file)
 		_ = copy(file, file+id+".bak")
 	}
 	configureZshrc(homedir)

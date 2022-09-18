@@ -30,6 +30,10 @@ func main() {
 		query(strings.Join(os.Args[2:], " "))
 	case "export":
 		export(strings.Join(os.Args[2:], " "))
+	case "redact":
+		fallthrough
+	case "delete":
+		panic("TODO: not yet implemented")
 	case "init":
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
