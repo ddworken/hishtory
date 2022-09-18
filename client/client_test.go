@@ -851,10 +851,6 @@ func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 		t.Skip("skip testing background saving since it is too flakey on M1")
 	}
-	if os.Getenv("GITHUB_ACTION") != "" {
-		t.Skip("skip testing background saving since it is somewhat flakey on github actions")
-	}
-	// TODO: ^
 
 	// Setup
 	defer shared.BackupAndRestore(t)()
