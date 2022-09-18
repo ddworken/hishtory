@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
@@ -10,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -133,12 +135,12 @@ func parseTimeGenerously(input string) (time.Time, error) {
 	return dateparse.ParseLocal(input)
 }
 
-func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
+func makeWhereQueryFromSearch(db *gorm.DB, query string) (*gorm.DB, error) {
 	tokens, err := tokenize(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to tokenize query: %v", err)
 	}
-	tx := db.Where("true")
+	tx := db.Model(&HistoryEntry{}).Where("true")
 	for _, token := range tokens {
 		if strings.HasPrefix(token, "-") {
 			if strings.Contains(token, ":") {
@@ -167,6 +169,45 @@ func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
 			}
 			tx = tx.Where(query, v1, v2, v3)
 		}
+	}
+	return tx, nil
+}
+
+func Redact(db *gorm.DB, query string) error {
+	tx, err := makeWhereQueryFromSearch(db, query)
+	if err != nil {
+		return err
+	}
+	var count int64
+	res := tx.Count(&count)
+	if res.Error != nil {
+		return res.Error
+	}
+	fmt.Printf("This will permanently delete %d entries, are you sure? [y/N]", count)
+	reader := bufio.NewReader(os.Stdin)
+	resp, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read response: %v", err)
+	}
+	if strings.TrimSpace(resp) != "y" {
+		fmt.Printf("Aborting delete per user response of %#v\n", strings.TrimSpace(resp))
+		return nil
+	}
+	tx, err = makeWhereQueryFromSearch(db, query)
+	if err != nil {
+		return err
+	}
+	res = tx.Delete(&HistoryEntry{})
+	if res.Error != nil {
+		return res.Error
+	}
+	return nil
+}
+
+func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
+	tx, err := makeWhereQueryFromSearch(db, query)
+	if err != nil {
+		return nil, err
 	}
 	tx = tx.Order("end_time DESC")
 	if limit > 0 {

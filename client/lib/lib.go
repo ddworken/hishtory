@@ -1055,6 +1055,9 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 }
 
 func IsOfflineError(err error) bool {
+	if err == nil {
+		return false
+	}
 	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") || strings.Contains(err.Error(), "read: connection reset by peer") || strings.Contains(err.Error(), ": EOF")
 }
 

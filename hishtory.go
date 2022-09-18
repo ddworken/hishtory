@@ -33,7 +33,9 @@ func main() {
 	case "redact":
 		fallthrough
 	case "delete":
-		panic("TODO: not yet implemented")
+		db, err := lib.OpenLocalSqliteDb()
+		lib.CheckFatalError(err)
+		lib.CheckFatalError(data.Redact(db, strings.Join(os.Args[2:], " ")))
 	case "init":
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
@@ -115,6 +117,9 @@ func printDumpStatus(config lib.ClientConfig) {
 
 func getDumpRequests(config lib.ClientConfig) ([]*shared.DumpRequest, error) {
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
+	if lib.IsOfflineError(err) {
+		return []*shared.DumpRequest{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +134,9 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 		return err
 	}
 	respBody, err := lib.ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
+	if lib.IsOfflineError(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -171,6 +179,9 @@ func displayBannerIfSet() error {
 	}
 	url := "/api/v1/banner?commit_hash=" + GitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + lib.Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	respBody, err := lib.ApiGet(url)
+	if lib.IsOfflineError(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

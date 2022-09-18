@@ -16,7 +16,6 @@ import (
 
 func TestESubmitThenQuery(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
 	InitDB()
 
 	// Register a few devices
@@ -114,7 +113,6 @@ func TestESubmitThenQuery(t *testing.T) {
 
 func TestDumpRequestAndResponse(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
 	InitDB()
 
 	// Register a first device for two different users
@@ -285,7 +283,6 @@ func TestUpdateReleaseVersion(t *testing.T) {
 	}
 
 	// Set up
-	defer shared.BackupAndRestore(t)()
 	InitDB()
 
 	// Check that ReleaseVersion hasn't been set yet

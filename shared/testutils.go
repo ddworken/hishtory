@@ -72,7 +72,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	touchFile(path.Join(homedir, ".zsh_history"))
 	return func() {
 		for _, file := range renameFiles {
-			_ = os.Rename(file+id+".bak", file)
+			checkError(os.Rename(file+id+".bak", file))
 		}
 		for _, file := range copyFiles {
 			checkError(copy(file+id+".bak", file))
