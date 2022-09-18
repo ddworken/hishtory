@@ -3,6 +3,7 @@ package shared
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -50,6 +51,25 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"))
+	_ = copy(path.Join(homedir, ".zshrc"), path.Join(homedir, ".zshrc"+id+".bak"))
+	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	checkError(err)
+	defer f.Close()
+	_, err = f.WriteString(`export HISTFILE=~/.zsh_history
+export HISTSIZE=10000
+export SAVEHIST=1000
+setopt SHARE_HISTORY`)
+	checkError(err)
+
+	_ = copy(path.Join(homedir, ".bashrc"), path.Join(homedir, ".bashrc"+id+".bak"))
+	_ = os.Rename(path.Join(homedir, ".bash_history"), path.Join(homedir, ".bash_history"+id+".bak"))
+	file, err := os.Create(path.Join(homedir, ".bash_history"))
+	checkError(err)
+	defer file.Close()
+	_ = os.Rename(path.Join(homedir, ".zsh_history"), path.Join(homedir, ".zsh_history"+id+".bak"))
+	file, err = os.Create(path.Join(homedir, ".zsh_history"))
+	checkError(err)
+	defer file.Close()
 	return func() {
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH)))
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH)))
@@ -58,7 +78,31 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "hishtory")))
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.sh")))
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh")))
+		checkError(copy(path.Join(homedir, ".zshrc"+id+".bak"), path.Join(homedir, ".zshrc")))
+		checkError(copy(path.Join(homedir, ".bashrc"+id+".bak"), path.Join(homedir, ".bashrc")))
+		checkError(os.Rename(path.Join(homedir, ".bash_history"+id+".bak"), path.Join(homedir, ".bash_history")))
+		checkError(os.Rename(path.Join(homedir, ".zsh_history"+id+".bak"), path.Join(homedir, ".zsh_history")))
 	}
+}
+
+func copy(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+	return out.Close()
 }
 
 func BackupAndRestoreEnv(k string) func() {

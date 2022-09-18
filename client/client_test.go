@@ -94,7 +94,7 @@ func (z zshTester) RunInteractiveShellRelaxed(t *testing.T, script string) (stri
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %v", script, stdout.String(), stderr.String(), err)
+		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %v", script, stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
 	if strings.Contains(outStr, "hishtory fatal error") {
@@ -313,7 +313,7 @@ echo thisisrecorded`)
 	// Test the actual table output
 	hostnameMatcher := `\S+`
 	tableDividerMatcher := `\s+`
-	pathMatcher := `~/[a-zA-Z_0-9/-]+`
+	pathMatcher := `~?/[a-zA-Z_0-9/-]+`
 	datetimeMatcher := `[a-zA-Z]{3}\s\d{2}\s\d{4}\s[0-9:]+\s[A-Z]{3}`
 	runtimeMatcher := `[0-9.ms]+`
 	exitCodeMatcher := `0`
