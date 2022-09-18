@@ -52,24 +52,12 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"))
 	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"))
 	_ = copy(path.Join(homedir, ".zshrc"), path.Join(homedir, ".zshrc"+id+".bak"))
-	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	checkError(err)
-	defer f.Close()
-	_, err = f.WriteString(`export HISTFILE=~/.zsh_history
-export HISTSIZE=10000
-export SAVEHIST=1000
-setopt SHARE_HISTORY`)
-	checkError(err)
-
+	configureZshrc(homedir)
 	_ = copy(path.Join(homedir, ".bashrc"), path.Join(homedir, ".bashrc"+id+".bak"))
 	_ = os.Rename(path.Join(homedir, ".bash_history"), path.Join(homedir, ".bash_history"+id+".bak"))
-	file, err := os.Create(path.Join(homedir, ".bash_history"))
-	checkError(err)
-	defer file.Close()
+	touchFile(path.Join(homedir, ".bash_history"))
 	_ = os.Rename(path.Join(homedir, ".zsh_history"), path.Join(homedir, ".zsh_history"+id+".bak"))
-	file, err = os.Create(path.Join(homedir, ".zsh_history"))
-	checkError(err)
-	defer file.Close()
+	touchFile(path.Join(homedir, ".zsh_history"))
 	return func() {
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH)))
 		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH)))
@@ -83,6 +71,23 @@ setopt SHARE_HISTORY`)
 		checkError(os.Rename(path.Join(homedir, ".bash_history"+id+".bak"), path.Join(homedir, ".bash_history")))
 		checkError(os.Rename(path.Join(homedir, ".zsh_history"+id+".bak"), path.Join(homedir, ".zsh_history")))
 	}
+}
+
+func touchFile(p string) {
+	file, err := os.Create(p)
+	checkError(err)
+	defer file.Close()
+}
+
+func configureZshrc(homedir string) {
+	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	checkError(err)
+	defer f.Close()
+	_, err = f.WriteString(`export HISTFILE=~/.zsh_history
+export HISTSIZE=10000
+export SAVEHIST=1000
+setopt SHARE_HISTORY`)
+	checkError(err)
 }
 
 func copy(src, dst string) error {
