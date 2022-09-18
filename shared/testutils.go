@@ -44,39 +44,52 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH), path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"), path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"), path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"))
-	_ = os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"), path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"))
-	_ = copy(path.Join(homedir, ".zshrc"), path.Join(homedir, ".zshrc"+id+".bak"))
+	renameFiles := []string{
+		path.Join(homedir, HISHTORY_PATH, DB_PATH),
+		path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH),
+		path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH),
+		path.Join(homedir, HISHTORY_PATH, CONFIG_PATH),
+		path.Join(homedir, HISHTORY_PATH, "hishtory"),
+		path.Join(homedir, HISHTORY_PATH, "config.sh"),
+		path.Join(homedir, HISHTORY_PATH, "config.zsh"),
+		path.Join(homedir, ".bash_history"),
+		path.Join(homedir, ".zsh_history"),
+	}
+	for _, file := range renameFiles {
+		touchFile(file)
+		_ = os.Rename(file, file+id+".bak")
+	}
+	copyFiles := []string{
+		path.Join(homedir, ".zshrc"),
+		path.Join(homedir, ".bashrc"),
+	}
+	for _, file := range copyFiles {
+		_ = copy(file, file+id+".bak")
+	}
 	configureZshrc(homedir)
-	_ = copy(path.Join(homedir, ".bashrc"), path.Join(homedir, ".bashrc"+id+".bak"))
-	_ = os.Rename(path.Join(homedir, ".bash_history"), path.Join(homedir, ".bash_history"+id+".bak"))
 	touchFile(path.Join(homedir, ".bash_history"))
-	_ = os.Rename(path.Join(homedir, ".zsh_history"), path.Join(homedir, ".zsh_history"+id+".bak"))
 	touchFile(path.Join(homedir, ".zsh_history"))
 	return func() {
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_PATH)))
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH)))
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH)))
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH+id+".bak"), path.Join(homedir, HISHTORY_PATH, CONFIG_PATH)))
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "hishtory"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "hishtory")))
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "config.sh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.sh")))
-		checkError(os.Rename(path.Join(homedir, HISHTORY_PATH, "config.zsh"+id+".bak"), path.Join(homedir, HISHTORY_PATH, "config.zsh")))
-		checkError(copy(path.Join(homedir, ".zshrc"+id+".bak"), path.Join(homedir, ".zshrc")))
-		checkError(copy(path.Join(homedir, ".bashrc"+id+".bak"), path.Join(homedir, ".bashrc")))
-		checkError(os.Rename(path.Join(homedir, ".bash_history"+id+".bak"), path.Join(homedir, ".bash_history")))
-		checkError(os.Rename(path.Join(homedir, ".zsh_history"+id+".bak"), path.Join(homedir, ".zsh_history")))
+		for _, file := range renameFiles {
+			_ = os.Rename(file+id+".bak", file)
+		}
+		for _, file := range copyFiles {
+			checkError(copy(file+id+".bak", file))
+		}
 	}
 }
 
 func touchFile(p string) {
-	file, err := os.Create(p)
-	checkError(err)
-	defer file.Close()
+	_, err := os.Stat(p)
+	if os.IsNotExist(err) {
+		file, err := os.Create("temp.txt")
+		checkError(err)
+		defer file.Close()
+	} else {
+		currentTime := time.Now().Local()
+		err := os.Chtimes(p, currentTime, currentTime)
+		checkError(err)
+	}
 }
 
 func configureZshrc(homedir string) {
