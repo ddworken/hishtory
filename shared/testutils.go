@@ -84,7 +84,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 func touchFile(p string) {
 	_, err := os.Stat(p)
 	if os.IsNotExist(err) {
-		checkError(os.MkdirAll(filepath.Base(p), os.ModePerm))
+		checkError(os.MkdirAll(filepath.Dir(p), os.ModePerm))
 		file, err := os.Create(p)
 		checkError(err)
 		defer file.Close()
