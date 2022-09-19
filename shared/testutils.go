@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -83,6 +84,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 func touchFile(p string) {
 	_, err := os.Stat(p)
 	if os.IsNotExist(err) {
+		checkError(os.MkdirAll(filepath.Base(p), os.ModePerm))
 		file, err := os.Create(p)
 		checkError(err)
 		defer file.Close()
