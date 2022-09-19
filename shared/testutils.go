@@ -83,7 +83,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 func touchFile(p string) {
 	_, err := os.Stat(p)
 	if os.IsNotExist(err) {
-		file, err := os.Create("temp.txt")
+		file, err := os.Create(p)
 		checkError(err)
 		defer file.Close()
 	} else {
