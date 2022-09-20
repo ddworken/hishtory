@@ -124,6 +124,9 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	w.Write(resp)
+
+	// TODO: Make thsi method also check the pending deletion requests
+	// And then can delete the extra round trip of doing processDeletionRequests() after pulling from the remote
 }
 
 func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -201,6 +204,67 @@ func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(forcedBanner))
 }
 
+func getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Count how many times they've been read and eventually delete them
+	userId := getRequiredQueryParam(r, "user_id")
+	deviceId := getRequiredQueryParam(r, "device_id")
+	var deletionRequests []*shared.DeletionRequest
+	result := GLOBAL_DB.Where("user_id = ? AND destination_device_id = ?", userId, deviceId).Find(&deletionRequests)
+	if result.Error != nil {
+		panic(fmt.Errorf("DB query error: %v", result.Error))
+	}
+	respBody, err := json.Marshal(deletionRequests)
+	if err != nil {
+		panic(fmt.Errorf("failed to JSON marshall the dump requests: %v", err))
+	}
+	w.Write(respBody)
+}
+
+func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	var request shared.DeletionRequest
+	err = json.Unmarshal(data, &request)
+	if err != nil {
+		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
+	}
+	fmt.Printf("addDeletionRequestHandler: received request containg %d messages to be deleted\n", len(request.Messages.Ids))
+
+	// Store the deletion request so all the devices will get it
+	tx := GLOBAL_DB.Where("user_id = ?", request.UserId)
+	var devices []*shared.Device
+	result := tx.Find(&devices)
+	if result.Error != nil {
+		panic(fmt.Errorf("DB query error: %v", result.Error))
+	}
+	if len(devices) == 0 {
+		panic(fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", request.UserId))
+	}
+	fmt.Printf("addDeletionRequestHandler: Found %d devices\n", len(devices))
+	for _, device := range devices {
+		request.DestinationDeviceId = device.DeviceId
+		result := GLOBAL_DB.Create(&request)
+		if result.Error != nil {
+			panic(result.Error)
+		}
+	}
+
+	// Also delete anything currently in the DB matching it
+	numDeleted := 0
+	for _, message := range request.Messages.Ids {
+		// TODO: Optimize this into one query
+		tx = GLOBAL_DB.Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date)
+		result := tx.Delete(&shared.EncHistoryEntry{})
+		if result.Error != nil {
+			panic(result.Error)
+		}
+		numDeleted += int(result.RowsAffected)
+	}
+	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
+}
+
 func wipeDbHandler(w http.ResponseWriter, r *http.Request) {
 	result := GLOBAL_DB.Exec("DELETE FROM enc_history_entries")
 	if result.Error != nil {
@@ -226,6 +290,7 @@ func OpenDB() (*gorm.DB, error) {
 		db.AutoMigrate(&shared.Device{})
 		db.AutoMigrate(&UsageData{})
 		db.AutoMigrate(&shared.DumpRequest{})
+		db.AutoMigrate(&shared.DeletionRequest{})
 		db.Exec("PRAGMA journal_mode = WAL")
 		return db, nil
 	}
@@ -238,6 +303,7 @@ func OpenDB() (*gorm.DB, error) {
 	db.AutoMigrate(&shared.Device{})
 	db.AutoMigrate(&UsageData{})
 	db.AutoMigrate(&shared.DumpRequest{})
+	db.AutoMigrate(&shared.DeletionRequest{})
 	return db, nil
 }
 
@@ -468,6 +534,8 @@ func main() {
 	http.Handle("/api/v1/banner", withLogging(apiBannerHandler))
 	http.Handle("/api/v1/download", withLogging(apiDownloadHandler))
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
+	http.Handle("/api/v1/get-deletion-requests", withLogging(getDeletionRequestsHandler))
+	http.Handle("/api/v1/add-deletion-request", withLogging(addDeletionRequestHandler))
 	if isTestEnvironment() {
 		http.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
 	}

@@ -130,6 +130,8 @@ func TestParameterized(t *testing.T) {
 		t.Run("testStripBashTimePrefix/"+tester.ShellName(), func(t *testing.T) { testStripBashTimePrefix(t, tester) })
 		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
 		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
+		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester) })
+		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 	}
 }
 
@@ -785,6 +787,9 @@ func hishtoryQuery(t *testing.T, tester shellTester, query string) string {
 func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.HistoryEntry) {
 	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
 	shared.Check(t, err)
+	if encEntry.Date != entry.EndTime {
+		t.Fatalf("encEntry.Date does not match the entry")
+	}
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	shared.Check(t, err)
 	resp, err := http.Post("http://localhost:8080/api/v1/submit", "application/json", bytes.NewBuffer(jsonValue))
@@ -1320,9 +1325,117 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Check that the previously recorded commands are in hishtory
+	// TODO: change the below to | grep -v pipefail and see that it fails weirdly with zsh
 	out = tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid)
 	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\nhishtory export %s\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
+
+func testLocalRedaction(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+
+	// Install hishtory
+	installHishtory(t, tester, "")
+
+	// Record some commands
+	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
+	randomCmd := fmt.Sprintf(`echo %v-foo
+echo %v-bas
+echo foo
+ls /tmp`, randomCmdUuid, randomCmdUuid)
+	tester.RunInteractiveShell(t, randomCmd)
+
+	// Check that the previously recorded commands are in hishtory
+	out := tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput := fmt.Sprintf("echo %s-foo\necho %s-bas\necho foo\nls /tmp\n", randomCmdUuid, randomCmdUuid)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Redact foo
+	out = tester.RunInteractiveShell(t, `hishtory redact --force foo`)
+	if out != "Permanently deleting 2 entries" {
+		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
+	}
+
+	// Check that the commands are redacted
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\nhishtory redact --force foo\n", randomCmdUuid)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Redact s
+	out = tester.RunInteractiveShell(t, `hishtory redact --force s`)
+	if out != "Permanently deleting 10 entries" {
+		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
+	}
+
+	// Check that the commands are redacted
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = "hishtory redact --force s\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
+func testRemoteRedaction(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+
+	// Install hishtory client 1
+	userSecret := installHishtory(t, tester, "")
+
+	// Record some commands
+	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
+	randomCmd := fmt.Sprintf(`echo %v-foo
+echo %v-bas`, randomCmdUuid, randomCmdUuid)
+	tester.RunInteractiveShell(t, randomCmd)
+	time.Sleep(2 * time.Second) // TODO: this sleep is covering up a bug
+	tester.RunInteractiveShell(t, `echo foo
+ls /tmp`)
+
+	// Check that the previously recorded commands are in hishtory
+	out := tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput := fmt.Sprintf("echo %s-foo\necho %s-bas\necho foo\nls /tmp\n", randomCmdUuid, randomCmdUuid)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Install hishtory client 2
+	restoreInstall1 := shared.BackupAndRestoreWithId(t, "-1")
+	installHishtory(t, tester, userSecret)
+
+	// And confirm that it has the commands too
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Restore the first client, and redact some commands
+	restoreInstall2 := shared.BackupAndRestoreWithId(t, "-2")
+	restoreInstall1()
+	out = tester.RunInteractiveShell(t, `hishtory redact --force `+randomCmdUuid)
+	if out != "Permanently deleting 2 entries" {
+		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
+	}
+
+	// Confirm that client1 doesn't have the commands
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = fmt.Sprintf("echo foo\nls /tmp\nhishtory redact --force %s\n", randomCmdUuid)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Swap back to the second client and then confirm it processed the deletion request
+	restoreInstall2()
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
+// TODO: some tests for offline behavior

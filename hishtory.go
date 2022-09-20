@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
@@ -26,16 +24,27 @@ func main() {
 	case "saveHistoryEntry":
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries())
 		saveHistoryEntry()
+		lib.CheckFatalError(processDeletionRequests())
 	case "query":
+		lib.CheckFatalError(processDeletionRequests())
 		query(strings.Join(os.Args[2:], " "))
 	case "export":
+		lib.CheckFatalError(processDeletionRequests())
 		export(strings.Join(os.Args[2:], " "))
 	case "redact":
 		fallthrough
 	case "delete":
+		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote())
+		lib.CheckFatalError(processDeletionRequests())
 		db, err := lib.OpenLocalSqliteDb()
 		lib.CheckFatalError(err)
-		lib.CheckFatalError(data.Redact(db, strings.Join(os.Args[2:], " ")))
+		query := strings.Join(os.Args[2:], " ")
+		force := false
+		if os.Args[2] == "--force" {
+			query = strings.Join(os.Args[3:], " ")
+			force = true
+		}
+		lib.CheckFatalError(lib.Redact(db, query, force))
 	case "init":
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
@@ -128,7 +137,44 @@ func getDumpRequests(config lib.ClientConfig) ([]*shared.DumpRequest, error) {
 	return dumpRequests, err
 }
 
-func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
+func processDeletionRequests() error {
+	config, err := lib.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	resp, err := lib.ApiGet("/api/v1/get-deletion-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
+	if lib.IsOfflineError(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var deletionRequests []*shared.DeletionRequest
+	err = json.Unmarshal(resp, &deletionRequests)
+	if err != nil {
+		return err
+	}
+	db, err := lib.OpenLocalSqliteDb()
+	if err != nil {
+		return err
+	}
+	for _, request := range deletionRequests {
+		for _, entry := range request.Messages.Ids {
+			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
+			if res.Error != nil {
+				return fmt.Errorf("DB error: %v", res.Error)
+			}
+		}
+	}
+	return nil
+}
+
+func retrieveAdditionalEntriesFromRemote() error {
+	db, err := lib.OpenLocalSqliteDb()
+	if err != nil {
+		return err
+	}
 	config, err := lib.GetConfig()
 	if err != nil {
 		return err
@@ -152,13 +198,13 @@ func retrieveAdditionalEntriesFromRemote(db *gorm.DB) error {
 		}
 		lib.AddToDbIfNew(db, decEntry)
 	}
-	return nil
+	return processDeletionRequests()
 }
 
 func query(query string) {
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
-	err = retrieveAdditionalEntriesFromRemote(db)
+	err = retrieveAdditionalEntriesFromRemote()
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
@@ -284,7 +330,7 @@ func saveHistoryEntry() {
 		}
 	}
 	if len(dumpRequests) > 0 {
-		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(db))
+		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote())
 		entries, err := data.Search(db, "", 0)
 		lib.CheckFatalError(err)
 		var encEntries []*shared.EncHistoryEntry
@@ -305,7 +351,7 @@ func saveHistoryEntry() {
 func export(query string) {
 	db, err := lib.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
-	err = retrieveAdditionalEntriesFromRemote(db)
+	err = retrieveAdditionalEntriesFromRemote()
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
@@ -319,3 +365,5 @@ func export(query string) {
 		fmt.Println(data[i].Command)
 	}
 }
+
+// TODO: Can we have a global db and config rather than this nonsense?

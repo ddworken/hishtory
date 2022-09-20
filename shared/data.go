@@ -1,6 +1,9 @@
 package shared
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -41,6 +44,39 @@ type UpdateInfo struct {
 	DarwinArm64UnsignedUrl    string `json:"darwin_arm_64_unsigned_url"`
 	DarwinArm64AttestationUrl string `json:"darwin_arm_64_attestation_url"`
 	Version                   string `json:"version"`
+}
+
+type DeletionRequest struct {
+	// TODO: Add a ReadCount
+	UserId              string             `json:"user_id"`
+	DestinationDeviceId string             `json:"destination_device_id"`
+	SendTime            time.Time          `json:"send_time"`
+	Messages            MessageIdentifiers `json:"messages"`
+}
+
+type MessageIdentifiers struct {
+	Ids []MessageIdentifier `json:"message_ids"`
+}
+
+type MessageIdentifier struct {
+	DeviceId string    `json:"device_id"`
+	Date     time.Time `json:"date"`
+}
+
+func (m *MessageIdentifiers) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("failed to unmarshal JSONB value: %v", value)
+	}
+
+	result := MessageIdentifiers{}
+	err := json.Unmarshal(bytes, &result)
+	*m = result
+	return err
+}
+
+func (m MessageIdentifiers) Value() (driver.Value, error) {
+	return json.Marshal(m)
 }
 
 const (
