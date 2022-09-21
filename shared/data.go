@@ -47,11 +47,11 @@ type UpdateInfo struct {
 }
 
 type DeletionRequest struct {
-	// TODO: Add a ReadCount
 	UserId              string             `json:"user_id"`
 	DestinationDeviceId string             `json:"destination_device_id"`
 	SendTime            time.Time          `json:"send_time"`
 	Messages            MessageIdentifiers `json:"messages"`
+	ReadCount           int                `json:"read_count"`
 }
 
 type MessageIdentifiers struct {

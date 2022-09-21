@@ -109,12 +109,15 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	deviceId := getRequiredQueryParam(r, "device_id")
 	updateUsageData(userId, deviceId)
 	// Increment the count
-	GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
+	result := GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
+	if result.Error != nil {
+		panic(result.Error)
+	}
 
 	// Then retrieve, to avoid a race condition
 	tx := GLOBAL_DB.Where("device_id = ? AND read_count < 5", deviceId)
 	var historyEntries []*shared.EncHistoryEntry
-	result := tx.Find(&historyEntries)
+	result = tx.Find(&historyEntries)
 	if result.Error != nil {
 		panic(fmt.Errorf("DB query error: %v", result.Error))
 	}
@@ -205,11 +208,18 @@ func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Count how many times they've been read and eventually delete them
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
+
+	// Increment the ReadCount
+	result := GLOBAL_DB.Exec("UPDATE deletion_requesy SET read_count = read_count + 1 WHERE destination_device_id = ? AND user_id = ?", deviceId, userId)
+	if result.Error != nil {
+		panic(result.Error)
+	}
+
+	// Return all the deletion requests
 	var deletionRequests []*shared.DeletionRequest
-	result := GLOBAL_DB.Where("user_id = ? AND destination_device_id = ?", userId, deviceId).Find(&deletionRequests)
+	result = GLOBAL_DB.Where("user_id = ? AND destination_device_id = ?", userId, deviceId).Find(&deletionRequests)
 	if result.Error != nil {
 		panic(fmt.Errorf("DB query error: %v", result.Error))
 	}
@@ -516,6 +526,10 @@ func byteCountToString(b int) string {
 
 func cleanDatabase() error {
 	result := GLOBAL_DB.Exec("DELETE FROM enc_history_entries WHERE read_count > 10")
+	if result.Error != nil {
+		return result.Error
+	}
+	result = GLOBAL_DB.Exec("DELETE FROM deletion_requests WHERE read_count > 100")
 	if result.Error != nil {
 		return result.Error
 	}
