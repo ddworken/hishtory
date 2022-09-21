@@ -1392,11 +1392,10 @@ func testRemoteRedaction(t *testing.T, tester shellTester) {
 	// Record some commands
 	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
 	randomCmd := fmt.Sprintf(`echo %v-foo
-echo %v-bas`, randomCmdUuid, randomCmdUuid)
+echo %v-bas
+echo foo
+ls /tmp`, randomCmdUuid, randomCmdUuid)
 	tester.RunInteractiveShell(t, randomCmd)
-	time.Sleep(2 * time.Second) // TODO: this sleep is covering up a bug
-	tester.RunInteractiveShell(t, `echo foo
-ls /tmp`)
 
 	// Check that the previously recorded commands are in hishtory
 	out := tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
