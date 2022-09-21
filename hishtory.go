@@ -21,21 +21,24 @@ func main() {
 		fmt.Println("Must specify a command! Do you mean `hishtory query`?")
 		return
 	}
-	ctx := hctx.MakeContext()
 	switch os.Args[1] {
 	case "saveHistoryEntry":
+		ctx := hctx.MakeContext()
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
 		saveHistoryEntry(ctx)
 		lib.CheckFatalError(processDeletionRequests(ctx))
 	case "query":
+		ctx := hctx.MakeContext()
 		lib.CheckFatalError(processDeletionRequests(ctx))
 		query(ctx, strings.Join(os.Args[2:], " "))
 	case "export":
+		ctx := hctx.MakeContext()
 		lib.CheckFatalError(processDeletionRequests(ctx))
 		export(ctx, strings.Join(os.Args[2:], " "))
 	case "redact":
 		fallthrough
 	case "delete":
+		ctx := hctx.MakeContext()
 		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(ctx))
 		lib.CheckFatalError(processDeletionRequests(ctx))
 		query := strings.Join(os.Args[2:], " ")
@@ -46,10 +49,11 @@ func main() {
 		}
 		lib.CheckFatalError(lib.Redact(ctx, query, force))
 	case "init":
-		lib.CheckFatalError(lib.Setup(ctx, os.Args))
+		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
-		lib.CheckFatalError(lib.Install(ctx))
+		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_TEST") == "" {
+			ctx := hctx.MakeContext()
 			numImported, err := lib.ImportHistory(ctx)
 			lib.CheckFatalError(err)
 			if numImported > 0 {
@@ -57,6 +61,7 @@ func main() {
 			}
 		}
 	case "import":
+		ctx := hctx.MakeContext()
 		if os.Getenv("HISHTORY_TEST") == "" {
 			lib.CheckFatalError(fmt.Errorf("the hishtory import command is only meant to be for testing purposes"))
 		}
@@ -66,12 +71,15 @@ func main() {
 			fmt.Printf("Imported %v history entries from your existing shell history", numImported)
 		}
 	case "enable":
+		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.Enable(ctx))
 	case "disable":
+		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.Disable(ctx))
 	case "version":
 		fallthrough
 	case "status":
+		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
 		fmt.Printf("Secret Key: %s\n", config.UserSecret)
@@ -339,5 +347,3 @@ func export(ctx *context.Context, query string) {
 		fmt.Println(data[i].Command)
 	}
 }
-
-// TODO: Can we have a global db and config rather than this nonsense?

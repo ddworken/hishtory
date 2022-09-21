@@ -250,7 +250,7 @@ func installHishtory(t *testing.T, tester shellTester, userSecret string) string
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
-		t.Fatalf("Failed to extract userSecret from output: matches=%#v", matches)
+		t.Fatalf("Failed to extract userSecret from output=%#v: matches=%#v", out, matches)
 	}
 	return matches[1]
 }
@@ -321,9 +321,9 @@ echo thisisrecorded`)
 	runtimeMatcher := `[0-9.ms]+`
 	exitCodeMatcher := `0`
 	pipefailMatcher := `set -em?o pipefail`
-	line1Matcher := `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command` + tableDividerMatcher + `\n`
-	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
-	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
+	line1Matcher := tableDividerMatcher + `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command` + tableDividerMatcher + `\n`
+	line2Matcher := tableDividerMatcher + hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
+	line3Matcher := tableDividerMatcher + hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	match, err := regexp.MatchString(line3Matcher, out)
 	shared.Check(t, err)
 	if !match {
@@ -868,7 +868,7 @@ go build -o /tmp/client
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
-		t.Fatalf("Failed to extract userSecret from output: matches=%#v", matches)
+		t.Fatalf("Failed to extract userSecret from output=%#v: matches=%#v", out, matches)
 	}
 	userSecret := matches[1]
 
@@ -1078,7 +1078,7 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
-		t.Fatalf("Failed to extract userSecret from output: matches=%#v", matches)
+		t.Fatalf("Failed to extract userSecret from output=%#v: matches=%#v", out, matches)
 	}
 	userSecret := matches[1]
 

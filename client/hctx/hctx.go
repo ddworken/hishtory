@@ -3,6 +3,7 @@ package hctx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -29,6 +30,10 @@ func GetLogger() *log.Logger {
 		if err != nil {
 			panic(fmt.Errorf("failed to get user's home directory: %v", err))
 		}
+		err = MakeHishtoryDir()
+		if err != nil {
+			panic(err)
+		}
 		f, err := os.OpenFile(path.Join(homedir, shared.HISHTORY_PATH, "hishtory.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o660)
 		if err != nil {
 			panic(fmt.Errorf("failed to open hishtory.log: %v", err))
@@ -39,14 +44,26 @@ func GetLogger() *log.Logger {
 	return hishtoryLogger
 }
 
+func MakeHishtoryDir() error {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+	err = os.MkdirAll(path.Join(homedir, shared.HISHTORY_PATH), 0o744)
+	if err != nil {
+		return fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
+	}
+	return nil
+}
+
 func OpenLocalSqliteDb() (*gorm.DB, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
 	}
-	err = os.MkdirAll(path.Join(homedir, shared.HISHTORY_PATH), 0o744)
+	err = MakeHishtoryDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
+		return nil, err
 	}
 	hishtoryLogger := GetLogger()
 	newLogger := logger.New(
@@ -81,12 +98,12 @@ func MakeContext() *context.Context {
 	ctx := context.Background()
 	config, err := GetConfig()
 	if err != nil {
-		GetLogger().Fatalf("failed to retrieve config: %v", err)
+		panic(fmt.Errorf("failed to retrieve config: %v", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("config"), config)
 	db, err := OpenLocalSqliteDb()
 	if err != nil {
-		GetLogger().Fatalf("failed to open local DB: %v", err)
+		panic(fmt.Errorf("failed to open local DB: %v", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("db"), db)
 	return &ctx
@@ -97,8 +114,7 @@ func GetConf(ctx *context.Context) ClientConfig {
 	if v != nil {
 		return v.(ClientConfig)
 	}
-	GetLogger().Fatalf("failed to find config in ctx")
-	return ClientConfig{}
+	panic(fmt.Errorf("failed to find config in ctx"))
 }
 
 func GetDb(ctx *context.Context) *gorm.DB {
@@ -106,8 +122,7 @@ func GetDb(ctx *context.Context) *gorm.DB {
 	if v != nil {
 		return v.(*gorm.DB)
 	}
-	GetLogger().Fatalf("failed to find db in ctx")
-	return nil
+	panic(fmt.Errorf("failed to find db in ctx"))
 }
 
 type ClientConfig struct {
@@ -161,10 +176,9 @@ func SetConfig(config ClientConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve homedir: %v", err)
 	}
-	clientDir := path.Join(homedir, shared.HISHTORY_PATH)
-	err = os.MkdirAll(clientDir, 0o744)
+	err = MakeHishtoryDir()
 	if err != nil {
-		return fmt.Errorf("failed to create ~/.hishtory/ folder: %v", err)
+		return err
 	}
 	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH), serializedConfig, 0o600)
 	if err != nil {
@@ -172,3 +186,17 @@ func SetConfig(config ClientConfig) error {
 	}
 	return nil
 }
+
+func InitConfig() error {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	_, err = os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
+	if errors.Is(err, os.ErrNotExist) {
+		return SetConfig(ClientConfig{})
+	}
+	return err
+}
+
+// TODO: make homedir part of the context

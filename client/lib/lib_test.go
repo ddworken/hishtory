@@ -16,12 +16,13 @@ import (
 func TestSetup(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	defer shared.RunTestServer()()
+
 	homedir, err := os.UserHomeDir()
 	shared.Check(t, err)
 	if _, err := os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	shared.Check(t, Setup(hctx.MakeContext(), []string{}))
+	shared.Check(t, Setup([]string{}))
 	if _, err := os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
@@ -35,7 +36,7 @@ func TestSetup(t *testing.T) {
 func TestBuildHistoryEntry(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
 	defer shared.RunTestServer()()
-	shared.Check(t, Setup(hctx.MakeContext(), []string{}))
+	shared.Check(t, Setup([]string{}))
 
 	// Test building an actual entry for bash
 	entry, err := BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958"})
@@ -94,6 +95,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 func TestPersist(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
+	shared.Check(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	entry := data.MakeFakeHistoryEntry("ls ~/")
@@ -112,6 +114,7 @@ func TestPersist(t *testing.T) {
 
 func TestSearch(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
+	shared.Check(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	// Insert data
@@ -137,6 +140,7 @@ func TestSearch(t *testing.T) {
 func TestAddToDbIfNew(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
+	shared.Check(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	// Add duplicate entries

@@ -274,7 +274,7 @@ func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, er
 	return false, nil
 }
 
-func Setup(ctx *context.Context, args []string) error {
+func Setup(args []string) error {
 	userSecret := uuid.Must(uuid.NewRandom()).String()
 	if len(args) > 2 && args[2] != "" {
 		userSecret = args[2]
@@ -292,7 +292,10 @@ func Setup(ctx *context.Context, args []string) error {
 	}
 
 	// Drop all existing data
-	db := hctx.GetDb(ctx)
+	db, err := hctx.OpenLocalSqliteDb()
+	if err != nil {
+		return err
+	}
 	db.Exec("DELETE FROM history_entries")
 
 	// Bootstrap from remote date
@@ -403,21 +406,20 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, err
 	}
 	for _, cmd := range historyEntries {
-		startTime := time.Now()
-		endTime := time.Now()
-		err = ReliableDbCreate(db, data.HistoryEntry{
+		entry := data.HistoryEntry{
 			LocalUsername:           currentUser.Name,
 			Hostname:                hostname,
 			Command:                 cmd,
 			CurrentWorkingDirectory: "Unknown",
 			HomeDirectory:           homedir,
 			ExitCode:                0, // Unknown, but assumed
-			StartTime:               startTime,
-			EndTime:                 endTime,
+			StartTime:               time.Now(),
+			EndTime:                 time.Now(),
 			DeviceId:                config.DeviceId,
-		})
+		}
+		err = ReliableDbCreate(db, entry)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("failed to insert imported history entry: %v", err)
 		}
 	}
 	config.HaveCompletedInitialImport = true
@@ -465,15 +467,14 @@ func parseZshHistory(homedir string) ([]string, error) {
 	return readFileToArray(histfile)
 }
 
-func Install(ctx *context.Context) error {
+func Install() error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
 	}
-	clientDir := path.Join(homedir, shared.HISHTORY_PATH)
-	err = os.MkdirAll(clientDir, 0o744)
+	err = hctx.MakeHishtoryDir()
 	if err != nil {
-		return fmt.Errorf("failed to create folder for hishtory binary: %v", err)
+		return err
 	}
 	path, err := installBinary(homedir)
 	if err != nil {
@@ -490,7 +491,7 @@ func Install(ctx *context.Context) error {
 	_, err = hctx.GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
-		return Setup(ctx, os.Args)
+		return Setup(os.Args)
 	}
 	return nil
 }
@@ -920,7 +921,7 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 				time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
 				continue
 			}
-			if strings.Contains(errMsg, "constraint failed: UNIQUE constraint failed") {
+			if strings.Contains(errMsg, "UNIQUE constraint failed") {
 				if i == 0 {
 					return err
 				} else {
