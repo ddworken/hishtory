@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 
+	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
@@ -958,7 +959,7 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	secretKey := installHishtory(t, tester, "")
 
 	// Confirm there are no pending dump requests
-	config, err := lib.GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		t.Fatal(err)
 	}

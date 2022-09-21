@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
@@ -36,7 +37,7 @@ func main() {
 	case "delete":
 		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote())
 		lib.CheckFatalError(processDeletionRequests())
-		db, err := lib.OpenLocalSqliteDb()
+		db, err := ctx.OpenLocalSqliteDb()
 		lib.CheckFatalError(err)
 		query := strings.Join(os.Args[2:], " ")
 		force := false
@@ -72,7 +73,7 @@ func main() {
 	case "version":
 		fallthrough
 	case "status":
-		config, err := lib.GetConfig()
+		config, err := ctx.GetConfig()
 		lib.CheckFatalError(err)
 		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
 		fmt.Printf("Secret Key: %s\n", config.UserSecret)
@@ -116,7 +117,7 @@ Supported commands:
 	}
 }
 
-func printDumpStatus(config lib.ClientConfig) {
+func printDumpStatus(config ctx.ClientConfig) {
 	dumpRequests, err := getDumpRequests(config)
 	lib.CheckFatalError(err)
 	fmt.Printf("Dump Requests: ")
@@ -126,7 +127,7 @@ func printDumpStatus(config lib.ClientConfig) {
 	fmt.Print("\n")
 }
 
-func getDumpRequests(config lib.ClientConfig) ([]*shared.DumpRequest, error) {
+func getDumpRequests(config ctx.ClientConfig) ([]*shared.DumpRequest, error) {
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
 	if lib.IsOfflineError(err) {
 		return []*shared.DumpRequest{}, nil
@@ -140,7 +141,7 @@ func getDumpRequests(config lib.ClientConfig) ([]*shared.DumpRequest, error) {
 }
 
 func processDeletionRequests() error {
-	config, err := lib.GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -157,7 +158,7 @@ func processDeletionRequests() error {
 	if err != nil {
 		return err
 	}
-	db, err := lib.OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	if err != nil {
 		return err
 	}
@@ -173,11 +174,11 @@ func processDeletionRequests() error {
 }
 
 func retrieveAdditionalEntriesFromRemote() error {
-	db, err := lib.OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	if err != nil {
 		return err
 	}
-	config, err := lib.GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -204,7 +205,7 @@ func retrieveAdditionalEntriesFromRemote() error {
 }
 
 func query(query string) {
-	db, err := lib.OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
 	err = retrieveAdditionalEntriesFromRemote()
 	if err != nil {
@@ -221,7 +222,7 @@ func query(query string) {
 }
 
 func displayBannerIfSet() error {
-	config, err := lib.GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %v", err)
 	}
@@ -240,7 +241,7 @@ func displayBannerIfSet() error {
 }
 
 func maybeUploadSkippedHistoryEntries() error {
-	config, err := lib.GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -249,7 +250,7 @@ func maybeUploadSkippedHistoryEntries() error {
 	}
 
 	// Upload the missing entries
-	db, err := lib.OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	if err != nil {
 		return nil
 	}
@@ -258,7 +259,7 @@ func maybeUploadSkippedHistoryEntries() error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
 	}
-	lib.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
+	ctx.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
 	for _, entry := range entries {
 		jsonValue, err := lib.EncryptAndMarshal(config, entry)
 		if err != nil {
@@ -274,7 +275,7 @@ func maybeUploadSkippedHistoryEntries() error {
 	// Mark down that we persisted it
 	config.HaveMissedUploads = false
 	config.MissedUploadTimestamp = 0
-	err = lib.SetConfig(config)
+	err = ctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to mark a history entry as uploaded: %v", err)
 	}
@@ -282,23 +283,23 @@ func maybeUploadSkippedHistoryEntries() error {
 }
 
 func saveHistoryEntry() {
-	config, err := lib.GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		log.Fatalf("hishtory cannot save an entry because the hishtory config file does not exist, try running `hishtory init` (err=%v)", err)
 	}
 	if !config.IsEnabled {
-		lib.GetLogger().Printf("Skipping saving a history entry because hishtory is disabled\n")
+		ctx.GetLogger().Printf("Skipping saving a history entry because hishtory is disabled\n")
 		return
 	}
 	entry, err := lib.BuildHistoryEntry(os.Args)
 	lib.CheckFatalError(err)
 	if entry == nil {
-		lib.GetLogger().Printf("Skipping saving a history entry because we failed to build a history entry (was the command prefixed with a space?)\n")
+		ctx.GetLogger().Printf("Skipping saving a history entry because we failed to build a history entry (was the command prefixed with a space?)\n")
 		return
 	}
 
 	// Persist it locally
-	db, err := lib.OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
 	err = lib.ReliableDbCreate(db, entry)
 	lib.CheckFatalError(err)
@@ -309,11 +310,11 @@ func saveHistoryEntry() {
 	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
 	if err != nil {
 		if lib.IsOfflineError(err) {
-			lib.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
+			ctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
 			if !config.HaveMissedUploads {
 				config.HaveMissedUploads = true
 				config.MissedUploadTimestamp = time.Now().Unix()
-				lib.CheckFatalError(lib.SetConfig(config))
+				lib.CheckFatalError(ctx.SetConfig(config))
 			}
 		} else {
 			lib.CheckFatalError(err)
@@ -326,7 +327,7 @@ func saveHistoryEntry() {
 		if lib.IsOfflineError(err) {
 			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
 			dumpRequests = []*shared.DumpRequest{}
-			lib.GetLogger().Printf("Failed to check for dump requests because the device is offline!")
+			ctx.GetLogger().Printf("Failed to check for dump requests because the device is offline!")
 		} else {
 			lib.CheckFatalError(err)
 		}
@@ -351,7 +352,7 @@ func saveHistoryEntry() {
 }
 
 func export(query string) {
-	db, err := lib.OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	lib.CheckFatalError(err)
 	err = retrieveAdditionalEntriesFromRemote()
 	if err != nil {

@@ -20,20 +20,19 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	_ "embed" // for embedding config.sh
 
-	"github.com/glebarez/sqlite" // an alternate non-cgo-requiring sqlite driver
+	// an alternate non-cgo-requiring sqlite driver
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/rodaine/table"
 
+	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
 )
@@ -75,7 +74,7 @@ func getCwd() (string, string, error) {
 
 func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
-		GetLogger().Printf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
+		ctx.GetLogger().Printf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
 		return nil, nil
 	}
 	shell := args[2]
@@ -152,7 +151,7 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.Hostname = hostname
 
 	// device ID
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get device ID when building history entry: %v", err)
 	}
@@ -265,7 +264,7 @@ func getLastCommand(history string) (string, error) {
 }
 
 func shouldSkipHiddenCommand(historyLine string) (bool, error) {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return false, err
 	}
@@ -273,7 +272,7 @@ func shouldSkipHiddenCommand(historyLine string) (bool, error) {
 		return true, nil
 	}
 	config.LastSavedHistoryLine = historyLine
-	err = SetConfig(config)
+	err = ctx.SetConfig(config)
 	if err != nil {
 		return false, err
 	}
@@ -281,7 +280,7 @@ func shouldSkipHiddenCommand(historyLine string) (bool, error) {
 }
 
 func GetUserSecret() (string, error) {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return "", err
 	}
@@ -296,17 +295,17 @@ func Setup(args []string) error {
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
 	// Create and set the config
-	var config ClientConfig
+	var config ctx.ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
-	err := SetConfig(config)
+	err := ctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
 	}
 
 	// Drop all existing data
-	db, err := OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	if err != nil {
 		return fmt.Errorf("failed to open DB: %v", err)
 	}
@@ -368,71 +367,8 @@ func DisplayResults(results []*data.HistoryEntry) {
 	tbl.Print()
 }
 
-type ClientConfig struct {
-	// The user secret that is used to derive encryption keys for syncing history entries
-	UserSecret string `json:"user_secret"`
-	// Whether hishtory recording is enabled
-	IsEnabled bool `json:"is_enabled"`
-	// A device ID used to track which history entry came from which device for remote syncing
-	DeviceId string `json:"device_id"`
-	// Used for skipping history entries prefixed with a space in bash
-	LastSavedHistoryLine string `json:"last_saved_history_line"`
-	// Used for uploading history entries that we failed to upload due to a missing network connection
-	HaveMissedUploads     bool  `json:"have_missed_uploads"`
-	MissedUploadTimestamp int64 `json:"missed_upload_timestamp"`
-	// Used for avoiding double imports of .bash_history
-	HaveCompletedInitialImport bool `json:"have_completed_initial_import"`
-}
-
-func GetConfig() (ClientConfig, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return ClientConfig{}, fmt.Errorf("failed to retrieve homedir: %v", err)
-	}
-	data, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
-	if err != nil {
-		files, err := ioutil.ReadDir(path.Join(homedir, shared.HISHTORY_PATH))
-		if err != nil {
-			return ClientConfig{}, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
-		}
-		filenames := ""
-		for _, file := range files {
-			filenames += file.Name()
-			filenames += ", "
-		}
-		return ClientConfig{}, fmt.Errorf("failed to read config file (files in ~/.hishtory/: %s): %v", filenames, err)
-	}
-	var config ClientConfig
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		return ClientConfig{}, fmt.Errorf("failed to parse config file: %v", err)
-	}
-	return config, nil
-}
-
-func SetConfig(config ClientConfig) error {
-	serializedConfig, err := json.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("failed to serialize config: %v", err)
-	}
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to retrieve homedir: %v", err)
-	}
-	clientDir := path.Join(homedir, shared.HISHTORY_PATH)
-	err = os.MkdirAll(clientDir, 0o744)
-	if err != nil {
-		return fmt.Errorf("failed to create ~/.hishtory/ folder: %v", err)
-	}
-	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH), serializedConfig, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to write config: %v", err)
-	}
-	return nil
-}
-
 func IsEnabled() (bool, error) {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return false, err
 	}
@@ -440,21 +376,21 @@ func IsEnabled() (bool, error) {
 }
 
 func Enable() error {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return err
 	}
 	config.IsEnabled = true
-	return SetConfig(config)
+	return ctx.SetConfig(config)
 }
 
 func Disable() error {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return err
 	}
 	config.IsEnabled = false
-	return SetConfig(config)
+	return ctx.SetConfig(config)
 }
 
 func CheckFatalError(err error) {
@@ -465,7 +401,7 @@ func CheckFatalError(err error) {
 }
 
 func ImportHistory() (int, error) {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return 0, err
 	}
@@ -486,7 +422,7 @@ func ImportHistory() (int, error) {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
-	db, err := OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	if err != nil {
 		return 0, nil
 	}
@@ -517,7 +453,7 @@ func ImportHistory() (int, error) {
 		}
 	}
 	config.HaveCompletedInitialImport = true
-	err = SetConfig(config)
+	err = ctx.SetConfig(config)
 	if err != nil {
 		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
 	}
@@ -583,7 +519,7 @@ func Install() error {
 	if err != nil {
 		return err
 	}
-	_, err = GetConfig()
+	_, err = ctx.GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
 		return Setup(os.Args)
@@ -862,7 +798,7 @@ func assertIdenticalBinaries(bin1Path, bin2Path string) error {
 			differences = append(differences, fmt.Sprintf("diff at index %d: %s[%d]=%x, %s[%d]=%x", i, bin1Path, i, b1, bin2Path, i, b2))
 		}
 	}
-	logger := GetLogger()
+	logger := ctx.GetLogger()
 	for _, d := range differences {
 		logger.Printf("comparing binaries: %#v\n", d)
 	}
@@ -953,63 +889,6 @@ func getServerHostname() string {
 	return "https://api.hishtory.dev"
 }
 
-var (
-	hishtoryLogger *log.Logger
-	getLoggerOnce  sync.Once
-)
-
-func GetLogger() *log.Logger {
-	getLoggerOnce.Do(func() {
-		homedir, err := os.UserHomeDir()
-		if err != nil {
-			panic(fmt.Errorf("failed to get user's home directory: %v", err))
-		}
-		f, err := os.OpenFile(path.Join(homedir, shared.HISHTORY_PATH, "hishtory.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o660)
-		if err != nil {
-			panic(fmt.Errorf("failed to open hishtory.log: %v", err))
-		}
-		// Purposefully not closing the file. Yes, this is a dangling file handle. But hishtory is short lived so this is okay.
-		hishtoryLogger = log.New(f, "\n", log.LstdFlags|log.Lshortfile)
-	})
-	return hishtoryLogger
-}
-
-func OpenLocalSqliteDb() (*gorm.DB, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
-	}
-	err = os.MkdirAll(path.Join(homedir, shared.HISHTORY_PATH), 0o744)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
-	}
-	hishtoryLogger := GetLogger()
-	newLogger := logger.New(
-		hishtoryLogger,
-		logger.Config{
-			SlowThreshold:             100 * time.Millisecond,
-			LogLevel:                  logger.Warn,
-			IgnoreRecordNotFoundError: false,
-			Colorful:                  false,
-		},
-	)
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, shared.HISHTORY_PATH, shared.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
-	}
-	tx, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
-	err = tx.Ping()
-	if err != nil {
-		return nil, err
-	}
-	db.AutoMigrate(&data.HistoryEntry{})
-	db.Exec("PRAGMA journal_mode = WAL")
-	return db, nil
-}
-
 func ApiGet(path string) ([]byte, error) {
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
@@ -1028,7 +907,7 @@ func ApiGet(path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
 	}
 	duration := time.Since(start)
-	GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
+	ctx.GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -1050,7 +929,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
 	}
 	duration := time.Since(start)
-	GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
+	ctx.GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -1089,7 +968,7 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
 }
 
-func EncryptAndMarshal(config ClientConfig, entry *data.HistoryEntry) ([]byte, error) {
+func EncryptAndMarshal(config ctx.ClientConfig, entry *data.HistoryEntry) ([]byte, error) {
 	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt history entry")
@@ -1146,7 +1025,7 @@ func Redact(db *gorm.DB, query string, force bool) error {
 }
 
 func deleteOnRemoteInstances(historyEntries []*data.HistoryEntry) error {
-	config, err := GetConfig()
+	config, err := ctx.GetConfig()
 	if err != nil {
 		return err
 	}

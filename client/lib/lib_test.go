@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
 )
@@ -112,7 +113,7 @@ func TestGetUserSecret(t *testing.T) {
 
 func TestPersist(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
-	db, err := OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	shared.Check(t, err)
 
 	entry := data.MakeFakeHistoryEntry("ls ~/")
@@ -131,7 +132,7 @@ func TestPersist(t *testing.T) {
 
 func TestSearch(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
-	db, err := OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	shared.Check(t, err)
 
 	// Insert data
@@ -157,7 +158,7 @@ func TestSearch(t *testing.T) {
 func TestAddToDbIfNew(t *testing.T) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
-	db, err := OpenLocalSqliteDb()
+	db, err := ctx.OpenLocalSqliteDb()
 	shared.Check(t, err)
 
 	// Add duplicate entries
