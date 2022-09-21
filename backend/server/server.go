@@ -277,17 +277,15 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func applyDeletionRequestsToBackend(request shared.DeletionRequest) (int, error) {
-	numDeleted := 0
+	tx := GLOBAL_DB.Where("false")
 	for _, message := range request.Messages.Ids {
-		// TODO: Optimize this into one query
-		tx := GLOBAL_DB.Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date)
-		result := tx.Delete(&shared.EncHistoryEntry{})
-		if result.Error != nil {
-			return 0, result.Error
-		}
-		numDeleted += int(result.RowsAffected)
+		tx = tx.Or(GLOBAL_DB.Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date))
 	}
-	return numDeleted, nil
+	result := tx.Delete(&shared.EncHistoryEntry{})
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return int(result.RowsAffected), nil
 }
 
 func wipeDbHandler(w http.ResponseWriter, r *http.Request) {
