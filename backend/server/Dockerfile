@@ -1,4 +1,4 @@
-FROM golang:8 AS builder
+FROM golang:1.18 AS builder
 COPY go.mod ./
 COPY go.sum ./
 RUN unset GOPATH; go mod download
