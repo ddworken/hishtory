@@ -100,6 +100,8 @@ Supported commands:
 		'hishtory query before:2022-02-01'	# Find shell commands run before 2022-02-01
 	'hishtory export': Query for matching commands and display them in list without any other 
 		metadata. Supports the same query format as 'hishtory query'. 
+	'hishtory redact': Query for matching commands and remove them from your shell history (on the
+		current machine and on all remote machines). Supports the same query format as 'hishtory query'.
 	'hishtory update': Securely update hishtory to the latest version. 
 	'hishtory disable': Stop recording shell commands 
 	'hishtory enable': Start recording shell commands 
