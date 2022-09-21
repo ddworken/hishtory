@@ -317,17 +317,27 @@ echo thisisrecorded`)
 	hostnameMatcher := `\S+`
 	tableDividerMatcher := `\s+`
 	pathMatcher := `~?/[a-zA-Z_0-9/-]+`
-	datetimeMatcher := `[a-zA-Z]{3}\s\d{2}\s\d{4}\s[0-9:]+\s[A-Z]{3}`
+	datetimeMatcher := `[a-zA-Z]{3}\s\d{2}\s\d{4}\s[0-9:]+\s([A-Z]{3}|[+-]\d{4})`
 	runtimeMatcher := `[0-9.ms]+`
 	exitCodeMatcher := `0`
 	pipefailMatcher := `set -em?o pipefail`
-	line1Matcher := tableDividerMatcher + `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command` + tableDividerMatcher + `\n`
-	line2Matcher := tableDividerMatcher + hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
-	line3Matcher := tableDividerMatcher + hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
+	line1Matcher := `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command\s*\n`
+	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
+	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	match, err := regexp.MatchString(line3Matcher, out)
 	shared.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
+	}
+	match, err = regexp.MatchString(line1Matcher, out)
+	shared.Check(t, err)
+	if !match {
+		t.Fatalf("output is missing the headings: %v", out)
+	}
+	match, err = regexp.MatchString(line2Matcher, out)
+	shared.Check(t, err)
+	if !match {
+		t.Fatalf("output is missing the pipefail: %v", out)
 	}
 	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher, out)
 	shared.Check(t, err)
