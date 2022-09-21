@@ -114,6 +114,8 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 		panic(result.Error)
 	}
 
+	// Delete any entries that match a pending deletion request
+
 	// Then retrieve, to avoid a race condition
 	tx := GLOBAL_DB.Where("device_id = ? AND read_count < 5", deviceId)
 	var historyEntries []*shared.EncHistoryEntry
@@ -212,7 +214,7 @@ func getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	deviceId := getRequiredQueryParam(r, "device_id")
 
 	// Increment the ReadCount
-	result := GLOBAL_DB.Exec("UPDATE deletion_requesy SET read_count = read_count + 1 WHERE destination_device_id = ? AND user_id = ?", deviceId, userId)
+	result := GLOBAL_DB.Exec("UPDATE deletion_requests SET read_count = read_count + 1 WHERE destination_device_id = ? AND user_id = ?", deviceId, userId)
 	if result.Error != nil {
 		panic(result.Error)
 	}
