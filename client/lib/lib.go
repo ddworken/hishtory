@@ -3,6 +3,7 @@ package lib
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,8 +33,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/rodaine/table"
 
-	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared"
 )
 
@@ -72,9 +73,9 @@ func getCwd() (string, string, error) {
 	return cwd, homedir, nil
 }
 
-func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
+func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
-		ctx.GetLogger().Printf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
+		hctx.GetLogger().Printf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
 		return nil, nil
 	}
 	shell := args[2]
@@ -119,7 +120,7 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to build history entry: %v", err)
 		}
-		shouldBeSkipped, err := shouldSkipHiddenCommand(args[4])
+		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
 		}
@@ -151,10 +152,7 @@ func BuildHistoryEntry(args []string) (*data.HistoryEntry, error) {
 	entry.Hostname = hostname
 
 	// device ID
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get device ID when building history entry: %v", err)
-	}
+	config := hctx.GetConf(ctx)
 	entry.DeviceId = config.DeviceId
 
 	return &entry, nil
@@ -263,31 +261,20 @@ func getLastCommand(history string) (string, error) {
 	return strings.SplitN(strings.SplitN(strings.TrimSpace(history), " ", 2)[1], " ", 2)[1], nil
 }
 
-func shouldSkipHiddenCommand(historyLine string) (bool, error) {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return false, err
-	}
+func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {
+	config := hctx.GetConf(ctx)
 	if config.LastSavedHistoryLine == historyLine {
 		return true, nil
 	}
 	config.LastSavedHistoryLine = historyLine
-	err = ctx.SetConfig(config)
+	err := hctx.SetConfig(config)
 	if err != nil {
 		return false, err
 	}
 	return false, nil
 }
 
-func GetUserSecret() (string, error) {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return "", err
-	}
-	return config.UserSecret, nil
-}
-
-func Setup(args []string) error {
+func Setup(ctx *context.Context, args []string) error {
 	userSecret := uuid.Must(uuid.NewRandom()).String()
 	if len(args) > 2 && args[2] != "" {
 		userSecret = args[2]
@@ -295,20 +282,17 @@ func Setup(args []string) error {
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
 	// Create and set the config
-	var config ctx.ClientConfig
+	var config hctx.ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
-	err := ctx.SetConfig(config)
+	err := hctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
 	}
 
 	// Drop all existing data
-	db, err := ctx.OpenLocalSqliteDb()
-	if err != nil {
-		return fmt.Errorf("failed to open DB: %v", err)
-	}
+	db := hctx.GetDb(ctx)
 	db.Exec("DELETE FROM history_entries")
 
 	// Bootstrap from remote date
@@ -367,30 +351,20 @@ func DisplayResults(results []*data.HistoryEntry) {
 	tbl.Print()
 }
 
-func IsEnabled() (bool, error) {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return false, err
-	}
-	return config.IsEnabled, nil
+func IsEnabled(ctx *context.Context) (bool, error) {
+	return hctx.GetConf(ctx).IsEnabled, nil
 }
 
-func Enable() error {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return err
-	}
+func Enable(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
 	config.IsEnabled = true
-	return ctx.SetConfig(config)
+	return hctx.SetConfig(config)
 }
 
-func Disable() error {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return err
-	}
+func Disable(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
 	config.IsEnabled = false
-	return ctx.SetConfig(config)
+	return hctx.SetConfig(config)
 }
 
 func CheckFatalError(err error) {
@@ -400,11 +374,8 @@ func CheckFatalError(err error) {
 	}
 }
 
-func ImportHistory() (int, error) {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return 0, err
-	}
+func ImportHistory(ctx *context.Context) (int, error) {
+	config := hctx.GetConf(ctx)
 	if config.HaveCompletedInitialImport {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
 		return 0, nil
@@ -422,10 +393,7 @@ func ImportHistory() (int, error) {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
-	db, err := ctx.OpenLocalSqliteDb()
-	if err != nil {
-		return 0, nil
-	}
+	db := hctx.GetDb(ctx)
 	currentUser, err := user.Current()
 	if err != nil {
 		return 0, err
@@ -453,7 +421,7 @@ func ImportHistory() (int, error) {
 		}
 	}
 	config.HaveCompletedInitialImport = true
-	err = ctx.SetConfig(config)
+	err = hctx.SetConfig(config)
 	if err != nil {
 		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
 	}
@@ -497,7 +465,7 @@ func parseZshHistory(homedir string) ([]string, error) {
 	return readFileToArray(histfile)
 }
 
-func Install() error {
+func Install(ctx *context.Context) error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
@@ -519,10 +487,10 @@ func Install() error {
 	if err != nil {
 		return err
 	}
-	_, err = ctx.GetConfig()
+	_, err = hctx.GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
-		return Setup(os.Args)
+		return Setup(ctx, os.Args)
 	}
 	return nil
 }
@@ -798,7 +766,7 @@ func assertIdenticalBinaries(bin1Path, bin2Path string) error {
 			differences = append(differences, fmt.Sprintf("diff at index %d: %s[%d]=%x, %s[%d]=%x", i, bin1Path, i, b1, bin2Path, i, b2))
 		}
 	}
-	logger := ctx.GetLogger()
+	logger := hctx.GetLogger()
 	for _, d := range differences {
 		logger.Printf("comparing binaries: %#v\n", d)
 	}
@@ -907,7 +875,7 @@ func ApiGet(path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
 	}
 	duration := time.Since(start)
-	ctx.GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
+	hctx.GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -929,7 +897,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
 	}
 	duration := time.Since(start)
-	ctx.GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
+	hctx.GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -968,7 +936,7 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
 }
 
-func EncryptAndMarshal(config ctx.ClientConfig, entry *data.HistoryEntry) ([]byte, error) {
+func EncryptAndMarshal(config hctx.ClientConfig, entry *data.HistoryEntry) ([]byte, error) {
 	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt history entry")
@@ -981,8 +949,8 @@ func EncryptAndMarshal(config ctx.ClientConfig, entry *data.HistoryEntry) ([]byt
 	return jsonValue, nil
 }
 
-func Redact(db *gorm.DB, query string, force bool) error {
-	tx, err := data.MakeWhereQueryFromSearch(db, query)
+func Redact(ctx *context.Context, query string, force bool) error {
+	tx, err := data.MakeWhereQueryFromSearch(hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
 	}
@@ -1006,7 +974,7 @@ func Redact(db *gorm.DB, query string, force bool) error {
 			return nil
 		}
 	}
-	tx, err = data.MakeWhereQueryFromSearch(db, query)
+	tx, err = data.MakeWhereQueryFromSearch(hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
 	}
@@ -1017,18 +985,15 @@ func Redact(db *gorm.DB, query string, force bool) error {
 	if res.RowsAffected != int64(len(historyEntries)) {
 		return fmt.Errorf("DB deleted %d rows, when we only expected to delete %d rows, something may have gone wrong", res.RowsAffected, len(historyEntries))
 	}
-	err = deleteOnRemoteInstances(historyEntries)
+	err = deleteOnRemoteInstances(ctx, historyEntries)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func deleteOnRemoteInstances(historyEntries []*data.HistoryEntry) error {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return err
-	}
+func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.HistoryEntry) error {
+	config := hctx.GetConf(ctx)
 
 	var deletionRequest shared.DeletionRequest
 	deletionRequest.SendTime = time.Now()

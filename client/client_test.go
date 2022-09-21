@@ -18,8 +18,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 
-	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 )
@@ -959,10 +959,7 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	secretKey := installHishtory(t, tester, "")
 
 	// Confirm there are no pending dump requests
-	config, err := ctx.GetConfig()
-	if err != nil {
-		t.Fatal(err)
-	}
+	config := hctx.GetConf(hctx.MakeContext())
 	deviceId1 := config.DeviceId
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
 	if err != nil {

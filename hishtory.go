@@ -1,15 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/ddworken/hishtory/client/ctx"
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 )
@@ -21,37 +21,36 @@ func main() {
 		fmt.Println("Must specify a command! Do you mean `hishtory query`?")
 		return
 	}
+	ctx := hctx.MakeContext()
 	switch os.Args[1] {
 	case "saveHistoryEntry":
-		lib.CheckFatalError(maybeUploadSkippedHistoryEntries())
-		saveHistoryEntry()
-		lib.CheckFatalError(processDeletionRequests())
+		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
+		saveHistoryEntry(ctx)
+		lib.CheckFatalError(processDeletionRequests(ctx))
 	case "query":
-		lib.CheckFatalError(processDeletionRequests())
-		query(strings.Join(os.Args[2:], " "))
+		lib.CheckFatalError(processDeletionRequests(ctx))
+		query(ctx, strings.Join(os.Args[2:], " "))
 	case "export":
-		lib.CheckFatalError(processDeletionRequests())
-		export(strings.Join(os.Args[2:], " "))
+		lib.CheckFatalError(processDeletionRequests(ctx))
+		export(ctx, strings.Join(os.Args[2:], " "))
 	case "redact":
 		fallthrough
 	case "delete":
-		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote())
-		lib.CheckFatalError(processDeletionRequests())
-		db, err := ctx.OpenLocalSqliteDb()
-		lib.CheckFatalError(err)
+		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(ctx))
+		lib.CheckFatalError(processDeletionRequests(ctx))
 		query := strings.Join(os.Args[2:], " ")
 		force := false
 		if os.Args[2] == "--force" {
 			query = strings.Join(os.Args[3:], " ")
 			force = true
 		}
-		lib.CheckFatalError(lib.Redact(db, query, force))
+		lib.CheckFatalError(lib.Redact(ctx, query, force))
 	case "init":
-		lib.CheckFatalError(lib.Setup(os.Args))
+		lib.CheckFatalError(lib.Setup(ctx, os.Args))
 	case "install":
-		lib.CheckFatalError(lib.Install())
+		lib.CheckFatalError(lib.Install(ctx))
 		if os.Getenv("HISHTORY_TEST") == "" {
-			numImported, err := lib.ImportHistory()
+			numImported, err := lib.ImportHistory(ctx)
 			lib.CheckFatalError(err)
 			if numImported > 0 {
 				fmt.Printf("Imported %v history entries from your existing shell history", numImported)
@@ -61,20 +60,19 @@ func main() {
 		if os.Getenv("HISHTORY_TEST") == "" {
 			lib.CheckFatalError(fmt.Errorf("the hishtory import command is only meant to be for testing purposes"))
 		}
-		numImported, err := lib.ImportHistory()
+		numImported, err := lib.ImportHistory(ctx)
 		lib.CheckFatalError(err)
 		if numImported > 0 {
 			fmt.Printf("Imported %v history entries from your existing shell history", numImported)
 		}
 	case "enable":
-		lib.CheckFatalError(lib.Enable())
+		lib.CheckFatalError(lib.Enable(ctx))
 	case "disable":
-		lib.CheckFatalError(lib.Disable())
+		lib.CheckFatalError(lib.Disable(ctx))
 	case "version":
 		fallthrough
 	case "status":
-		config, err := ctx.GetConfig()
-		lib.CheckFatalError(err)
+		config := hctx.GetConf(ctx)
 		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
 		fmt.Printf("Secret Key: %s\n", config.UserSecret)
 		if len(os.Args) == 3 && os.Args[2] == "-v" {
@@ -117,7 +115,7 @@ Supported commands:
 	}
 }
 
-func printDumpStatus(config ctx.ClientConfig) {
+func printDumpStatus(config hctx.ClientConfig) {
 	dumpRequests, err := getDumpRequests(config)
 	lib.CheckFatalError(err)
 	fmt.Printf("Dump Requests: ")
@@ -127,7 +125,7 @@ func printDumpStatus(config ctx.ClientConfig) {
 	fmt.Print("\n")
 }
 
-func getDumpRequests(config ctx.ClientConfig) ([]*shared.DumpRequest, error) {
+func getDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
 	if lib.IsOfflineError(err) {
 		return []*shared.DumpRequest{}, nil
@@ -140,11 +138,8 @@ func getDumpRequests(config ctx.ClientConfig) ([]*shared.DumpRequest, error) {
 	return dumpRequests, err
 }
 
-func processDeletionRequests() error {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return err
-	}
+func processDeletionRequests(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
 
 	resp, err := lib.ApiGet("/api/v1/get-deletion-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
 	if lib.IsOfflineError(err) {
@@ -158,10 +153,7 @@ func processDeletionRequests() error {
 	if err != nil {
 		return err
 	}
-	db, err := ctx.OpenLocalSqliteDb()
-	if err != nil {
-		return err
-	}
+	db := hctx.GetDb(ctx)
 	for _, request := range deletionRequests {
 		for _, entry := range request.Messages.Ids {
 			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
@@ -173,15 +165,9 @@ func processDeletionRequests() error {
 	return nil
 }
 
-func retrieveAdditionalEntriesFromRemote() error {
-	db, err := ctx.OpenLocalSqliteDb()
-	if err != nil {
-		return err
-	}
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return err
-	}
+func retrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
+	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
 	respBody, err := lib.ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
 	if lib.IsOfflineError(err) {
 		return nil
@@ -201,13 +187,12 @@ func retrieveAdditionalEntriesFromRemote() error {
 		}
 		lib.AddToDbIfNew(db, decEntry)
 	}
-	return processDeletionRequests()
+	return processDeletionRequests(ctx)
 }
 
-func query(query string) {
-	db, err := ctx.OpenLocalSqliteDb()
-	lib.CheckFatalError(err)
-	err = retrieveAdditionalEntriesFromRemote()
+func query(ctx *context.Context, query string) {
+	db := hctx.GetDb(ctx)
+	err := retrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
@@ -215,17 +200,14 @@ func query(query string) {
 			lib.CheckFatalError(err)
 		}
 	}
-	lib.CheckFatalError(displayBannerIfSet())
+	lib.CheckFatalError(displayBannerIfSet(ctx))
 	data, err := data.Search(db, query, 25)
 	lib.CheckFatalError(err)
 	lib.DisplayResults(data)
 }
 
-func displayBannerIfSet() error {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return fmt.Errorf("failed to get config: %v", err)
-	}
+func displayBannerIfSet(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
 	url := "/api/v1/banner?commit_hash=" + GitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + lib.Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	respBody, err := lib.ApiGet(url)
 	if lib.IsOfflineError(err) {
@@ -240,26 +222,20 @@ func displayBannerIfSet() error {
 	return nil
 }
 
-func maybeUploadSkippedHistoryEntries() error {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		return err
-	}
+func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
 	if !config.HaveMissedUploads {
 		return nil
 	}
 
 	// Upload the missing entries
-	db, err := ctx.OpenLocalSqliteDb()
-	if err != nil {
-		return nil
-	}
+	db := hctx.GetDb(ctx)
 	query := fmt.Sprintf("after:%s", time.Unix(config.MissedUploadTimestamp, 0).Format("2006-01-02"))
 	entries, err := data.Search(db, query, 0)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
 	}
-	ctx.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
+	hctx.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
 	for _, entry := range entries {
 		jsonValue, err := lib.EncryptAndMarshal(config, entry)
 		if err != nil {
@@ -275,32 +251,28 @@ func maybeUploadSkippedHistoryEntries() error {
 	// Mark down that we persisted it
 	config.HaveMissedUploads = false
 	config.MissedUploadTimestamp = 0
-	err = ctx.SetConfig(config)
+	err = hctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to mark a history entry as uploaded: %v", err)
 	}
 	return nil
 }
 
-func saveHistoryEntry() {
-	config, err := ctx.GetConfig()
-	if err != nil {
-		log.Fatalf("hishtory cannot save an entry because the hishtory config file does not exist, try running `hishtory init` (err=%v)", err)
-	}
+func saveHistoryEntry(ctx *context.Context) {
+	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
-		ctx.GetLogger().Printf("Skipping saving a history entry because hishtory is disabled\n")
+		hctx.GetLogger().Printf("Skipping saving a history entry because hishtory is disabled\n")
 		return
 	}
-	entry, err := lib.BuildHistoryEntry(os.Args)
+	entry, err := lib.BuildHistoryEntry(ctx, os.Args)
 	lib.CheckFatalError(err)
 	if entry == nil {
-		ctx.GetLogger().Printf("Skipping saving a history entry because we failed to build a history entry (was the command prefixed with a space?)\n")
+		hctx.GetLogger().Printf("Skipping saving a history entry because we failed to build a history entry (was the command prefixed with a space?)\n")
 		return
 	}
 
 	// Persist it locally
-	db, err := ctx.OpenLocalSqliteDb()
-	lib.CheckFatalError(err)
+	db := hctx.GetDb(ctx)
 	err = lib.ReliableDbCreate(db, entry)
 	lib.CheckFatalError(err)
 
@@ -310,11 +282,11 @@ func saveHistoryEntry() {
 	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
 	if err != nil {
 		if lib.IsOfflineError(err) {
-			ctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
+			hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
 			if !config.HaveMissedUploads {
 				config.HaveMissedUploads = true
 				config.MissedUploadTimestamp = time.Now().Unix()
-				lib.CheckFatalError(ctx.SetConfig(config))
+				lib.CheckFatalError(hctx.SetConfig(config))
 			}
 		} else {
 			lib.CheckFatalError(err)
@@ -327,13 +299,13 @@ func saveHistoryEntry() {
 		if lib.IsOfflineError(err) {
 			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
 			dumpRequests = []*shared.DumpRequest{}
-			ctx.GetLogger().Printf("Failed to check for dump requests because the device is offline!")
+			hctx.GetLogger().Printf("Failed to check for dump requests because the device is offline!")
 		} else {
 			lib.CheckFatalError(err)
 		}
 	}
 	if len(dumpRequests) > 0 {
-		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote())
+		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(ctx))
 		entries, err := data.Search(db, "", 0)
 		lib.CheckFatalError(err)
 		var encEntries []*shared.EncHistoryEntry
@@ -351,10 +323,9 @@ func saveHistoryEntry() {
 	}
 }
 
-func export(query string) {
-	db, err := ctx.OpenLocalSqliteDb()
-	lib.CheckFatalError(err)
-	err = retrieveAdditionalEntriesFromRemote()
+func export(ctx *context.Context, query string) {
+	db := hctx.GetDb(ctx)
+	err := retrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")

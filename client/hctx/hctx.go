@@ -1,4 +1,4 @@
-package ctx
+package hctx
 
 import (
 	"context"
@@ -77,7 +77,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 
 type hishtoryContextKey string
 
-func MakeContext() context.Context {
+func MakeContext() *context.Context {
 	ctx := context.Background()
 	config, err := GetConfig()
 	if err != nil {
@@ -89,11 +89,20 @@ func MakeContext() context.Context {
 		GetLogger().Fatalf("failed to open local DB: %v", err)
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("db"), db)
-	return ctx
+	return &ctx
 }
 
-func GetDbFromContext(ctx context.Context) *gorm.DB {
-	v := ctx.Value(hishtoryContextKey("db"))
+func GetConf(ctx *context.Context) ClientConfig {
+	v := (*ctx).Value(hishtoryContextKey("config"))
+	if v != nil {
+		return v.(ClientConfig)
+	}
+	GetLogger().Fatalf("failed to find config in ctx")
+	return ClientConfig{}
+}
+
+func GetDb(ctx *context.Context) *gorm.DB {
+	v := (*ctx).Value(hishtoryContextKey("db"))
 	if v != nil {
 		return v.(*gorm.DB)
 	}
