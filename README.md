@@ -47,6 +47,10 @@ In addition, `hishtory export` dumps all commands to stdout separated by a singl
 
 If you want to temporarily turn on/off hishtory recording, you can do so via `hishtory disable` (to turn off recording) and `hishtory enable` (to turn on recording). You can check whether or not `hishtory` is enabled via `hishtory status`. 
 
+### Deletion
+
+`hishtory redact` can be used to delete history entries that you didn't intend to record. It accepts the same search format as `hishtory query`. For example, to delete all history entries containing `psql`, run `hishtory redact psql`. 
+
 ### Updating
 
 To update `hishtory` to the latest version, just run `hishtory update` to transparently download and apply the latest update. 
