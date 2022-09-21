@@ -25,4 +25,5 @@ jobs:
       run: |
           sudo apt-get update || true 
           sudo apt-get install -y zsh || true
+          cp -f `which go` /usr/bin/go
           make test
