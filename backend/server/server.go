@@ -115,6 +115,14 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete any entries that match a pending deletion request
+	var deletionRequests []*shared.DeletionRequest
+	GLOBAL_DB.Where("destination_device_id = ? AND user_id = ?", deviceId, userId).Find(&deletionRequests)
+	for _, request := range deletionRequests {
+		_, err := applyDeletionRequestsToBackend(*request)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	// Then retrieve, to avoid a race condition
 	tx := GLOBAL_DB.Where("device_id = ? AND read_count < 5", deviceId)
@@ -129,9 +137,6 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	w.Write(resp)
-
-	// TODO: Make thsi method also check the pending deletion requests
-	// And then can delete the extra round trip of doing processDeletionRequests() after pulling from the remote
 }
 
 func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -264,17 +269,25 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Also delete anything currently in the DB matching it
+	numDeleted, err := applyDeletionRequestsToBackend(request)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
+}
+
+func applyDeletionRequestsToBackend(request shared.DeletionRequest) (int, error) {
 	numDeleted := 0
 	for _, message := range request.Messages.Ids {
 		// TODO: Optimize this into one query
-		tx = GLOBAL_DB.Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date)
+		tx := GLOBAL_DB.Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date)
 		result := tx.Delete(&shared.EncHistoryEntry{})
 		if result.Error != nil {
-			panic(result.Error)
+			return 0, result.Error
 		}
 		numDeleted += int(result.RowsAffected)
 	}
-	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
+	return numDeleted, nil
 }
 
 func wipeDbHandler(w http.ResponseWriter, r *http.Request) {
