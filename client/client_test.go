@@ -874,6 +874,10 @@ func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
 
+	p, err := exec.LookPath("go")
+	shared.Check(t, err)
+	fmt.Printf("TODO: DDWORKENDEBUG: go=%s path=%s\n", p, os.Getenv("PATH"))
+
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := tester.RunInteractiveShell(t, `unset HISHTORY_TEST
 CGO_ENABLED=0 go build -o /tmp/client
