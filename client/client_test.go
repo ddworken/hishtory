@@ -132,6 +132,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
 		t.Run("testStripBashTimePrefix/"+tester.ShellName(), func(t *testing.T) { testStripBashTimePrefix(t, tester) })
 		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
+		t.Run("testHishtoryOffline/"+tester.ShellName(), func(t *testing.T) { testHishtoryOffline(t, tester) })
 		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
 		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester) })
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
@@ -1299,6 +1300,53 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	}
 }
 
+func testHishtoryOffline(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+
+	// Init an initial device
+	userSecret := installHishtory(t, tester, "")
+
+	// Set up a second device
+	restoreFirstProfile := shared.BackupAndRestoreWithId(t, "-install1")
+	installHishtory(t, tester, userSecret)
+
+	// Device 2: Record a command
+	tester.RunInteractiveShell(t, `echo dev2`)
+
+	// Device 1: Run a command
+	restoreSecondProfile := shared.BackupAndRestoreWithId(t, "-install2")
+	restoreFirstProfile()
+	tester.RunInteractiveShell(t, `echo dev1-a`)
+
+	// Device 1: Query while offline
+	out := tester.RunInteractiveShell(t, `export HISHTORY_SIMULATE_NETWORK_ERROR=1; hishtory export | grep -v pipefail`)
+	expectedOutput := "echo dev2\necho dev1-a\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Device 2: Record another command
+	restoreFirstProfile = shared.BackupAndRestoreWithId(t, "-install1")
+	restoreSecondProfile()
+	tester.RunInteractiveShell(t, `echo dev2-b`)
+
+	// Device 1: Query while offline before ever retrieving the command
+	restoreFirstProfile()
+	out = tester.RunInteractiveShell(t, `export HISHTORY_SIMULATE_NETWORK_ERROR=1; hishtory export | grep -v pipefail`)
+	expectedOutput = "echo dev2\necho dev1-a\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Device 1: Query while online and get the command
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = "echo dev2\necho dev1-a\necho dev2-b\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
@@ -1446,5 +1494,3 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 }
-
-// TODO: some tests for offline behavior
