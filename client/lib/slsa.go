@@ -14,7 +14,7 @@ import (
 	"github.com/slsa-framework/slsa-verifier/verifiers"
 )
 
-func verify(provenance []byte, artifactHash, source, branch, versionTag string) error {
+func verify(ctx *context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
 	provenanceOpts := &options.ProvenanceOpts{
 		ExpectedSourceURI:    source,
 		ExpectedBranch:       &branch,
@@ -41,7 +41,7 @@ func checkForDowngrade(currentVersionS, newVersionS string) error {
 	return nil
 }
 
-func verifyBinary(binaryPath, attestationPath, versionTag string) error {
+func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag string) error {
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
@@ -60,7 +60,7 @@ func verifyBinary(binaryPath, attestationPath, versionTag string) error {
 		return err
 	}
 
-	return verify(attestation, hash, "github.com/ddworken/hishtory", "master", versionTag)
+	return verify(ctx, attestation, hash, "github.com/ddworken/hishtory", "master", versionTag)
 }
 
 func getFileHash(binaryPath string) (string, error) {

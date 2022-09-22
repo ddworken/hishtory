@@ -654,9 +654,9 @@ func Update(ctx *context.Context) error {
 
 	// Verify the SLSA attestation
 	if runtime.GOOS == "darwin" {
-		err = verifyBinaryMac("/tmp/hishtory-client", downloadData)
+		err = verifyBinaryMac(ctx, "/tmp/hishtory-client", downloadData)
 	} else {
-		err = verifyBinary("/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
+		err = verifyBinary(ctx, "/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update (to bypass, set `export HISHTORY_DISABLE_SLSA_ATTESTATION=true`): %v", err)
@@ -692,7 +692,7 @@ func Update(ctx *context.Context) error {
 	return nil
 }
 
-func verifyBinaryMac(binaryPath string, downloadData shared.UpdateInfo) error {
+func verifyBinaryMac(ctx *context.Context, binaryPath string, downloadData shared.UpdateInfo) error {
 	// On Mac, binary verification is a bit more complicated since mac binaries are code
 	// signed. To verify a signed binary, we:
 	// 1. Download the unsigned binary
@@ -734,7 +734,7 @@ func verifyBinaryMac(binaryPath string, downloadData shared.UpdateInfo) error {
 	}
 
 	// Step 4: Use SLSA to verify the unsigned binary
-	return verifyBinary(unsignedBinaryPath, "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
+	return verifyBinary(ctx, unsignedBinaryPath, "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 }
 
 func assertIdenticalBinaries(bin1Path, bin2Path string) error {
