@@ -26,7 +26,6 @@ import (
 
 	_ "embed" // for embedding config.sh
 
-	// an alternate non-cgo-requiring sqlite driver
 	"gorm.io/gorm"
 
 	"github.com/fatih/color"

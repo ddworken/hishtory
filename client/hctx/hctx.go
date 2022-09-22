@@ -14,9 +14,11 @@ import (
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	// Needed to use sqlite without CGO
+	"github.com/glebarez/sqlite"
 )
 
 var (
