@@ -247,6 +247,7 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
 	}
+	request.ReadCount = 0
 	fmt.Printf("addDeletionRequestHandler: received request containg %d messages to be deleted\n", len(request.Messages.Ids))
 
 	// Store the deletion request so all the devices will get it

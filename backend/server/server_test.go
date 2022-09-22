@@ -8,9 +8,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/go-test/deep"
 	"github.com/google/uuid"
 )
 
@@ -306,4 +308,181 @@ func TestUpdateReleaseVersion(t *testing.T) {
 	}
 }
 
-// TODO: server tests for redaction
+func TestDeletionRequests(t *testing.T) {
+	// Set up
+	InitDB()
+
+	// Register two devices for two different users
+	userId := data.UserId("dkey")
+	devId1 := uuid.Must(uuid.NewRandom()).String()
+	devId2 := uuid.Must(uuid.NewRandom()).String()
+	otherUser := data.UserId("dOtherkey")
+	otherDev1 := uuid.Must(uuid.NewRandom()).String()
+	otherDev2 := uuid.Must(uuid.NewRandom()).String()
+	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	apiRegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
+	apiRegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev1+"&user_id="+otherUser, nil)
+	apiRegisterHandler(nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev2+"&user_id="+otherUser, nil)
+	apiRegisterHandler(nil, deviceReq)
+
+	// Add an entry for user1
+	entry1 := data.MakeFakeHistoryEntry("ls ~/")
+	entry1.DeviceId = devId1
+	encEntry, err := data.EncryptHistoryEntry("dkey", entry1)
+	shared.Check(t, err)
+	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	shared.Check(t, err)
+	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	apiSubmitHandler(nil, submitReq)
+
+	// And another entry for user1
+	entry2 := data.MakeFakeHistoryEntry("ls /foo/bar")
+	entry2.DeviceId = devId2
+	encEntry, err = data.EncryptHistoryEntry("dkey", entry2)
+	shared.Check(t, err)
+	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
+	shared.Check(t, err)
+	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	apiSubmitHandler(nil, submitReq)
+
+	// And an entry for user2 that has the same timestamp as the previous entry
+	entry3 := data.MakeFakeHistoryEntry("ls /foo/bar")
+	entry3.StartTime = entry1.StartTime
+	entry3.EndTime = entry1.EndTime
+	encEntry, err = data.EncryptHistoryEntry("dOtherkey", entry3)
+	shared.Check(t, err)
+	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
+	shared.Check(t, err)
+	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	apiSubmitHandler(nil, submitReq)
+
+	// Query for device id 1
+	w := httptest.NewRecorder()
+	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	apiQueryHandler(w, searchReq)
+	res := w.Result()
+	defer res.Body.Close()
+	respBody, err := ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	var retrievedEntries []*shared.EncHistoryEntry
+	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	if len(retrievedEntries) != 2 {
+		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
+	}
+	for _, dbEntry := range retrievedEntries {
+		if dbEntry.DeviceId != devId1 {
+			t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
+		}
+		if dbEntry.UserId != data.UserId("dkey") {
+			t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
+		}
+		if dbEntry.ReadCount != 1 {
+			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
+		}
+		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
+		shared.Check(t, err)
+		if !data.EntryEquals(decEntry, entry1) && !data.EntryEquals(decEntry, entry2) {
+			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1, entry2)
+		}
+	}
+
+	// Submit a redact request for entry1
+	delReqTime := time.Now()
+	delReq := shared.DeletionRequest{
+		UserId:   data.UserId("dkey"),
+		SendTime: delReqTime,
+		Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{
+			{DeviceId: devId1, Date: entry1.EndTime},
+		}},
+	}
+	reqBody, err = json.Marshal(delReq)
+	shared.Check(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	addDeletionRequestHandler(nil, req)
+
+	// Query again for device id 1 and get a single result
+	w = httptest.NewRecorder()
+	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	apiQueryHandler(w, searchReq)
+	res = w.Result()
+	defer res.Body.Close()
+	respBody, err = ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	if len(retrievedEntries) != 1 {
+		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
+	}
+	dbEntry := retrievedEntries[0]
+	if dbEntry.DeviceId != devId1 {
+		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
+	}
+	if dbEntry.UserId != data.UserId("dkey") {
+		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
+	}
+	if dbEntry.ReadCount != 2 {
+		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
+	}
+	decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
+	shared.Check(t, err)
+	if !data.EntryEquals(decEntry, entry2) {
+		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry2)
+	}
+
+	// Query for user 2
+	w = httptest.NewRecorder()
+	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev1+"&user_id="+otherUser, nil)
+	apiQueryHandler(w, searchReq)
+	res = w.Result()
+	defer res.Body.Close()
+	respBody, err = ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	if len(retrievedEntries) != 1 {
+		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
+	}
+	dbEntry = retrievedEntries[0]
+	if dbEntry.DeviceId != otherDev1 {
+		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
+	}
+	if dbEntry.UserId != data.UserId("dOtherkey") {
+		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
+	}
+	if dbEntry.ReadCount != 1 {
+		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
+	}
+	decEntry, err = data.DecryptHistoryEntry("dOtherkey", *dbEntry)
+	shared.Check(t, err)
+	if !data.EntryEquals(decEntry, entry3) {
+		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry3)
+	}
+
+	// Query for deletion requests
+	w = httptest.NewRecorder()
+	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	getDeletionRequestsHandler(w, searchReq)
+	res = w.Result()
+	defer res.Body.Close()
+	respBody, err = ioutil.ReadAll(res.Body)
+	shared.Check(t, err)
+	var deletionRequests []*shared.DeletionRequest
+	shared.Check(t, json.Unmarshal(respBody, &deletionRequests))
+	if len(deletionRequests) != 1 {
+		t.Fatalf("received %d deletion requests, expected only one", len(deletionRequests))
+	}
+	deletionRequest := deletionRequests[0]
+	expected := shared.DeletionRequest{
+		UserId:              data.UserId("dkey"),
+		DestinationDeviceId: devId1,
+		SendTime:            delReqTime,
+		ReadCount:           1,
+		Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{
+			{DeviceId: devId1, Date: entry1.EndTime},
+		}},
+	}
+	if diff := deep.Equal(*deletionRequest, expected); diff != nil {
+		t.Error(diff)
+	}
+}
