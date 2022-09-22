@@ -637,7 +637,7 @@ func GetDownloadData() (shared.UpdateInfo, error) {
 	return downloadData, nil
 }
 
-func Update() error {
+func Update(ctx *context.Context) error {
 	// Download the binary
 	downloadData, err := GetDownloadData()
 	if err != nil {
@@ -664,10 +664,7 @@ func Update() error {
 
 	// Unlink the existing binary so we can overwrite it even though it is still running
 	if runtime.GOOS == "linux" {
-		homedir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("failed to get user's home directory: %v", err)
-		}
+		homedir := hctx.GetHome(ctx)
 		err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
 		if err != nil {
 			return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)

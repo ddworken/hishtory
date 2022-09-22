@@ -90,7 +90,7 @@ func main() {
 		}
 		fmt.Printf("Commit Hash: %s\n", GitCommit)
 	case "update":
-		lib.CheckFatalError(lib.Update())
+		lib.CheckFatalError(lib.Update(hctx.MakeContext()))
 	case "-h":
 		fallthrough
 	case "help":
