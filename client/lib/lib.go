@@ -961,7 +961,7 @@ func Redact(ctx *context.Context, query string, force bool) error {
 		return res.Error
 	}
 	if force {
-		fmt.Printf("Permanently deleting %d entries", len(historyEntries))
+		fmt.Printf("Permanently deleting %d entries\n", len(historyEntries))
 	} else {
 		// TODO: Find a way to test the prompting
 		fmt.Printf("This will permanently delete %d entries, are you sure? [y/N]", len(historyEntries))

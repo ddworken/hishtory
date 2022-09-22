@@ -57,7 +57,7 @@ func main() {
 			numImported, err := lib.ImportHistory(ctx)
 			lib.CheckFatalError(err)
 			if numImported > 0 {
-				fmt.Printf("Imported %v history entries from your existing shell history", numImported)
+				fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
 			}
 		}
 	case "import":
@@ -68,7 +68,7 @@ func main() {
 		numImported, err := lib.ImportHistory(ctx)
 		lib.CheckFatalError(err)
 		if numImported > 0 {
-			fmt.Printf("Imported %v history entries from your existing shell history", numImported)
+			fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
 		}
 	case "enable":
 		ctx := hctx.MakeContext()
