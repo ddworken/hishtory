@@ -26,6 +26,8 @@ else:
 
 with urllib.request.urlopen(download_url) as response:
     hishtory_binary = response.read()
+if os.path.exists('/tmp/hishtory-client'):
+    os.remove('/tmp/hishtory-client')
 with open('/tmp/hishtory-client', 'wb') as f:
     f.write(hishtory_binary)
 os.system('chmod +x /tmp/hishtory-client')
