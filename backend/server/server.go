@@ -568,3 +568,5 @@ func main() {
 	}
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
+// TODO: Maybe optimize the endpoints a bit to reduce the number of round trips required?

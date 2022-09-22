@@ -305,3 +305,5 @@ func TestUpdateReleaseVersion(t *testing.T) {
 		t.Fatalf("ReleaseVersion wasn't updated to contain a version: %#v", ReleaseVersion)
 	}
 }
+
+// TODO: server tests for redaction
