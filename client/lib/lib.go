@@ -54,15 +54,12 @@ var Version string = "Unknown"
 // 256KB ought to be enough for any reasonable cmd
 var maxSupportedLineLengthForImport = 256_000
 
-func getCwd() (string, string, error) {
+func getCwd(ctx *context.Context) (string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
 	}
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get user's home directory: %v", err)
-	}
+	homedir := hctx.GetHome(ctx)
 	if cwd == homedir {
 		return "~/", homedir, nil
 	}
@@ -96,7 +93,7 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	entry.LocalUsername = user.Username
 
 	// cwd and homedir
-	cwd, homedir, err := getCwd()
+	cwd, homedir, err := getCwd(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build history entry: %v", err)
 	}
@@ -382,10 +379,7 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
 		return 0, nil
 	}
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get user's home directory: %v", err)
-	}
+	homedir := hctx.GetHome(ctx)
 	historyEntries, err := parseBashHistory(homedir)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse bash history: %v", err)

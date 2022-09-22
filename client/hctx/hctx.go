@@ -108,6 +108,11 @@ func MakeContext() *context.Context {
 		panic(fmt.Errorf("failed to open local DB: %v", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("db"), db)
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		panic(fmt.Errorf("failed to get homedir: %v", err))
+	}
+	ctx = context.WithValue(ctx, hishtoryContextKey("homedir"), homedir)
 	return &ctx
 }
 
@@ -125,6 +130,14 @@ func GetDb(ctx *context.Context) *gorm.DB {
 		return v.(*gorm.DB)
 	}
 	panic(fmt.Errorf("failed to find db in ctx"))
+}
+
+func GetHome(ctx *context.Context) string {
+	v := (*ctx).Value(hishtoryContextKey("homedir"))
+	if v != nil {
+		return v.(string)
+	}
+	panic(fmt.Errorf("failed to find homedir in ctx"))
 }
 
 type ClientConfig struct {
@@ -200,5 +213,3 @@ func InitConfig() error {
 	}
 	return err
 }
-
-// TODO: make homedir part of the context
