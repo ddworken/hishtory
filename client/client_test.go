@@ -27,6 +27,8 @@ import (
 func TestMain(m *testing.M) {
 	defer shared.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "CGO_ENABLED=0")
 	err := cmd.Run()
 	if err != nil {
 		panic(fmt.Sprintf("failed to build client: %v", err))
@@ -1365,7 +1367,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact foo
 	out = tester.RunInteractiveShell(t, `hishtory redact --force foo`)
-	if out != "Permanently deleting 2 entries" {
+	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
@@ -1378,7 +1380,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact s
 	out = tester.RunInteractiveShell(t, `hishtory redact --force s`)
-	if out != "Permanently deleting 10 entries" {
+	if out != "Permanently deleting 10 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
@@ -1426,7 +1428,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	restoreInstall2 := shared.BackupAndRestoreWithId(t, "-2")
 	restoreInstall1()
 	out = tester.RunInteractiveShell(t, `hishtory redact --force `+randomCmdUuid)
-	if out != "Permanently deleting 2 entries" {
+	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
