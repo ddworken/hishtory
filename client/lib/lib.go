@@ -634,9 +634,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer destination.Close()
+
 	_, err = io.Copy(destination, source)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return destination.Close()
 }
 
 func GetDownloadData() (shared.UpdateInfo, error) {
