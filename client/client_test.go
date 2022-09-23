@@ -1448,6 +1448,28 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
+
+	// Record another command
+	tester.RunInteractiveShell(t, `echo hello`)
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = "hishtory redact --force s\necho hello\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Redact it without --force
+	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
+	shared.Check(t, err)
+	if out != "This will permanently delete 1 entries, are you sure? [y/N]" {
+		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
+	}
+
+	// And check it was redacted
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = "hishtory redact --force s\nyes | hishtory redact hello\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
 }
 
 func testRemoteRedaction(t *testing.T, tester shellTester) {

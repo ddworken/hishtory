@@ -547,7 +547,7 @@ func cleanDatabase() error {
 	if result.Error != nil {
 		return result.Error
 	}
-	// TODO(future): Clean the database by deleting entries for users that haven't been used in X amount of time
+	// TODO(optimization): Clean the database by deleting entries for users that haven't been used in X amount of time
 	return nil
 }
 
@@ -570,4 +570,4 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// TODO: Maybe optimize the endpoints a bit to reduce the number of round trips required?
+// TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?

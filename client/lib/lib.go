@@ -968,7 +968,6 @@ func Redact(ctx *context.Context, query string, force bool) error {
 	if force {
 		fmt.Printf("Permanently deleting %d entries\n", len(historyEntries))
 	} else {
-		// TODO: Find a way to test the prompting
 		fmt.Printf("This will permanently delete %d entries, are you sure? [y/N]", len(historyEntries))
 		reader := bufio.NewReader(os.Stdin)
 		resp, err := reader.ReadString('\n')
