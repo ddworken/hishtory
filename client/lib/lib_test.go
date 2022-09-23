@@ -91,13 +91,6 @@ func TestBuildHistoryEntry(t *testing.T) {
 	if entry.StartTime.Unix() != 1641774958 {
 		t.Fatalf("history entry has incorrect Unix time in the start time: %v", entry.StartTime.Unix())
 	}
-
-	// Test the weird zsh bug
-	entry, err = BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "120", ": 1663823053:0;echo foo\n", "1641774958"})
-	shared.Check(t, err)
-	if entry.Command != "echo foo" {
-		t.Fatalf("expected the zsh command to be worked around, actual=%s", entry.Command)
-	}
 }
 
 func TestPersist(t *testing.T) {
