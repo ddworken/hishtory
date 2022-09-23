@@ -22,7 +22,7 @@ func verify(ctx *context.Context, provenance []byte, artifactHash, source, branc
 		ExpectedVersionedTag: &versionTag,
 	}
 	builderOpts := &options.BuilderOpts{}
-	_, _, err := verifiers.Verify(context.TODO(), provenance, artifactHash, provenanceOpts, builderOpts)
+	_, _, err := verifiers.Verify(*ctx, provenance, artifactHash, provenanceOpts, builderOpts)
 	return err
 }
 
