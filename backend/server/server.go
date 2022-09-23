@@ -547,7 +547,7 @@ func cleanDatabase() error {
 	if result.Error != nil {
 		return result.Error
 	}
-	// TODO: Clean the database by deleting entries for users that haven't been used in X amount of time
+	// TODO(future): Clean the database by deleting entries for users that haven't been used in X amount of time
 	return nil
 }
 

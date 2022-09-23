@@ -867,16 +867,16 @@ echo other`)
 }
 
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		t.Skip("skip testing background saving since it is too flakey on M1")
+	if runtime.GOOS == "darwin" {
+		t.Skip("skip testing background saving since it is flakey on MacOs")
 	}
 
 	// Setup
 	defer shared.BackupAndRestore(t)()
 
-	p, err := exec.LookPath("go")
+	// Check that we can find the go binary
+	_, err := exec.LookPath("go")
 	shared.Check(t, err)
-	fmt.Printf("TODO: DDWORKENDEBUG: go=%s path=%s\n", p, os.Getenv("PATH"))
 
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := tester.RunInteractiveShell(t, `unset HISHTORY_TEST
@@ -1387,7 +1387,13 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Check that the previously recorded commands are in hishtory
-	// TODO: change the below to | grep -v pipefail and see that it fails weirdly with zsh
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\n/tmp/client install \nhishtory export %s\nhishtory import\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// And check a different way
 	out = tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid)
 	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\nhishtory export %s\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
@@ -1499,4 +1505,5 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 }
 
-// TODO: Add a test with different users
+// TODO(future): Add a test with different users
+// TODO(future): Can we do a fuzz test with lots of users and lots of devices?

@@ -281,7 +281,7 @@ func saveHistoryEntry(ctx *context.Context) {
 
 	// Persist it locally
 	db := hctx.GetDb(ctx)
-	err = lib.ReliableDbCreate(db, entry)
+	err = lib.ReliableDbCreate(db, *entry)
 	lib.CheckFatalError(err)
 
 	// Persist it remotely

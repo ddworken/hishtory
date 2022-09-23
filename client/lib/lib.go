@@ -154,6 +154,17 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	return &entry, nil
 }
 
+func isZshWeirdness(cmd string) bool {
+	// Zsh has this weird behavior where the currently running command is persisted to
+	// the history file with a weird prefix. This only matters to us when running
+	// an import, in which case we want to just skip it.
+	// For example, if the running command was echo foo the command would
+	// show up in the history file as `: 1663823053:0;echo foo`
+	firstCommandBugRegex := regexp.MustCompile(`: \d+:\d;(.*)`)
+	matches := firstCommandBugRegex.FindStringSubmatch(cmd)
+	return len(matches) == 2
+}
+
 func buildRegexFromTimeFormat(timeFormat string) string {
 	expectedRegex := ""
 	lastCharWasPercent := false
@@ -399,13 +410,17 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, err
 	}
 	for _, cmd := range historyEntries {
+		if isZshWeirdness(cmd) {
+			// Skip it
+			continue
+		}
 		entry := data.HistoryEntry{
 			LocalUsername:           currentUser.Name,
 			Hostname:                hostname,
 			Command:                 cmd,
 			CurrentWorkingDirectory: "Unknown",
 			HomeDirectory:           homedir,
-			ExitCode:                0, // Unknown, but assumed
+			ExitCode:                0,
 			StartTime:               time.Now(),
 			EndTime:                 time.Now(),
 			DeviceId:                config.DeviceId,
