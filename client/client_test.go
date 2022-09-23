@@ -1735,6 +1735,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 }
 
 func FuzzTestMultipleUsers(f *testing.F) {
+	// Format: $Key;$Device|$Command\n<Repeat>
 	f.Add("a;b|2\n")
 	f.Add("a;b|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
 	f.Add("a;b|aaaBBcccDD\n")
@@ -1747,10 +1748,10 @@ func FuzzTestMultipleUsers(f *testing.F) {
 	f.Add("a;a|hello\na;a|hello")
 	f.Add("a;a|1\nb;a|2\nc;a|2\nd;a|2\na;b|2\na;b|3\na;b|4\na;b|8\na;d|2\nb;a|1")
 	f.Add("a;a|1\na;b|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
+	f.Add("a;a|1\nb;b|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
+	f.Add("a;a|1\na;a|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
 	f.Fuzz(func(t *testing.T, input string) {
 		fuzzTest(t, bashTester{}, input)
 		fuzzTest(t, zshTester{}, input)
 	})
 }
-
-// TODO(future): Can we do a fuzz test with lots of users and lots of devices?
