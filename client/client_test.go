@@ -136,6 +136,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
 		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester) })
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
+		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 	}
 }
 
@@ -1527,5 +1528,119 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 }
 
-// TODO(future): Add a test with different users
+type deviceSet struct {
+	deviceMap     *map[device]deviceOp
+	currentDevice *device
+}
+
+type device struct {
+	key      string
+	deviceId string
+}
+
+type deviceOp struct {
+	backup  func()
+	restore func()
+}
+
+func createDevice(t *testing.T, tester shellTester, devices *deviceSet, key, deviceId string) {
+	hctx.GetLogger().Printf("devices=%#v\n", devices)
+	d := device{key, deviceId}
+	_, ok := (*devices.deviceMap)[d]
+	if ok {
+		t.Fatal(fmt.Errorf("cannot create device twice for key=%s deviceId=%s", key, deviceId))
+	}
+	installHishtory(t, tester, key)
+	(*devices.deviceMap)[d] = deviceOp{
+		backup:  func() { shared.BackupAndRestoreWithId(t, key+deviceId) },
+		restore: shared.BackupAndRestoreWithId(t, key+deviceId),
+	}
+}
+
+func switchToDevice(devices *deviceSet, d device) {
+	if devices.currentDevice != nil {
+		(*devices.deviceMap)[*devices.currentDevice].backup()
+	}
+	devices.currentDevice = &d
+	(*devices.deviceMap)[d].restore()
+}
+
+func testMultipleUsers(t *testing.T, tester shellTester) {
+	defer shared.BackupAndRestore(t)()
+
+	// Create all our devices
+	var deviceMap map[device]deviceOp = make(map[device]deviceOp)
+	var devices deviceSet = deviceSet{}
+	devices.deviceMap = &deviceMap
+	devices.currentDevice = nil
+	u1d1 := device{key: "user1", deviceId: "1"}
+	createDevice(t, tester, &devices, u1d1.key, u1d1.deviceId)
+	u1d2 := device{key: "user1", deviceId: "2"}
+	createDevice(t, tester, &devices, u1d2.key, u1d2.deviceId)
+	u2d1 := device{key: "user2", deviceId: "1"}
+	createDevice(t, tester, &devices, u2d1.key, u2d1.deviceId)
+	u2d2 := device{key: "user2", deviceId: "2"}
+	createDevice(t, tester, &devices, u2d2.key, u2d2.deviceId)
+	u2d3 := device{key: "user2", deviceId: "3"}
+	createDevice(t, tester, &devices, u2d3.key, u2d3.deviceId)
+
+	// Run commands on user1
+	switchToDevice(&devices, u1d1)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d1`)
+	switchToDevice(&devices, u1d2)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d2`)
+
+	// Run commands on user2
+	switchToDevice(&devices, u2d1)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u2d1`)
+	switchToDevice(&devices, u2d2)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u2d2`)
+	switchToDevice(&devices, u2d3)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u2d3`)
+
+	// Run more commands on user1
+	switchToDevice(&devices, u1d1)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d1-b`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d1-c`)
+	switchToDevice(&devices, u1d2)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d2-b`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d2-c`)
+
+	// Check that the right commands were recorded for user1
+	for i, d := range []device{u1d1, u1d2} {
+		switchToDevice(&devices, d)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export`)
+		shared.Check(t, err)
+		expectedOutput := "echo u1d1\necho u1d2\necho u1d1-b\necho u1d1-c\necho u1d2-b\necho u1d2-c\n"
+		for j := 0; j < i; j++ {
+			expectedOutput += "hishtory export\n"
+		}
+		if diff := cmp.Diff(expectedOutput, out); diff != "" {
+			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+		}
+	}
+
+	// Run more commands on user2
+	switchToDevice(&devices, u2d1)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d1-b`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d1-c`)
+	switchToDevice(&devices, u2d3)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u2d3-b`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u2d3-c`)
+
+	// Check that the right commands were recorded for user2
+	for i, d := range []device{u2d1, u2d2, u2d3} {
+		switchToDevice(&devices, d)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export`)
+		shared.Check(t, err)
+		expectedOutput := "echo u2d1\necho u2d2\necho u2d3\necho u1d1-b\necho u1d1-c\necho u2d3-b\necho u2d3-c\n"
+		for j := 0; j < i; j++ {
+			expectedOutput += "hishtory export\n"
+		}
+		if diff := cmp.Diff(expectedOutput, out); diff != "" {
+			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+		}
+	}
+}
+
 // TODO(future): Can we do a fuzz test with lots of users and lots of devices?

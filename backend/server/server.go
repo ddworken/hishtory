@@ -131,7 +131,7 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		panic(fmt.Errorf("DB query error: %v", result.Error))
 	}
-	fmt.Printf("apiQueryHandler: Found %d entries\n", len(historyEntries))
+	fmt.Printf("apiQueryHandler: Found %d entries for %s\n", len(historyEntries), r.URL)
 	resp, err := json.Marshal(historyEntries)
 	if err != nil {
 		panic(err)
