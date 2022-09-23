@@ -1648,6 +1648,92 @@ type operation struct {
 	cmd    string
 }
 
+var tmp int = 0
+var runCounter *int = &tmp
+
+func fuzzTest(t *testing.T, tester shellTester, input string) {
+	*runCounter += 1
+	// Parse the input
+	if len(input) > 1_000 {
+		return
+	}
+	input = strings.TrimSpace(input)
+	ops := make([]operation, 0)
+	for _, line := range strings.Split(input, "\n") {
+		split1 := strings.SplitN(line, "|", 2)
+		if len(split1) != 2 {
+			return
+		}
+		split2 := strings.SplitN(split1[0], ";", 2)
+		if len(split2) != 2 {
+			return
+		}
+		cmd := split1[1]
+		re := regexp.MustCompile(`[a-zA-Z]+`)
+		if !re.MatchString(cmd) {
+			return
+		}
+		key := split2[0]
+		if strings.Contains(key, "-") {
+			return
+		}
+		op := operation{device: device{key: key + "-" + strconv.Itoa(*runCounter), deviceId: split2[1]}, cmd: "echo " + cmd}
+		ops = append(ops, op)
+	}
+
+	// Set up and create the devices
+	defer shared.BackupAndRestore(t)()
+	var deviceMap map[device]deviceOp = make(map[device]deviceOp)
+	var devices deviceSet = deviceSet{}
+	devices.deviceMap = &deviceMap
+	devices.currentDevice = nil
+	for _, op := range ops {
+		_, ok := (*devices.deviceMap)[op.device]
+		if ok {
+			continue
+		}
+		createDevice(t, tester, &devices, op.device.key, op.device.deviceId)
+	}
+
+	// Persist our basic in-memory copy of expected shell commands
+	keyToCommands := make(map[string]string)
+
+	// Run the commands
+	for _, op := range ops {
+		// Run the command
+		switchToDevice(&devices, op.device)
+		_, _ = tester.RunInteractiveShellRelaxed(t, op.cmd)
+
+		// Calculate the expected output of hishtory export
+		val, ok := keyToCommands[op.device.key]
+		if !ok {
+			val = ""
+		}
+		val += op.cmd
+		val += "\n"
+		keyToCommands[op.device.key] = val
+
+		// Run hishtory export and check the output
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
+		shared.Check(t, err)
+		expectedOutput := keyToCommands[op.device.key]
+		if diff := cmp.Diff(expectedOutput, out); diff != "" {
+			t.Fatalf("hishtory export mismatch for input=%#v key=%s (-expected +got):\n%s\nout=%#v", input, op.device.key, diff, out)
+		}
+	}
+
+	// Check that hishtory export has the expected results
+	for _, op := range ops {
+		switchToDevice(&devices, op.device)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
+		shared.Check(t, err)
+		expectedOutput := keyToCommands[op.device.key]
+		if diff := cmp.Diff(expectedOutput, out); diff != "" {
+			t.Fatalf("hishtory export mismatch for key=%s (-expected +got):\n%s\nout=%#v", op.device.key, diff, out)
+		}
+	}
+}
+
 func FuzzTestMultipleUsers(f *testing.F) {
 	f.Add("a;b|2\n")
 	f.Add("a;b|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
@@ -1658,92 +1744,12 @@ func FuzzTestMultipleUsers(f *testing.F) {
 	f.Add("a;a|1\na;a|2\na;b|1\n")
 	f.Add("a;a|1\na;a|2\na;b|1\nz;z|1\na;a|1\n")
 	f.Add("a;a|hello\na;a|wobld")
+	f.Add("a;a|hello\na;a|hello")
 	f.Add("a;a|1\nb;a|2\nc;a|2\nd;a|2\na;b|2\na;b|3\na;b|4\na;b|8\na;d|2\nb;a|1")
 	f.Add("a;a|1\na;b|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
-	tmp := 0
-	var runCounter *int = &tmp
 	f.Fuzz(func(t *testing.T, input string) {
-		*runCounter += 1
-		// Parse the input
-		if len(input) > 1_000 {
-			return
-		}
-		input = strings.TrimSpace(input)
-		ops := make([]operation, 0)
-		for _, line := range strings.Split(input, "\n") {
-			split1 := strings.SplitN(line, "|", 2)
-			if len(split1) != 2 {
-				return
-			}
-			split2 := strings.SplitN(split1[0], ";", 2)
-			if len(split2) != 2 {
-				return
-			}
-			cmd := split1[1]
-			re := regexp.MustCompile(`[a-zA-Z]+`)
-			if !re.MatchString(cmd) {
-				return
-			}
-			key := split2[0]
-			if strings.Contains(key, "-") {
-				return
-			}
-			op := operation{device: device{key: key + "-" + strconv.Itoa(*runCounter), deviceId: split2[1]}, cmd: "echo " + cmd}
-			ops = append(ops, op)
-		}
-
-		// Set up and create the devices
-		defer shared.BackupAndRestore(t)()
-		tester := bashTester{}
-		var deviceMap map[device]deviceOp = make(map[device]deviceOp)
-		var devices deviceSet = deviceSet{}
-		devices.deviceMap = &deviceMap
-		devices.currentDevice = nil
-		for _, op := range ops {
-			_, ok := (*devices.deviceMap)[op.device]
-			if ok {
-				continue
-			}
-			createDevice(t, tester, &devices, op.device.key, op.device.deviceId)
-		}
-
-		// Persist our basic in-memory copy of expected shell commands
-		keyToCommands := make(map[string]string)
-
-		// Run the commands
-		for _, op := range ops {
-			// Run the command
-			switchToDevice(&devices, op.device)
-			_, _ = tester.RunInteractiveShellRelaxed(t, op.cmd)
-
-			// Calculate the expected output of hishtory export
-			val, ok := keyToCommands[op.device.key]
-			if !ok {
-				val = ""
-			}
-			val += op.cmd
-			val += "\n"
-			keyToCommands[op.device.key] = val
-
-			// Run hishtory export and check the output
-			out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
-			shared.Check(t, err)
-			expectedOutput := keyToCommands[op.device.key]
-			if diff := cmp.Diff(expectedOutput, out); diff != "" {
-				t.Fatalf("hishtory export mismatch for input=%#v key=%s (-expected +got):\n%s\nout=%#v", input, op.device.key, diff, out)
-			}
-		}
-
-		// Check that hishtory export has the expected results
-		for _, op := range ops {
-			switchToDevice(&devices, op.device)
-			out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
-			shared.Check(t, err)
-			expectedOutput := keyToCommands[op.device.key]
-			if diff := cmp.Diff(expectedOutput, out); diff != "" {
-				t.Fatalf("hishtory export mismatch for key=%s (-expected +got):\n%s\nout=%#v", op.device.key, diff, out)
-			}
-		}
+		fuzzTest(t, bashTester{}, input)
+		fuzzTest(t, zshTester{}, input)
 	})
 }
 
