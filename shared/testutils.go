@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -37,6 +38,19 @@ func ResetLocalState(t *testing.T) {
 
 func BackupAndRestore(t *testing.T) func() {
 	return BackupAndRestoreWithId(t, "")
+}
+
+func DeleteBakFiles(t *testing.T) {
+	homedir, err := os.UserHomeDir()
+	checkError(err)
+	entries, err := ioutil.ReadDir(path.Join(homedir, HISHTORY_PATH))
+	checkError(err)
+	for _, entry := range entries {
+		fmt.Println(entry.Name())
+		if strings.HasSuffix(entry.Name(), ".bak") {
+			checkError(os.Remove(path.Join(homedir, HISHTORY_PATH, entry.Name())))
+		}
+	}
 }
 
 func BackupAndRestoreWithId(t *testing.T, id string) func() {

@@ -5,6 +5,9 @@ forcetest:
 test:
 	HISHTORY_TEST=1 go test -p 1 ./...
 
+fuzz:
+	HISHTORY_TEST=1 go test -p 1 -fuzz=FuzzTestMultipleUsers -run FuzzTestMultipleUsers client/client_test.go
+
 acttest:
 	act push -j test -e .github/push_event.json --reuse --container-architecture linux/amd64
 
