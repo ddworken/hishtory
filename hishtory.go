@@ -81,7 +81,7 @@ func main() {
 	case "status":
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
-		fmt.Printf("Hishtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
+		fmt.Printf("hiSHtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
 		fmt.Printf("Secret Key: %s\n", config.UserSecret)
 		if len(os.Args) == 3 && os.Args[2] == "-v" {
 			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))
@@ -94,7 +94,7 @@ func main() {
 	case "-h":
 		fallthrough
 	case "help":
-		fmt.Print(`hishtory: Better shell history
+		fmt.Print(`hiSHtory: Better shell history
 
 Supported commands:
     'hishtory query': Query for matching commands and display them in a table. Examples:

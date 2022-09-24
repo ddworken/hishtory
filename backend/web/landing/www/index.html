@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description" content="">
   <meta name="author" content="">
-  <title>Hishtory: Better Shell History</title>
+  <title>hiSHtory: Better Shell History</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=UA-144207374-1"></script>
   <script>
       window.dataLayer = window.dataLayer || [];
@@ -35,7 +35,7 @@
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-light fixed-top py-3" id="mainNav">
     <div class="container">
-      <a class="navbar-brand js-scroll-trigger" href="#page-top">Hishtory</a>
+      <a class="navbar-brand js-scroll-trigger" href="#page-top">hiSHtory</a>
       <div class="collapse navbar-collapse" id="navbarResponsive">
         <ul class="navbar-nav ml-auto my-2 my-lg-0">
           <li class="nav-item">
@@ -78,7 +78,7 @@
           context (where did I run that command? what was the output of the command? how long did it take to run?) and it is easily
           corrupted (open two terminals at once? Say goodbye to your shell history!).<br>
           <br>
-          Hishtory keeps track of the command you ran, how long it took to run, whether it succeeded or failed, where you ran it, and on
+          hiSHtory keeps track of the command you ran, how long it took to run, whether it succeeded or failed, where you ran it, and on
           what machine. It syncs this information across all your machines, so you can always find that useful shell pipeline you wrote a
           month ago.</p>
         </div>
@@ -104,12 +104,12 @@
         <div class="tab-content">
           <div class="tab-pane active" id="install-first" role="tabpanel" aria-labelledby="home-tab">
             <br>
-            To install hishtory on your first machine:<br>
+            To install hiSHtory on your first machine:<br>
             <code>&nbsp;&nbsp;&nbsp;&nbsp;curl https://hishtory.dev/install.py | python3 -<br></code>
           </div>
           <div class="tab-pane" id="install-second" role="tabpanel" aria-labelledby="profile-tab">
             <br>
-            To install hishtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run
+            To install hiSHtory on your second machine, you must first retrieve your secret key from first first machine. To do so, run
             <code>hishtory status</code>&nbsp;and copy your "Secret Key". Then to install it on your second machine:<br>
             <code>&nbsp;&nbsp;&nbsp;&nbsp;curl https://hishtory.dev/install.py | python3 -<br>
             &nbsp;&nbsp;&nbsp;&nbsp;hishtory init $YOUR_HISHTORY_SECRET</code>
@@ -118,10 +118,10 @@
       </div><br>
       <h2 class="text-center mt-0">Usage</h2>
       <ul>
-        <li>To query your hishtory: <code>hishtory query foo</code> or use the custom search atoms
+        <li>To query your hiSHtory: <code>hishtory query foo</code> or use the custom search atoms
         <code>cwd:/etc/</code>,&nbsp;<code>exit_code:127</code>,&nbsp;<code>hostname:laptop</code>,&nbsp;<code>user:david</code></li>
-        <li>To dump all hishtory entries to stdout: <code>hishtory export</code></li>
-        <li>To temporarily turn on/off hishtory recording: <code>hishtory disable</code>&nbsp;/&nbsp;<code>hishtory enable</code></li>
+        <li>To dump all hiSHtory entries to stdout: <code>hishtory export</code></li>
+        <li>To temporarily turn on/off hiSHtory recording: <code>hishtory disable</code>&nbsp;/&nbsp;<code>hishtory enable</code></li>
         <li>To update to the latest version: <code>hishtory update</code></li>
       </ul>
     </div>
@@ -140,7 +140,7 @@
               </div>
               <div id="collapseZero" class="collapse show" aria-labelledby="headingZero" data-parent="#accordionExample">
                 <div class="card-body">
-                  Hishtory hooks into your shell to record everything you could want to know about your shell history. It saves this data
+                  hiSHtory hooks into your shell to record everything you could want to know about your shell history. It saves this data
                   in a local sqlite DB, and then syncs an encrypted copy of this DB with all your other computers.
                 </div>
               </div>

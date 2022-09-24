@@ -1,4 +1,4 @@
-# hishtory: Better Shell Hishtory
+# hiSHtory: Better Shell History
 
 `hishtory` is a better shell history. It stores your shell history in context (what directory you ran the command it, whether it succeeded or failed, how long it took, etc). This is all stored in locally and end-to-end encrypted for syncing to to all your other computers. All of this is easily queryable via the `hishtory` CLI. This means from your laptop, you can easily find that complex bash pipeline you wrote on your server, and see the context in which you ran it. 
 
@@ -12,7 +12,7 @@ curl https://hishtory.dev/install.py | python3 -
 
 At this point, `hishtory` is already managing your shell history. Give it a try with `hishtory query` and see below for more details on the advanced query features. 
 
-Then to install `hishtory` on your other computers, you need your secret key. Get this by running `hishtory status`. Once you have it, you follow similar steps to install hishtory on your other computers:
+Then to install `hishtory` on your other computers, you need your secret key. Get this by running `hishtory status`. Once you have it, you follow similar steps to install hiSHtory on your other computers:
 
 ```bash
 curl https://hishtory.dev/install.py | python3 -
@@ -41,7 +41,7 @@ For true power users, you can even query in SQLite via `sqlite3 ~/.hishtory/.his
 
 ### Enable/Disable
 
-If you want to temporarily turn on/off hishtory recording, you can do so via `hishtory disable` (to turn off recording) and `hishtory enable` (to turn on recording). You can check whether or not `hishtory` is enabled via `hishtory status`. 
+If you want to temporarily turn on/off hiSHtory recording, you can do so via `hishtory disable` (to turn off recording) and `hishtory enable` (to turn on recording). You can check whether or not `hishtory` is enabled via `hishtory status`. 
 
 ### Deletion
 
@@ -78,8 +78,8 @@ When the user runs `hishtory query`, it retrieves all unread blobs from the back
 
 ## Security
 
-`hishtory` is written in Go and uses AES-GCM for end-to-end encrypting your hishtory entries while syncing them. The binary is reproducibly built and [SLSA Level 3](https://slsa.dev/) to make it easy to verify you're getting the code contained in this repository. 
+`hishtory` is written in Go and uses AES-GCM for end-to-end encrypting your history entries while syncing them. The binary is reproducibly built and [SLSA Level 3](https://slsa.dev/) to make it easy to verify you're getting the code contained in this repository. 
 
 This all ensures that the minimalist backend cannot read your shell history, it only sees encrypted data. 
 
-If you find any security issues in hishtory, please reach out to `david@daviddworken.com`. 
+If you find any security issues in hiSHtory, please reach out to `david@daviddworken.com`. 
