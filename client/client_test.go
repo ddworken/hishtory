@@ -1189,7 +1189,7 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 
 	// Test the help command
 	out := tester.RunInteractiveShell(t, `hishtory help`)
-	if !strings.HasPrefix(out, "hishtory: Better shell history\n\nSupported commands:\n") {
+	if !strings.HasPrefix(out, "hiSHtory: Better shell history\n\nSupported commands:\n") {
 		t.Fatalf("expected hishtory help to contain intro, actual=%#v", out)
 	}
 	out2 := tester.RunInteractiveShell(t, `hishtory -h`)
