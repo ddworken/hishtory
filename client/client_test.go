@@ -1644,8 +1644,9 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 }
 
 type operation struct {
-	device device
-	cmd    string
+	device      device
+	cmd         string
+	redactQuery string
 }
 
 var tmp int = 0
@@ -1662,22 +1663,29 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 	for _, line := range strings.Split(input, "\n") {
 		split1 := strings.SplitN(line, "|", 2)
 		if len(split1) != 2 {
-			return
+			panic("malformed: split1")
 		}
 		split2 := strings.SplitN(split1[0], ";", 2)
 		if len(split2) != 2 {
-			return
+			panic("malformed: split2")
 		}
-		cmd := split1[1]
+		thingToDo := split1[1]
+		cmd := ""
+		redactQuery := ""
+		if strings.HasPrefix(thingToDo, "!") {
+			redactQuery = thingToDo[1:]
+		} else {
+			cmd = "echo " + thingToDo
+		}
 		re := regexp.MustCompile(`[a-zA-Z]+`)
-		if !re.MatchString(cmd) {
-			return
+		if !re.MatchString(cmd) && cmd != "" {
+			panic("malformed: re")
 		}
 		key := split2[0]
 		if strings.Contains(key, "-") {
-			return
+			panic("malformed: key-")
 		}
-		op := operation{device: device{key: key + "-" + strconv.Itoa(*runCounter), deviceId: split2[1]}, cmd: "echo " + cmd}
+		op := operation{device: device{key: key + "-" + strconv.Itoa(*runCounter), deviceId: split2[1]}, cmd: cmd, redactQuery: redactQuery}
 		ops = append(ops, op)
 	}
 
@@ -1702,15 +1710,36 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 	for _, op := range ops {
 		// Run the command
 		switchToDevice(&devices, op.device)
-		_, _ = tester.RunInteractiveShellRelaxed(t, op.cmd)
+		if op.cmd != "" {
+			_, err := tester.RunInteractiveShellRelaxed(t, op.cmd)
+			shared.Check(t, err)
+		}
+		if op.redactQuery != "" {
+			_, err := tester.RunInteractiveShellRelaxed(t, `hishtory redact --force `+op.redactQuery)
+			shared.Check(t, err)
+		}
 
 		// Calculate the expected output of hishtory export
 		val, ok := keyToCommands[op.device.key]
 		if !ok {
 			val = ""
 		}
-		val += op.cmd
-		val += "\n"
+		if op.cmd != "" {
+			val += op.cmd
+			val += "\n"
+		}
+		if op.redactQuery != "" {
+			lines := strings.Split(val, "\n")
+			filteredLines := make([]string, 0)
+			for _, line := range lines {
+				if strings.Contains(line, op.redactQuery) {
+					continue
+				}
+				filteredLines = append(filteredLines, line)
+			}
+			val = strings.Join(filteredLines, "\n")
+			val += `hishtory redact --force ` + op.redactQuery + "\n"
+		}
 		keyToCommands[op.device.key] = val
 
 		// Run hishtory export and check the output
@@ -1735,7 +1764,13 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 }
 
 func FuzzTestMultipleUsers(f *testing.F) {
-	// Format: $Key;$Device|$Command\n<Repeat>
+	// Format:
+	//   $Op = $Key;$Device|$Command\n
+	//         $Key;$Device|$Command\n$Op
+	//   $Command = !$ThingToRedact
+	//              $CommandToRun
+	//
+	// Running repeated commands
 	f.Add("a;b|2\n")
 	f.Add("a;b|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
 	f.Add("a;b|aaaBBcccDD\n")
@@ -1750,6 +1785,11 @@ func FuzzTestMultipleUsers(f *testing.F) {
 	f.Add("a;a|1\na;b|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
 	f.Add("a;a|1\nb;b|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
 	f.Add("a;a|1\na;a|1\na;c|1\na;d|1\na;e|1\na;f|1\na;g|1\na;b|1\na;b|1\na;b|1\na;b|1")
+	// Running repeated commands with redaction
+	f.Add("a;b|!hello\n")
+	f.Add("a;b|hello\na;b|world\na;b|!hello\n")
+	f.Add("a;b|hello\na;b|world\na;a|hello2\na;b|!hello\na;b|hello3\na;b|hello4\n")
+	f.Add("a;b|hello\na;b|world\na;a|hello2\na;b|!h\na;b|!h\na;b|hello3\na;b|hello4\n")
 	f.Fuzz(func(t *testing.T, input string) {
 		fuzzTest(t, bashTester{}, input)
 		fuzzTest(t, zshTester{}, input)
