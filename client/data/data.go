@@ -21,7 +21,6 @@ import (
 
 const (
 	KdfUserID        = "user_id"
-	KdfDeviceID      = "device_id"
 	KdfEncryptionKey = "encryption_key"
 )
 
