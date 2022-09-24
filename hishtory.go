@@ -347,3 +347,5 @@ func export(ctx *context.Context, query string) {
 		fmt.Println(data[i].Command)
 	}
 }
+
+// TODO(feature): Add a session_id column that corresponds to the shell session the command was run in
