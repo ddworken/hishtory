@@ -265,7 +265,7 @@ func testBasicUserFlow(t *testing.T, tester shellTester) string {
 
 	// Test the status subcommand
 	out := tester.RunInteractiveShell(t, `hishtory status`)
-	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -601,7 +601,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 
 	// Check the status command
 	out := tester.RunInteractiveShell(t, `hishtory status`)
-	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -645,7 +645,7 @@ func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
 
 	// Check the status command
 	out := tester.RunInteractiveShell(t, `hishtory status`)
-	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -682,7 +682,7 @@ func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 
 	// Check the status command
 	out := tester.RunInteractiveShell(t, `hishtory status`)
-	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -905,7 +905,7 @@ CGO_ENABLED=0 go build -o /tmp/client
 
 	// Test the status subcommand
 	out = tester.RunInteractiveShell(t, `hishtory status`)
-	if out != fmt.Sprintf("Hishtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
 		t.Fatalf("status command has unexpected output: %#v", out)
 	}
 
@@ -1106,7 +1106,7 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 		t.Fatal(err)
 	}
 	out = tester.RunInteractiveShell(t, `hishtory status`)
-	expectedOut := fmt.Sprintf("Hishtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)
+	expectedOut := fmt.Sprintf("hiSHtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)
 	if !strings.Contains(out, expectedOut) {
 		t.Fatalf("status command has unexpected output: actual=%#v, expected=%#v", out, expectedOut)
 	}
@@ -1558,6 +1558,9 @@ func createDevice(t *testing.T, tester shellTester, devices *deviceSet, key, dev
 }
 
 func switchToDevice(devices *deviceSet, d device) {
+	if devices.currentDevice != nil && d == *devices.currentDevice {
+		return
+	}
 	if devices.currentDevice != nil {
 		(*devices.deviceMap)[*devices.currentDevice].backup()
 	}
