@@ -1,5 +1,4 @@
 # This script should be sourced inside of .bashrc to integrate bash with hishtory
-# This is the same as config.sh, except it doesn't run the save process in the background. This is crucial to making tests reproducible. 
 
 # Implementation of running before/after every command based on https://jichu4n.com/posts/debug-trap-and-prompt_command-in-bash/
 function __hishtory_precommand() {
