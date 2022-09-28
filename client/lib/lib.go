@@ -165,6 +165,13 @@ func isZshWeirdness(cmd string) bool {
 	return len(matches) == 2
 }
 
+func isBashWeirdness(cmd string) bool {
+	// Bash has this weird behavior where the it has entries like `#1664342754` in the
+	// history file. We want to skip these.
+	firstCommandBugRegex := regexp.MustCompile(`#\d+`)
+	return firstCommandBugRegex.MatchString(cmd)
+}
+
 func buildRegexFromTimeFormat(timeFormat string) string {
 	expectedRegex := ""
 	lastCharWasPercent := false
@@ -410,7 +417,7 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, err
 	}
 	for _, cmd := range historyEntries {
-		if isZshWeirdness(cmd) {
+		if isZshWeirdness(cmd) || isBashWeirdness(cmd) {
 			// Skip it
 			continue
 		}
