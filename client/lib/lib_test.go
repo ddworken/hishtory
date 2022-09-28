@@ -35,6 +35,7 @@ func TestSetup(t *testing.T) {
 
 func TestBuildHistoryEntry(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
+	defer shared.RunTestServer()()
 	shared.Check(t, Setup([]string{}))
 
 	// Test building an actual entry for bash
@@ -95,6 +96,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 func TestBuildHistoryEntryWithRedaction(t *testing.T) {
 	defer shared.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 	defer shared.BackupAndRestore(t)()
+	defer shared.RunTestServer()()
 	shared.Check(t, Setup([]string{}))
 
 	testcases := []struct {
