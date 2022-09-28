@@ -24,6 +24,10 @@ import (
 	"github.com/ddworken/hishtory/shared"
 )
 
+func skipSlowTests() bool {
+	return os.Getenv("FAST") != ""
+}
+
 func TestMain(m *testing.M) {
 	defer shared.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -113,6 +117,9 @@ func (z zshTester) ShellName() string {
 var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
 
 func TestParameterized(t *testing.T) {
+	if skipSlowTests() {
+		shellTesters = shellTesters[:1]
+	}
 	for _, tester := range shellTesters {
 		t.Run("testRepeatedCommandThenQuery/"+tester.ShellName(), func(t *testing.T) { testRepeatedCommandThenQuery(t, tester) })
 		t.Run("testRepeatedCommandAndQuery/"+tester.ShellName(), func(t *testing.T) { testRepeatedCommandAndQuery(t, tester) })
@@ -591,6 +598,9 @@ func testUpdate(t *testing.T, tester shellTester) {
 	}
 	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
 		t.Skip("skipping on linux/arm64 which is unsupported")
+	}
+	if skipSlowTests() {
+		t.Skip("skipping slow tests")
 	}
 	// Set up
 	defer shared.BackupAndRestore(t)()
@@ -1772,6 +1782,9 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 }
 
 func FuzzTestMultipleUsers(f *testing.F) {
+	if skipSlowTests() {
+		f.Skip("skipping slow tests")
+	}
 	// Format:
 	//   $Op = $Key;$Device|$Command\n
 	//         $Key;$Device|$Command\n$Op
