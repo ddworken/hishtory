@@ -49,6 +49,7 @@ func main() {
 		}
 		lib.CheckFatalError(lib.Redact(ctx, query, force))
 	case "init":
+		// TODO: prompt people if they run hishtory init and already have a bunch of history entries
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
 		lib.CheckFatalError(lib.Install())
