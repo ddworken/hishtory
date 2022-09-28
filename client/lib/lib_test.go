@@ -35,7 +35,6 @@ func TestSetup(t *testing.T) {
 
 func TestBuildHistoryEntry(t *testing.T) {
 	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer()()
 	shared.Check(t, Setup([]string{}))
 
 	// Test building an actual entry for bash
@@ -90,6 +89,35 @@ func TestBuildHistoryEntry(t *testing.T) {
 	}
 	if entry.StartTime.Unix() != 1641774958 {
 		t.Fatalf("history entry has incorrect Unix time in the start time: %v", entry.StartTime.Unix())
+	}
+}
+
+func TestBuildHistoryEntryWithRedaction(t *testing.T) {
+	defer shared.BackupAndRestoreEnv("HISTTIMEFORMAT")()
+	defer shared.BackupAndRestore(t)()
+	shared.Check(t, Setup([]string{}))
+
+	testcases := []struct {
+		input, histtimeformat, expectedCommand string
+	}{
+		{" 123  ls /foo  ", "", "ls /foo"},
+		{" 2389  [2022-09-28 04:38:32 +0000] echo", "", "[2022-09-28 04:38:32 +0000] echo"},
+		{" 2389  [2022-09-28 04:38:32 +0000] echo", "[%F %T %z] ", "echo"},
+	}
+	for _, tc := range testcases {
+		conf := hctx.GetConf(hctx.MakeContext())
+		conf.LastSavedHistoryLine = ""
+		shared.Check(t, hctx.SetConfig(conf))
+
+		os.Setenv("HISTTIMEFORMAT", tc.histtimeformat)
+		entry, err := BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", tc.input, "1641774958"})
+		shared.Check(t, err)
+		if entry == nil {
+			t.Fatalf("entry is unexpectedly nil")
+		}
+		if entry.Command != tc.expectedCommand {
+			t.Fatalf("BuildHistoryEntry(%#v) returned %#v (expected=%#v)", tc.input, entry.Command, tc.expectedCommand)
+		}
 	}
 }
 
@@ -165,16 +193,12 @@ func TestAddToDbIfNew(t *testing.T) {
 
 func TestParseCrossPlatformInt(t *testing.T) {
 	res, err := parseCrossPlatformInt("123")
-	if err != nil {
-		t.Fatalf("failed to parse int: %v", err)
-	}
+	shared.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
 	res, err = parseCrossPlatformInt("123N")
-	if err != nil {
-		t.Fatalf("failed to parse int: %v", err)
-	}
+	shared.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
@@ -196,6 +220,22 @@ func TestBuildRegexFromTimeFormat(t *testing.T) {
 	for _, tc := range testcases {
 		if regex := buildRegexFromTimeFormat(tc.formatString); regex != tc.regex {
 			t.Fatalf("building a regex for %#v returned %#v (expected=%#v)", tc.formatString, regex, tc.regex)
+		}
+	}
+}
+
+func TestGetLastCommand(t *testing.T) {
+	testcases := []struct {
+		input, expectedOutput string
+	}{
+		{"   33  ls", "ls"},
+		{" 2389  [2022-09-28 04:38:32 +0000] echo", "[2022-09-28 04:38:32 +0000] echo"},
+	}
+	for _, tc := range testcases {
+		actualOutput, err := getLastCommand(tc.input)
+		shared.Check(t, err)
+		if actualOutput != tc.expectedOutput {
+			t.Fatalf("getLastCommand(%#v) returned %#v (expected=%#v)", tc.input, actualOutput, tc.expectedOutput)
 		}
 	}
 }
@@ -229,14 +269,13 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 		{"[%c %t]", "[Sun Aug 19 02:56:02 2012 	]foo", "foo"},
 		{"[%c %t", "[Sun Aug 19 02:56:02 2012 	foo", "foo"},
 		{"[%F %T %z]", "[2022-09-28 04:17:06 +0000]foo", "foo"},
+		{"[%F %T %z] ", "[2022-09-28 04:17:06 +0000] foo", "foo"},
 	}
 
 	for _, tc := range testcases {
 		os.Setenv("HISTTIMEFORMAT", tc.env)
 		stripped, err := maybeSkipBashHistTimePrefix(tc.cmdLine)
-		if err != nil {
-			t.Fatal(err)
-		}
+		shared.Check(t, err)
 		if stripped != tc.expected {
 			t.Fatalf("skipping the time prefix returned %#v (expected=%#v for %#v)", stripped, tc.expected, tc.cmdLine)
 		}
