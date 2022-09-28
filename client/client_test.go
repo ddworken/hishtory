@@ -1692,6 +1692,11 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 		ops = append(ops, op)
 	}
 
+	// MacOs on github actions is slow, so trim the fuzz tests down so they finish in time
+	if len(ops) > 5 && os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" {
+		ops = ops[:5]
+	}
+
 	// Set up and create the devices
 	defer shared.BackupAndRestore(t)()
 	var deviceMap map[device]deviceOp = make(map[device]deviceOp)
