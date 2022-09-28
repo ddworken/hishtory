@@ -228,6 +228,7 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 		{"[%c %t]", "[Sun Aug 19 02:56:02 2012 	]ls", "ls"},
 		{"[%c %t]", "[Sun Aug 19 02:56:02 2012 	]foo", "foo"},
 		{"[%c %t", "[Sun Aug 19 02:56:02 2012 	foo", "foo"},
+		{"[%F %T %z]", "[2022-09-28 04:17:06 +0000]foo", "foo"},
 	}
 
 	for _, tc := range testcases {
