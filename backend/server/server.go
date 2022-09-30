@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -32,9 +35,10 @@ var (
 )
 
 type UsageData struct {
-	UserId   string    `json:"user_id" gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
-	DeviceId string    `json:"device_id"  gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
-	LastUsed time.Time `json:"last_used"`
+	UserId            string    `json:"user_id" gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
+	DeviceId          string    `json:"device_id"  gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
+	LastUsed          time.Time `json:"last_used"`
+	NumEntriesHandled int       `json:"num_entries_handled"`
 }
 
 func getRequiredQueryParam(r *http.Request, queryParam string) string {
@@ -45,13 +49,46 @@ func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	return val
 }
 
-func updateUsageData(userId, deviceId string) {
+func updateUsageData(userId, deviceId string, numEntries int) {
 	var usageData []UsageData
 	GLOBAL_DB.Where("user_id = ? AND device_id = ?", userId, deviceId).Find(&usageData)
 	if len(usageData) == 0 {
-		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now()})
+		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now(), NumEntriesHandled: numEntries})
 	} else {
 		GLOBAL_DB.Model(&UsageData{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("last_used", time.Now())
+		if numEntries > 0 {
+			GLOBAL_DB.Exec("UPDATE usage_data SET num_entries_handled = COALESCE(num_entries_handled, 0) + ? WHERE user_id = ? AND device_id = ?", numEntries, userId, deviceId)
+		}
+	}
+
+}
+
+func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
+	query := `
+	SELECT 
+		MIN(devices.registration_date) as registration_date, 
+		COUNT(DISTINCT devices.device_id) as num_devices,
+		SUM(usage_data.num_entries_handled) as num_history_entries,
+		MAX(usage_data.last_used) as last_active
+	FROM devices
+	INNER JOIN usage_data ON devices.device_id = usage_data.device_id
+	GROUP BY devices.user_id
+	ORDER BY registration_date
+	`
+	rows, err := GLOBAL_DB.Raw(query).Rows()
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		var registrationDate time.Time
+		var numDevices int
+		var numEntries int
+		var lastUsedDate time.Time
+		err = rows.Scan(&registrationDate, &numDevices, &numEntries, &lastUsedDate)
+		if err != nil {
+			panic(err)
+		}
+		w.Write([]byte(fmt.Sprintf("Registered: %s\tNumDevices: %d\tNumEntries: %d\tLastUsed: %s\n", registrationDate.Format("2006-01-02"), numDevices, numEntries, lastUsedDate.Format("2006-01-02"))))
 	}
 }
 
@@ -67,7 +104,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("apiSubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	for _, entry := range entries {
-		updateUsageData(entry.UserId, entry.DeviceId)
+		updateUsageData(entry.UserId, entry.DeviceId, 1)
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
 		var devices []*shared.Device
 		result := tx.Find(&devices)
@@ -91,7 +128,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	updateUsageData(userId, deviceId)
+	updateUsageData(userId, deviceId, 0)
 	tx := GLOBAL_DB.Where("user_id = ?", userId)
 	var historyEntries []*shared.EncHistoryEntry
 	result := tx.Find(&historyEntries)
@@ -108,7 +145,7 @@ func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	updateUsageData(userId, deviceId)
+	updateUsageData(userId, deviceId, 0)
 	// Increment the count
 	result := GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
 	if result.Error != nil {
@@ -149,11 +186,12 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		panic(result.Error)
 	}
+	// TODO: r.RemoteAddr isn't using the proxy protocol and isn't the actual device IP
 	GLOBAL_DB.Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: r.RemoteAddr, RegistrationDate: time.Now()})
 	if existingDevicesCount > 0 {
 		GLOBAL_DB.Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
 	}
-	updateUsageData(userId, deviceId)
+	updateUsageData(userId, deviceId, 0)
 }
 
 func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
@@ -174,6 +212,7 @@ func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
 
 func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
+	srcDeviceId := getRequiredQueryParam(r, "source_device_id")
 	requestingDeviceId := getRequiredQueryParam(r, "requesting_device_id")
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -205,6 +244,7 @@ func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		panic(fmt.Errorf("failed to clear the dump request: %v", err))
 	}
+	updateUsageData(userId, srcDeviceId, len(entries))
 }
 
 func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
@@ -565,10 +605,34 @@ func main() {
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/api/v1/get-deletion-requests", withLogging(getDeletionRequestsHandler))
 	http.Handle("/api/v1/add-deletion-request", withLogging(addDeletionRequestHandler))
+	http.Handle("/internal/api/v1/usage-stats", withLogging(basicAuth(usageStatsHandler)))
 	if isTestEnvironment() {
 		http.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
 	}
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func basicAuth(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if ok {
+			// sha256sum of a random 32 byte hard coded password that I use for accessing the internal routes. Good luck brute forcing this :)
+			unencodedHash := sha256.Sum256([]byte(password))
+			passwordHash := hex.EncodeToString(unencodedHash[:])
+			expectedPasswordHash := "137d125ff03808cf8306244aa9c018b570f504fdb94b3c98fd817b5a97a4bb80"
+
+			usernameMatch := username == "ddworken"
+			passwordMatch := (subtle.ConstantTimeCompare([]byte(passwordHash), []byte(expectedPasswordHash)) == 1)
+
+			if usernameMatch && passwordMatch {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	})
 }
 
 // TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?
