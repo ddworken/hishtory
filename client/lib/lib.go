@@ -922,7 +922,10 @@ func IsOfflineError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") || strings.Contains(err.Error(), "read: connection reset by peer") || strings.Contains(err.Error(), ": EOF")
+	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
+		strings.Contains(err.Error(), "connect: network is unreachable") ||
+		strings.Contains(err.Error(), "read: connection reset by peer") ||
+		strings.Contains(err.Error(), ": EOF")
 }
 
 func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
