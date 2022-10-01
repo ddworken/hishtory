@@ -17,6 +17,7 @@ import (
 
 	"github.com/ddworken/hishtory/shared"
 	_ "github.com/lib/pq"
+	"github.com/rodaine/table"
 	"gorm.io/driver/postgres"
 
 	"gorm.io/driver/sqlite"
@@ -40,7 +41,11 @@ type UsageData struct {
 	LastUsed          time.Time `json:"last_used"`
 	LastIp            string    `json:"last_ip"`
 	NumEntriesHandled int       `json:"num_entries_handled"`
+	LastQueried       time.Time `json:"last_queried"`
+	NumQueries        int       `json:"num_queries"`
 }
+
+// TODO: Audit this file for queries that don't check result.Error
 
 func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	val := r.URL.Query().Get(queryParam)
@@ -50,18 +55,20 @@ func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	return val
 }
 
-func updateUsageData(r *http.Request, userId, deviceId string, numEntries int) {
+func updateUsageData(r *http.Request, userId, deviceId string, numEntriesHandled int, isQuery bool) {
 	var usageData []UsageData
 	GLOBAL_DB.Where("user_id = ? AND device_id = ?", userId, deviceId).Find(&usageData)
 	if len(usageData) == 0 {
-		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now(), NumEntriesHandled: numEntries})
+		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now(), NumEntriesHandled: numEntriesHandled})
 	} else {
 		GLOBAL_DB.Model(&UsageData{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("last_used", time.Now()).Update("last_ip", getRemoteAddr(r))
-		if numEntries > 0 {
-			GLOBAL_DB.Exec("UPDATE usage_data SET num_entries_handled = COALESCE(num_entries_handled, 0) + ? WHERE user_id = ? AND device_id = ?", numEntries, userId, deviceId)
+		if numEntriesHandled > 0 {
+			GLOBAL_DB.Exec("UPDATE usage_data SET num_entries_handled = COALESCE(num_entries_handled, 0) + ? WHERE user_id = ? AND device_id = ?", numEntriesHandled, userId, deviceId)
 		}
 	}
-
+	if isQuery {
+		GLOBAL_DB.Exec("UPDATE usage_data SET num_queries = COALESCE(num_queries, 0) + 1, last_queried = ? WHERE user_id = ? AND device_id = ?", time.Now(), userId, deviceId)
+	}
 }
 
 func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +78,9 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 		COUNT(DISTINCT devices.device_id) as num_devices,
 		SUM(usage_data.num_entries_handled) as num_history_entries,
 		MAX(usage_data.last_used) as last_active,
-		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ' ') FILTER (WHERE usage_data.last_ip != 'Unknown'), 'Unknown')  as ip_addresses
+		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ' ') FILTER (WHERE usage_data.last_ip != 'Unknown'), 'Unknown')  as ip_addresses,
+		COALESCE(SUM(usage_data.num_queries), 0) as num_queries,
+		COALESCE(MAX(usage_data.last_queried), 'January 1, 1970') as last_queried
 	FROM devices
 	INNER JOIN usage_data ON devices.device_id = usage_data.device_id
 	GROUP BY devices.user_id
@@ -81,18 +90,23 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	tbl := table.New("Registration Date", "Num Devices", "Num Entries", "Num Queries", "Last Active", "Last Query", "IPs")
+	tbl.WithWriter(w)
 	for rows.Next() {
 		var registrationDate time.Time
 		var numDevices int
 		var numEntries int
 		var lastUsedDate time.Time
 		var ipAddresses string
-		err = rows.Scan(&registrationDate, &numDevices, &numEntries, &lastUsedDate, &ipAddresses)
+		var numQueries int
+		var lastQueried time.Time
+		err = rows.Scan(&registrationDate, &numDevices, &numEntries, &lastUsedDate, &ipAddresses, &numQueries, &lastQueried)
 		if err != nil {
 			panic(err)
 		}
-		w.Write([]byte(fmt.Sprintf("Registered: %s\tNumDevices: %d\tNumEntries: %d\tLastUsed: %s\tIP: %s\n", registrationDate.Format("2006-01-02"), numDevices, numEntries, lastUsedDate.Format("2006-01-02"), ipAddresses)))
+		tbl.AddRow(registrationDate.Format("2006-01-02"), numDevices, numEntries, numQueries, lastUsedDate.Format("2006-01-02"), lastQueried.Format("2006-01-02"), ipAddresses)
 	}
+	tbl.Print()
 }
 
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +121,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("apiSubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	for _, entry := range entries {
-		updateUsageData(r, entry.UserId, entry.DeviceId, 1)
+		updateUsageData(r, entry.UserId, entry.DeviceId, 1, false)
 		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
 		var devices []*shared.Device
 		result := tx.Find(&devices)
@@ -131,7 +145,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	updateUsageData(r, userId, deviceId, 0)
+	updateUsageData(r, userId, deviceId, 0, false)
 	tx := GLOBAL_DB.Where("user_id = ?", userId)
 	var historyEntries []*shared.EncHistoryEntry
 	result := tx.Find(&historyEntries)
@@ -148,7 +162,7 @@ func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	updateUsageData(r, userId, deviceId, 0)
+	updateUsageData(r, userId, deviceId, 0, true)
 	// Increment the count
 	result := GLOBAL_DB.Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId)
 	if result.Error != nil {
@@ -201,7 +215,7 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if existingDevicesCount > 0 {
 		GLOBAL_DB.Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
 	}
-	updateUsageData(r, userId, deviceId, 0)
+	updateUsageData(r, userId, deviceId, 0, false)
 }
 
 func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
@@ -254,7 +268,7 @@ func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		panic(fmt.Errorf("failed to clear the dump request: %v", err))
 	}
-	updateUsageData(r, userId, srcDeviceId, len(entries))
+	updateUsageData(r, userId, srcDeviceId, len(entries), false)
 }
 
 func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
