@@ -328,7 +328,7 @@ echo thisisrecorded`)
 	hostnameMatcher := `\S+`
 	tableDividerMatcher := `\s+`
 	pathMatcher := `~?/[a-zA-Z_0-9/-]+`
-	datetimeMatcher := `[a-zA-Z]{3}\s\d{2}\s\d{4}\s[0-9:]+\s([A-Z]{3}|[+-]\d{4})`
+	datetimeMatcher := `[a-zA-Z]{3}\s\d{1,2}\s\d{4}\s[0-9:]+\s([A-Z]{3}|[+-]\d{4})`
 	runtimeMatcher := `[0-9.ms]+`
 	exitCodeMatcher := `0`
 	pipefailMatcher := `set -em?o pipefail`
