@@ -407,6 +407,11 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
+	extraEntries, err = readStdin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to read stdin: %v", err)
+	}
+	historyEntries = append(historyEntries, extraEntries...)
 	db := hctx.GetDb(ctx)
 	currentUser, err := user.Current()
 	if err != nil {
@@ -443,6 +448,25 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
 	}
 	return len(historyEntries), nil
+}
+
+func readStdin() ([]string, error) {
+	ret := make([]string, 0)
+	in := bufio.NewReader(os.Stdin)
+	for {
+		s, err := in.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+			break
+		}
+		s = strings.TrimSpace(s)
+		if s != "" {
+			ret = append(ret, s)
+		}
+	}
+	return ret, nil
 }
 
 func parseBashHistory(homedir string) ([]string, error) {

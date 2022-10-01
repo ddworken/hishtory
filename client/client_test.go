@@ -1383,7 +1383,7 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Trigger an import
-	out = tester.RunInteractiveShell(t, "hishtory import")
+	out = tester.RunInteractiveShell(t, "echo stdincommand | hishtory import")
 	r := regexp.MustCompile(`Imported (.+) history entries from your existing shell history`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
@@ -1399,7 +1399,7 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 
 	// Check that the previously recorded commands are in hishtory
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\n/tmp/client install \nhishtory export %s\nhishtory import\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
+	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\n/tmp/client install \nhishtory export %s\nstdincommand\necho stdincommand | hishtory import\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
