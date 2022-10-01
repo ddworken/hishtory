@@ -898,12 +898,21 @@ func getServerHostname() string {
 	return "https://api.hishtory.dev"
 }
 
+func httpClient() *http.Client {
+	return &http.Client{}
+}
+
 func ApiGet(path string) ([]byte, error) {
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	resp, err := http.Get(getServerHostname() + path)
+	req, err := http.NewRequest("GET", getServerHostname()+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GET: %v", err)
+	}
+	req.Header.Set("X-Hishtory-Version", "v0."+Version)
+	resp, err := httpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET %s%s: %v", getServerHostname(), path, err)
 	}
@@ -925,7 +934,13 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	resp, err := http.Post(getServerHostname()+path, contentType, bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", getServerHostname()+path, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create POST: %v", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("X-Hishtory-Version", "v0."+Version)
+	resp, err := httpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to POST %s: %v", path, err)
 	}

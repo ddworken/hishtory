@@ -204,7 +204,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	shared.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{entry1, entry2})
 	shared.Check(t, err)
-	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2, bytes.NewReader(reqBody))
+	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2+"&source_device_id="+devId1, bytes.NewReader(reqBody))
 	apiSubmitDumpHandler(nil, submitReq)
 
 	// Check that the dump request is no longer there for userId for either device ID

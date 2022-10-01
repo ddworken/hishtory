@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -49,7 +50,20 @@ func main() {
 		}
 		lib.CheckFatalError(lib.Redact(ctx, query, force))
 	case "init":
-		// TODO: prompt people if they run hishtory init and already have a bunch of history entries
+		db, err := hctx.OpenLocalSqliteDb()
+		lib.CheckFatalError(err)
+		data, err := data.Search(db, "", 10)
+		lib.CheckFatalError(err)
+		if len(data) > 0 {
+			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset? [y/N]")
+			reader := bufio.NewReader(os.Stdin)
+			resp, err := reader.ReadString('\n')
+			lib.CheckFatalError(err)
+			if strings.TrimSpace(resp) != "y" {
+				fmt.Printf("Aborting init per user response of %#v\n", strings.TrimSpace(resp))
+				return
+			}
+		}
 		lib.CheckFatalError(lib.Setup(os.Args))
 	case "install":
 		lib.CheckFatalError(lib.Install())
@@ -91,6 +105,7 @@ func main() {
 		}
 		fmt.Printf("Commit Hash: %s\n", GitCommit)
 	case "update":
+		// TODO: Add banner integration to update
 		lib.CheckFatalError(lib.Update(hctx.MakeContext()))
 	case "-h":
 		fallthrough
