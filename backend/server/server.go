@@ -86,10 +86,10 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 		COUNT(DISTINCT devices.device_id) as num_devices,
 		SUM(usage_data.num_entries_handled) as num_history_entries,
 		MAX(usage_data.last_used) as last_active,
-		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ' ') FILTER (WHERE usage_data.last_ip != 'Unknown'), 'Unknown')  as ip_addresses,
+		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ', ') FILTER (WHERE usage_data.last_ip != 'Unknown'), 'Unknown')  as ip_addresses,
 		COALESCE(SUM(usage_data.num_queries), 0) as num_queries,
 		COALESCE(MAX(usage_data.last_queried), 'January 1, 1970') as last_queried,
-		STRING_AGG(DISTINCT usage_data.version, ' ') as versions
+		STRING_AGG(DISTINCT usage_data.version, ', ') as versions
 	FROM devices
 	INNER JOIN usage_data ON devices.device_id = usage_data.device_id
 	GROUP BY devices.user_id
