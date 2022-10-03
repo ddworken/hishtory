@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/lib/pq v1.10.4
 	github.com/rodaine/table v1.0.1
-	github.com/slsa-framework/slsa-verifier v1.3.0
+	github.com/slsa-framework/slsa-verifier v1.3.1
 	gorm.io/driver/postgres v1.3.1
 	gorm.io/driver/sqlite v1.3.6
 	gorm.io/gorm v1.23.8
