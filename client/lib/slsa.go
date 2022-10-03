@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -76,4 +77,15 @@ func getFileHash(binaryPath string) (string, error) {
 	}
 	hash := hex.EncodeToString(hasher.Sum(nil))
 	return hash, nil
+}
+
+func handleSlsaFailure(srcErr error) error {
+	fmt.Printf("\nFailed to verify SLSA provenance! This is likely due to a SLSA bug (SLSA is a brand new standard, and like all new things, has bugs). Ignoring this failure means falling back to the way most software does updates. Do you want to ignore this failure and update anyways? [y/N]")
+	reader := bufio.NewReader(os.Stdin)
+	resp, err := reader.ReadString('\n')
+	if err == nil && strings.TrimSpace(resp) == "y" {
+		fmt.Println("Proceeding with update...")
+		return nil
+	}
+	return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update (to bypass, set `export HISHTORY_DISABLE_SLSA_ATTESTATION=true`): %v", srcErr)
 }

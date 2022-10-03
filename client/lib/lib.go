@@ -703,13 +703,17 @@ func Update(ctx *context.Context) error {
 	}
 
 	// Verify the SLSA attestation
+	var slsaError error
 	if runtime.GOOS == "darwin" {
-		err = verifyBinaryMac(ctx, "/tmp/hishtory-client", downloadData)
+		slsaError = verifyBinaryMac(ctx, "/tmp/hishtory-client", downloadData)
 	} else {
-		err = verifyBinary(ctx, "/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
+		slsaError = verifyBinary(ctx, "/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
 	}
-	if err != nil {
-		return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update (to bypass, set `export HISHTORY_DISABLE_SLSA_ATTESTATION=true`): %v", err)
+	if slsaError != nil {
+		err = handleSlsaFailure(slsaError)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Unlink the existing binary so we can overwrite it even though it is still running

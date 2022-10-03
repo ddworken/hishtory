@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -105,8 +106,10 @@ func main() {
 		}
 		fmt.Printf("Commit Hash: %s\n", GitCommit)
 	case "update":
-		// TODO: Add banner integration to update
-		lib.CheckFatalError(lib.Update(hctx.MakeContext()))
+		err := lib.Update(hctx.MakeContext())
+		if err != nil {
+			log.Fatalf("Failed to update hishtory: %v", err)
+		}
 	case "-h":
 		fallthrough
 	case "help":
