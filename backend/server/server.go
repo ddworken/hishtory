@@ -44,6 +44,7 @@ type UsageData struct {
 	NumEntriesHandled int       `json:"num_entries_handled"`
 	LastQueried       time.Time `json:"last_queried"`
 	NumQueries        int       `json:"num_queries"`
+	Version           string    `json:"version"`
 }
 
 func getRequiredQueryParam(r *http.Request, queryParam string) string {
@@ -54,15 +55,23 @@ func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	return val
 }
 
+func getHishtoryVersion(r *http.Request) string {
+	return r.Header.Get("X-Hishtory-Version")
+}
+
 func updateUsageData(r *http.Request, userId, deviceId string, numEntriesHandled int, isQuery bool) {
 	var usageData []UsageData
 	GLOBAL_DB.Where("user_id = ? AND device_id = ?", userId, deviceId).Find(&usageData)
 	if len(usageData) == 0 {
-		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now(), NumEntriesHandled: numEntriesHandled})
+		GLOBAL_DB.Create(&UsageData{UserId: userId, DeviceId: deviceId, LastUsed: time.Now(), NumEntriesHandled: numEntriesHandled, Version: getHishtoryVersion(r)})
 	} else {
+		usage := usageData[0]
 		GLOBAL_DB.Model(&UsageData{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("last_used", time.Now()).Update("last_ip", getRemoteAddr(r))
 		if numEntriesHandled > 0 {
 			GLOBAL_DB.Exec("UPDATE usage_data SET num_entries_handled = COALESCE(num_entries_handled, 0) + ? WHERE user_id = ? AND device_id = ?", numEntriesHandled, userId, deviceId)
+		}
+		if usage.Version != getHishtoryVersion(r) {
+			GLOBAL_DB.Exec("UPDATE usage_data SET version = ? WHERE user_id = ? AND device_id = ?", getHishtoryVersion(r), userId, deviceId)
 		}
 	}
 	if isQuery {
@@ -79,7 +88,8 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 		MAX(usage_data.last_used) as last_active,
 		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ' ') FILTER (WHERE usage_data.last_ip != 'Unknown'), 'Unknown')  as ip_addresses,
 		COALESCE(SUM(usage_data.num_queries), 0) as num_queries,
-		COALESCE(MAX(usage_data.last_queried), 'January 1, 1970') as last_queried
+		COALESCE(MAX(usage_data.last_queried), 'January 1, 1970') as last_queried,
+		STRING_AGG(DISTINCT usage_data.version, ' ') as versions
 	FROM devices
 	INNER JOIN usage_data ON devices.device_id = usage_data.device_id
 	GROUP BY devices.user_id
@@ -89,7 +99,7 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	tbl := table.New("Registration Date", "Num Devices", "Num Entries", "Num Queries", "Last Active", "Last Query", "IPs")
+	tbl := table.New("Registration Date", "Num Devices", "Num Entries", "Num Queries", "Last Active", "Last Query", "Versions", "IPs")
 	tbl.WithWriter(w)
 	for rows.Next() {
 		var registrationDate time.Time
@@ -99,11 +109,13 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 		var ipAddresses string
 		var numQueries int
 		var lastQueried time.Time
-		err = rows.Scan(&registrationDate, &numDevices, &numEntries, &lastUsedDate, &ipAddresses, &numQueries, &lastQueried)
+		var versions string
+		err = rows.Scan(&registrationDate, &numDevices, &numEntries, &lastUsedDate, &ipAddresses, &numQueries, &lastQueried, &versions)
 		if err != nil {
 			panic(err)
 		}
-		tbl.AddRow(registrationDate.Format("2006-01-02"), numDevices, numEntries, numQueries, lastUsedDate.Format("2006-01-02"), lastQueried.Format("2006-01-02"), ipAddresses)
+		versions = strings.ReplaceAll(versions, "Unknown", "")
+		tbl.AddRow(registrationDate.Format("2006-01-02"), numDevices, numEntries, numQueries, lastUsedDate.Format("2006-01-02"), lastQueried.Format("2006-01-02"), versions, ipAddresses)
 	}
 	tbl.Print()
 }
@@ -540,7 +552,7 @@ func withLogging(h func(http.ResponseWriter, *http.Request)) http.Handler {
 		h(&lrw, r)
 
 		duration := time.Since(start)
-		fmt.Printf("%s %s %#v %s %s %s\n", r.RemoteAddr, r.Method, r.RequestURI, r.Header.Get("X-Hishtory-Version"), duration.String(), byteCountToString(responseData.size))
+		fmt.Printf("%s %s %#v %s %s %s\n", r.RemoteAddr, r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
 	}
 	return http.HandlerFunc(logFn)
 }
