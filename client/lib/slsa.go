@@ -45,8 +45,6 @@ func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag 
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
-	// TODO: Re-enable SLSA verification pending https://github.com/slsa-framework/slsa-verifier/issues/285
-	return nil
 
 	if err := checkForDowngrade(Version, versionTag); err != nil && os.Getenv("HISHTORY_ALLOW_DOWNGRADE") == "true" {
 		return err
