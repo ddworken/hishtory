@@ -78,9 +78,6 @@ func main() {
 		}
 	case "import":
 		ctx := hctx.MakeContext()
-		if os.Getenv("HISHTORY_TEST") == "" {
-			lib.CheckFatalError(fmt.Errorf("the hishtory import command is only meant to be for testing purposes"))
-		}
 		numImported, err := lib.ImportHistory(ctx)
 		lib.CheckFatalError(err)
 		if numImported > 0 {
