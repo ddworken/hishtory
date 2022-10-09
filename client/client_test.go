@@ -245,12 +245,15 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 		t.Fatalf("hishtory query doesn't contain cmd run on another machine! out=%#v", out)
 	}
 
+	// Run a reupload just to test that flow
+	tester.RunInteractiveShell(t, "hishtory reupload")
+
 	// Finally, test the export command
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v '/tmp/client install'`)
 	if strings.Contains(out, "thisisnotrecorded") {
 		t.Fatalf("hishtory export contains a command that should not have been recorded, out=%#v", out)
 	}
-	expectedOutputWithoutKey := "hishtory status\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\"\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nyes | hishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\n"
+	expectedOutputWithoutKey := "hishtory status\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\"\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nyes | hishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\nhishtory reupload\n"
 	expectedOutput := fmt.Sprintf(expectedOutputWithoutKey, userSecret)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)

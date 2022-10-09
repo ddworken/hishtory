@@ -107,6 +107,18 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to update hishtory: %v", err)
 		}
+	case "reupload":
+		// Purposefully undocumented since this command is generally not necessary to run
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		entries, err := data.Search(hctx.GetDb(ctx), "", 0)
+		lib.CheckFatalError(err)
+		for _, entry := range entries {
+			jsonValue, err := lib.EncryptAndMarshal(config, entry)
+			lib.CheckFatalError(err)
+			_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+			lib.CheckFatalError(err)
+		}
 	case "-h":
 		fallthrough
 	case "help":
@@ -265,7 +277,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 		if err != nil {
 			return err
 		}
-		_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
+		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 		if err != nil {
 			// Failed to upload the history entry, so we must still be offline. So just return nil and we'll try again later.
 			return nil
@@ -303,7 +315,7 @@ func saveHistoryEntry(ctx *context.Context) {
 	// Persist it remotely
 	jsonValue, err := lib.EncryptAndMarshal(config, entry)
 	lib.CheckFatalError(err)
-	_, err = lib.ApiPost("/api/v1/submit", "application/json", jsonValue)
+	_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
