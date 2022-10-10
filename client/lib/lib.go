@@ -442,6 +442,10 @@ func ImportHistory(ctx *context.Context) (int, error) {
 			return 0, fmt.Errorf("failed to insert imported history entry: %v", err)
 		}
 	}
+	err = Reupload(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to upload hishtory import: %v", err)
+	}
 	config.HaveCompletedInitialImport = true
 	err = hctx.SetConfig(config)
 	if err != nil {
