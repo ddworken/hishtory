@@ -263,16 +263,14 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
 	}
 	hctx.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
-	for _, entry := range entries {
-		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
-		if err != nil {
-			return err
-		}
-		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		if err != nil {
-			// Failed to upload the history entry, so we must still be offline. So just return nil and we'll try again later.
-			return nil
-		}
+	jsonValue, err := lib.EncryptAndMarshal(config, entries)
+	if err != nil {
+		return err
+	}
+	_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+	if err != nil {
+		// Failed to upload the history entry, so we must still be offline. So just return nil and we'll try again later.
+		return nil
 	}
 
 	// Mark down that we persisted it
