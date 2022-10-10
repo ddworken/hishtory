@@ -109,16 +109,7 @@ func main() {
 		}
 	case "reupload":
 		// Purposefully undocumented since this command is generally not necessary to run
-		ctx := hctx.MakeContext()
-		config := hctx.GetConf(ctx)
-		entries, err := data.Search(hctx.GetDb(ctx), "", 0)
-		lib.CheckFatalError(err)
-		for _, entry := range entries {
-			jsonValue, err := lib.EncryptAndMarshal(config, entry)
-			lib.CheckFatalError(err)
-			_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-			lib.CheckFatalError(err)
-		}
+		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
 	case "-h":
 		fallthrough
 	case "help":
@@ -273,7 +264,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	}
 	hctx.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
 	for _, entry := range entries {
-		jsonValue, err := lib.EncryptAndMarshal(config, entry)
+		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		if err != nil {
 			return err
 		}
@@ -313,7 +304,7 @@ func saveHistoryEntry(ctx *context.Context) {
 	lib.CheckFatalError(err)
 
 	// Persist it remotely
-	jsonValue, err := lib.EncryptAndMarshal(config, entry)
+	jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 	lib.CheckFatalError(err)
 	_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 	if err != nil {

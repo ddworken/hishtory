@@ -999,13 +999,17 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
 }
 
-func EncryptAndMarshal(config hctx.ClientConfig, entry *data.HistoryEntry) ([]byte, error) {
-	encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt history entry")
+func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
+	var encEntries []shared.EncHistoryEntry
+	for _, entry := range entries {
+		encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt history entry")
+		}
+		encEntry.DeviceId = config.DeviceId
+		encEntries = append(encEntries, encEntry)
 	}
-	encEntry.DeviceId = config.DeviceId
-	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	jsonValue, err := json.Marshal(encEntries)
 	if err != nil {
 		return jsonValue, fmt.Errorf("failed to marshal encrypted history entry: %v", err)
 	}
@@ -1071,6 +1075,23 @@ func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.Histor
 	_, err = ApiPost("/api/v1/add-deletion-request", "application/json", data)
 	if err != nil {
 		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %v", err)
+	}
+	return nil
+}
+
+func Reupload(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
+	entries, err := data.Search(hctx.GetDb(ctx), "", 0)
+	if err != nil {
+		return fmt.Errorf("failed to reupload due to failed search: %v", err)
+	}
+	jsonValue, err := EncryptAndMarshal(config, entries)
+	if err != nil {
+		return fmt.Errorf("failed to reupload due to failed encryption: %v", err)
+	}
+	_, err = ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+	if err != nil {
+		return fmt.Errorf("failed to reupload due to failed POST: %v", err)
 	}
 	return nil
 }
