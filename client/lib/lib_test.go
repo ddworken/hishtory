@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -280,6 +281,25 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 		shared.Check(t, err)
 		if stripped != tc.expected {
 			t.Fatalf("skipping the time prefix returned %#v (expected=%#v for %#v)", stripped, tc.expected, tc.cmdLine)
+		}
+	}
+}
+
+func TestChunks(t *testing.T) {
+	testcases := []struct {
+		input     []int
+		chunkSize int
+		output    [][]int
+	}{
+		{[]int{1, 2, 3, 4, 5}, 2, [][]int{{1, 2}, {3, 4}, {5}}},
+		{[]int{1, 2, 3, 4, 5}, 3, [][]int{{1, 2, 3}, {4, 5}}},
+		{[]int{1, 2, 3, 4, 5}, 1, [][]int{{1}, {2}, {3}, {4}, {5}}},
+		{[]int{1, 2, 3, 4, 5}, 4, [][]int{{1, 2, 3, 4}, {5}}},
+	}
+	for _, tc := range testcases {
+		actual := chunks(tc.input, tc.chunkSize)
+		if !reflect.DeepEqual(actual, tc.output) {
+			t.Fatal("chunks failure")
 		}
 	}
 }

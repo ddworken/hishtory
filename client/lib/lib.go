@@ -1089,13 +1089,27 @@ func Reupload(ctx *context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to reupload due to failed search: %v", err)
 	}
-	jsonValue, err := EncryptAndMarshal(config, entries)
-	if err != nil {
-		return fmt.Errorf("failed to reupload due to failed encryption: %v", err)
-	}
-	_, err = ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-	if err != nil {
-		return fmt.Errorf("failed to reupload due to failed POST: %v", err)
+	for _, chunk := range chunks(entries, 100) {
+		jsonValue, err := EncryptAndMarshal(config, chunk)
+		if err != nil {
+			return fmt.Errorf("failed to reupload due to failed encryption: %v", err)
+		}
+		_, err = ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		if err != nil {
+			return fmt.Errorf("failed to reupload due to failed POST: %v", err)
+		}
 	}
 	return nil
+}
+
+func chunks[k any](slice []k, chunkSize int) [][]k {
+	var chunks [][]k
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+		if end > len(slice) {
+			end = len(slice)
+		}
+		chunks = append(chunks, slice[i:end])
+	}
+	return chunks
 }
