@@ -195,9 +195,13 @@ func SetConfig(config ClientConfig) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH), serializedConfig, 0o600)
+	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH+".tmp"), serializedConfig, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to write config: %v", err)
+	}
+	err = os.Rename(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH+".tmp"), path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
+	if err != nil {
+		return fmt.Errorf("failed to replace config file with the rewritten version: %v", err)
 	}
 	return nil
 }
