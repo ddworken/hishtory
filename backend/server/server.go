@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -261,7 +262,7 @@ func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 	deviceId := getRequiredQueryParam(r, "device_id")
 	forcedBanner := r.URL.Query().Get("forced_banner")
 	fmt.Printf("apiBannerHandler: commit_hash=%#v, device_id=%#v, forced_banner=%#v\n", commitHash, deviceId, forcedBanner)
-	w.Write([]byte(forcedBanner))
+	w.Write([]byte(html.EscapeString(forcedBanner)))
 }
 
 func getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
