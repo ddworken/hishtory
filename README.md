@@ -53,9 +53,9 @@ If you want to temporarily turn on/off hiSHtory recording, you can do so via `hi
 
 To update `hishtory` to the latest version, just run `hishtory update` to securely download and apply the latest update. 
 
-### Multi-Shell Support
+### Multi-Shell and Multi-OS Support
 
-`hishtory` supports `zsh` and `bash`. If you'd like support for another shell (e.g. `fish`), please open an issue!
+`hishtory` supports `zsh` and `bash` on Linux and macOS. If you'd like support for another shell (e.g. `fish`), please open an issue!
 
 ## Design
 
