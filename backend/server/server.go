@@ -606,9 +606,15 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, ok := r.BasicAuth()
 		if ok {
-			// sha256sum of a random 32 byte hard coded password that I use for accessing the internal routes. Good luck brute forcing this :)
 			unencodedHash := sha256.Sum256([]byte(password))
 			passwordHash := hex.EncodeToString(unencodedHash[:])
+			// Let's do a threat model for this, since this goes against the standard advice of "never emed
+			// secrets in source code". This the sha256 hash of a 32 byte random password. So to crack it
+			// you'd have to calculate 2^256 sha256 hashses. Good luck. And then, if you do crack it,
+			// what is exposed? That function is used just to add basic auth to the internal stats
+			// endpoint for the server. Hishtory is designed so the server has access to zero sensitive
+			// data, so there is nothing sensitive to be concerned with. This endpoint just expoes basic usage
+			// information for my own curiousity. So an attacker getting access to it wouldn't matter.
 			expectedPasswordHash := "137d125ff03808cf8306244aa9c018b570f504fdb94b3c98fd817b5a97a4bb80"
 
 			usernameMatch := username == "ddworken"
