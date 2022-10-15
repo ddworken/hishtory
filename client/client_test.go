@@ -144,6 +144,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester) })
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
+		// TODO: Add a test for multi-line history entries
 	}
 }
 
