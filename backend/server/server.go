@@ -352,7 +352,11 @@ func OpenDB() (*gorm.DB, error) {
 		return db, nil
 	}
 
-	db, err := gorm.Open(postgres.Open(PostgresDb), &gorm.Config{})
+	postgresDb := PostgresDb
+	if os.Getenv("HISHTORY_POSTGRES_DB") != "" {
+		postgresDb = os.Getenv("HISHTORY_POSTGRES_DB")
+	}
+	db, err := gorm.Open(postgres.Open(postgresDb), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
