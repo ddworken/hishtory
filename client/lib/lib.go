@@ -407,11 +407,11 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
-	extraEntries, err = readStdin()
-	if err != nil {
-		return 0, fmt.Errorf("failed to read stdin: %v", err)
-	}
-	historyEntries = append(historyEntries, extraEntries...)
+	// extraEntries, err = readStdin()
+	// if err != nil {
+	// 	return 0, fmt.Errorf("failed to read stdin: %v", err)
+	// }
+	// historyEntries = append(historyEntries, extraEntries...)
 	db := hctx.GetDb(ctx)
 	currentUser, err := user.Current()
 	if err != nil {

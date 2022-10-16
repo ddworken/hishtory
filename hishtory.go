@@ -73,6 +73,7 @@ func main() {
 	case "install":
 		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_TEST") == "" {
+			fmt.Println("Importing existing shell history...")
 			ctx := hctx.MakeContext()
 			numImported, err := lib.ImportHistory(ctx)
 			lib.CheckFatalError(err)
