@@ -42,6 +42,7 @@ type model struct {
 	queryInput textinput.Model
 	banner     string
 	isOffline  bool
+	numEntries int
 }
 
 type doneDownloadingMsg struct{}
@@ -50,7 +51,7 @@ type bannerMsg struct {
 	banner string
 }
 
-func initialModel(ctx *context.Context, t table.Model, initialQuery string) model {
+func initialModel(ctx *context.Context, t table.Model, initialQuery string, numEntries int) model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -62,7 +63,7 @@ func initialModel(ctx *context.Context, t table.Model, initialQuery string) mode
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
-	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: initialQuery, queryInput: queryInput}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: initialQuery, queryInput: queryInput, numEntries: numEntries}
 }
 
 func (m model) Init() tea.Cmd {
@@ -71,15 +72,20 @@ func (m model) Init() tea.Cmd {
 
 func runQueryAndUpdateTable(m model) model {
 	if m.runQuery != "" && m.runQuery != m.lastQuery {
-		rows, err := getRows(m.ctx, m.runQuery)
+		rows, numEntries, err := getRows(m.ctx, m.runQuery)
 		if err != nil {
 			m.err = err
 			return m
 		}
+		m.numEntries = numEntries
 		m.table.SetRows(rows)
 		m.table.SetCursor(0)
 		m.lastQuery = m.runQuery
 		m.runQuery = ""
+	}
+	if m.table.Cursor() >= m.numEntries {
+		// Ensure that we can't scroll past the end of the table
+		m.table.SetCursor(m.numEntries - 1)
 	}
 	return m
 }
@@ -92,7 +98,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "enter":
-			m.selected = true
+			if m.numEntries != 0 {
+				m.selected = true
+			}
 			return m, tea.Quit
 		default:
 			t, cmd1 := m.table.Update(msg)
@@ -146,11 +154,11 @@ func (m model) View() string {
 	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, offlineWarning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
-func getRows(ctx *context.Context, query string) ([]table.Row, error) {
+func getRows(ctx *context.Context, query string) ([]table.Row, int, error) {
 	db := hctx.GetDb(ctx)
 	data, err := data.Search(db, query, PADDED_NUM_ENTRIES)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var rows []table.Row
 	for i := 0; i < PADDED_NUM_ENTRIES; i++ {
@@ -163,7 +171,7 @@ func getRows(ctx *context.Context, query string) ([]table.Row, error) {
 			rows = append(rows, table.Row{})
 		}
 	}
-	return rows, nil
+	return rows, len(data), nil
 }
 
 func TuiQuery(ctx *context.Context, initialQuery string) error {
@@ -175,7 +183,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 		{Title: "Exit Code", Width: 9},
 		{Title: "Command", Width: 70},
 	}
-	rows, err := getRows(ctx, initialQuery)
+	rows, numEntries, err := getRows(ctx, initialQuery)
 	if err != nil {
 		return err
 	}
@@ -199,7 +207,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	t.SetStyles(s)
 	t.Focus()
 
-	p := tea.NewProgram(initialModel(ctx, t, initialQuery), tea.WithOutput(os.Stderr))
+	p := tea.NewProgram(initialModel(ctx, t, initialQuery, numEntries), tea.WithOutput(os.Stderr))
 	go func() {
 		err := RetrieveAdditionalEntriesFromRemote(ctx)
 		if err != nil {
@@ -225,5 +233,3 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	fmt.Printf("%s\n", selectedRow)
 	return nil
 }
-
-// TODO: handling if someone hits enter when there are no results
