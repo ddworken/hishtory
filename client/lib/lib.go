@@ -391,7 +391,7 @@ func CheckFatalError(err error) {
 	}
 }
 
-func ImportHistory(ctx *context.Context) (int, error) {
+func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
 	config := hctx.GetConf(ctx)
 	if config.HaveCompletedInitialImport {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
@@ -407,11 +407,13 @@ func ImportHistory(ctx *context.Context) (int, error) {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
-	// extraEntries, err = readStdin()
-	// if err != nil {
-	// 	return 0, fmt.Errorf("failed to read stdin: %v", err)
-	// }
-	// historyEntries = append(historyEntries, extraEntries...)
+	if shouldReadStdin {
+		extraEntries, err = readStdin()
+		if err != nil {
+			return 0, fmt.Errorf("failed to read stdin: %v", err)
+		}
+		historyEntries = append(historyEntries, extraEntries...)
+	}
 	db := hctx.GetDb(ctx)
 	currentUser, err := user.Current()
 	if err != nil {
