@@ -111,6 +111,32 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to update hishtory: %v", err)
 		}
+	case "config-get":
+		// TODO: tests for config-get and config-set
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		key := os.Args[2]
+		switch key {
+		case "enable-control-r":
+			fmt.Printf("%v", config.ControlRSearchEnabled)
+		default:
+			log.Fatalf("Unrecognized config key: %s", key)
+		}
+	case "config-set":
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		key := os.Args[2]
+		val := os.Args[3]
+		switch key {
+		case "enable-control-r":
+			if val != "true" && val != "false" {
+				log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+			}
+			config.ControlRSearchEnabled = (val == "true")
+			lib.CheckFatalError(hctx.SetConfig(config))
+		default:
+			log.Fatalf("Unrecognized config key: %s", key)
+		}
 	case "reupload":
 		// Purposefully undocumented since this command is generally not necessary to run
 		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))

@@ -154,6 +154,8 @@ type ClientConfig struct {
 	MissedUploadTimestamp int64 `json:"missed_upload_timestamp"`
 	// Used for avoiding double imports of .bash_history
 	HaveCompletedInitialImport bool `json:"have_completed_initial_import"`
+	// Whether control-r bindings are enabled
+	ControlRSearchEnabled bool `json:"enable_control_r_search"`
 }
 
 func GetConfig() (ClientConfig, error) {
