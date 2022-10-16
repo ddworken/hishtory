@@ -1102,6 +1102,7 @@ echo other`)
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	// Set up
 	defer shared.BackupAndRestore(t)()
+	defer shared.BackupAndRestoreEnv("HISHTORY_TEST")()
 
 	// Install via the python script
 	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`)
@@ -1127,6 +1128,7 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	}
 
 	// And test that it recorded that command
+	time.Sleep(time.Second)
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
 	if out != "hishtory status\n" {
 		t.Fatalf("unexpected output from hishtory export=%#v", out)
