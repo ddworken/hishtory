@@ -1115,3 +1115,61 @@ func chunks[k any](slice []k, chunkSize int) [][]k {
 	}
 	return chunks
 }
+
+func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
+	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
+	respBody, err := ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
+	if IsOfflineError(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var retrievedEntries []*shared.EncHistoryEntry
+	err = json.Unmarshal(respBody, &retrievedEntries)
+	if err != nil {
+		return fmt.Errorf("failed to load JSON response: %v", err)
+	}
+	for _, entry := range retrievedEntries {
+		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
+		}
+		AddToDbIfNew(db, decEntry)
+	}
+	return ProcessDeletionRequests(ctx)
+}
+
+func ProcessDeletionRequests(ctx *context.Context) error {
+	config := hctx.GetConf(ctx)
+
+	resp, err := ApiGet("/api/v1/get-deletion-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
+	if IsOfflineError(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var deletionRequests []*shared.DeletionRequest
+	err = json.Unmarshal(resp, &deletionRequests)
+	if err != nil {
+		return err
+	}
+	db := hctx.GetDb(ctx)
+	for _, request := range deletionRequests {
+		for _, entry := range request.Messages.Ids {
+			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
+			if res.Error != nil {
+				return fmt.Errorf("DB error: %v", res.Error)
+			}
+		}
+	}
+	return nil
+}
+
+func GetBanner(ctx *context.Context, gitCommit string) ([]byte, error) {
+	config := hctx.GetConf(ctx)
+	url := "/api/v1/banner?commit_hash=" + gitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
+	return ApiGet(url)
+}

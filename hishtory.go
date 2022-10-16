@@ -28,21 +28,25 @@ func main() {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
 		saveHistoryEntry(ctx)
-		lib.CheckFatalError(processDeletionRequests(ctx))
+		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 	case "query":
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(processDeletionRequests(ctx))
+		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		query(ctx, strings.Join(os.Args[2:], " "))
+	case "tquery":
+		ctx := hctx.MakeContext()
+		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+		lib.CheckFatalError(lib.TuiQuery(ctx))
 	case "export":
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(processDeletionRequests(ctx))
+		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		export(ctx, strings.Join(os.Args[2:], " "))
 	case "redact":
 		fallthrough
 	case "delete":
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(ctx))
-		lib.CheckFatalError(processDeletionRequests(ctx))
+		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
+		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		query := strings.Join(os.Args[2:], " ")
 		force := false
 		if os.Args[2] == "--force" {
@@ -165,61 +169,9 @@ func getDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
 	return dumpRequests, err
 }
 
-func processDeletionRequests(ctx *context.Context) error {
-	config := hctx.GetConf(ctx)
-
-	resp, err := lib.ApiGet("/api/v1/get-deletion-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
-	if lib.IsOfflineError(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	var deletionRequests []*shared.DeletionRequest
-	err = json.Unmarshal(resp, &deletionRequests)
-	if err != nil {
-		return err
-	}
-	db := hctx.GetDb(ctx)
-	for _, request := range deletionRequests {
-		for _, entry := range request.Messages.Ids {
-			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
-			if res.Error != nil {
-				return fmt.Errorf("DB error: %v", res.Error)
-			}
-		}
-	}
-	return nil
-}
-
-func retrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
-	db := hctx.GetDb(ctx)
-	config := hctx.GetConf(ctx)
-	respBody, err := lib.ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
-	if lib.IsOfflineError(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	var retrievedEntries []*shared.EncHistoryEntry
-	err = json.Unmarshal(respBody, &retrievedEntries)
-	if err != nil {
-		return fmt.Errorf("failed to load JSON response: %v", err)
-	}
-	for _, entry := range retrievedEntries {
-		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
-		if err != nil {
-			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
-		}
-		lib.AddToDbIfNew(db, decEntry)
-	}
-	return processDeletionRequests(ctx)
-}
-
 func query(ctx *context.Context, query string) {
 	db := hctx.GetDb(ctx)
-	err := retrieveAdditionalEntriesFromRemote(ctx)
+	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
@@ -234,9 +186,7 @@ func query(ctx *context.Context, query string) {
 }
 
 func displayBannerIfSet(ctx *context.Context) error {
-	config := hctx.GetConf(ctx)
-	url := "/api/v1/banner?commit_hash=" + GitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + lib.Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
-	respBody, err := lib.ApiGet(url)
+	respBody, err := lib.GetBanner(ctx, GitCommit)
 	if lib.IsOfflineError(err) {
 		return nil
 	}
@@ -330,7 +280,7 @@ func saveHistoryEntry(ctx *context.Context) {
 		}
 	}
 	if len(dumpRequests) > 0 {
-		lib.CheckFatalError(retrieveAdditionalEntriesFromRemote(ctx))
+		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
 		entries, err := data.Search(db, "", 0)
 		lib.CheckFatalError(err)
 		var encEntries []*shared.EncHistoryEntry
@@ -350,7 +300,7 @@ func saveHistoryEntry(ctx *context.Context) {
 
 func export(ctx *context.Context, query string) {
 	db := hctx.GetDb(ctx)
-	err := retrieveAdditionalEntriesFromRemote(ctx)
+	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
