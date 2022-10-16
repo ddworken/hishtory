@@ -36,7 +36,7 @@ func main() {
 	case "tquery":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
-		lib.CheckFatalError(lib.TuiQuery(ctx))
+		lib.CheckFatalError(lib.TuiQuery(ctx, strings.Join(os.Args[2:], " ")))
 	case "export":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
@@ -113,7 +113,6 @@ func main() {
 			log.Fatalf("Failed to update hishtory: %v", err)
 		}
 	case "config-get":
-		// TODO: tests for config-get and config-set
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		key := os.Args[2]
@@ -343,3 +342,4 @@ func export(ctx *context.Context, query string) {
 }
 
 // TODO(feature): Add a session_id column that corresponds to the shell session the command was run in
+// TODO: Skip recording of empty commands

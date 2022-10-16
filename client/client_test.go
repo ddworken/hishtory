@@ -144,6 +144,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester) })
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
+		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
 		// TODO: Add a test for multi-line history entries
 	}
 }
@@ -1542,6 +1543,32 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
+func testConfigGetSet(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Initially is false
+	out := tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
+	if out != "false" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+
+	// Set to true and check
+	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r true`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
+	if out != "true" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+
+	// Set to false and check
+	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r false`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
+	if out != "false" {
+		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 }
 

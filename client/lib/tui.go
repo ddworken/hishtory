@@ -3,6 +3,8 @@ package lib
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	_ "embed" // for embedding config.sh
 
@@ -13,7 +15,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/muesli/termenv"
 )
+
+const TABLE_HEIGHT = 20
+const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 3
+
+var selectedRow string = ""
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
@@ -29,6 +37,7 @@ type model struct {
 	selected   bool
 	table      table.Model
 	runQuery   string
+	lastQuery  string
 	err        error
 	queryInput textinput.Model
 	banner     string
@@ -41,7 +50,7 @@ type bannerMsg struct {
 	banner string
 }
 
-func initialModel(ctx *context.Context, t table.Model) model {
+func initialModel(ctx *context.Context, t table.Model, initialQuery string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -50,25 +59,32 @@ func initialModel(ctx *context.Context, t table.Model) model {
 	queryInput.Focus()
 	queryInput.CharLimit = 156
 	queryInput.Width = 50
-	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: "", queryInput: queryInput}
+	if initialQuery != "" {
+		queryInput.SetValue(initialQuery)
+	}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: initialQuery, queryInput: queryInput}
 }
 
 func (m model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.runQuery != "" {
+func runQueryAndUpdateTable(m model) model {
+	if m.runQuery != "" && m.runQuery != m.lastQuery {
 		rows, err := getRows(m.ctx, m.runQuery)
 		if err != nil {
 			m.err = err
-			return m, nil
+			return m
 		}
 		m.table.SetRows(rows)
 		m.table.SetCursor(0)
+		m.lastQuery = m.runQuery
 		m.runQuery = ""
 	}
+	return m
+}
 
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -84,6 +100,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			i, cmd2 := m.queryInput.Update(msg)
 			m.queryInput = i
 			m.runQuery = m.queryInput.Value()
+			m = runQueryAndUpdateTable(m)
 			return m, tea.Batch(cmd1, cmd2)
 		}
 	case errMsg:
@@ -114,34 +131,43 @@ func (m model) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.err)
 	}
-	if m.isLoading {
-		return fmt.Sprintf("\n\n   %s Loading hishtory entries from other devices... press q to quit\n\n", m.spinner.View())
-	}
 	if m.selected {
-		return fmt.Sprintf("\n%s\n", m.table.SelectedRow()[4])
+		selectedRow = m.table.SelectedRow()[4]
+		return ""
+	}
+	loadingMessage := ""
+	if m.isLoading {
+		loadingMessage = fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View())
 	}
 	offlineWarning := ""
 	if m.isOffline {
 		offlineWarning = "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale\n\n"
 	}
-	return fmt.Sprintf("\n%s%s\nSearch Query: %s\n\n%s\n", offlineWarning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
+	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, offlineWarning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
 func getRows(ctx *context.Context, query string) ([]table.Row, error) {
 	db := hctx.GetDb(ctx)
-	data, err := data.Search(db, query, 25)
+	data, err := data.Search(db, query, PADDED_NUM_ENTRIES)
 	if err != nil {
 		return nil, err
 	}
 	var rows []table.Row
-	for _, entry := range data {
-		row := table.Row{entry.Hostname, entry.CurrentWorkingDirectory, entry.StartTime.Format("Jan 2 2006 15:04:05 MST"), fmt.Sprintf("%d", entry.ExitCode), entry.Command}
-		rows = append(rows, row)
+	for i := 0; i < PADDED_NUM_ENTRIES; i++ {
+		if i < len(data) {
+			entry := data[i]
+			entry.Command = strings.ReplaceAll(entry.Command, "\n", " ") // TODO: handle multi-line commands better here
+			row := table.Row{entry.Hostname, entry.CurrentWorkingDirectory, entry.StartTime.Format("Jan 2 2006 15:04:05 MST"), fmt.Sprintf("%d", entry.ExitCode), entry.Command}
+			rows = append(rows, row)
+		} else {
+			rows = append(rows, table.Row{})
+		}
 	}
 	return rows, nil
 }
 
-func TuiQuery(ctx *context.Context) error {
+func TuiQuery(ctx *context.Context, initialQuery string) error {
+	lipgloss.SetColorProfile(termenv.ANSI)
 	columns := []table.Column{
 		{Title: "Hostname", Width: 25},
 		{Title: "CWD", Width: 40},
@@ -149,15 +175,15 @@ func TuiQuery(ctx *context.Context) error {
 		{Title: "Exit Code", Width: 9},
 		{Title: "Command", Width: 70},
 	}
-	rows, err := getRows(ctx, "")
+	rows, err := getRows(ctx, initialQuery)
 	if err != nil {
 		return err
 	}
 	t := table.New(
 		table.WithColumns(columns),
-		table.WithRows(rows),
+		table.WithRows(rows), // TODO: need to pad this to always have at least length items
 		table.WithFocused(true),
-		table.WithHeight(20),
+		table.WithHeight(TABLE_HEIGHT),
 	)
 
 	s := table.DefaultStyles()
@@ -173,7 +199,7 @@ func TuiQuery(ctx *context.Context) error {
 	t.SetStyles(s)
 	t.Focus()
 
-	p := tea.NewProgram(initialModel(ctx, t))
+	p := tea.NewProgram(initialModel(ctx, t, initialQuery), tea.WithOutput(os.Stderr))
 	go func() {
 		err := RetrieveAdditionalEntriesFromRemote(ctx)
 		if err != nil {
@@ -196,5 +222,8 @@ func TuiQuery(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("%s\n", selectedRow)
 	return nil
 }
+
+// TODO: handling if someone hits enter when there are no results
