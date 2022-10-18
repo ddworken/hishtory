@@ -1574,7 +1574,11 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 }
 
 func testTui(t *testing.T, tester shellTester) {
-	t.Skip() // TODO
+	if os.Getenv("GITHUB_ACTION") != "" {
+		t.Skip()
+		// TODO: run this on actions. Need to fix the timezone bug, see https://github.com/ddworken/hishtory/actions/runs/3277144800/jobs/5394045156
+	}
+
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -1587,9 +1591,10 @@ func testTui(t *testing.T, tester shellTester) {
 	db.Create(data.MakeFakeHistoryEntry("ls ~/"))
 	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
 
-	out := strings.TrimSpace(tester.RunInteractiveShell(t, `tmux -u new-session -d -x 200 -y 50 -s foo
+	// Check the initial output when there is no search
+	out := strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
+	tmux -u new-session -d -x 200 -y 50 -s foo
 	tmux send -t foo hishtory SPACE tquery ENTER
-	sleep 1
 	sleep 1
 	tmux capture-pane -p
 	tmux kill-session -t foo`))
@@ -1620,11 +1625,67 @@ func testTui(t *testing.T, tester shellTester) {
 │                                                                                                                                                                                   │
 │                                                                                                                                                                                   │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
-
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
 	}
 
+	// Check the output when there is a search
+	out = strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
+	tmux -u new-session -d -x 200 -y 50 -s foo
+	tmux send -t foo hishtory SPACE tquery ENTER
+	sleep 1
+	tmux send -t foo ls
+	sleep 1
+	tmux capture-pane -p
+	tmux kill-session -t foo`))
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[2])
+	expected = `Search Query: > ls
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
+│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/                                                                  │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
+	if diff := cmp.Diff(expected, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+	}
+
+	// Check the output when there is a selected result
+	out = strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
+	tmux -u new-session -d -x 200 -y 50 -s foo
+	tmux send -t foo hishtory SPACE tquery ENTER
+	sleep 1
+	tmux send -t foo ls ENTER
+	sleep 1
+	tmux capture-pane -p
+	tmux kill-session -t foo`))
+	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[2]), "\n")[0]
+	expected = `ls ~/`
+	if diff := cmp.Diff(expected, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+	}
+
+	// TODO: test arrow keys
+	// TODO: test control-r
 }
 
 type deviceSet struct {
