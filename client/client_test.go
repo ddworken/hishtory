@@ -1574,6 +1574,7 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 }
 
 func testTui(t *testing.T, tester shellTester) {
+	t.Skip() // TODO
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
