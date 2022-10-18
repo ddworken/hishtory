@@ -609,13 +609,12 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 		if ok {
 			unencodedHash := sha256.Sum256([]byte(password))
 			passwordHash := hex.EncodeToString(unencodedHash[:])
-			// Let's do a threat model for this, since this goes against the standard advice of "never emed
-			// secrets in source code". This the sha256 hash of a 32 byte random password. So to crack it
-			// you'd have to calculate 2^256 sha256 hashses. Good luck. And then, if you do crack it,
-			// what is exposed? That function is used just to add basic auth to the internal stats
-			// endpoint for the server. Hishtory is designed so the server has access to zero sensitive
-			// data, so there is nothing sensitive to be concerned with. This endpoint just expoes basic usage
-			// information for my own curiousity. So an attacker getting access to it wouldn't matter.
+			// This the sha256 hash of a 32 byte random password. This is used to add basic auth to
+			// the usage-stats endpoint that allows me to view data on the current users of hiSHtory.
+			// Note that the backend never has access to any sensitive data, it only can view encrypted
+			// data. So all that this protects is metadata about interactions with hiSHtory. Cracking
+			// this hash would not allow access to history entries. If you have any complaints about
+			// this, please route them to /dev/null.
 			expectedPasswordHash := "137d125ff03808cf8306244aa9c018b570f504fdb94b3c98fd817b5a97a4bb80"
 
 			usernameMatch := username == "ddworken"
