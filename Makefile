@@ -28,6 +28,7 @@ deploy-static: build-static
 
 deploy-api: build-api
 	docker push gcr.io/dworken-k8s/hishtory-api
+	ssh monoserver "cd ~/infra/ && docker compose pull hishtory-api && docker compose up -d --no-deps hishtory-api"
 
 deploy: release deploy-static deploy-api
 
