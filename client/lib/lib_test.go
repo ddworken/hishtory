@@ -303,3 +303,22 @@ func TestChunks(t *testing.T) {
 		}
 	}
 }
+
+func TestZshWeirdness(t *testing.T) {
+	testcases := []struct {
+		input   string
+		isWeird bool
+	}{
+		{": 1666062975:0;bash", true},
+		{": 16660:0;ls", true},
+		{"ls", false},
+		{"0", false},
+		{"hgffddxsdsrzsz xddfgdxfdv gdfc ghcvhgfcfg vgv", false},
+	}
+	for _, tc := range testcases {
+		actual := isZshWeirdness(tc.input)
+		if !reflect.DeepEqual(actual, tc.isWeird) {
+			t.Fatalf("weirdness failure for %#v", tc.input)
+		}
+	}
+}
