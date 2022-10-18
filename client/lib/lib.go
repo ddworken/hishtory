@@ -976,7 +976,8 @@ func IsOfflineError(err error) bool {
 		strings.Contains(err.Error(), "read: connection reset by peer") ||
 		strings.Contains(err.Error(), ": EOF") ||
 		strings.Contains(err.Error(), ": status_code=502") ||
-		strings.Contains(err.Error(), ": status_code=503")
+		strings.Contains(err.Error(), ": status_code=503") ||
+		strings.Contains(err.Error(), ": i/o timeout")
 }
 
 func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
