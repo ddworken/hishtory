@@ -127,25 +127,28 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	var entries []shared.EncHistoryEntry
+	var entries []*shared.EncHistoryEntry
 	err = json.Unmarshal(data, &entries)
 	if err != nil {
 		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
 	}
 	fmt.Printf("apiSubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
-	for _, entry := range entries {
-		updateUsageData(r, entry.UserId, entry.DeviceId, 1, false)
-		tx := GLOBAL_DB.Where("user_id = ?", entry.UserId)
-		var devices []*shared.Device
-		checkGormResult(tx.Find(&devices))
-		if len(devices) == 0 {
-			panic(fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", entry.UserId))
-		}
-		fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
-		for _, device := range devices {
+	if len(entries) == 0 {
+		return
+	}
+	updateUsageData(r, entries[0].UserId, entries[0].DeviceId, len(entries), false)
+	tx := GLOBAL_DB.Where("user_id = ?", entries[0].UserId)
+	var devices []*shared.Device
+	checkGormResult(tx.Find(&devices))
+	if len(devices) == 0 {
+		panic(fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", entries[0].UserId))
+	}
+	fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
+	for _, device := range devices {
+		for _, entry := range entries {
 			entry.DeviceId = device.DeviceId
-			checkGormResult(GLOBAL_DB.Create(&entry))
 		}
+		checkGormResult(GLOBAL_DB.Create(&entries))
 	}
 }
 
