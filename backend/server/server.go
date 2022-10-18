@@ -558,7 +558,7 @@ func withLogging(h func(http.ResponseWriter, *http.Request)) http.Handler {
 		h(&lrw, r)
 
 		duration := time.Since(start)
-		fmt.Printf("%s %s %#v %s %s %s\n", r.RemoteAddr, r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
+		fmt.Printf("%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
 	}
 	return http.HandlerFunc(logFn)
 }
