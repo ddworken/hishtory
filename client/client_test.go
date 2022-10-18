@@ -145,6 +145,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
+		t.Run("testTui/"+tester.ShellName(), func(t *testing.T) { testTui(t, tester) })
 		// TODO: Add a test for multi-line history entries
 	}
 }
@@ -1570,6 +1571,59 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 	if out != "false" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
+}
+
+func testTui(t *testing.T, tester shellTester) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Disable recording so that all our testing commands don't get recorded
+	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
+
+	// Insert a couple hishtory entries
+	db := hctx.GetDb(hctx.MakeContext())
+	db.Create(data.MakeFakeHistoryEntry("ls ~/"))
+	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
+
+	out := strings.TrimSpace(tester.RunInteractiveShell(t, `tmux -u new-session -d -x 200 -y 50 -s foo
+	tmux send -t foo hishtory SPACE tquery ENTER
+	sleep 1
+	sleep 1
+	tmux capture-pane -p
+	tmux kill-session -t foo`))
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[2])
+	expected := `Search Query: > ls
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
+│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'aaaaaa bbbb'                                                     │
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/                                                                  │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
+
+	if diff := cmp.Diff(expected, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+	}
+
 }
 
 type deviceSet struct {
