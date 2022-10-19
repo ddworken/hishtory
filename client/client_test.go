@@ -1573,6 +1573,39 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 	}
 }
 
+func TestFish(t *testing.T) {
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Test recording in fish
+	out := tester.RunInteractiveShell(t, ` export SHELL=/opt/homebrew/bin/fish
+ tmux kill-session -t foo || true
+ tmux -u new-session -d -x 200 -y 50 -s foo
+ tmux send -t foo ps -p $$ ENTER 
+ sleep 0.5
+ tmux send -t foo echo SPACE foo ENTER
+ sleep 0.5
+ tmux send -t foo echo SPACE bar ENTER
+ sleep 0.5
+ tmux send -t foo ls SPACE /tmp/ ENTER
+ sleep 0.5
+ tmux send -t foo SPACE echo SPACE foobar ENTER
+ sleep 0.5
+ tmux capture-pane -p
+ tmux kill-session -t foo`)
+	if !strings.Contains(out, "fish") {
+		t.Fatalf("unexpected shell")
+	}
+
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
+	expectedOutput := "echo foo\necho bar\nls /tmp/\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
 func testTui(t *testing.T, tester shellTester) {
 	if os.Getenv("GITHUB_ACTION") != "" {
 		t.Skip()
