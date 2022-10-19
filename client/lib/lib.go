@@ -52,6 +52,9 @@ var TestConfigZshContents string
 //go:embed config.fish
 var ConfigFishContents string
 
+//go:embed test_config.fish
+var TestConfigFishContents string
+
 var Version string = "Unknown"
 
 // 256KB ought to be enough for any reasonable cmd
@@ -559,6 +562,9 @@ func configureFish(homedir, binaryPath string) error {
 	// Create the file we're going to source. Do this no matter what in case there are updates to it.
 	fishConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.fish")
 	configContents := ConfigFishContents
+	if os.Getenv("HISHTORY_TEST") != "" {
+		configContents = TestConfigFishContents
+	}
 	err = ioutil.WriteFile(fishConfigPath, []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
