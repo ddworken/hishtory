@@ -1961,3 +1961,5 @@ func FuzzTestMultipleUsers(f *testing.F) {
 		fuzzTest(t, zshTester{}, input)
 	})
 }
+
+// TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

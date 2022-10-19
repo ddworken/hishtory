@@ -49,6 +49,9 @@ var ConfigZshContents string
 //go:embed test_config.zsh
 var TestConfigZshContents string
 
+//go:embed config.fish
+var ConfigFishContents string
+
 var Version string = "Unknown"
 
 // 256KB ought to be enough for any reasonable cmd
@@ -129,7 +132,7 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 			return nil, err
 		}
 		entry.Command = cmd
-	} else if shell == "zsh" {
+	} else if shell == "zsh" || shell == "fish" {
 		cmd := strings.TrimSuffix(strings.TrimSuffix(args[4], "\n"), " ")
 		if strings.HasPrefix(cmd, " ") {
 			// Don't save commands that start with a space
@@ -533,12 +536,64 @@ func Install() error {
 	if err != nil {
 		return err
 	}
+	err = configureFish(homedir, path)
+	if err != nil {
+		return err
+	}
 	_, err = hctx.GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
 		return Setup(os.Args)
 	}
 	return nil
+}
+
+// TODO: deduplicate shell config code
+
+func configureFish(homedir, binaryPath string) error {
+	// Check if fish is installed
+	_, err := exec.LookPath("fish")
+	if err != nil {
+		return nil
+	}
+	// Create the file we're going to source. Do this no matter what in case there are updates to it.
+	fishConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.fish")
+	configContents := ConfigFishContents
+	err = ioutil.WriteFile(fishConfigPath, []byte(configContents), 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to write config.zsh file: %v", err)
+	}
+	// Check if we need to configure the fishrc
+	fishIsConfigured, err := isFishConfigured(homedir)
+	if err != nil {
+		return fmt.Errorf("failed to check ~/.config/fish/config.fish: %v", err)
+	}
+	if fishIsConfigured {
+		return nil
+	}
+	// Add to fishrc
+	f, err := os.OpenFile(path.Join(homedir, ".config/fish/config.fish"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to append to ~/.config/fish/config.fish: %v", err)
+	}
+	defer f.Close()
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, shared.HISHTORY_PATH) + "\"\nsource " + fishConfigPath + "\n")
+	if err != nil {
+		return fmt.Errorf("failed to append to zshrc: %v", err)
+	}
+	return nil
+}
+
+func isFishConfigured(homedir string) (bool, error) {
+	_, err := os.Stat(path.Join(homedir, ".config/fish/config.fish"))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
+	if err != nil {
+		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %v", err)
+	}
+	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
 }
 
 func configureZshrc(homedir, binaryPath string) error {

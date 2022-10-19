@@ -34,6 +34,7 @@ func ResetLocalState(t *testing.T) {
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "hishtory"))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.sh"))
 	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.zsh"))
+	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.fish"))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -67,6 +68,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		path.Join(homedir, HISHTORY_PATH, "hishtory"),
 		path.Join(homedir, HISHTORY_PATH, "config.sh"),
 		path.Join(homedir, HISHTORY_PATH, "config.zsh"),
+		path.Join(homedir, HISHTORY_PATH, "config.fish"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
 	}
