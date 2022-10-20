@@ -578,6 +578,10 @@ func configureFish(homedir, binaryPath string) error {
 		return nil
 	}
 	// Add to fishrc
+	err = os.MkdirAll(path.Join(homedir, ".config/fish"), 0o744)
+	if err != nil {
+		return fmt.Errorf("failed to create fish config directory: %v", err)
+	}
 	f, err := os.OpenFile(path.Join(homedir, ".config/fish/config.fish"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to append to ~/.config/fish/config.fish: %v", err)
