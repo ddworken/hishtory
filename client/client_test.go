@@ -1580,7 +1580,11 @@ func TestFish(t *testing.T) {
 	installHishtory(t, tester, "")
 
 	// Test recording in fish
-	out := tester.RunInteractiveShell(t, ` export SHELL=/opt/homebrew/bin/fish
+	fishLocation, err := exec.LookPath("fish")
+	if err != nil {
+		t.Fatalf("fish is not installed")
+	}
+	out := tester.RunInteractiveShell(t, ` export SHELL=`+fishLocation+`
  tmux kill-session -t foo || true
  tmux -u new-session -d -x 200 -y 50 -s foo
  tmux send -t foo ps -p $$ ENTER 

@@ -25,5 +25,5 @@ jobs:
       run: |
           sudo apt-get update || true 
           sudo apt-get install -y zsh fish || true
-          which go
+          brew install fish || true
           make test
