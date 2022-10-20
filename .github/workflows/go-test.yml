@@ -24,6 +24,6 @@ jobs:
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           sudo apt-get update || true 
-          sudo apt-get install -y zsh || true
+          sudo apt-get install -y zsh fish || true
           which go
           make test
