@@ -233,3 +233,5 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	fmt.Printf("%s\n", selectedRow)
 	return nil
 }
+
+// TODO: make the tui support `after:` without crashing everyhitng
