@@ -1153,17 +1153,19 @@ echo thisisnotrecorded
 sleep 0.5
 cd /tmp/
 hishtory enable
-echo thisisrecorded`)
+echo thisisrecorded
+echo bar &
+sleep 1`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\n" {
+	if out != "foo\nbar\nthisisnotrecorded\nthisisrecorded\nbar\n" {
 		t.Fatalf("unexpected output from running commands: %#v", out)
 	}
 
 	// Test querying for all commands
 	out = hishtoryQuery(t, tester, "")
-	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
+	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a", "echo bar &", "sleep 1"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
 			t.Fatalf("output is missing expected item %#v: %#v", item, out)
@@ -1196,7 +1198,7 @@ echo thisisrecorded`)
 
 	// Test a more complex query with export
 	out = tester.RunInteractiveShell(t, `hishtory export cwd:/tmp/`)
-	if out != "hishtory enable\necho thisisrecorded\n" {
+	if out != "hishtory enable\necho thisisrecorded\necho bar &\nsleep 1\n" {
 		t.Fatalf("expected hishtory export to equal out=%#v", out)
 	}
 }
