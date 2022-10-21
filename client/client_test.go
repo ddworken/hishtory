@@ -145,7 +145,6 @@ func TestParameterized(t *testing.T) {
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
-		t.Run("testTui/"+tester.ShellName(), func(t *testing.T) { testTui(t, tester) })
 		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester) })
 		// TODO: Add a test for multi-line history entries
 	}
@@ -1615,7 +1614,7 @@ func TestFish(t *testing.T) {
 	}
 }
 
-func testTui(t *testing.T, tester shellTester) {
+func TestTui(t *testing.T) {
 	if os.Getenv("GITHUB_ACTION") != "" {
 		t.Skip()
 		// TODO: run this on actions. Need to fix the timezone bug, see https://github.com/ddworken/hishtory/actions/runs/3277144800/jobs/5394045156
@@ -1623,6 +1622,7 @@ func testTui(t *testing.T, tester shellTester) {
 
 	// Setup
 	defer shared.BackupAndRestore(t)()
+	tester := zshTester{}
 	installHishtory(t, tester, "")
 
 	// Disable recording so that all our testing commands don't get recorded
@@ -1633,7 +1633,6 @@ func testTui(t *testing.T, tester shellTester) {
 	db.Create(data.MakeFakeHistoryEntry("ls ~/"))
 	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
 
-	// TODO: Make the below actually use the correct shell
 	// Check the initial output when there is no search
 	out := strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
 	tmux -u new-session -d -x 200 -y 50 -s foo
