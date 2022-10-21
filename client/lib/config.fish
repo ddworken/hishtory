@@ -19,5 +19,16 @@ end
 
 # TODO: support background commands, see https://github.com/fish-shell/fish-shell/issues/3894
 
-# TODO: control-r search is currently unsupported for fish 
-[ "$(hishtory config-get enable-control-r)" = true ] && echo "Sorry, hishtory does not currently support overriding control-r for fish"
+function __hishtory_on_control_r
+	set -l tmp (mktemp -t fish.XXXXXX)
+	set -x init_query (commandline -b)
+	hishtory tquery $init_query > $tmp
+	set -l res $status
+	commandline -f repaint
+	if [ -s $tmp ]
+		commandline -r (cat $tmp)
+	end
+	rm -f $tmp
+end
+
+[ "$(hishtory config-get enable-control-r)" = true ] && bind \cr __hishtory_on_control_r

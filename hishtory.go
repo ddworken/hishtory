@@ -75,6 +75,7 @@ func main() {
 		if os.Getenv("HISHTORY_TEST") == "" {
 			fmt.Println("Importing existing shell history...")
 			ctx := hctx.MakeContext()
+			// TODO: skip doing this if this is an update
 			numImported, err := lib.ImportHistory(ctx, false)
 			lib.CheckFatalError(err)
 			if numImported > 0 {
