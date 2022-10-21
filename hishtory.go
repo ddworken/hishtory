@@ -73,13 +73,18 @@ func main() {
 	case "install":
 		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_TEST") == "" {
-			fmt.Println("Importing existing shell history...")
-			ctx := hctx.MakeContext()
-			// TODO: skip doing this if this is an update
-			numImported, err := lib.ImportHistory(ctx, false)
+			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
-			if numImported > 0 {
-				fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
+			data, err := data.Search(db, "", 10)
+			lib.CheckFatalError(err)
+			if len(data) < 10 {
+				fmt.Println("Importing existing shell history...")
+				ctx := hctx.MakeContext()
+				numImported, err := lib.ImportHistory(ctx, false)
+				lib.CheckFatalError(err)
+				if numImported > 0 {
+					fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
+				}
 			}
 		}
 	case "import":
