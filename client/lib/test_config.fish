@@ -16,3 +16,17 @@ function __hishtory_on_prompt --on-event fish_prompt
         hishtory saveHistoryEntry fish $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time
     end 
 end
+
+function __hishtory_on_control_r
+	set -l tmp (mktemp -t fish.XXXXXX)
+	set -x init_query (commandline -b)
+	hishtory tquery $init_query > $tmp
+	set -l res $status
+	commandline -f repaint
+	if [ -s $tmp ]
+		commandline -r (cat $tmp)
+	end
+	rm -f $tmp
+end
+
+[ "$(hishtory config-get enable-control-r)" = true ] && bind \cr __hishtory_on_control_r

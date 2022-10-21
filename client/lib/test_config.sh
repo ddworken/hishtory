@@ -28,3 +28,14 @@ function __hishtory_postcommand() {
 }
 PROMPT_COMMAND="__hishtory_postcommand; $PROMPT_COMMAND"
 export HISTTIMEFORMAT=$HISTTIMEFORMAT
+
+__history_control_r() {
+	READLINE_LINE=$(hishtory tquery "$READLINE_LINE" | tr -d '\n')
+	READLINE_POINT=0x7FFFFFFF
+}
+
+__hishtory_bind_control_r() {
+  bind -x '"\C-r": __history_control_r'
+}
+
+[ "$(hishtory config-get enable-control-r)" = true ] && __hishtory_bind_control_r

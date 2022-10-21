@@ -23,3 +23,16 @@ function _hishtory_precmd() {
     fi
     hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time
 }
+
+_hishtory_widget() {
+    BUFFER=$(hishtory tquery $BUFFER | tr -d '\n')
+    CURSOR=${#BUFFER}
+    zle reset-prompt
+}
+
+_hishtory_bind_control_r() {
+    zle     -N   _hishtory_widget
+    bindkey '^R' _hishtory_widget
+}
+
+[ "$(hishtory config-get enable-control-r)" = true ] && _hishtory_bind_control_r

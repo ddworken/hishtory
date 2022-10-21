@@ -146,6 +146,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
 		t.Run("testTui/"+tester.ShellName(), func(t *testing.T) { testTui(t, tester) })
+		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester) })
 		// TODO: Add a test for multi-line history entries
 	}
 }
@@ -1632,6 +1633,7 @@ func testTui(t *testing.T, tester shellTester) {
 	db.Create(data.MakeFakeHistoryEntry("ls ~/"))
 	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
 
+	// TODO: Make the below actually use the correct shell
 	// Check the initial output when there is no search
 	out := strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
 	tmux -u new-session -d -x 200 -y 50 -s foo
@@ -1726,7 +1728,86 @@ func testTui(t *testing.T, tester shellTester) {
 	}
 
 	// TODO: test arrow keys
-	// TODO: test control-r
+}
+
+// TODO: the below, but for fish
+func testControlR(t *testing.T, tester shellTester) {
+	if os.Getenv("GITHUB_ACTION") != "" {
+		t.Skip()
+		// TODO: run this on actions. Need to fix the timezone bug, see https://github.com/ddworken/hishtory/actions/runs/3277144800/jobs/5394045156
+	}
+	if tester.ShellName() == "bash" {
+		t.Skip()
+		// TODO: this currently fails on bash, need to figure this out
+	}
+
+	// Setup
+	defer shared.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Disable recording so that all our testing commands don't get recorded
+	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
+
+	// Insert a few hishtory entries
+	db := hctx.GetDb(hctx.MakeContext())
+	e1 := data.MakeFakeHistoryEntry("ls ~/")
+	e1.CurrentWorkingDirectory = "/etc/"
+	e1.Hostname = "server"
+	e1.ExitCode = 127
+	db.Create(e1)
+	db.Create(data.MakeFakeHistoryEntry("ls ~/foo/"))
+	db.Create(data.MakeFakeHistoryEntry("ls ~/bar/"))
+	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
+	db.Create(data.MakeFakeHistoryEntry("echo 'bar' &"))
+
+	// And check that the control-r binding brings up the search
+	shellLocation, err := exec.LookPath(tester.ShellName())
+	if err != nil {
+		t.Fatalf("fish is not installed")
+	}
+	out := strings.TrimSpace(tester.RunInteractiveShell(t, `export SHELL=`+shellLocation+`
+	tmux kill-session -t foo || true
+	tmux -u new-session -d -x 200 -y 50 -s foo
+	tmux send -t foo echo SPACE '$SHELL' ENTER
+	sleep 1
+	tmux send -t foo C-R
+	sleep 3
+	tmux capture-pane -p -t foo
+	tmux kill-session -t foo`))
+	if !strings.Contains(out, "\n\n\n") {
+		t.Fatalf("failed to find separator in %#v", out)
+	}
+	stripped := strings.Split(out, "\n\n\n")[1]
+	expected := `Search Query: > ls
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
+│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'bar' &                                                           │
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'aaaaaa bbbb'                                                     │
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/bar/                                                              │
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/foo/                                                              │
+│ server                     /etc/                                     Oct 17 2022 21:43:11 PDT   127        ls ~/                                                                  │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
+	if diff := cmp.Diff(expected, stripped); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
+	}
 }
 
 type deviceSet struct {
