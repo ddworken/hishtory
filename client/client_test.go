@@ -1828,6 +1828,51 @@ func testControlR(t *testing.T, tester shellTester) {
 	if !strings.HasSuffix(out, " ls ~/bar/") {
 		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
 	}
+
+	// Search using an atom
+	out = captureTerminalOutput(t, tester, []string{"C-R", "fo", "BSpace BSpace", "exit_code:127", "ENTER"})
+	if !strings.HasSuffix(out, " ls ~/") {
+		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
+	}
+
+	// Search and check that the table is updated
+	out = captureTerminalOutput(t, tester, []string{"C-R", "echo"})
+	stripped = strings.TrimSpace(out)
+	if tester.ShellName() == "bash" {
+		if !strings.Contains(out, "\n\n\n") {
+			t.Fatalf("failed to find separator in %#v", out)
+		}
+		stripped = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	expected = `Search Query: > echo
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
+│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'bar' &                                                           │
+│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'aaaaaa bbbb'                                                     │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+│                                                                                                                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
+	if diff := cmp.Diff(expected, stripped); diff != "" {
+		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
+	}
 }
 
 type deviceSet struct {
