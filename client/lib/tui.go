@@ -50,8 +50,8 @@ type model struct {
 
 	// The search box for the query
 	queryInput textinput.Model
-	// The query to run. Reset to an empty string after it was run.
-	runQuery string
+	// The query to run. Reset to nil after it was run.
+	runQuery *string
 	// The previous query that was run.
 	lastQuery string
 
@@ -84,7 +84,7 @@ func initialModel(ctx *context.Context, t table.Model, initialQuery string, numE
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
-	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: initialQuery, queryInput: queryInput, numEntries: numEntries}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: &initialQuery, queryInput: queryInput, numEntries: numEntries}
 }
 
 func (m model) Init() tea.Cmd {
@@ -92,9 +92,8 @@ func (m model) Init() tea.Cmd {
 }
 
 func runQueryAndUpdateTable(m model) model {
-	// TODO: this has the bug where if you search for x, and then hit backspace to an empty search query it won't rerun
-	if m.runQuery != "" && m.runQuery != m.lastQuery {
-		rows, numEntries, err := getRows(m.ctx, m.runQuery)
+	if m.runQuery != nil && *m.runQuery != m.lastQuery {
+		rows, numEntries, err := getRows(m.ctx, *m.runQuery)
 		if err != nil {
 			m.searchErr = err
 			return m
@@ -104,8 +103,8 @@ func runQueryAndUpdateTable(m model) model {
 		m.numEntries = numEntries
 		m.table.SetRows(rows)
 		m.table.SetCursor(0)
-		m.lastQuery = m.runQuery
-		m.runQuery = ""
+		m.lastQuery = *m.runQuery
+		m.runQuery = nil
 	}
 	if m.table.Cursor() >= m.numEntries {
 		// Ensure that we can't scroll past the end of the table
@@ -131,7 +130,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.table = t
 			i, cmd2 := m.queryInput.Update(msg)
 			m.queryInput = i
-			m.runQuery = m.queryInput.Value()
+			searchQuery := m.queryInput.Value()
+			m.runQuery = &searchQuery
 			m = runQueryAndUpdateTable(m)
 			return m, tea.Batch(cmd1, cmd2)
 		}
