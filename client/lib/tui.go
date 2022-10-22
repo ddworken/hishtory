@@ -30,20 +30,40 @@ var baseStyle = lipgloss.NewStyle().
 type errMsg error
 
 type model struct {
-	ctx        *context.Context
-	spinner    spinner.Model
-	quitting   bool
-	isLoading  bool
-	selected   bool
-	table      table.Model
-	runQuery   string
-	lastQuery  string
-	err        error
-	searchErr  error
-	queryInput textinput.Model
-	banner     string
-	isOffline  bool
+	// context
+	ctx *context.Context
+
+	// Model for the loading spinner.
+	spinner spinner.Model
+	// Whether data is still loading and the spinner should still be displayed.
+	isLoading bool
+
+	// Whether the TUI is quitting.
+	quitting bool
+
+	// The table used for displaying search results.
+	table table.Model
+	// The number of entries in the table.
 	numEntries int
+	// Whether the user has hit enter to select an entry and the TUI is thus about to quit.
+	selected bool
+
+	// The search box for the query
+	queryInput textinput.Model
+	// The query to run. Reset to an empty string after it was run.
+	runQuery string
+	// The previous query that was run.
+	lastQuery string
+
+	// Unrecoverable error.
+	err error
+	// An error while searching. Recoverable and displayed as a warning message.
+	searchErr error
+	// Whether the device is offline. If so, a warning will be displayed.
+	isOffline bool
+
+	// A banner from the backend to be displayed. Generally an empty string.
+	banner string
 }
 
 type doneDownloadingMsg struct{}
