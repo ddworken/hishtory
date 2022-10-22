@@ -1600,6 +1600,8 @@ func TestFish(t *testing.T) {
  tmux send -t foo ls SPACE /tmp/ ENTER
  sleep 0.5
  tmux send -t foo SPACE echo SPACE foobar ENTER
+ tmux send -t foo ls SPACE /bar/ SPACE '&' ENTER
+ sleep 0.5
  sleep 0.5
  tmux capture-pane -p
  tmux kill-session -t foo`)
@@ -1608,7 +1610,7 @@ func TestFish(t *testing.T) {
 	}
 
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
-	expectedOutput := "echo foo\necho bar\nls /tmp/\n"
+	expectedOutput := "echo foo\necho bar\nls /tmp/\nls /bar/ &\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}

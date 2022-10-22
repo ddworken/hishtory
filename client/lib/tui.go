@@ -92,6 +92,7 @@ func (m model) Init() tea.Cmd {
 }
 
 func runQueryAndUpdateTable(m model) model {
+	// TODO: this has the bug where if you search for x, and then hit backspace to an empty search query it won't rerun
 	if m.runQuery != "" && m.runQuery != m.lastQuery {
 		rows, numEntries, err := getRows(m.ctx, m.runQuery)
 		if err != nil {

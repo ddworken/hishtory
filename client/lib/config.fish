@@ -17,8 +17,6 @@ function __hishtory_on_prompt --on-event fish_prompt
     end 
 end
 
-# TODO: support background commands, see https://github.com/fish-shell/fish-shell/issues/3894
-
 function __hishtory_on_control_r
 	set -l tmp (mktemp -t fish.XXXXXX)
 	set -x init_query (commandline -b)
