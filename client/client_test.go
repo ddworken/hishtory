@@ -1578,7 +1578,7 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 func TestFish(t *testing.T) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
-	tester := zshTester{}
+	tester := bashTester{}
 	installHishtory(t, tester, "")
 
 	// Test recording in fish
