@@ -1622,11 +1622,6 @@ func TestFish(t *testing.T) {
 }
 
 func TestTui(t *testing.T) {
-	if os.Getenv("GITHUB_ACTION") != "" {
-		t.Skip()
-		// TODO: run this on actions. Need to fix the timezone bug, see https://github.com/ddworken/hishtory/actions/runs/3277144800/jobs/5394045156
-	}
-
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	tester := zshTester{}
@@ -1755,11 +1750,6 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 
 // TODO: the below, but for fish
 func testControlR(t *testing.T, tester shellTester, shellName string) {
-	if os.Getenv("GITHUB_ACTION") != "" {
-		t.Skip()
-		// TODO: run this on actions. Need to fix the timezone bug, see https://github.com/ddworken/hishtory/actions/runs/3277144800/jobs/5394045156
-	}
-
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
