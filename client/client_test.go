@@ -1748,7 +1748,6 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
-// TODO: the below, but for fish
 func testControlR(t *testing.T, tester shellTester, shellName string) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
@@ -1831,12 +1830,9 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	}
 
 	// Search using an atom
-	if shellName != "fish" {
-		// TODO: why does this fail in fish???
-		out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "fo", "BSpace BSpace", "exit_code:127", "ENTER"})
-		if !strings.HasSuffix(out, " ls ~/") {
-			t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
-		}
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "fo", "BSpace BSpace", "exit_code:2", "Enter"})
+	if !strings.HasSuffix(out, " echo 'bar' &") {
+		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
 	}
 
 	// Search and check that the table is updated
