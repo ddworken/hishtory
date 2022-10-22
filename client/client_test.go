@@ -1725,12 +1725,12 @@ func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) 
 	if tester.ShellName() == "bash" {
 		fullCommand += " tmux send -t foo source SPACE ~/.bashrc ENTER\n"
 	}
-	fullCommand += " sleep 0.5\n"
+	fullCommand += " sleep 0.1\n"
 	for _, cmd := range commands {
 		fullCommand += " tmux send -t foo "
 		fullCommand += cmd
 		fullCommand += "\n"
-		fullCommand += " sleep 0.5\n"
+		fullCommand += " sleep 0.1\n"
 	}
 	fullCommand += " tmux capture-pane -p\n"
 	fullCommand += " tmux kill-session -t foo\n"
@@ -1810,6 +1810,18 @@ func testControlR(t *testing.T, tester shellTester) {
 	out = captureTerminalOutput(t, tester, []string{"C-R", "Down", "Enter", "Enter"})
 	if !strings.Contains(out, "echo 'aaaaaa bbbb'\naaaaaa bbbb\n") {
 		t.Fatalf("hishtory tquery executed the wrong result, out=%#v", out)
+	}
+
+	// Search for something more specific and select it
+	out = captureTerminalOutput(t, tester, []string{"C-R", "foo", "Enter"})
+	if !strings.HasSuffix(out, " ls ~/foo/") {
+		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
+	}
+
+	// Search for something more specific, and then unsearch, and then search for something else
+	out = captureTerminalOutput(t, tester, []string{"C-R", "fo", "BSpace BSpace", "bar", "Down", "Enter"})
+	if !strings.HasSuffix(out, " ls ~/bar/") {
+		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
 	}
 }
 
