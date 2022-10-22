@@ -1667,7 +1667,7 @@ func TestTui(t *testing.T) {
 │                                                                                                                                                                                   │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
 	if diff := cmp.Diff(expected, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s", diff)
 	}
 
 	// Check the output when there is a search
@@ -1703,7 +1703,7 @@ func TestTui(t *testing.T) {
 │                                                                                                                                                                                   │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
 	if diff := cmp.Diff(expected, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s", diff)
 	}
 
 	// Check the output when there is a selected result
@@ -1797,7 +1797,19 @@ func testControlR(t *testing.T, tester shellTester) {
 │                                                                                                                                                                                   │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
 	if diff := cmp.Diff(expected, stripped); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
+		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
+	}
+
+	// And check that we can scroll down and select an option
+	out = captureTerminalOutput(t, tester, []string{"C-R", "Down", "Down", "Enter"})
+	if !strings.HasSuffix(out, " ls ~/bar/") {
+		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
+	}
+
+	// And that the above works, but also with an ENTER to actually execute it
+	out = captureTerminalOutput(t, tester, []string{"C-R", "Down", "Enter", "Enter"})
+	if !strings.Contains(out, "echo 'aaaaaa bbbb'\naaaaaa bbbb\n") {
+		t.Fatalf("hishtory tquery executed the wrong result, out=%#v", out)
 	}
 }
 
