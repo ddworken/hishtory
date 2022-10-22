@@ -39,6 +39,7 @@ type model struct {
 	runQuery   string
 	lastQuery  string
 	err        error
+	searchErr  error
 	queryInput textinput.Model
 	banner     string
 	isOffline  bool
@@ -74,8 +75,10 @@ func runQueryAndUpdateTable(m model) model {
 	if m.runQuery != "" && m.runQuery != m.lastQuery {
 		rows, numEntries, err := getRows(m.ctx, m.runQuery)
 		if err != nil {
-			m.err = err
+			m.searchErr = err
 			return m
+		} else {
+			m.searchErr = nil
 		}
 		m.numEntries = numEntries
 		m.table.SetRows(rows)
@@ -147,11 +150,14 @@ func (m model) View() string {
 	if m.isLoading {
 		loadingMessage = fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View())
 	}
-	offlineWarning := ""
+	warning := ""
 	if m.isOffline {
-		offlineWarning = "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale\n\n"
+		warning += "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale\n\n"
 	}
-	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, offlineWarning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
+	if m.searchErr != nil {
+		warning += fmt.Sprintf("Warning: failed to search: %v\n\n", m.searchErr)
+	}
+	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
 func getRows(ctx *context.Context, query string) ([]table.Row, int, error) {
@@ -189,7 +195,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	}
 	t := table.New(
 		table.WithColumns(columns),
-		table.WithRows(rows), // TODO: need to pad this to always have at least length items
+		table.WithRows(rows),
 		table.WithFocused(true),
 		table.WithHeight(TABLE_HEIGHT),
 	)
@@ -233,5 +239,3 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	fmt.Printf("%s\n", selectedRow)
 	return nil
 }
-
-// TODO: make the tui support `after:` without crashing everyhitng
