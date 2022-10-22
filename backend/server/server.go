@@ -1,9 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -599,39 +596,11 @@ func main() {
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/api/v1/get-deletion-requests", withLogging(getDeletionRequestsHandler))
 	http.Handle("/api/v1/add-deletion-request", withLogging(addDeletionRequestHandler))
-	http.Handle("/internal/api/v1/usage-stats", withLogging(basicAuth(usageStatsHandler)))
+	http.Handle("/internal/api/v1/usage-stats", withLogging(usageStatsHandler))
 	if isTestEnvironment() {
 		http.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
 	}
 	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func basicAuth(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if ok {
-			unencodedHash := sha256.Sum256([]byte(password))
-			passwordHash := hex.EncodeToString(unencodedHash[:])
-			// This the sha256 hash of a 32 byte random password. This is used to add basic auth to
-			// the usage-stats endpoint that allows me to view data on the current users of hiSHtory.
-			// Note that the backend never has access to any sensitive data, it only can view encrypted
-			// data. So all that this protects is metadata about interactions with hiSHtory. Cracking
-			// this hash would not allow access to history entries. If you have any complaints about
-			// this, please route them to /dev/null.
-			expectedPasswordHash := "137d125ff03808cf8306244aa9c018b570f504fdb94b3c98fd817b5a97a4bb80"
-
-			usernameMatch := username == "ddworken"
-			passwordMatch := (subtle.ConstantTimeCompare([]byte(passwordHash), []byte(expectedPasswordHash)) == 1)
-
-			if usernameMatch && passwordMatch {
-				next.ServeHTTP(w, r)
-				return
-			}
-		}
-
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	})
 }
 
 func checkGormResult(result *gorm.DB) {
