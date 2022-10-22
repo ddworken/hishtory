@@ -1602,7 +1602,6 @@ func TestFish(t *testing.T) {
  tmux send -t foo SPACE echo SPACE foobar ENTER
  tmux send -t foo ls SPACE /bar/ SPACE '&' ENTER
  sleep 0.5
- sleep 0.5
  tmux capture-pane -p
  tmux kill-session -t foo`)
 	if !strings.Contains(out, "fish") {
@@ -1636,13 +1635,11 @@ func TestTui(t *testing.T) {
 	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
 
 	// Check the initial output when there is no search
-	out := strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
-	tmux -u new-session -d -x 200 -y 50 -s foo
-	tmux send -t foo hishtory SPACE tquery ENTER
-	sleep 1
-	tmux capture-pane -p
-	tmux kill-session -t foo`))
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[2])
+	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
+	if len(strings.Split(out, "hishtory tquery")) != 2 {
+		t.Fatalf("failed to split out=%#v", out)
+	}
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	expected := `Search Query: > ls
 
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -1674,15 +1671,11 @@ func TestTui(t *testing.T) {
 	}
 
 	// Check the output when there is a search
-	out = strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
-	tmux -u new-session -d -x 200 -y 50 -s foo
-	tmux send -t foo hishtory SPACE tquery ENTER
-	sleep 1
-	tmux send -t foo ls
-	sleep 1
-	tmux capture-pane -p
-	tmux kill-session -t foo`))
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[2])
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"ls",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	expected = `Search Query: > ls
 
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -1714,21 +1707,34 @@ func TestTui(t *testing.T) {
 	}
 
 	// Check the output when there is a selected result
-	out = strings.TrimSpace(tester.RunInteractiveShell(t, `tmux kill-session -t foo || true
-	tmux -u new-session -d -x 200 -y 50 -s foo
-	tmux send -t foo hishtory SPACE tquery ENTER
-	sleep 1
-	tmux send -t foo ls ENTER
-	sleep 1
-	tmux capture-pane -p
-	tmux kill-session -t foo`))
-	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[2]), "\n")[0]
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"ls ENTER",
+	})
+	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
 	expected = `ls ~/`
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
 	}
+}
 
-	// TODO: test arrow keys
+func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
+	fullCommand := ""
+	fullCommand += " tmux kill-session -t foo || true\n"
+	fullCommand += " tmux -u new-session -d -x 200 -y 50 -s foo " + tester.ShellName() + "\n"
+	if tester.ShellName() == "bash" {
+		fullCommand += " tmux send -t foo source SPACE ~/.bashrc ENTER\n"
+	}
+	fullCommand += " sleep 0.5\n"
+	for _, cmd := range commands {
+		fullCommand += " tmux send -t foo "
+		fullCommand += cmd
+		fullCommand += "\n"
+		fullCommand += " sleep 0.5\n"
+	}
+	fullCommand += " tmux capture-pane -p\n"
+	fullCommand += " tmux kill-session -t foo\n"
+	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
 // TODO: the below, but for fish
@@ -1736,10 +1742,6 @@ func testControlR(t *testing.T, tester shellTester) {
 	if os.Getenv("GITHUB_ACTION") != "" {
 		t.Skip()
 		// TODO: run this on actions. Need to fix the timezone bug, see https://github.com/ddworken/hishtory/actions/runs/3277144800/jobs/5394045156
-	}
-	if tester.ShellName() == "bash" {
-		t.Skip()
-		// TODO: this currently fails on bash, need to figure this out
 	}
 
 	// Setup
@@ -1763,23 +1765,11 @@ func testControlR(t *testing.T, tester shellTester) {
 	db.Create(data.MakeFakeHistoryEntry("echo 'bar' &"))
 
 	// And check that the control-r binding brings up the search
-	shellLocation, err := exec.LookPath(tester.ShellName())
-	if err != nil {
-		t.Fatalf("fish is not installed")
-	}
-	out := strings.TrimSpace(tester.RunInteractiveShell(t, `export SHELL=`+shellLocation+`
-	tmux kill-session -t foo || true
-	tmux -u new-session -d -x 200 -y 50 -s foo
-	tmux send -t foo echo SPACE '$SHELL' ENTER
-	sleep 1
-	tmux send -t foo C-R
-	sleep 3
-	tmux capture-pane -p -t foo
-	tmux kill-session -t foo`))
+	out := captureTerminalOutput(t, tester, []string{"C-R"})
 	if !strings.Contains(out, "\n\n\n") {
 		t.Fatalf("failed to find separator in %#v", out)
 	}
-	stripped := strings.Split(out, "\n\n\n")[1]
+	stripped := strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	expected := `Search Query: > ls
 
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
