@@ -793,7 +793,7 @@ func getPidofCommand() string {
 }
 
 func waitForBackgroundSavesToComplete(t *testing.T) {
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 30; i++ {
 		cmd := exec.Command(getPidofCommand(), "hishtory")
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
