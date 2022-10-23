@@ -811,7 +811,7 @@ func waitForBackgroundSavesToComplete(t *testing.T) {
 			return
 		}
 		lastOut = stdout.String()
-		lastErr = stdout.String()
+		lastErr = stderr.String()
 		time.Sleep(50 * time.Millisecond)
 	}
 	t.Fatalf("failed to wait until hishtory wasn't running (lastOut=%#v, lastErr=%#v)", lastOut, lastErr)
