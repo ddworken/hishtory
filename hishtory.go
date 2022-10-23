@@ -36,7 +36,7 @@ func main() {
 	case "tquery":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
-		lib.CheckFatalError(lib.TuiQuery(ctx, strings.Join(os.Args[2:], " ")))
+		lib.CheckFatalError(lib.TuiQuery(ctx, GitCommit, strings.Join(os.Args[2:], " ")))
 	case "export":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))

@@ -205,7 +205,7 @@ func getRows(ctx *context.Context, query string) ([]table.Row, int, error) {
 	return rows, len(data), nil
 }
 
-func TuiQuery(ctx *context.Context, initialQuery string) error {
+func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
 	columns := []table.Column{
 		{Title: "Hostname", Width: 25},
@@ -274,7 +274,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 		p.Send(doneDownloadingMsg{})
 	}()
 	go func() {
-		banner, err := GetBanner(ctx, "TODO_WIRE_GIT_COMMIT_HERE")
+		banner, err := GetBanner(ctx, gitCommit)
 		if err != nil {
 			if IsOfflineError(err) {
 				p.Send(offlineMsg{})
