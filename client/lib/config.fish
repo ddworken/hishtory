@@ -14,6 +14,7 @@ function __hishtory_on_prompt --on-event fish_prompt
         set --global -e _hishtory_first_prompt
     else if [ -n "$_hishtory_command" ]
         hishtory saveHistoryEntry fish $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &
+        set --global -e _hishtory_command  # Unset _hishtory_command so we don't double-save entries when fish_prompt is invoked but fish_postexec isn't
     end 
 end
 

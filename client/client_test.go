@@ -1605,6 +1605,8 @@ func TestFish(t *testing.T) {
  sleep 0.5
  tmux send -t foo echo SPACE foo ENTER
  sleep 0.5
+ tmux send -t foo ENTER
+ sleep 0.5
  tmux send -t foo SPACE echo SPACE baz ENTER
  sleep 0.5
  tmux send -t foo echo SPACE bar ENTER
