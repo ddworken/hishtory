@@ -29,4 +29,4 @@ function __hishtory_on_control_r
 	rm -f $tmp
 end
 
-[ $(hishtory config-get enable-control-r) = true ] && bind \cr __hishtory_on_control_r
+[ (hishtory config-get enable-control-r) = true ] && bind \cr __hishtory_on_control_r
