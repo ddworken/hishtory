@@ -1729,6 +1729,9 @@ func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) 
 
 func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overriddenShellName string, commands []string) string {
 	sleepAmount := "0.1"
+	if runtime.GOOS == "linux" {
+		sleepAmount = "0.2"
+	}
 	if overriddenShellName == "fish" {
 		// Fish is considerably slower so this is sadly necessary
 		sleepAmount = "0.5"
