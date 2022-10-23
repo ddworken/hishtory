@@ -26,6 +26,8 @@ var (
 	getLoggerOnce  sync.Once
 )
 
+// TODO: Can we auto-rotate the log file?
+
 func GetLogger() *log.Logger {
 	getLoggerOnce.Do(func() {
 		homedir, err := os.UserHomeDir()

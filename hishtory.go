@@ -274,7 +274,7 @@ func saveHistoryEntry(ctx *context.Context) {
 	entry, err := lib.BuildHistoryEntry(ctx, os.Args)
 	lib.CheckFatalError(err)
 	if entry == nil {
-		hctx.GetLogger().Printf("Skipping saving a history entry because we failed to build a history entry (was the command prefixed with a space?)\n")
+		hctx.GetLogger().Printf("Skipping saving a history entry because we did not build a history entry (was the command prefixed with a space and/or empty?)\n")
 		return
 	}
 
@@ -348,4 +348,3 @@ func export(ctx *context.Context, query string) {
 }
 
 // TODO(feature): Add a session_id column that corresponds to the shell session the command was run in
-// TODO: Skip recording of empty commands

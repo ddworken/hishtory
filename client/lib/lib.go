@@ -145,6 +145,10 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	} else {
 		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
 	}
+	if strings.TrimSpace(entry.Command) == "" {
+		// Skip recording empty commands where the user just hits enter in their terminal
+		return nil, nil
+	}
 
 	// hostname
 	hostname, err := os.Hostname()
@@ -278,7 +282,15 @@ func parseCrossPlatformInt(data string) (int64, error) {
 }
 
 func getLastCommand(history string) (string, error) {
-	return strings.SplitN(strings.SplitN(strings.TrimSpace(history), " ", 2)[1], " ", 2)[1], nil
+	split := strings.SplitN(strings.TrimSpace(history), " ", 2)
+	if len(split) <= 1 {
+		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug", history)
+	}
+	split = strings.SplitN(split[1], " ", 2)
+	if len(split) <= 1 {
+		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug", history)
+	}
+	return split[1], nil
 }
 
 func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {

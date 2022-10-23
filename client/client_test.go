@@ -681,8 +681,10 @@ func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
 		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
 	}
 
-	// Run a few more commands
+	// Run a few more commands including some empty lines that don't get recorded
 	tester.RunInteractiveShell(t, `echo mycommand-30
+
+
 echo mycommand-31
 echo mycommand-3`)
 
