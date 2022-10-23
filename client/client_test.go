@@ -1583,11 +1583,6 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 }
 
 func TestFish(t *testing.T) {
-	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "linux" {
-		t.Skip()
-		// TODO: run this on actions. Need to figure out what is going on with https://github.com/ddworken/hishtory/actions/runs/3302394207/jobs/5449159179
-	}
-
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	tester := bashTester{}
