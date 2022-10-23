@@ -21,7 +21,7 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    - uses: mxschmitt/action-tmate@v3
+    # - uses: mxschmitt/action-tmate@v3
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
@@ -29,4 +29,5 @@ jobs:
           sudo apt-get install -y zsh fish || true
           brew install fish tmux || true
           export TZ='America/Los_Angeles' # Force the time zone so that test output is consistent
+          sudo chmod 0755 -R /usr/share/zsh/ || true  # Work around a weird bug where zsh on ubuntu actiosn gives that diretory 0777 which makes zsh refuse to start
           make test
