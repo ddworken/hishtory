@@ -94,6 +94,11 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		for _, file := range copyFiles {
 			checkError(copy(file+id+".bak", file))
 		}
+		cmd := exec.Command("killall", "hishtory")
+		stdout, err := cmd.Output()
+		if err != nil && err.Error() != "exit status 1" {
+			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
+		}
 	}
 }
 
