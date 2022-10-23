@@ -160,23 +160,31 @@ type ClientConfig struct {
 	ControlRSearchEnabled bool `json:"enable_control_r_search"`
 }
 
-func GetConfig() (ClientConfig, error) {
+func GetConfigContents() ([]byte, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return ClientConfig{}, fmt.Errorf("failed to retrieve homedir: %v", err)
+		return nil, fmt.Errorf("failed to retrieve homedir: %v", err)
 	}
 	data, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
 	if err != nil {
 		files, err := ioutil.ReadDir(path.Join(homedir, shared.HISHTORY_PATH))
 		if err != nil {
-			return ClientConfig{}, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
+			return nil, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
 		}
 		filenames := ""
 		for _, file := range files {
 			filenames += file.Name()
 			filenames += ", "
 		}
-		return ClientConfig{}, fmt.Errorf("failed to read config file (files in ~/.hishtory/: %s): %v", filenames, err)
+		return nil, fmt.Errorf("failed to read config file (files in ~/.hishtory/: %s): %v", filenames, err)
+	}
+	return data, nil
+}
+
+func GetConfig() (ClientConfig, error) {
+	data, err := GetConfigContents()
+	if err != nil {
+		return ClientConfig{}, err
 	}
 	var config ClientConfig
 	err = json.Unmarshal(data, &config)

@@ -318,6 +318,7 @@ func Setup(args []string) error {
 	config.UserSecret = userSecret
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
+	config.ControlRSearchEnabled = true
 	err := hctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
@@ -555,11 +556,46 @@ func Install() error {
 	if err != nil {
 		return err
 	}
+	err = promptOnUpgradedFeatures()
+	if err != nil {
+		return err
+	}
 	_, err = hctx.GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
 		return Setup(os.Args)
 	}
+	return nil
+}
+
+func promptOnUpgradedFeatures() error {
+	configConents, err := hctx.GetConfigContents()
+	if err != nil {
+		// No config, so this is a new install and thus there is nothing to prompt on
+		return nil
+	}
+	if strings.Contains(string(configConents), "enable_control_r_search") {
+		// control-r search is already configured, so there is nothing to prompt on
+		return nil
+	}
+	fmt.Printf("The new version of hishtory supports binding to your shell's control-R key binding for searching. Do you want to enable this? [y/N] ")
+	reader := bufio.NewReader(os.Stdin)
+	resp, err := reader.ReadString('\n')
+	CheckFatalError(err)
+	if strings.TrimSpace(resp) != "y" {
+		// They don't want it, so nothing to do
+		return nil
+	}
+	config, err := hctx.GetConfig()
+	if err != nil {
+		return err
+	}
+	config.ControlRSearchEnabled = true
+	err = hctx.SetConfig(config)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Enabled the control-R key binding, please restart your shell for this to take effect\n")
 	return nil
 }
 
