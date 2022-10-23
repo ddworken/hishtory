@@ -1752,8 +1752,6 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
-// TODO: check that if enable-control-r is false, then it isn't enabled
-
 func testControlR(t *testing.T, tester shellTester, shellName string) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
@@ -1778,10 +1776,6 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	// And check that the control-r binding brings up the search
 	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
 	if !strings.Contains(out, "\n\n\n") {
-		if shellName == "zsh" {
-			// TODO: delete this debugging code
-			t.Fatalf("failed to find separator in %#v, compaudit=%#v", out, tester.RunInteractiveShell(t, "compaudit"))
-		}
 		t.Fatalf("failed to find separator in %#v", out)
 	}
 	stripped := strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
@@ -1882,6 +1876,14 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
 	if diff := cmp.Diff(expected, stripped); diff != "" {
 		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
+	}
+
+	// Disable control-r
+	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
+	// And it shouldn't pop up
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
+	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
+		t.Fatalf("hishtory overrode control-r even when this was disabled? out=%#v", out)
 	}
 }
 
