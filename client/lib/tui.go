@@ -8,6 +8,7 @@ import (
 
 	_ "embed" // for embedding config.sh
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -128,6 +129,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			t, cmd1 := m.table.Update(msg)
 			m.table = t
+			if strings.HasPrefix(msg.String(), "alt+") {
+				return m, tea.Batch(cmd1)
+			}
 			i, cmd2 := m.queryInput.Update(msg)
 			m.queryInput = i
 			searchQuery := m.queryInput.Value()
@@ -214,11 +218,38 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	if err != nil {
 		return err
 	}
+	km := table.KeyMap{
+		LineUp: key.NewBinding(
+			key.WithKeys("up", "alt+OA"),
+			key.WithHelp("↑", "scroll up"),
+		),
+		LineDown: key.NewBinding(
+			key.WithKeys("down", "alt+OB"),
+			key.WithHelp("↓", "scroll down"),
+		),
+		PageUp: key.NewBinding(
+			key.WithKeys("pgup"),
+			key.WithHelp("pgup", "page up"),
+		),
+		PageDown: key.NewBinding(
+			key.WithKeys("pgdown"),
+			key.WithHelp("pgdn", "page down"),
+		),
+		GotoTop: key.NewBinding(
+			key.WithKeys("home"),
+			key.WithHelp("home", "go to start"),
+		),
+		GotoBottom: key.NewBinding(
+			key.WithKeys("end"),
+			key.WithHelp("end", "go to end"),
+		),
+	}
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
 		table.WithHeight(TABLE_HEIGHT),
+		table.WithKeyMap(km),
 	)
 
 	s := table.DefaultStyles()
