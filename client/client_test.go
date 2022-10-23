@@ -1739,6 +1739,7 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
 	fullCommand += " tmux -u new-session -d -x 200 -y 50 -s foo " + overriddenShellName + "\n"
+	fullCommand += " sleep 1\n"
 	if overriddenShellName == "bash" {
 		fullCommand += " tmux send -t foo source SPACE ~/.bashrc ENTER\n"
 	}
