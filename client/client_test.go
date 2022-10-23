@@ -793,7 +793,9 @@ func getPidofCommand() string {
 }
 
 func waitForBackgroundSavesToComplete(t *testing.T) {
-	for i := 0; i < 30; i++ {
+	lastOut := ""
+	lastErr := ""
+	for i := 0; i < 20; i++ {
 		cmd := exec.Command(getPidofCommand(), "hishtory")
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
@@ -808,9 +810,11 @@ func waitForBackgroundSavesToComplete(t *testing.T) {
 			time.Sleep(1000 * time.Millisecond)
 			return
 		}
+		lastOut = stdout.String()
+		lastErr = stdout.String()
 		time.Sleep(50 * time.Millisecond)
 	}
-	t.Fatalf("failed to wait until hishtory wasn't running")
+	t.Fatalf("failed to wait until hishtory wasn't running (lastOut=%#v, lastErr=%#v)", lastOut, lastErr)
 }
 
 func hishtoryQuery(t *testing.T, tester shellTester, query string) string {
