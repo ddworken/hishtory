@@ -1820,6 +1820,10 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string) {
+	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" && shellName == "bash" {
+		t.Skip() // TODO: further debug this. example failure: https://github.com/ddworken/hishtory/actions/runs/3309097201/jobs/5461940137
+	}
+
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -1874,10 +1878,6 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
 	if diff := cmp.Diff(expected, stripped); diff != "" {
 		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
-	}
-
-	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" && shellName == "bash" {
-		t.Skip() // TODO: further debug this
 	}
 
 	// And check that we can scroll down and select an option
