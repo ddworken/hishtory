@@ -38,7 +38,7 @@ type HistoryEntry struct {
 	CustomColumns           CustomColumns `json:"custom_columns"`
 }
 
-type CustomColumns []CustomColumns
+type CustomColumns []CustomColumn
 
 type CustomColumn struct {
 	Name string `json:"name"`

@@ -152,7 +152,40 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	config := hctx.GetConf(ctx)
 	entry.DeviceId = config.DeviceId
 
+	// custom columns
+	cc, err := buildCustomColumns(ctx)
+	if err != nil {
+		return nil, err
+	}
+	entry.CustomColumns = cc
+
 	return &entry, nil
+}
+
+func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
+	ccs := data.CustomColumns{}
+	config := hctx.GetConf(ctx)
+	for _, cc := range config.CustomColumns {
+		cmd := exec.Command("bash", "-c", cc.ColumnCommand)
+		var stdout bytes.Buffer
+		cmd.Stdout = &stdout
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Start()
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
+		}
+		err = cmd.Wait()
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
+		}
+		ccv := data.CustomColumn{
+			Name: cc.ColumnName,
+			Val:  strings.TrimSpace(stdout.String()),
+		}
+		ccs = append(ccs, ccv)
+	}
+	return ccs, nil
 }
 
 func isZshWeirdness(cmd string) bool {
