@@ -146,7 +146,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
 		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName()) })
-		t.Run("testUpgradePromptControlR/"+tester.ShellName(), func(t *testing.T) { testUpgradePromptControlR(t, tester) })
+		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		// TODO: Add a test for multi-line history entries
 	}
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish") })
@@ -1589,18 +1589,20 @@ func clearControlRSearchFromConfig(t *testing.T) {
 	configContents = []byte(strings.ReplaceAll(string(configContents), "enable_control_r_search", "something-else"))
 	homedir, err := os.UserHomeDir()
 	shared.Check(t, err)
-	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH), configContents, 0o600)
+	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH), configContents, 0o644)
 	shared.Check(t, err)
 }
 
-func testUpgradePromptControlR(t *testing.T, tester shellTester) {
+func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 	// Setup
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
-	// Install, and there is no prompt since the config mentions control-r
-	tester.RunInteractiveShell(t, `/tmp/client install`)
-	tester.RunInteractiveShell(t, `hishtory disable`)
+	// Install, and there is no prompt since the config already mentions control-r
+	_, err := tester.RunInteractiveShellRelaxed(t, `/tmp/client install`)
+	shared.Check(t, err)
+	_, err = tester.RunInteractiveShellRelaxed(t, `hishtory disable`)
+	shared.Check(t, err)
 
 	// Ensure that the config doesn't mention control-r
 	clearControlRSearchFromConfig(t)
@@ -1611,37 +1613,13 @@ func testUpgradePromptControlR(t *testing.T, tester shellTester) {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 
-	// And install again, this time we should get a prompt
+	// And install again, this time it will get set to true by default
 	clearControlRSearchFromConfig(t)
-	out, err := tester.RunInteractiveShellRelaxed(t, `yes | /tmp/client install`)
-	shared.Check(t, err)
-	expected := "The new version of hishtory supports binding to your shell's control-R key binding for searching. Do you want to enable this? [y/N] Enabled the control-R key binding, please restart your shell for this to take effect\n"
-	if !strings.HasPrefix(out, expected) {
-		t.Fatalf("hishtory install mismatch, out=%#v", out)
-	}
+	tester.RunInteractiveShell(t, ` /tmp/client install`)
 
 	// Now it should be enabled
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
 	if out != "true" {
-		t.Fatalf("unexpected config-get output: %#v", out)
-	}
-
-	// Clear it again, and this time we'll respond no
-	clearControlRSearchFromConfig(t)
-	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "false" {
-		t.Fatalf("unexpected config-get output: %#v", out)
-	}
-	clearControlRSearchFromConfig(t)
-	out, err = tester.RunInteractiveShellRelaxed(t, `echo n | /tmp/client install`)
-	shared.Check(t, err)
-	if strings.Contains(out, expected) || strings.Contains(out, "Enabled the control-R key binding") {
-		t.Fatalf("hishtory install mismatch, out=%#v", out)
-	}
-
-	// Now it should be disabled
-	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "false" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 }

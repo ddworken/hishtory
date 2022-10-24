@@ -547,7 +547,7 @@ func Install() error {
 	if err != nil {
 		return err
 	}
-	err = promptOnUpgradedFeatures()
+	err = handleUpgradedFeatures()
 	if err != nil {
 		return err
 	}
@@ -559,35 +559,23 @@ func Install() error {
 	return nil
 }
 
-func promptOnUpgradedFeatures() error {
+func handleUpgradedFeatures() error {
 	configConents, err := hctx.GetConfigContents()
 	if err != nil {
-		// No config, so this is a new install and thus there is nothing to prompt on
+		// No config, so this is a new install and thus there is nothing to do
 		return nil
 	}
 	if strings.Contains(string(configConents), "enable_control_r_search") {
-		// control-r search is already configured, so there is nothing to prompt on
+		// control-r search is already configured, so there is nothing to do
 		return nil
 	}
-	fmt.Printf("The new version of hishtory supports binding to your shell's control-R key binding for searching. Do you want to enable this? [y/N] ")
-	reader := bufio.NewReader(os.Stdin)
-	resp, err := reader.ReadString('\n')
-	CheckFatalError(err)
-	if strings.TrimSpace(resp) != "y" {
-		// They don't want it, so nothing to do
-		return nil
-	}
+	// Enable control-r search
 	config, err := hctx.GetConfig()
 	if err != nil {
 		return err
 	}
 	config.ControlRSearchEnabled = true
-	err = hctx.SetConfig(config)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Enabled the control-R key binding, please restart your shell for this to take effect\n")
-	return nil
+	return hctx.SetConfig(config)
 }
 
 func configureFish(homedir, binaryPath string) error {
@@ -853,14 +841,15 @@ func Update(ctx *context.Context) error {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to chmod +x the update (out=%#v, err=%#v): %v", stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to chmod +x the update (stdout=%#v, stderr=%#v): %v", stdout.String(), stderr.String(), err)
 	}
 	cmd = exec.Command("/tmp/hishtory-client", "install")
-	stdout = bytes.Buffer{}
+	cmd.Stdout = os.Stdout
 	stderr = bytes.Buffer{}
+	cmd.Stdin = os.Stdin
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to install update (out=%#v, err=%#v): %v", stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to install update (stderr=%#v): %v", stderr.String(), err)
 	}
 	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", Version, downloadData.Version)
 	return nil

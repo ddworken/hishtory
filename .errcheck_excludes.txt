@@ -3,3 +3,4 @@
 os.Setenv
 (*os.File).Close
 (io.ReadCloser).Close
+(*github.com/gofrs/flock.Flock).Unlock

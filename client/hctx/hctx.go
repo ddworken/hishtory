@@ -207,13 +207,15 @@ func SetConfig(config ClientConfig) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH+".tmp"), serializedConfig, 0o600)
+	configPath := path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)
+	stagedConfigPath := configPath + ".tmp"
+	err = os.WriteFile(stagedConfigPath, serializedConfig, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config: %v", err)
 	}
-	err = os.Rename(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH+".tmp"), path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
+	err = os.Rename(stagedConfigPath, configPath)
 	if err != nil {
-		return fmt.Errorf("failed to replace config file with the rewritten version: %v", err)
+		return fmt.Errorf("failed to replace config file with the updated version: %v", err)
 	}
 	return nil
 }
