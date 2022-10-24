@@ -27,17 +27,22 @@ Now if you run `hishtory query` on first computer, you can automatically see the
 
 ### Querying
 
-`hishtory query` is the main interface for searching through your shell history. See some below annotated queries:
+There are two ways to interact with hiSHtory. 
 
-| Command | Explanation |
+1. Via pressing `Control+R` in your terminal. Search for a command, select it via `Enter`, and then have it ready to execute in your terminal's buffer. 
+2. Via `hishtory query` if you just want to explore your shell history. 
+
+Both support the same query format, see the below annotated queries:
+
+| Query | Explanation |
 |---|---|
-| `hishtory query psql` | Find all commands containing `psql` |
-| `hishtory query psql db.example.com` | Find all commands containing `psql` and `db.example.com` |
-| `hishtory query docker hostname:my-server` | Find all commands containing `docker` that were run on the computer with hostname `my-server` |
-| `hishtory query nano user:root` | Find all commands containing `nano` that were run as `root` |
-| `hishtory query exit_code:127` | Find all commands that exited with code `127` |
-| `hishtory query service before:2022-02-01` | Find all commands containing `service` run before February 1st 2022 |
-| `hishtory query service after:2022-02-01` | Find all commands containing `service` run after February 1st 2022 |
+| `psql` | Find all commands containing `psql` |
+| `psql db.example.com` | Find all commands containing `psql` and `db.example.com` |
+| `docker hostname:my-server` | Find all commands containing `docker` that were run on the computer with hostname `my-server` |
+| `nano user:root` | Find all commands containing `nano` that were run as `root` |
+| `exit_code:127` | Find all commands that exited with code `127` |
+| `service before:2022-02-01` | Find all commands containing `service` run before February 1st 2022 |
+| `service after:2022-02-01` | Find all commands containing `service` run after February 1st 2022 |
 
 For true power users, you can even query in SQLite via `sqlite3 ~/.hishtory/.hishtory.db`. 
 
@@ -55,7 +60,11 @@ To update `hishtory` to the latest version, just run `hishtory update` to secure
 
 ### Multi-Shell and Multi-OS Support
 
-`hishtory` supports `zsh` and `bash` on Linux and macOS. If you'd like support for another shell (e.g. `fish`), please open an issue!
+`hishtory` supports `bash`, `zsh`, and `fish` on Linux and macOS. If you'd like support for another shell, please open an issue!
+
+### Disabling Control-R integration
+
+If you'd like to disable the control-R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
 
 ## Design
 
