@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql/driver"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -25,15 +26,36 @@ const (
 )
 
 type HistoryEntry struct {
-	LocalUsername           string    `json:"local_username" gorm:"uniqueIndex:compositeindex"`
-	Hostname                string    `json:"hostname" gorm:"uniqueIndex:compositeindex"`
-	Command                 string    `json:"command" gorm:"uniqueIndex:compositeindex"`
-	CurrentWorkingDirectory string    `json:"current_working_directory" gorm:"uniqueIndex:compositeindex"`
-	HomeDirectory           string    `json:"home_directory" gorm:"uniqueIndex:compositeindex"`
-	ExitCode                int       `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
-	StartTime               time.Time `json:"start_time" gorm:"uniqueIndex:compositeindex"`
-	EndTime                 time.Time `json:"end_time" gorm:"uniqueIndex:compositeindex"`
-	DeviceId                string    `json:"device_id" gorm:"uniqueIndex:compositeindex"`
+	LocalUsername           string        `json:"local_username" gorm:"uniqueIndex:compositeindex"`
+	Hostname                string        `json:"hostname" gorm:"uniqueIndex:compositeindex"`
+	Command                 string        `json:"command" gorm:"uniqueIndex:compositeindex"`
+	CurrentWorkingDirectory string        `json:"current_working_directory" gorm:"uniqueIndex:compositeindex"`
+	HomeDirectory           string        `json:"home_directory" gorm:"uniqueIndex:compositeindex"`
+	ExitCode                int           `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
+	StartTime               time.Time     `json:"start_time" gorm:"uniqueIndex:compositeindex"`
+	EndTime                 time.Time     `json:"end_time" gorm:"uniqueIndex:compositeindex"`
+	DeviceId                string        `json:"device_id" gorm:"uniqueIndex:compositeindex"`
+	CustomColumns           CustomColumns `json:"custom_columns"`
+}
+
+type CustomColumns []CustomColumns
+
+type CustomColumn struct {
+	Name string `json:"name"`
+	Val  string `json:"value"`
+}
+
+func (c *CustomColumns) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("failed to unmarshal CustomColumns value %#v", value)
+	}
+
+	return json.Unmarshal(bytes, c)
+}
+
+func (c CustomColumns) Value() (driver.Value, error) {
+	return json.Marshal(c)
 }
 
 func (h *HistoryEntry) GoString() string {

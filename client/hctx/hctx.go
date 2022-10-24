@@ -160,6 +160,13 @@ type ClientConfig struct {
 	ControlRSearchEnabled bool `json:"enable_control_r_search"`
 	// The set of columns that the user wants to be displayed
 	DisplayedColumns []string `json:"displayed_columns"`
+	// Custom columns
+	CustomColumns []CustomColumnDefinition `json:"custom_columns"`
+}
+
+type CustomColumnDefinition struct {
+	ColumnName    string `json:"column_name"`
+	ColumnCommand string `json:"column_command"`
 }
 
 func GetConfigContents() ([]byte, error) {

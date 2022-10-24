@@ -70,3 +70,23 @@ func TestParseTimeGenerously(t *testing.T) {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 }
+
+func TestCustomColumnSerialization(t *testing.T) {
+	// cc1 := CustomColumn{
+	// 	Name: "name1",
+	// 	Val:  "val1",
+	// }
+	// cc2 := CustomColumn{
+	// 	Name: "name2",
+	// 	Val:  "val2",
+	// }
+	var ccs CustomColumns = make(CustomColumns, 0)
+	v, err := ccs.Value()
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	val := string(v.([]uint8))
+	if val != "[]" {
+		t.Fatalf("unexpected val for empty CustomColumns: %#v", val)
+	}
+}
