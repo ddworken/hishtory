@@ -316,6 +316,20 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
 }
 
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	var count int64
+	checkGormResult(GLOBAL_DB.Model(&shared.EncHistoryEntry{}).Count(&count))
+	if count < 100 {
+		panic("Suspiciously few enc history entries!")
+	}
+	checkGormResult(GLOBAL_DB.Model(&shared.Device{}).Count(&count))
+	if count < 50 {
+		panic("Suspiciously few devices!")
+	}
+	ok := "OK"
+	w.Write([]byte(ok))
+}
+
 func applyDeletionRequestsToBackend(request shared.DeletionRequest) (int, error) {
 	tx := GLOBAL_DB.Where("false")
 	for _, message := range request.Messages.Ids {
@@ -596,6 +610,7 @@ func main() {
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/api/v1/get-deletion-requests", withLogging(getDeletionRequestsHandler))
 	http.Handle("/api/v1/add-deletion-request", withLogging(addDeletionRequestHandler))
+	http.Handle("/healthcheck", withLogging(healthCheckHandler))
 	http.Handle("/internal/api/v1/usage-stats", withLogging(usageStatsHandler))
 	if isTestEnvironment() {
 		http.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
