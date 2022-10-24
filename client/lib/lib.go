@@ -40,20 +40,11 @@ import (
 //go:embed config.sh
 var ConfigShContents string
 
-//go:embed test_config.sh
-var TestConfigShContents string
-
 //go:embed config.zsh
 var ConfigZshContents string
 
-//go:embed test_config.zsh
-var TestConfigZshContents string
-
 //go:embed config.fish
 var ConfigFishContents string
-
-//go:embed test_config.fish
-var TestConfigFishContents string
 
 var Version string = "Unknown"
 
@@ -599,8 +590,6 @@ func promptOnUpgradedFeatures() error {
 	return nil
 }
 
-// TODO: deduplicate shell config code
-
 func configureFish(homedir, binaryPath string) error {
 	// Check if fish is installed
 	_, err := exec.LookPath("fish")
@@ -611,7 +600,11 @@ func configureFish(homedir, binaryPath string) error {
 	fishConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.fish")
 	configContents := ConfigFishContents
 	if os.Getenv("HISHTORY_TEST") != "" {
-		configContents = TestConfigFishContents
+		testConfig, err := tweakConfigForTests(ConfigFishContents)
+		if err != nil {
+			return err
+		}
+		configContents = testConfig
 	}
 	err = ioutil.WriteFile(fishConfigPath, []byte(configContents), 0o644)
 	if err != nil {
@@ -659,7 +652,11 @@ func configureZshrc(homedir, binaryPath string) error {
 	zshConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.zsh")
 	configContents := ConfigZshContents
 	if os.Getenv("HISHTORY_TEST") != "" {
-		configContents = TestConfigZshContents
+		testConfig, err := tweakConfigForTests(configContents)
+		if err != nil {
+			return err
+		}
+		configContents = testConfig
 	}
 	err := ioutil.WriteFile(zshConfigPath, []byte(configContents), 0o644)
 	if err != nil {
@@ -703,7 +700,11 @@ func configureBashrc(homedir, binaryPath string) error {
 	bashConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.sh")
 	configContents := ConfigShContents
 	if os.Getenv("HISHTORY_TEST") != "" {
-		configContents = TestConfigShContents
+		testConfig, err := tweakConfigForTests(ConfigShContents)
+		if err != nil {
+			return err
+		}
+		configContents = testConfig
 	}
 	err := ioutil.WriteFile(bashConfigPath, []byte(configContents), 0o644)
 	if err != nil {
@@ -1288,4 +1289,27 @@ func GetBanner(ctx *context.Context, gitCommit string) ([]byte, error) {
 	config := hctx.GetConf(ctx)
 	url := "/api/v1/banner?commit_hash=" + gitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	return ApiGet(url)
+}
+
+func tweakConfigForTests(configContents string) (string, error) {
+	madeSubstitution := false
+	skipLineIndex := -1
+	ret := ""
+	split := strings.Split(configContents, "\n")
+	for i, line := range split {
+		if strings.Contains(line, "# Background Run") {
+			ret += strings.ReplaceAll(split[i+1], "# hishtory", "hishtory")
+			madeSubstitution = true
+			skipLineIndex = i + 1
+		} else if i == skipLineIndex {
+			continue
+		} else {
+			ret += line
+		}
+		ret += "\n"
+	}
+	if !madeSubstitution {
+		return "", fmt.Errorf("failed to find substitution line in configConents=%#v", configContents)
+	}
+	return ret, nil
 }

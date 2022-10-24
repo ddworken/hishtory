@@ -19,7 +19,8 @@ function _hishtory_precmd() {
         unset _hishtory_first_prompt
         return
     fi
-    (hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &)
+    (hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &)  # Background Run
+    # hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time  # Foreground Run
 }
 
 _hishtory_widget() {

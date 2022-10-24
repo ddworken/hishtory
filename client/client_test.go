@@ -294,8 +294,8 @@ func testBasicUserFlow(t *testing.T, tester shellTester) string {
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
-	if !strings.Contains(string(dat), "except it doesn't run the save process in the background") {
-		t.Fatalf("config.sh is the prod version when it shouldn't be, config.sh=%#v", dat)
+	if strings.Contains(string(dat), "# Background Run") {
+		t.Fatalf("config.sh is the prod version when it shouldn't be, config.sh=%#v", string(dat))
 	}
 
 	// Test the banner
