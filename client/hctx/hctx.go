@@ -158,6 +158,8 @@ type ClientConfig struct {
 	HaveCompletedInitialImport bool `json:"have_completed_initial_import"`
 	// Whether control-r bindings are enabled
 	ControlRSearchEnabled bool `json:"enable_control_r_search"`
+	// The set of columns that the user wants to be displayed
+	DisplayedColumns []string `json:"displayed_columns"`
 }
 
 func GetConfigContents() ([]byte, error) {
@@ -190,6 +192,9 @@ func GetConfig() (ClientConfig, error) {
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return ClientConfig{}, fmt.Errorf("failed to parse config file: %v", err)
+	}
+	if config.DisplayedColumns == nil || len(config.DisplayedColumns) == 0 {
+		config.DisplayedColumns = []string{"Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command"}
 	}
 	return config, nil
 }

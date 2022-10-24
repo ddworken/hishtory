@@ -300,6 +300,7 @@ func testBasicUserFlow(t *testing.T, tester shellTester) string {
 
 	// Test the banner
 	os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
+	defer os.Setenv("FORCED_BANNER", "")
 	out = hishtoryQuery(t, tester, "")
 	if !strings.Contains(out, "HELLO_FROM_SERVER\nHostname") {
 		t.Fatalf("hishtory query didn't show the banner message! out=%#v", out)

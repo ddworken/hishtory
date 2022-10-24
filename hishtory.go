@@ -214,7 +214,7 @@ func query(ctx *context.Context, query string) {
 	lib.CheckFatalError(displayBannerIfSet(ctx))
 	data, err := data.Search(db, query, 25)
 	lib.CheckFatalError(err)
-	lib.DisplayResults(data)
+	lib.CheckFatalError(lib.DisplayResults(ctx, data))
 }
 
 func displayBannerIfSet(ctx *context.Context) error {

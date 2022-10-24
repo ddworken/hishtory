@@ -364,18 +364,42 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
-func DisplayResults(results []*data.HistoryEntry) {
+func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
+	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
-	tbl := table.New("Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command")
+
+	columns := make([]any, 0)
+	for _, c := range config.DisplayedColumns {
+		columns = append(columns, c)
+	}
+	tbl := table.New(columns...)
 	tbl.WithHeaderFormatter(headerFmt)
 
 	for _, result := range results {
-		timestamp := result.StartTime.Format("Jan 2 2006 15:04:05 MST")
-		duration := result.EndTime.Sub(result.StartTime).Round(time.Millisecond).String()
-		tbl.AddRow(result.Hostname, result.CurrentWorkingDirectory, timestamp, duration, result.ExitCode, result.Command)
+		row := make([]any, 0)
+		for _, header := range config.DisplayedColumns {
+			switch header {
+			case "Hostname":
+				row = append(row, result.Hostname)
+			case "CWD":
+				row = append(row, result.CurrentWorkingDirectory)
+			case "Timestamp":
+				row = append(row, result.StartTime.Format("Jan 2 2006 15:04:05 MST"))
+			case "Runtime":
+				row = append(row, result.EndTime.Sub(result.StartTime).Round(time.Millisecond).String())
+			case "Exit Code":
+				row = append(row, fmt.Sprintf("%d", result.ExitCode))
+			case "Command":
+				row = append(row, result.Command)
+			default:
+				return fmt.Errorf("failed to map column %#v to a value", header)
+			}
+		}
+		tbl.AddRow(row...)
 	}
 
 	tbl.Print()
+	return nil
 }
 
 func IsEnabled(ctx *context.Context) (bool, error) {
