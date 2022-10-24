@@ -17,6 +17,13 @@ type EncHistoryEntry struct {
 	ReadCount     int       `json:"read_count"`
 }
 
+/*
+Manually created the indices:
+CREATE INDEX CONCURRENTLY device_id_idx ON enc_history_entries USING btree(device_id);
+CREATE INDEX CONCURRENTLY read_count_idx ON enc_history_entries USING btree(read_count);
+CREATE INDEX CONCURRENTLY redact_idx ON enc_history_entries USING btree(user_id, device_id, date);
+*/
+
 type Device struct {
 	UserId   string `json:"user_id"`
 	DeviceId string `json:"device_id"`
