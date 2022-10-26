@@ -150,20 +150,78 @@ func main() {
 			vals := os.Args[3:]
 			config.DisplayedColumns = vals
 			lib.CheckFatalError(hctx.SetConfig(config))
+		case "custom-columns":
+			log.Fatalf("Please use config-add and config-delete to interact with custom-columns")
 		default:
 			log.Fatalf("Unrecognized config key: %s", key)
 		}
-	case "add-custom-column":
-		// TODO: implement a way of deleting a custom column
-		columnName := os.Args[2]
-		command := os.Args[3]
+	case "config-add":
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
-		if config.CustomColumns == nil {
-			config.CustomColumns = make([]hctx.CustomColumnDefinition, 0)
+		key := os.Args[2]
+		switch key {
+		case "custom-columns":
+			columnName := os.Args[3]
+			command := os.Args[4]
+			ctx := hctx.MakeContext()
+			config := hctx.GetConf(ctx)
+			if config.CustomColumns == nil {
+				config.CustomColumns = make([]hctx.CustomColumnDefinition, 0)
+			}
+			config.CustomColumns = append(config.CustomColumns, hctx.CustomColumnDefinition{ColumnName: columnName, ColumnCommand: command})
+			lib.CheckFatalError(hctx.SetConfig(config))
+		case "displayed-columns":
+			vals := os.Args[3:]
+			config.DisplayedColumns = append(config.DisplayedColumns, vals...)
+			lib.CheckFatalError(hctx.SetConfig(config))
+		default:
+			log.Fatalf("Unrecognized config key: %s", key)
 		}
-		config.CustomColumns = append(config.CustomColumns, hctx.CustomColumnDefinition{ColumnName: columnName, ColumnCommand: command})
-		lib.CheckFatalError(hctx.SetConfig(config))
+	case "config-delete":
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		key := os.Args[2]
+		switch key {
+		case "custom-columns":
+			columnName := os.Args[2]
+			ctx := hctx.MakeContext()
+			config := hctx.GetConf(ctx)
+			if config.CustomColumns == nil {
+				return
+			}
+			newColumns := make([]hctx.CustomColumnDefinition, 0)
+			deletedColumns := false
+			for _, c := range config.CustomColumns {
+				if c.ColumnName != columnName {
+					newColumns = append(newColumns, c)
+					deletedColumns = true
+				}
+			}
+			if !deletedColumns {
+				log.Fatalf("Did not find a column with name %#v to delete (current columns = %#v)", columnName, config.CustomColumns)
+			}
+			config.CustomColumns = newColumns
+			lib.CheckFatalError(hctx.SetConfig(config))
+		case "displayed-columns":
+			deletedColumns := os.Args[3:]
+			newColumns := make([]string, 0)
+			for _, c := range config.DisplayedColumns {
+				isDeleted := false
+				for _, d := range deletedColumns {
+					if c == d {
+						isDeleted = true
+					}
+				}
+				if !isDeleted {
+					newColumns = append(newColumns, c)
+				}
+			}
+			config.DisplayedColumns = newColumns
+			lib.CheckFatalError(hctx.SetConfig(config))
+		default:
+			log.Fatalf("Unrecognized config key: %s", key)
+		}
+
 	case "reupload":
 		// Purposefully undocumented since this command is generally not necessary to run
 		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
