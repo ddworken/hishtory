@@ -125,6 +125,12 @@ func main() {
 		switch key {
 		case "enable-control-r":
 			fmt.Printf("%v", config.ControlRSearchEnabled)
+		case "displayed-columns":
+			// TODO: better formatting for the below
+			fmt.Printf("%#v", config.DisplayedColumns)
+		case "custom-columns":
+			// TODO: better formatting for this
+			fmt.Printf("%#v", config.CustomColumns)
 		default:
 			log.Fatalf("Unrecognized config key: %s", key)
 		}
@@ -132,13 +138,17 @@ func main() {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		key := os.Args[2]
-		val := os.Args[3]
 		switch key {
 		case "enable-control-r":
+			val := os.Args[3]
 			if val != "true" && val != "false" {
 				log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
 			}
 			config.ControlRSearchEnabled = (val == "true")
+			lib.CheckFatalError(hctx.SetConfig(config))
+		case "displayed-columns":
+			vals := os.Args[3:]
+			config.DisplayedColumns = vals
 			lib.CheckFatalError(hctx.SetConfig(config))
 		default:
 			log.Fatalf("Unrecognized config key: %s", key)
@@ -183,7 +193,7 @@ Supported commands:
 	'hishtory init': Set the secret key to enable syncing shell commands from another 
 		machine with a matching secret key. 
 	'hishtory help': View this help page
-`)
+`) // TODO; Update ^ to document the config-get and config-set options
 	default:
 		lib.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}
