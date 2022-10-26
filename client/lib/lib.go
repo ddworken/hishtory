@@ -397,6 +397,15 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
+func getCustomColumnValue(header string, entry *data.HistoryEntry) (string, error) {
+	for _, c := range entry.CustomColumns {
+		if strings.EqualFold(c.Name, header) {
+			return c.Val, nil
+		}
+	}
+	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
+}
+
 func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
@@ -425,7 +434,11 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 			case "Command":
 				row = append(row, result.Command)
 			default:
-				return fmt.Errorf("failed to map column %#v to a value", header)
+				customColumnValue, err := getCustomColumnValue(header, result)
+				if err != nil {
+					return err
+				}
+				row = append(row, customColumnValue)
 			}
 		}
 		tbl.AddRow(row...)
