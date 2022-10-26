@@ -143,6 +143,17 @@ func main() {
 		default:
 			log.Fatalf("Unrecognized config key: %s", key)
 		}
+	case "add-custom-column":
+		// TODO: implement a way of deleting a custom column
+		columnName := os.Args[2]
+		command := os.Args[3]
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		if config.CustomColumns == nil {
+			config.CustomColumns = make([]hctx.CustomColumnDefinition, 0)
+		}
+		config.CustomColumns = append(config.CustomColumns, hctx.CustomColumnDefinition{ColumnName: columnName, ColumnCommand: command})
+		lib.CheckFatalError(hctx.SetConfig(config))
 	case "reupload":
 		// Purposefully undocumented since this command is generally not necessary to run
 		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
