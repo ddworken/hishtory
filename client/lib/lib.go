@@ -397,10 +397,16 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
-func getCustomColumnValue(header string, entry *data.HistoryEntry) (string, error) {
+func getCustomColumnValue(ctx *context.Context, header string, entry *data.HistoryEntry) (string, error) {
 	for _, c := range entry.CustomColumns {
 		if strings.EqualFold(c.Name, header) {
 			return c.Val, nil
+		}
+	}
+	config := hctx.GetConf(ctx)
+	for _, c := range config.CustomColumns {
+		if strings.EqualFold(c.ColumnName, header) {
+			return "", nil
 		}
 	}
 	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
@@ -434,7 +440,7 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 			case "Command":
 				row = append(row, result.Command)
 			default:
-				customColumnValue, err := getCustomColumnValue(header, result)
+				customColumnValue, err := getCustomColumnValue(ctx, header, result)
 				if err != nil {
 					return err
 				}
