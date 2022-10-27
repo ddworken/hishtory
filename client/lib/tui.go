@@ -205,19 +205,31 @@ func getRows(ctx *context.Context, query string) ([]table.Row, int, error) {
 	return rows, len(data), nil
 }
 
-func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
-	lipgloss.SetColorProfile(termenv.ANSI)
-	columns := []table.Column{
-		{Title: "Hostname", Width: 25},
-		{Title: "CWD", Width: 40},
-		{Title: "Timestamp", Width: 25},
-		{Title: "Exit Code", Width: 9},
-		{Title: "Command", Width: 70},
+func makeTableColumns(columnNames []string, rows []table.Row) []table.Column {
+	numColumns := len(rows[0])
+	maxColumnWidths := make([]int, numColumns)
+	for _, row := range rows {
+		for i, v := range row {
+			maxColumnWidths[i] = max(maxColumnWidths[i], len(v))
+		}
 	}
-	rows, numEntries, err := getRows(ctx, initialQuery)
-	if err != nil {
-		return err
+	columns := make([]table.Column, 0)
+	for i, name := range columnNames {
+		maxColumnWidths[i] = max(maxColumnWidths[i], len(name))
+		columns = append(columns, table.Column{Title: name, Width: maxColumnWidths[i] + 4})
 	}
+	return columns
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func makeTable(rows []table.Row) (table.Model, error) {
+	columns := makeTableColumns([]string{"Hostname", "CWD", "Timestamp", "Exit Code", "Command"}, rows)
 	km := table.KeyMap{
 		LineUp: key.NewBinding(
 			key.WithKeys("up", "alt+OA"),
@@ -264,7 +276,19 @@ func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 		Bold(false)
 	t.SetStyles(s)
 	t.Focus()
+	return t, nil
+}
 
+func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
+	lipgloss.SetColorProfile(termenv.ANSI)
+	rows, numEntries, err := getRows(ctx, initialQuery)
+	if err != nil {
+		return err
+	}
+	t, err := makeTable(rows)
+	if err != nil {
+		return err
+	}
 	p := tea.NewProgram(initialModel(ctx, t, initialQuery, numEntries), tea.WithOutput(os.Stderr))
 	go func() {
 		err := RetrieveAdditionalEntriesFromRemote(ctx)
