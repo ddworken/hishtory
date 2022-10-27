@@ -397,7 +397,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
-func getCustomColumnValue(ctx *context.Context, header string, entry *data.HistoryEntry) (string, error) {
+func getCustomColumnValue(ctx *context.Context, header string, entry data.HistoryEntry) (string, error) {
 	for _, c := range entry.CustomColumns {
 		if strings.EqualFold(c.Name, header) {
 			return c.Val, nil
@@ -412,6 +412,41 @@ func getCustomColumnValue(ctx *context.Context, header string, entry *data.Histo
 	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
 }
 
+func buildTableRow(ctx *context.Context, columnNames []string, entry data.HistoryEntry) ([]string, error) {
+	row := make([]string, 0)
+	for _, header := range columnNames {
+		switch header {
+		case "Hostname":
+			row = append(row, entry.Hostname)
+		case "CWD":
+			row = append(row, entry.CurrentWorkingDirectory)
+		case "Timestamp":
+			row = append(row, entry.StartTime.Format("Jan 2 2006 15:04:05 MST"))
+		case "Runtime":
+			row = append(row, entry.EndTime.Sub(entry.StartTime).Round(time.Millisecond).String())
+		case "Exit Code":
+			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
+		case "Command":
+			row = append(row, entry.Command)
+		default:
+			customColumnValue, err := getCustomColumnValue(ctx, header, entry)
+			if err != nil {
+				return nil, err
+			}
+			row = append(row, customColumnValue)
+		}
+	}
+	return row, nil
+}
+
+func stringArrayToAnyArray(arr []string) []any {
+	ret := make([]any, 0)
+	for _, item := range arr {
+		ret = append(ret, item)
+	}
+	return ret
+}
+
 func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
@@ -424,30 +459,11 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 	tbl.WithHeaderFormatter(headerFmt)
 
 	for _, result := range results {
-		row := make([]any, 0)
-		for _, header := range config.DisplayedColumns {
-			switch header {
-			case "Hostname":
-				row = append(row, result.Hostname)
-			case "CWD":
-				row = append(row, result.CurrentWorkingDirectory)
-			case "Timestamp":
-				row = append(row, result.StartTime.Format("Jan 2 2006 15:04:05 MST"))
-			case "Runtime":
-				row = append(row, result.EndTime.Sub(result.StartTime).Round(time.Millisecond).String())
-			case "Exit Code":
-				row = append(row, fmt.Sprintf("%d", result.ExitCode))
-			case "Command":
-				row = append(row, result.Command)
-			default:
-				customColumnValue, err := getCustomColumnValue(ctx, header, result)
-				if err != nil {
-					return err
-				}
-				row = append(row, customColumnValue)
-			}
+		row, err := buildTableRow(ctx, config.DisplayedColumns, *result)
+		if err != nil {
+			return err
 		}
-		tbl.AddRow(row...)
+		tbl.AddRow(stringArrayToAnyArray(row))
 	}
 
 	tbl.Print()

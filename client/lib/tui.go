@@ -95,7 +95,7 @@ func (m model) Init() tea.Cmd {
 
 func runQueryAndUpdateTable(m model) model {
 	if m.runQuery != nil && *m.runQuery != m.lastQuery {
-		rows, numEntries, err := getRows(m.ctx, *m.runQuery, PADDED_NUM_ENTRIES)
+		rows, numEntries, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
 		if err != nil {
 			m.searchErr = err
 			return m
@@ -169,7 +169,18 @@ func (m model) View() string {
 		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.err)
 	}
 	if m.selected {
-		selectedRow = m.table.SelectedRow()[4]
+		indexOfCommand := -1
+		for i, columnName := range hctx.GetConf(m.ctx).DisplayedColumns {
+			if columnName == "Command" {
+				indexOfCommand = i
+				break
+			}
+		}
+		if indexOfCommand == -1 {
+			selectedRow = "Error: Table doesn't have a column named `Command`?"
+			return ""
+		}
+		selectedRow = m.table.SelectedRow()[indexOfCommand]
 		return ""
 	}
 	loadingMessage := ""
@@ -186,7 +197,7 @@ func (m model) View() string {
 	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
-func getRows(ctx *context.Context, query string, numEntries int) ([]table.Row, int, error) {
+func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, int, error) {
 	db := hctx.GetDb(ctx)
 	data, err := data.Search(db, query, numEntries)
 	if err != nil {
@@ -197,7 +208,10 @@ func getRows(ctx *context.Context, query string, numEntries int) ([]table.Row, i
 		if i < len(data) {
 			entry := data[i]
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", " ") // TODO: handle multi-line commands better here
-			row := table.Row{entry.Hostname, entry.CurrentWorkingDirectory, entry.StartTime.Format("Jan 2 2006 15:04:05 MST"), fmt.Sprintf("%d", entry.ExitCode), entry.Command}
+			row, err := buildTableRow(ctx, columnNames, *entry)
+			if err != nil {
+				return nil, 0, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
+			}
 			rows = append(rows, row)
 		} else {
 			rows = append(rows, table.Row{})
@@ -230,7 +244,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 
 	// Calculate the maximum column width that is useful for each column if we search for the empty string
 	if bigQueryResults == nil {
-		bigRows, _, err := getRows(ctx, "", 1000)
+		bigRows, _, err := getRows(ctx, columnNames, "", 1000)
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +257,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 	if err != nil {
 		return nil, fmt.Errorf("failed to get terminal size: %v", err)
 	}
-	for totalWidth < terminalWidth {
+	for totalWidth < (terminalWidth - len(columnNames)) {
 		prevTotalWidth := totalWidth
 		for i := range columnNames {
 			if columnWidths[i] < maximumColumnWidths[i]+5 {
@@ -254,6 +268,20 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 		if totalWidth == prevTotalWidth {
 			break
 		}
+	}
+
+	// And if we are too large from the initial query, let's shrink things to make the table fit. We'll use the heuristic of always shrinking the widest column.
+	for totalWidth > terminalWidth {
+		largestColumnIdx := -1
+		largestColumnSize := -1
+		for i := range columnNames {
+			if columnWidths[i] > largestColumnSize {
+				largestColumnIdx = i
+				largestColumnSize = columnWidths[i]
+			}
+		}
+		columnWidths[largestColumnIdx] -= 2
+		totalWidth -= 2
 	}
 
 	// And finally, create some actual columns!
@@ -272,7 +300,8 @@ func max(a, b int) int {
 }
 
 func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
-	columns, err := makeTableColumns(ctx, []string{"Hostname", "CWD", "Timestamp", "Exit Code", "Command"}, rows)
+	config := hctx.GetConf(ctx)
+	columns, err := makeTableColumns(ctx, config.DisplayedColumns, rows)
 	if err != nil {
 		return table.Model{}, err
 	}
@@ -327,7 +356,7 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 
 func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
-	rows, numEntries, err := getRows(ctx, initialQuery, PADDED_NUM_ENTRIES)
+	rows, numEntries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
 		return err
 	}
