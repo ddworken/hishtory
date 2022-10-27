@@ -17,6 +17,7 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/muesli/termenv"
+	"golang.org/x/term"
 )
 
 const TABLE_HEIGHT = 20
@@ -94,7 +95,7 @@ func (m model) Init() tea.Cmd {
 
 func runQueryAndUpdateTable(m model) model {
 	if m.runQuery != nil && *m.runQuery != m.lastQuery {
-		rows, numEntries, err := getRows(m.ctx, *m.runQuery)
+		rows, numEntries, err := getRows(m.ctx, *m.runQuery, PADDED_NUM_ENTRIES)
 		if err != nil {
 			m.searchErr = err
 			return m
@@ -185,14 +186,14 @@ func (m model) View() string {
 	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
-func getRows(ctx *context.Context, query string) ([]table.Row, int, error) {
+func getRows(ctx *context.Context, query string, numEntries int) ([]table.Row, int, error) {
 	db := hctx.GetDb(ctx)
-	data, err := data.Search(db, query, PADDED_NUM_ENTRIES)
+	data, err := data.Search(db, query, numEntries)
 	if err != nil {
 		return nil, 0, err
 	}
 	var rows []table.Row
-	for i := 0; i < PADDED_NUM_ENTRIES; i++ {
+	for i := 0; i < numEntries; i++ {
 		if i < len(data) {
 			entry := data[i]
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", " ") // TODO: handle multi-line commands better here
@@ -205,20 +206,62 @@ func getRows(ctx *context.Context, query string) ([]table.Row, int, error) {
 	return rows, len(data), nil
 }
 
-func makeTableColumns(columnNames []string, rows []table.Row) []table.Column {
+func calculateColumnWidths(rows []table.Row) []int {
 	numColumns := len(rows[0])
-	maxColumnWidths := make([]int, numColumns)
+	neededColumnWidth := make([]int, numColumns)
 	for _, row := range rows {
 		for i, v := range row {
-			maxColumnWidths[i] = max(maxColumnWidths[i], len(v))
+			neededColumnWidth[i] = max(neededColumnWidth[i], len(v))
 		}
 	}
+	return neededColumnWidth
+}
+
+var bigQueryResults []table.Row
+
+func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
+	// Calculate the minimum amount of space that we need for each column for the current actual search
+	columnWidths := calculateColumnWidths(rows)
+	totalWidth := 20
+	for i, name := range columnNames {
+		columnWidths[i] = max(columnWidths[i], len(name))
+		totalWidth += columnWidths[i]
+	}
+
+	// Calculate the maximum column width that is useful for each column if we search for the empty string
+	if bigQueryResults == nil {
+		bigRows, _, err := getRows(ctx, "", 1000)
+		if err != nil {
+			return nil, err
+		}
+		bigQueryResults = bigRows
+	}
+	maximumColumnWidths := calculateColumnWidths(bigQueryResults)
+
+	// Get the actual terminal width. If we're below this, opportunistically add some padding aiming for the maximum column widths
+	terminalWidth, _, err := term.GetSize(2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get terminal size: %v", err)
+	}
+	for totalWidth < terminalWidth {
+		prevTotalWidth := totalWidth
+		for i := range columnNames {
+			if columnWidths[i] < maximumColumnWidths[i]+5 {
+				columnWidths[i] += 1
+				totalWidth += 1
+			}
+		}
+		if totalWidth == prevTotalWidth {
+			break
+		}
+	}
+
+	// And finally, create some actual columns!
 	columns := make([]table.Column, 0)
 	for i, name := range columnNames {
-		maxColumnWidths[i] = max(maxColumnWidths[i], len(name))
-		columns = append(columns, table.Column{Title: name, Width: maxColumnWidths[i] + 4})
+		columns = append(columns, table.Column{Title: name, Width: columnWidths[i]})
 	}
-	return columns
+	return columns, nil
 }
 
 func max(a, b int) int {
@@ -228,8 +271,11 @@ func max(a, b int) int {
 	return b
 }
 
-func makeTable(rows []table.Row) (table.Model, error) {
-	columns := makeTableColumns([]string{"Hostname", "CWD", "Timestamp", "Exit Code", "Command"}, rows)
+func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
+	columns, err := makeTableColumns(ctx, []string{"Hostname", "CWD", "Timestamp", "Exit Code", "Command"}, rows)
+	if err != nil {
+		return table.Model{}, err
+	}
 	km := table.KeyMap{
 		LineUp: key.NewBinding(
 			key.WithKeys("up", "alt+OA"),
@@ -281,11 +327,11 @@ func makeTable(rows []table.Row) (table.Model, error) {
 
 func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
-	rows, numEntries, err := getRows(ctx, initialQuery)
+	rows, numEntries, err := getRows(ctx, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
 		return err
 	}
-	t, err := makeTable(rows)
+	t, err := makeTable(ctx, rows)
 	if err != nil {
 		return err
 	}
