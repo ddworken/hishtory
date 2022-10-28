@@ -1598,23 +1598,45 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
-	// Initially is true
+	// Config-get and set for enable-control-r
 	out := tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
 	if out != "true" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
-
-	// Set to false and check
 	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r false`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
 	if out != "false" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
-
-	// Set to true and check
 	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r true`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
 	if out != "true" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+
+	// config for displayed-columns
+	out = tester.RunInteractiveShell(t, `hishtory config-get displayed-columns`)
+	if out != "Hostname CWD Timestamp Runtime \"Exit Code\" Command \n" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname Command 'Exit Code'`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get displayed-columns`)
+	if out != "Hostname Command \"Exit Code\" \n" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns Timestamp`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get displayed-columns`)
+	if out != "Hostname Command \"Exit Code\" Timestamp \n" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+	tester.RunInteractiveShell(t, `hishtory config-delete displayed-columns Hostname`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get displayed-columns`)
+	if out != "Command \"Exit Code\" Timestamp \n" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns foobar`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get displayed-columns`)
+	if out != "Command \"Exit Code\" Timestamp foobar \n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 }

@@ -126,8 +126,14 @@ func main() {
 		case "enable-control-r":
 			fmt.Printf("%v", config.ControlRSearchEnabled)
 		case "displayed-columns":
-			// TODO: better formatting for the below
-			fmt.Printf("%#v", config.DisplayedColumns)
+			for _, col := range config.DisplayedColumns {
+				if strings.Contains(col, " ") {
+					fmt.Printf("%q ", col)
+				} else {
+					fmt.Print(col + " ")
+				}
+			}
+			fmt.Print("\n")
 		case "custom-columns":
 			// TODO: better formatting for this
 			fmt.Printf("%#v", config.CustomColumns)
