@@ -148,7 +148,6 @@ func TestParameterized(t *testing.T) {
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
 		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName()) })
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
-		// TODO: Add a test for multi-line history entries
 	}
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish") })
 }
@@ -1004,16 +1003,20 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 	compareGoldens(t, out, "testDisplayTable-customColumns")
 
 	// And again
-	tester.RunInteractiveShell(t, ` hishtory disable`)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
 	out = hishtoryQuery(t, tester, "table")
 	compareGoldens(t, out, "testDisplayTable-customColumns-2")
 
 	// And again
-	tester.RunInteractiveShell(t, ` hishtory disable`)
 	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns CWD`)
 	out = hishtoryQuery(t, tester, "table")
 	compareGoldens(t, out, "testDisplayTable-customColumns-3")
+
+	// Test displaying a command with multiple lines
+	entry3 := testutils.MakeFakeHistoryEntry("while :\ndo\nls /table/\ndone")
+	manuallySubmitHistoryEntry(t, userSecret, entry3)
+	out = hishtoryQuery(t, tester, "table")
+	compareGoldens(t, out, "testDisplayTable-customColumns-multiLineCommand")
 }
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
