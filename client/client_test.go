@@ -1869,6 +1869,18 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	}
 	compareGoldens(t, out, "testControlR-AdvancedSearch")
 
+	// Set some different columns to be displayed and check that the table displays those
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
+	out = strings.TrimSpace(out)
+	if tester.ShellName() == "bash" {
+		if !strings.Contains(out, "\n\n\n") {
+			t.Fatalf("failed to find separator in %#v", out)
+		}
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-CustomColumns")
+
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
 	// And it shouldn't pop up
