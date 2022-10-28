@@ -1849,22 +1849,14 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 
 	// Search and check that the table is updated
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "echo"})
-	out = strings.TrimSpace(out)
-	if tester.ShellName() == "bash" {
-		if !strings.Contains(out, "\n\n\n") {
-			t.Fatalf("failed to find separator in %#v", out)
-		}
+	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
 	compareGoldens(t, out, "testControlR-Search")
 
 	// An advanced search and check that the table is updated
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "cwd:/tmp/ SPACE ls"})
-	out = strings.TrimSpace(out)
-	if tester.ShellName() == "bash" {
-		if !strings.Contains(out, "\n\n\n") {
-			t.Fatalf("failed to find separator in %#v", out)
-		}
+	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
 	compareGoldens(t, out, "testControlR-AdvancedSearch")
@@ -1872,11 +1864,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	// Set some different columns to be displayed and check that the table displays those
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
-	out = strings.TrimSpace(out)
-	if tester.ShellName() == "bash" {
-		if !strings.Contains(out, "\n\n\n") {
-			t.Fatalf("failed to find separator in %#v", out)
-		}
+	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
 	compareGoldens(t, out, "testControlR-displayedColumns")
