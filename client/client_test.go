@@ -242,6 +242,8 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	// Manually submit an event that isn't in the local DB, and then we'll
 	// check if we see it when we do a query without ever having done an init
 	newEntry := data.MakeFakeHistoryEntry("othercomputer")
+	newEntry.StartTime = time.Now()
+	newEntry.EndTime = time.Now()
 	manuallySubmitHistoryEntry(t, userSecret, newEntry)
 
 	// Now check if that is in there when we do hishtory query
@@ -990,11 +992,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// Query and check the table
 	out := hishtoryQuery(t, tester, "table")
-	expectedOutput1 := "Hostname   CWD     Timestamp                   Runtime  Exit Code  Command     \nlocalhost  ~/foo/  Apr 16 2022 01:03:16 -0700  24s      3          table_cmd2  \nlocalhost  /tmp/   Apr 16 2022 01:03:06 -0700  4s       2          table_cmd1  \n"
-	expectedOutput2 := "Hostname   CWD     Timestamp                 Runtime  Exit Code  Command     \nlocalhost  ~/foo/  Apr 16 2022 01:03:16 PDT  24s      3          table_cmd2  \nlocalhost  /tmp/   Apr 16 2022 01:03:06 PDT  4s       2          table_cmd1  \n"
-	if out != expectedOutput1 && out != expectedOutput2 {
-		t.Fatalf("hishtory query table test mismatch out=%#v", out)
-	}
+	compareGoldens(t, out, "testDisplayTable")
 }
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
@@ -1667,8 +1665,29 @@ func TestFish(t *testing.T) {
 	}
 }
 
+func compareGoldens(t *testing.T, out, goldenName string) {
+	goldenPath := path.Join("client/lib/goldens/", goldenName)
+	expected, err := os.ReadFile(goldenPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			expected = []byte{}
+		} else {
+			shared.Check(t, err)
+		}
+	}
+	if diff := cmp.Diff(string(expected), out); diff != "" {
+		if os.Getenv("HISHTORY_UPDATE_GOLDENS") == "" {
+			_, filename, line, _ := runtime.Caller(1)
+			t.Fatalf("hishtory golden mismatch at %s:%d (-expected +got):\n%s", filename, line, diff)
+		} else {
+			shared.Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
+		}
+	}
+}
+
 func TestTui(t *testing.T) {
 	// Setup
+	data.ResetFakeHistoryTimestamp() // TODO: move this to backupandrestore
 	defer shared.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -1687,35 +1706,7 @@ func TestTui(t *testing.T) {
 		t.Fatalf("failed to split out=%#v", out)
 	}
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	expected := `Search Query: > ls
-
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
-│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'aaaaaa bbbb'                                                     │
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/                                                                  │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
-	if diff := cmp.Diff(expected, out); diff != "" {
-		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s", diff)
-	}
+	compareGoldens(t, out, "TestTui-Initial")
 
 	// Check the output when there is a search
 	out = captureTerminalOutput(t, tester, []string{
@@ -1723,35 +1714,7 @@ func TestTui(t *testing.T) {
 		"ls",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	expected = `Search Query: > ls
-
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
-│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/                                                                  │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
-	if diff := cmp.Diff(expected, out); diff != "" {
-		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s", diff)
-	}
+	compareGoldens(t, out, "TestTui-Search")
 
 	// Check the output when there is a selected result
 	out = captureTerminalOutput(t, tester, []string{
@@ -1759,7 +1722,7 @@ func TestTui(t *testing.T) {
 		"ls ENTER",
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
-	expected = `ls ~/`
+	expected := `ls ~/`
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
 	}
@@ -1804,6 +1767,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	}
 
 	// Setup
+	data.ResetFakeHistoryTimestamp() // TODO: move this to backupandrestore
 	defer shared.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -1828,44 +1792,16 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	if !strings.Contains(out, "\n\n\n") {
 		t.Fatalf("failed to find separator in %#v", out)
 	}
-	stripped := strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	expected := `Search Query: > ls
-
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
-│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'bar' &                                                           │
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'aaaaaa bbbb'                                                     │
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/bar/                                                              │
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          ls ~/foo/                                                              │
-│ server                     /etc/                                     Oct 17 2022 21:43:11 PDT   127        ls ~/                                                                  │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
-	if diff := cmp.Diff(expected, stripped); diff != "" {
-		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
-	}
+	out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	compareGoldens(t, out, "testControlR-Initial")
 
 	// And check that we can scroll down and select an option
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Down", "Down", "Enter"})
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Down Down", "Enter"})
 	if !strings.HasSuffix(out, " ls ~/bar/") {
 		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
 	}
 
-	// And that the above works, but also with an ENTER to actually execute it
+	// And that the above works, but also with an ENTER to actually execute the selected command
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Down", "Enter", "Enter"})
 	if !strings.Contains(out, "echo 'aaaaaa bbbb'\naaaaaa bbbb\n") {
 		t.Fatalf("hishtory tquery executed the wrong result, out=%#v", out)
@@ -1891,42 +1827,14 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 
 	// Search and check that the table is updated
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "echo"})
-	stripped = strings.TrimSpace(out)
+	out = strings.TrimSpace(out)
 	if tester.ShellName() == "bash" {
 		if !strings.Contains(out, "\n\n\n") {
 			t.Fatalf("failed to find separator in %#v", out)
 		}
-		stripped = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	expected = `Search Query: > echo
-
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname                   CWD                                       Timestamp                  Exit Code  Command                                                                │
-│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'bar' &                                                           │
-│ localhost                  /tmp/                                     Oct 17 2022 21:43:11 PDT   2          echo 'aaaaaa bbbb'                                                     │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-│                                                                                                                                                                                   │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘`
-	if diff := cmp.Diff(expected, stripped); diff != "" {
-		t.Fatalf("hishtory tquery mismatch (-expected +got):\n%s \n(out=%#v)", diff, out)
-	}
+	compareGoldens(t, out, "testControlR-Search")
 
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
@@ -1935,6 +1843,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
 		t.Fatalf("hishtory overrode control-r even when this was disabled? out=%#v", out)
 	}
+	compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 }
 
 type deviceSet struct {

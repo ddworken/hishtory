@@ -463,7 +463,7 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 		if err != nil {
 			return err
 		}
-		tbl.AddRow(stringArrayToAnyArray(row))
+		tbl.AddRow(stringArrayToAnyArray(row)...)
 	}
 
 	tbl.Print()

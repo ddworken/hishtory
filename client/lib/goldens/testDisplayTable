@@ -1,0 +1,3 @@
+Hostname   CWD     Timestamp                 Runtime  Exit Code  Command     
+localhost  ~/foo/  Apr 16 2022 01:03:16 PDT  24s      3          table_cmd2  
+localhost  /tmp/   Apr 16 2022 01:03:06 PDT  4s       2          table_cmd1  
