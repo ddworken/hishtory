@@ -1002,6 +1002,12 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 	// And check the table again
 	out = hishtoryQuery(t, tester, "table")
 	compareGoldens(t, out, "testDisplayTable-customColumns")
+
+	// And again
+	tester.RunInteractiveShell(t, ` hishtory disable`)
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
+	out = hishtoryQuery(t, tester, "table")
+	compareGoldens(t, out, "testDisplayTable-customColumns-2")
 }
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
