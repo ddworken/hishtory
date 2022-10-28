@@ -1724,7 +1724,16 @@ func TestFish(t *testing.T) {
 	}
 }
 
+func normalizeHostnames(data string) string {
+	hostnames := []string{"Davids-MacBook-Air.local", "ghaction-runner-hostname"}
+	for _, hostname := range hostnames {
+		data = strings.ReplaceAll(data, hostname, "ghaction-runner-hostname")
+	}
+	return data
+}
+
 func compareGoldens(t *testing.T, out, goldenName string) {
+	out = normalizeHostnames(out)
 	goldenPath := path.Join("client/lib/goldens/", goldenName)
 	expected, err := os.ReadFile(goldenPath)
 	if err != nil {

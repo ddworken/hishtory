@@ -1,4 +1,4 @@
 Hostname                  Exit Code  Command               CWD              
-Davids-MacBook-Air.local  0          hishtory query table  ~/code/hishtory  
+ghaction-runner-hostname  0          hishtory query table  ~/code/hishtory  
 localhost                 3          table_cmd2            ~/foo/           
 localhost                 2          table_cmd1            /tmp/            

@@ -1,4 +1,4 @@
 Hostname                  Exit Code  Command               
-Davids-MacBook-Air.local  0          hishtory query table  
+ghaction-runner-hostname  0          hishtory query table  
 localhost                 3          table_cmd2            
 localhost                 2          table_cmd1            

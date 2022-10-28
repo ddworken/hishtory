@@ -1,5 +1,5 @@
 Hostname                  Exit Code  Command               CWD              
-Davids-MacBook-Air.local  0          hishtory query table  ~/code/hishtory  
+ghaction-runner-hostname  0          hishtory query table  ~/code/hishtory  
 localhost                 2          while :               /tmp/            
                                      do                                     
                                      ls /table/                             

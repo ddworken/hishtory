@@ -3,7 +3,7 @@ Search Query: > -pipefail
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Hostname                       Exit Code  Command                  foo      │
 │─────────────────────────────────────────────────────────────────────────────│
-│ Davids-MacBook-Air.local       0          ls /                     foo      │
+│ ghaction-runner-hostname       0          ls /                     foo      │
 │ localhost                      2          echo 'bar' &                      │
 │ localhost                      2          echo 'aaaaaa bbbb'                │
 │ localhost                      2          ls ~/bar/                         │
