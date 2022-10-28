@@ -11,37 +11,37 @@ import (
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
-	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/testutils"
 )
 
 func TestSetup(t *testing.T) {
-	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer()()
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.RunTestServer()()
 
 	homedir, err := os.UserHomeDir()
-	shared.Check(t, err)
-	if _, err := os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)); err == nil {
+	testutils.Check(t, err)
+	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	shared.Check(t, Setup([]string{}))
-	if _, err := os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)); err != nil {
+	testutils.Check(t, Setup([]string{}))
+	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
-	shared.Check(t, err)
+	data, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
+	testutils.Check(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
 	}
 }
 
 func TestBuildHistoryEntry(t *testing.T) {
-	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer()()
-	shared.Check(t, Setup([]string{}))
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.RunTestServer()()
+	testutils.Check(t, Setup([]string{}))
 
 	// Test building an actual entry for bash
 	entry, err := BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958"})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
@@ -70,7 +70,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 	// Test building an entry for zsh
 	entry, err = BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "120", "ls /foo\n", "1641774958"})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
@@ -95,7 +95,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 	// Test building an entry for fish
 	entry, err = BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "fish", "120", "ls /foo\n", "1641774958"})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
@@ -120,17 +120,17 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 	// Test building an entry that is empty, and thus not saved
 	entry, err = BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "120", " \n", "1641774958"})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if entry != nil {
 		t.Fatalf("expected history entry to be nil")
 	}
 }
 
 func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
-	defer shared.BackupAndRestoreEnv("HISTTIMEFORMAT")()
-	defer shared.BackupAndRestore(t)()
-	defer shared.RunTestServer()()
-	shared.Check(t, Setup([]string{}))
+	defer testutils.BackupAndRestoreEnv("HISTTIMEFORMAT")()
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.RunTestServer()()
+	testutils.Check(t, Setup([]string{}))
 
 	testcases := []struct {
 		input, histtimeformat, expectedCommand string
@@ -142,11 +142,11 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 	for _, tc := range testcases {
 		conf := hctx.GetConf(hctx.MakeContext())
 		conf.LastSavedHistoryLine = ""
-		shared.Check(t, hctx.SetConfig(conf))
+		testutils.Check(t, hctx.SetConfig(conf))
 
 		os.Setenv("HISTTIMEFORMAT", tc.histtimeformat)
 		entry, err := BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", tc.input, "1641774958"})
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		if entry == nil {
 			t.Fatalf("entry is unexpectedly nil")
 		}
@@ -157,15 +157,15 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 }
 
 func TestPersist(t *testing.T) {
-	defer shared.BackupAndRestore(t)()
-	shared.Check(t, hctx.InitConfig())
+	defer testutils.BackupAndRestore(t)()
+	testutils.Check(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
-	entry := data.MakeFakeHistoryEntry("ls ~/")
+	entry := testutils.MakeFakeHistoryEntry("ls ~/")
 	db.Create(entry)
 	var historyEntries []*data.HistoryEntry
 	result := db.Find(&historyEntries)
-	shared.Check(t, result.Error)
+	testutils.Check(t, result.Error)
 	if len(historyEntries) != 1 {
 		t.Fatalf("DB has %d entries, expected 1!", len(historyEntries))
 	}
@@ -176,19 +176,19 @@ func TestPersist(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	defer shared.BackupAndRestore(t)()
-	shared.Check(t, hctx.InitConfig())
+	defer testutils.BackupAndRestore(t)()
+	testutils.Check(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	// Insert data
-	entry1 := data.MakeFakeHistoryEntry("ls /foo")
+	entry1 := testutils.MakeFakeHistoryEntry("ls /foo")
 	db.Create(entry1)
-	entry2 := data.MakeFakeHistoryEntry("ls /bar")
+	entry2 := testutils.MakeFakeHistoryEntry("ls /bar")
 	db.Create(entry2)
 
 	// Search for data
 	results, err := data.Search(db, "ls", 5)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2!", len(results))
 	}
@@ -202,15 +202,15 @@ func TestSearch(t *testing.T) {
 
 func TestAddToDbIfNew(t *testing.T) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
-	shared.Check(t, hctx.InitConfig())
+	defer testutils.BackupAndRestore(t)()
+	testutils.Check(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	// Add duplicate entries
-	entry1 := data.MakeFakeHistoryEntry("ls /foo")
+	entry1 := testutils.MakeFakeHistoryEntry("ls /foo")
 	AddToDbIfNew(db, entry1)
 	AddToDbIfNew(db, entry1)
-	entry2 := data.MakeFakeHistoryEntry("ls /foo")
+	entry2 := testutils.MakeFakeHistoryEntry("ls /foo")
 	AddToDbIfNew(db, entry2)
 	AddToDbIfNew(db, entry2)
 	AddToDbIfNew(db, entry1)
@@ -228,12 +228,12 @@ func TestAddToDbIfNew(t *testing.T) {
 
 func TestParseCrossPlatformInt(t *testing.T) {
 	res, err := parseCrossPlatformInt("123")
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
 	res, err = parseCrossPlatformInt("123N")
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
@@ -270,7 +270,7 @@ func TestGetLastCommand(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		actualOutput, err := getLastCommand(tc.input)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		if actualOutput != tc.expectedOutput {
 			t.Fatalf("getLastCommand(%#v) returned %#v (expected=%#v)", tc.input, actualOutput, tc.expectedOutput)
 		}
@@ -278,7 +278,7 @@ func TestGetLastCommand(t *testing.T) {
 }
 
 func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
-	defer shared.BackupAndRestoreEnv("HISTTIMEFORMAT")()
+	defer testutils.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 
 	testcases := []struct {
 		env, cmdLine, expected string
@@ -312,7 +312,7 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 	for _, tc := range testcases {
 		os.Setenv("HISTTIMEFORMAT", tc.env)
 		stripped, err := maybeSkipBashHistTimePrefix(tc.cmdLine)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		if stripped != tc.expected {
 			t.Fatalf("skipping the time prefix returned %#v (expected=%#v for %#v)", stripped, tc.expected, tc.cmdLine)
 		}

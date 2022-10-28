@@ -12,6 +12,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/go-test/deep"
 	"github.com/google/uuid"
 )
@@ -34,11 +35,11 @@ func TestESubmitThenQuery(t *testing.T) {
 	apiRegisterHandler(nil, deviceReq)
 
 	// Submit a few entries for different devices
-	entry := data.MakeFakeHistoryEntry("ls ~/")
+	entry := testutils.MakeFakeHistoryEntry("ls ~/")
 	encEntry, err := data.EncryptHistoryEntry("key", entry)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	apiSubmitHandler(nil, submitReq)
 
@@ -49,9 +50,9 @@ func TestESubmitThenQuery(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -66,7 +67,7 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, entry)
 	}
@@ -78,8 +79,8 @@ func TestESubmitThenQuery(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -94,7 +95,7 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err = data.DecryptHistoryEntry("key", *dbEntry)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, entry)
 	}
@@ -106,8 +107,8 @@ func TestESubmitThenQuery(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
@@ -139,9 +140,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	var dumpRequests []*shared.DumpRequest
-	shared.Check(t, json.Unmarshal(respBody, &dumpRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
@@ -159,9 +160,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
-	shared.Check(t, json.Unmarshal(respBody, &dumpRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
@@ -179,7 +180,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
 	}
@@ -190,20 +191,20 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
 	}
 
 	// Now submit a dump for userId
-	entry1Dec := data.MakeFakeHistoryEntry("ls ~/")
+	entry1Dec := testutils.MakeFakeHistoryEntry("ls ~/")
 	entry1, err := data.EncryptHistoryEntry("dkey", entry1Dec)
-	shared.Check(t, err)
-	entry2Dec := data.MakeFakeHistoryEntry("aaaaaaáaaa")
+	testutils.Check(t, err)
+	entry2Dec := testutils.MakeFakeHistoryEntry("aaaaaaáaaa")
 	entry2, err := data.EncryptHistoryEntry("dkey", entry1Dec)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{entry1, entry2})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2+"&source_device_id="+devId1, bytes.NewReader(reqBody))
 	apiSubmitDumpHandler(nil, submitReq)
 
@@ -213,7 +214,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
 	}
@@ -223,7 +224,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
 	}
@@ -234,9 +235,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
-	shared.Check(t, json.Unmarshal(respBody, &dumpRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
@@ -255,9 +256,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
@@ -272,7 +273,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		if !data.EntryEquals(decEntry, entry1Dec) && !data.EntryEquals(decEntry, entry2Dec) {
 			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1Dec, entry2Dec)
 		}
@@ -280,7 +281,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 }
 
 func TestUpdateReleaseVersion(t *testing.T) {
-	if !shared.IsOnline() {
+	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
 
@@ -329,33 +330,33 @@ func TestDeletionRequests(t *testing.T) {
 	apiRegisterHandler(nil, deviceReq)
 
 	// Add an entry for user1
-	entry1 := data.MakeFakeHistoryEntry("ls ~/")
+	entry1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	entry1.DeviceId = devId1
 	encEntry, err := data.EncryptHistoryEntry("dkey", entry1)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	apiSubmitHandler(nil, submitReq)
 
 	// And another entry for user1
-	entry2 := data.MakeFakeHistoryEntry("ls /foo/bar")
+	entry2 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
 	entry2.DeviceId = devId2
 	encEntry, err = data.EncryptHistoryEntry("dkey", entry2)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	apiSubmitHandler(nil, submitReq)
 
 	// And an entry for user2 that has the same timestamp as the previous entry
-	entry3 := data.MakeFakeHistoryEntry("ls /foo/bar")
+	entry3 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
 	entry3.StartTime = entry1.StartTime
 	entry3.EndTime = entry1.EndTime
 	encEntry, err = data.EncryptHistoryEntry("dOtherkey", entry3)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	apiSubmitHandler(nil, submitReq)
 
@@ -366,9 +367,9 @@ func TestDeletionRequests(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -383,7 +384,7 @@ func TestDeletionRequests(t *testing.T) {
 			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		if !data.EntryEquals(decEntry, entry1) && !data.EntryEquals(decEntry, entry2) {
 			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1, entry2)
 		}
@@ -399,7 +400,7 @@ func TestDeletionRequests(t *testing.T) {
 		}},
 	}
 	reqBody, err = json.Marshal(delReq)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	addDeletionRequestHandler(nil, req)
 
@@ -410,8 +411,8 @@ func TestDeletionRequests(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -426,7 +427,7 @@ func TestDeletionRequests(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry2) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry2)
 	}
@@ -438,8 +439,8 @@ func TestDeletionRequests(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
-	shared.Check(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -454,7 +455,7 @@ func TestDeletionRequests(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err = data.DecryptHistoryEntry("dOtherkey", *dbEntry)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry3) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry3)
 	}
@@ -466,9 +467,9 @@ func TestDeletionRequests(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = ioutil.ReadAll(res.Body)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	var deletionRequests []*shared.DeletionRequest
-	shared.Check(t, json.Unmarshal(respBody, &deletionRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &deletionRequests))
 	if len(deletionRequests) != 1 {
 		t.Fatalf("received %d deletion requests, expected only one", len(deletionRequests))
 	}

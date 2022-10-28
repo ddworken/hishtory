@@ -1,4 +1,4 @@
-package shared
+package testutils
 
 import (
 	"bytes"
@@ -15,11 +15,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ddworken/hishtory/client/data"
 )
 
 const (
-	DB_WAL_PATH = DB_PATH + "-wal"
-	DB_SHM_PATH = DB_PATH + "-shm"
+	DB_WAL_PATH = data.DB_PATH + "-wal"
+	DB_SHM_PATH = data.DB_PATH + "-shm"
 )
 
 func ResetLocalState(t *testing.T) {
@@ -28,13 +30,13 @@ func ResetLocalState(t *testing.T) {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, DB_PATH))
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH))
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, CONFIG_PATH))
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "hishtory"))
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.sh"))
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.zsh"))
-	_ = os.Remove(path.Join(homedir, HISHTORY_PATH, "config.fish"))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, DB_WAL_PATH))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "hishtory"))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "config.sh"))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "config.zsh"))
+	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "config.fish"))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -44,31 +46,32 @@ func BackupAndRestore(t *testing.T) func() {
 func DeleteBakFiles(t *testing.T) {
 	homedir, err := os.UserHomeDir()
 	checkError(err)
-	entries, err := ioutil.ReadDir(path.Join(homedir, HISHTORY_PATH))
+	entries, err := ioutil.ReadDir(path.Join(homedir, data.HISHTORY_PATH))
 	checkError(err)
 	for _, entry := range entries {
 		fmt.Println(entry.Name())
 		if strings.HasSuffix(entry.Name(), ".bak") {
-			checkError(os.Remove(path.Join(homedir, HISHTORY_PATH, entry.Name())))
+			checkError(os.Remove(path.Join(homedir, data.HISHTORY_PATH, entry.Name())))
 		}
 	}
 }
 
 func BackupAndRestoreWithId(t *testing.T, id string) func() {
+	ResetFakeHistoryTimestamp()
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
 	renameFiles := []string{
-		path.Join(homedir, HISHTORY_PATH, DB_PATH),
-		path.Join(homedir, HISHTORY_PATH, DB_WAL_PATH),
-		path.Join(homedir, HISHTORY_PATH, DB_SHM_PATH),
-		path.Join(homedir, HISHTORY_PATH, CONFIG_PATH),
-		path.Join(homedir, HISHTORY_PATH, "hishtory"),
-		path.Join(homedir, HISHTORY_PATH, "config.sh"),
-		path.Join(homedir, HISHTORY_PATH, "config.zsh"),
-		path.Join(homedir, HISHTORY_PATH, "config.fish"),
+		path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH),
+		path.Join(homedir, data.HISHTORY_PATH, DB_WAL_PATH),
+		path.Join(homedir, data.HISHTORY_PATH, DB_SHM_PATH),
+		path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH),
+		path.Join(homedir, data.HISHTORY_PATH, "hishtory"),
+		path.Join(homedir, data.HISHTORY_PATH, "config.sh"),
+		path.Join(homedir, data.HISHTORY_PATH, "config.zsh"),
+		path.Join(homedir, data.HISHTORY_PATH, "config.fish"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
 	}
@@ -248,4 +251,24 @@ func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
 func IsOnline() bool {
 	_, err := http.Get("https://hishtory.dev")
 	return err == nil
+}
+
+var fakeHistoryTimestamp int64 = 1666068191
+
+func ResetFakeHistoryTimestamp() {
+	fakeHistoryTimestamp = 1666068191
+}
+
+func MakeFakeHistoryEntry(command string) data.HistoryEntry {
+	fakeHistoryTimestamp += 5
+	return data.HistoryEntry{
+		LocalUsername:           "david",
+		Hostname:                "localhost",
+		Command:                 command,
+		CurrentWorkingDirectory: "/tmp/",
+		HomeDirectory:           "/home/david/",
+		ExitCode:                2,
+		StartTime:               time.Unix(fakeHistoryTimestamp, 0),
+		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0),
+	}
 }

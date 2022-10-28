@@ -22,6 +22,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/testutils"
 )
 
 func skipSlowTests() bool {
@@ -29,7 +30,7 @@ func skipSlowTests() bool {
 }
 
 func TestMain(m *testing.M) {
-	defer shared.RunTestServer()()
+	defer testutils.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "CGO_ENABLED=0")
@@ -154,7 +155,7 @@ func TestParameterized(t *testing.T) {
 
 func testIntegration(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Run the test
 	testBasicUserFlow(t, tester)
@@ -162,13 +163,13 @@ func testIntegration(t *testing.T, tester shellTester) {
 
 func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Run the test
 	userSecret := testBasicUserFlow(t, tester)
 
 	// Clear all local state
-	shared.ResetLocalState(t)
+	testutils.ResetLocalState(t)
 
 	// Install it again
 	installHishtory(t, tester, userSecret)
@@ -195,7 +196,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	}
 
 	// Clear local state again
-	shared.ResetLocalState(t)
+	testutils.ResetLocalState(t)
 
 	// Install it a 3rd time
 	installHishtory(t, tester, "adifferentsecret")
@@ -209,7 +210,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 
 	// Set the secret key to the previous secret key
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory init `+userSecret)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
 		t.Fatalf("Failed to re-init with the user secret: %v", out)
 	}
@@ -241,7 +242,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 
 	// Manually submit an event that isn't in the local DB, and then we'll
 	// check if we see it when we do a query without ever having done an init
-	newEntry := data.MakeFakeHistoryEntry("othercomputer")
+	newEntry := testutils.MakeFakeHistoryEntry("othercomputer")
 	newEntry.StartTime = time.Now()
 	newEntry.EndTime = time.Now()
 	manuallySubmitHistoryEntry(t, userSecret, newEntry)
@@ -292,7 +293,7 @@ func testBasicUserFlow(t *testing.T, tester shellTester) string {
 	if err != nil {
 		t.Fatalf("failed to get homedir: %v", err)
 	}
-	dat, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, "config.sh"))
+	dat, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, "config.sh"))
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
@@ -348,22 +349,22 @@ echo thisisrecorded`)
 	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
 	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	match, err := regexp.MatchString(line3Matcher, out)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
 	}
 	match, err = regexp.MatchString(line1Matcher, out)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the headings: %v", out)
 	}
 	match, err = regexp.MatchString(line2Matcher, out)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the pipefail: %v", out)
 	}
 	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher, out)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output doesn't match the expected table: %v", out)
 	}
@@ -404,7 +405,7 @@ echo thisisrecorded`)
 
 func testAdvancedQuery(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory
 	userSecret := installHishtory(t, tester, "")
@@ -514,7 +515,7 @@ hishtory disable`)
 	}
 
 	// Manually submit an entry with a different hostname and username so we can test those atoms
-	entry := data.MakeFakeHistoryEntry("cmd_with_diff_hostname_and_username")
+	entry := testutils.MakeFakeHistoryEntry("cmd_with_diff_hostname_and_username")
 	entry.LocalUsername = "otheruser"
 	entry.Hostname = "otherhostname"
 	manuallySubmitHistoryEntry(t, userSecret, entry)
@@ -575,7 +576,7 @@ hishtory disable`)
 	}
 
 	// Test filtering out a search item that also looks like it could be a search for a flag
-	entry = data.MakeFakeHistoryEntry("foo -echo")
+	entry = testutils.MakeFakeHistoryEntry("foo -echo")
 	manuallySubmitHistoryEntry(t, userSecret, entry)
 	out = hishtoryQuery(t, tester, `-echo -install`)
 	if strings.Contains(out, "echo") {
@@ -586,7 +587,7 @@ hishtory disable`)
 	}
 
 	// Search for a cwd based on the home directory
-	entry = data.MakeFakeHistoryEntry("foobar")
+	entry = testutils.MakeFakeHistoryEntry("foobar")
 	entry.HomeDirectory = "/home/david/"
 	entry.CurrentWorkingDirectory = "~/dir/"
 	manuallySubmitHistoryEntry(t, userSecret, entry)
@@ -605,7 +606,7 @@ hishtory disable`)
 }
 
 func testUpdate(t *testing.T, tester shellTester) {
-	if !shared.IsOnline() {
+	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
 	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
@@ -615,7 +616,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 		t.Skip("skipping slow tests")
 	}
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
 	// Record a command before the update
@@ -662,7 +663,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 
 func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
 	// Check the status command
@@ -701,7 +702,7 @@ echo mycommand-3`)
 
 func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
 	// Check the status command
@@ -726,7 +727,7 @@ func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 
 func testRepeatedEnableDisable(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Run a command many times
@@ -758,7 +759,7 @@ hishtory enable`, i))
 
 func testExcludeHiddenCommand(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	tester.RunInteractiveShell(t, `echo hello1
@@ -829,14 +830,14 @@ func hishtoryQuery(t *testing.T, tester shellTester, query string) string {
 
 func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.HistoryEntry) {
 	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if encEntry.Date != entry.EndTime {
 		t.Fatalf("encEntry.Date does not match the entry")
 	}
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	resp, err := http.Post("http://localhost:8080/api/v1/submit", "application/json", bytes.NewBuffer(jsonValue))
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
 	}
@@ -844,7 +845,7 @@ func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.Hist
 
 func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Record a command
@@ -866,7 +867,7 @@ func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 
 func testTableDisplayCwd(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Record a command
@@ -901,11 +902,11 @@ func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	}
 
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Check that we can find the go binary
 	_, err := exec.LookPath("go")
-	shared.Check(t, err)
+	testutils.Check(t, err)
 
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := tester.RunInteractiveShell(t, `unset HISHTORY_TEST
@@ -923,7 +924,7 @@ CGO_ENABLED=0 go build -o /tmp/client
 	if err != nil {
 		t.Fatalf("failed to get homedir: %v", err)
 	}
-	dat, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, "config.sh"))
+	dat, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, "config.sh"))
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
@@ -971,7 +972,7 @@ echo foo`)
 
 func testDisplayTable(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
 	// Submit two fake entries
@@ -979,11 +980,11 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 	if err != nil {
 		t.Fatalf("failed to load timezone: %v", err)
 	}
-	entry1 := data.MakeFakeHistoryEntry("table_cmd1")
+	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1")
 	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
 	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
 	manuallySubmitHistoryEntry(t, userSecret, entry1)
-	entry2 := data.MakeFakeHistoryEntry("table_cmd2")
+	entry2 := testutils.MakeFakeHistoryEntry("table_cmd2")
 	entry2.StartTime = time.Unix(1650096196, 0).In(tmz)
 	entry2.EndTime = time.Unix(1650096220, 0).In(tmz)
 	entry2.CurrentWorkingDirectory = "~/foo/"
@@ -1005,7 +1006,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	secretKey := installHishtory(t, tester, "")
 
 	// Confirm there are no pending dump requests
@@ -1039,7 +1040,7 @@ echo other`)
 	}
 
 	// Back up this copy
-	restoreFirstInstallation := shared.BackupAndRestoreWithId(t, "-install1")
+	restoreFirstInstallation := testutils.BackupAndRestoreWithId(t, "-install1")
 
 	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
 	_, err = lib.ApiGet("/api/v1/wipe-db")
@@ -1073,7 +1074,7 @@ echo other`)
 	}
 
 	// Restore the first copy
-	restoreSecondInstallation := shared.BackupAndRestoreWithId(t, "-install2")
+	restoreSecondInstallation := testutils.BackupAndRestoreWithId(t, "-install2")
 	restoreFirstInstallation()
 
 	// Confirm it still has the correct entries via hishtory export (and this runs a command to trigger it to dump the DB)
@@ -1118,8 +1119,8 @@ echo other`)
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	// Set up
-	defer shared.BackupAndRestore(t)()
-	defer shared.BackupAndRestoreEnv("HISHTORY_TEST")()
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 
 	// Install via the python script
 	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`)
@@ -1154,7 +1155,7 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 
 func testExportWithQuery(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Test recording commands
@@ -1220,7 +1221,7 @@ sleep 1`)
 
 func testHelpCommand(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Test the help command
@@ -1240,7 +1241,7 @@ func testStripBashTimePrefix(t *testing.T, tester shellTester) {
 	}
 
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Add a HISTTIMEFORMAT to the bashrc
@@ -1296,13 +1297,13 @@ func testStripBashTimePrefix(t *testing.T, tester shellTester) {
 
 func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Init an initial device
 	userSecret := installHishtory(t, tester, "")
 
 	// Set up a second device
-	restoreFirstProfile := shared.BackupAndRestoreWithId(t, "-install1")
+	restoreFirstProfile := testutils.BackupAndRestoreWithId(t, "-install1")
 	installHishtory(t, tester, userSecret)
 
 	// Device 2: Record a command
@@ -1312,7 +1313,7 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	tester.RunInteractiveShell(t, `echo 2; export HISHTORY_SIMULATE_NETWORK_ERROR=1; echo 3`)
 
 	// Device 1: Run an export and confirm that the network only contains the first command
-	restoreSecondProfile := shared.BackupAndRestoreWithId(t, "-install2")
+	restoreSecondProfile := testutils.BackupAndRestoreWithId(t, "-install2")
 	restoreFirstProfile()
 	out := tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
 	expectedOutput := "echo 1\n"
@@ -1321,7 +1322,7 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	}
 
 	// Device 2: Run another command but with the network re-enabled
-	restoreFirstProfile = shared.BackupAndRestoreWithId(t, "-install1")
+	restoreFirstProfile = testutils.BackupAndRestoreWithId(t, "-install1")
 	restoreSecondProfile()
 	tester.RunInteractiveShell(t, `unset HISHTORY_SIMULATE_NETWORK_ERROR; echo 4`)
 
@@ -1343,20 +1344,20 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 
 func testHishtoryOffline(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Init an initial device
 	userSecret := installHishtory(t, tester, "")
 
 	// Set up a second device
-	restoreFirstProfile := shared.BackupAndRestoreWithId(t, "-install1")
+	restoreFirstProfile := testutils.BackupAndRestoreWithId(t, "-install1")
 	installHishtory(t, tester, userSecret)
 
 	// Device 2: Record a command
 	tester.RunInteractiveShell(t, `echo dev2`)
 
 	// Device 1: Run a command
-	restoreSecondProfile := shared.BackupAndRestoreWithId(t, "-install2")
+	restoreSecondProfile := testutils.BackupAndRestoreWithId(t, "-install2")
 	restoreFirstProfile()
 	tester.RunInteractiveShell(t, `echo dev1-a`)
 
@@ -1368,7 +1369,7 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 	}
 
 	// Device 2: Record another command
-	restoreFirstProfile = shared.BackupAndRestoreWithId(t, "-install1")
+	restoreFirstProfile = testutils.BackupAndRestoreWithId(t, "-install1")
 	restoreSecondProfile()
 	tester.RunInteractiveShell(t, `echo dev2-b`)
 
@@ -1390,7 +1391,7 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Record some commands before installing hishtory
 	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
@@ -1440,7 +1441,7 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 
 func testLocalRedaction(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory
 	installHishtory(t, tester, "")
@@ -1496,7 +1497,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact it without --force
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	if out != "This will permanently delete 1 entries, are you sure? [y/N]" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
@@ -1511,7 +1512,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 func testRemoteRedaction(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory client 1
 	userSecret := installHishtory(t, tester, "")
@@ -1532,7 +1533,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Install hishtory client 2
-	restoreInstall1 := shared.BackupAndRestoreWithId(t, "-1")
+	restoreInstall1 := testutils.BackupAndRestoreWithId(t, "-1")
 	installHishtory(t, tester, userSecret)
 
 	// And confirm that it has the commands too
@@ -1542,7 +1543,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Restore the first client, and redact some commands
-	restoreInstall2 := shared.BackupAndRestoreWithId(t, "-2")
+	restoreInstall2 := testutils.BackupAndRestoreWithId(t, "-2")
 	restoreInstall1()
 	out = tester.RunInteractiveShell(t, `hishtory redact --force `+randomCmdUuid)
 	if out != "Permanently deleting 2 entries\n" {
@@ -1566,7 +1567,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 func testConfigGetSet(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Initially is true
@@ -1592,24 +1593,24 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 
 func clearControlRSearchFromConfig(t *testing.T) {
 	configContents, err := hctx.GetConfigContents()
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	configContents = []byte(strings.ReplaceAll(string(configContents), "enable_control_r_search", "something-else"))
 	homedir, err := os.UserHomeDir()
-	shared.Check(t, err)
-	err = os.WriteFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH), configContents, 0o644)
-	shared.Check(t, err)
+	testutils.Check(t, err)
+	err = os.WriteFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH), configContents, 0o644)
+	testutils.Check(t, err)
 }
 
 func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Install, and there is no prompt since the config already mentions control-r
 	_, err := tester.RunInteractiveShellRelaxed(t, `/tmp/client install`)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 	_, err = tester.RunInteractiveShellRelaxed(t, `hishtory disable`)
-	shared.Check(t, err)
+	testutils.Check(t, err)
 
 	// Ensure that the config doesn't mention control-r
 	clearControlRSearchFromConfig(t)
@@ -1633,7 +1634,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 func TestFish(t *testing.T) {
 	// Setup
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
 
@@ -1680,7 +1681,7 @@ func compareGoldens(t *testing.T, out, goldenName string) {
 		if os.IsNotExist(err) {
 			expected = []byte{}
 		} else {
-			shared.Check(t, err)
+			testutils.Check(t, err)
 		}
 	}
 	if diff := cmp.Diff(string(expected), out); diff != "" {
@@ -1688,15 +1689,14 @@ func compareGoldens(t *testing.T, out, goldenName string) {
 			_, filename, line, _ := runtime.Caller(1)
 			t.Fatalf("hishtory golden mismatch at %s:%d (-expected +got):\n%s", filename, line, diff)
 		} else {
-			shared.Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
+			testutils.Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
 		}
 	}
 }
 
 func TestTui(t *testing.T) {
 	// Setup
-	data.ResetFakeHistoryTimestamp() // TODO: move this to backupandrestore
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
 
@@ -1705,8 +1705,8 @@ func TestTui(t *testing.T) {
 
 	// Insert a couple hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
-	db.Create(data.MakeFakeHistoryEntry("ls ~/"))
-	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
+	db.Create(testutils.MakeFakeHistoryEntry("ls ~/"))
+	db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
 
 	// Check the initial output when there is no search
 	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
@@ -1775,8 +1775,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	}
 
 	// Setup
-	data.ResetFakeHistoryTimestamp() // TODO: move this to backupandrestore
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Disable recording so that all our testing commands don't get recorded
@@ -1785,15 +1784,15 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 
 	// Insert a few hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
-	e1 := data.MakeFakeHistoryEntry("ls ~/")
+	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
 	e1.ExitCode = 127
 	db.Create(e1)
-	db.Create(data.MakeFakeHistoryEntry("ls ~/foo/"))
-	db.Create(data.MakeFakeHistoryEntry("ls ~/bar/"))
-	db.Create(data.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
-	db.Create(data.MakeFakeHistoryEntry("echo 'bar' &"))
+	db.Create(testutils.MakeFakeHistoryEntry("ls ~/foo/"))
+	db.Create(testutils.MakeFakeHistoryEntry("ls ~/bar/"))
+	db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
+	db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &"))
 
 	// And check that the control-r binding brings up the search
 	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
@@ -1878,8 +1877,8 @@ func createDevice(t *testing.T, tester shellTester, devices *deviceSet, key, dev
 	}
 	installHishtory(t, tester, key)
 	(*devices.deviceMap)[d] = deviceOp{
-		backup:  func() { shared.BackupAndRestoreWithId(t, key+deviceId) },
-		restore: shared.BackupAndRestoreWithId(t, key+deviceId),
+		backup:  func() { testutils.BackupAndRestoreWithId(t, key+deviceId) },
+		restore: testutils.BackupAndRestoreWithId(t, key+deviceId),
 	}
 }
 
@@ -1895,7 +1894,7 @@ func switchToDevice(devices *deviceSet, d device) {
 }
 
 func testMultipleUsers(t *testing.T, tester shellTester) {
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 
 	// Create all our devices
 	var deviceMap map[device]deviceOp = make(map[device]deviceOp)
@@ -1939,7 +1938,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	for i, d := range []device{u1d1, u1d2} {
 		switchToDevice(&devices, d)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export`)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		expectedOutput := "echo u1d1\necho u1d2\necho u1d1-b\necho u1d1-c\necho u1d2-b\necho u1d2-c\n"
 		for j := 0; j < i; j++ {
 			expectedOutput += "hishtory export\n"
@@ -1961,7 +1960,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	for i, d := range []device{u2d1, u2d2, u2d3} {
 		switchToDevice(&devices, d)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export`)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		expectedOutput := "echo u2d1\necho u2d2\necho u2d3\necho u1d1-b\necho u1d1-c\necho u2d3-b\necho u2d3-c\n"
 		for j := 0; j < i; j++ {
 			expectedOutput += "hishtory export\n"
@@ -2019,7 +2018,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 	}
 
 	// Set up and create the devices
-	defer shared.BackupAndRestore(t)()
+	defer testutils.BackupAndRestore(t)()
 	var deviceMap map[device]deviceOp = make(map[device]deviceOp)
 	var devices deviceSet = deviceSet{}
 	devices.deviceMap = &deviceMap
@@ -2041,11 +2040,11 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 		switchToDevice(&devices, op.device)
 		if op.cmd != "" {
 			_, err := tester.RunInteractiveShellRelaxed(t, op.cmd)
-			shared.Check(t, err)
+			testutils.Check(t, err)
 		}
 		if op.redactQuery != "" {
 			_, err := tester.RunInteractiveShellRelaxed(t, `hishtory redact --force `+op.redactQuery)
-			shared.Check(t, err)
+			testutils.Check(t, err)
 		}
 
 		// Calculate the expected output of hishtory export
@@ -2073,7 +2072,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 
 		// Run hishtory export and check the output
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		expectedOutput := keyToCommands[op.device.key]
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch for input=%#v key=%s (-expected +got):\n%s\nout=%#v", input, op.device.key, diff, out)
@@ -2084,7 +2083,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 	for _, op := range ops {
 		switchToDevice(&devices, op.device)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
-		shared.Check(t, err)
+		testutils.Check(t, err)
 		expectedOutput := keyToCommands[op.device.key]
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch for key=%s (-expected +got):\n%s\nout=%#v", op.device.key, diff, out)

@@ -677,7 +677,7 @@ func configureFish(homedir, binaryPath string) error {
 		return nil
 	}
 	// Create the file we're going to source. Do this no matter what in case there are updates to it.
-	fishConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.fish")
+	fishConfigPath := path.Join(homedir, data.HISHTORY_PATH, "config.fish")
 	configContents := ConfigFishContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		testConfig, err := tweakConfigForTests(ConfigFishContents)
@@ -708,7 +708,7 @@ func configureFish(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to ~/.config/fish/config.fish: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, shared.HISHTORY_PATH) + "\"\nsource " + fishConfigPath + "\n")
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + fishConfigPath + "\n")
 	if err != nil {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
@@ -729,7 +729,7 @@ func isFishConfigured(homedir string) (bool, error) {
 
 func configureZshrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our zshrc. Do this no matter what in case there are updates to it.
-	zshConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.zsh")
+	zshConfigPath := path.Join(homedir, data.HISHTORY_PATH, "config.zsh")
 	configContents := ConfigZshContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		testConfig, err := tweakConfigForTests(configContents)
@@ -756,7 +756,7 @@ func configureZshrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, shared.HISHTORY_PATH) + "\"\nsource " + zshConfigPath + "\n")
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + zshConfigPath + "\n")
 	if err != nil {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
@@ -777,7 +777,7 @@ func isZshConfigured(homedir string) (bool, error) {
 
 func configureBashrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
-	bashConfigPath := path.Join(homedir, shared.HISHTORY_PATH, "config.sh")
+	bashConfigPath := path.Join(homedir, data.HISHTORY_PATH, "config.sh")
 	configContents := ConfigShContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		testConfig, err := tweakConfigForTests(ConfigShContents)
@@ -804,7 +804,7 @@ func configureBashrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, shared.HISHTORY_PATH) + "\"\nsource " + bashConfigPath + "\n")
+	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + bashConfigPath + "\n")
 	if err != nil {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
@@ -826,7 +826,7 @@ func isBashConfigured(homedir string) (bool, error) {
 func installBinary(homedir string) (string, error) {
 	clientPath, err := exec.LookPath("hishtory")
 	if err != nil {
-		clientPath = path.Join(homedir, shared.HISHTORY_PATH, "hishtory")
+		clientPath = path.Join(homedir, data.HISHTORY_PATH, "hishtory")
 	}
 	if _, err := os.Stat(clientPath); err == nil {
 		err = syscall.Unlink(clientPath)
@@ -919,9 +919,9 @@ func Update(ctx *context.Context) error {
 	// Unlink the existing binary so we can overwrite it even though it is still running
 	if runtime.GOOS == "linux" {
 		homedir := hctx.GetHome(ctx)
-		err = syscall.Unlink(path.Join(homedir, shared.HISHTORY_PATH, "hishtory"))
+		err = syscall.Unlink(path.Join(homedir, data.HISHTORY_PATH, "hishtory"))
 		if err != nil {
-			return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, shared.HISHTORY_PATH, "hishtory"), err)
+			return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, data.HISHTORY_PATH, "hishtory"), err)
 		}
 	}
 

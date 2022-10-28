@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
-	"github.com/ddworken/hishtory/shared"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -38,7 +37,7 @@ func GetLogger() *log.Logger {
 		if err != nil {
 			panic(err)
 		}
-		f, err := os.OpenFile(path.Join(homedir, shared.HISHTORY_PATH, "hishtory.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o660)
+		f, err := os.OpenFile(path.Join(homedir, data.HISHTORY_PATH, "hishtory.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o660)
 		if err != nil {
 			panic(fmt.Errorf("failed to open hishtory.log: %v", err))
 		}
@@ -53,7 +52,7 @@ func MakeHishtoryDir() error {
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
 	}
-	err = os.MkdirAll(path.Join(homedir, shared.HISHTORY_PATH), 0o744)
+	err = os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH), 0o744)
 	if err != nil {
 		return fmt.Errorf("failed to create ~/.hishtory dir: %v", err)
 	}
@@ -79,7 +78,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 			Colorful:                  false,
 		},
 	)
-	db, err := gorm.Open(sqlite.Open(path.Join(homedir, shared.HISHTORY_PATH, shared.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
+	db, err := gorm.Open(sqlite.Open(path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
@@ -174,9 +173,9 @@ func GetConfigContents() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve homedir: %v", err)
 	}
-	data, err := os.ReadFile(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
+	dat, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
 	if err != nil {
-		files, err := ioutil.ReadDir(path.Join(homedir, shared.HISHTORY_PATH))
+		files, err := ioutil.ReadDir(path.Join(homedir, data.HISHTORY_PATH))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
 		}
@@ -187,7 +186,7 @@ func GetConfigContents() ([]byte, error) {
 		}
 		return nil, fmt.Errorf("failed to read config file (files in ~/.hishtory/: %s): %v", filenames, err)
 	}
-	return data, nil
+	return dat, nil
 }
 
 func GetConfig() (ClientConfig, error) {
@@ -219,7 +218,7 @@ func SetConfig(config ClientConfig) error {
 	if err != nil {
 		return err
 	}
-	configPath := path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH)
+	configPath := path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)
 	stagedConfigPath := configPath + ".tmp"
 	err = os.WriteFile(stagedConfigPath, serializedConfig, 0o644)
 	if err != nil {
@@ -237,7 +236,7 @@ func InitConfig() error {
 	if err != nil {
 		return err
 	}
-	_, err = os.Stat(path.Join(homedir, shared.HISHTORY_PATH, shared.CONFIG_PATH))
+	_, err = os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
 	if errors.Is(err, os.ErrNotExist) {
 		return SetConfig(ClientConfig{})
 	}

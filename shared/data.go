@@ -85,9 +85,3 @@ func (m *MessageIdentifiers) Scan(value interface{}) error {
 func (m MessageIdentifiers) Value() (driver.Value, error) {
 	return json.Marshal(m)
 }
-
-const (
-	CONFIG_PATH   = ".hishtory.config"
-	HISHTORY_PATH = ".hishtory"
-	DB_PATH       = ".hishtory.db"
-)

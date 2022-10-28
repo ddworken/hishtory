@@ -268,24 +268,8 @@ func EntryEquals(entry1, entry2 HistoryEntry) bool {
 		entry1.EndTime.Format(time.RFC3339) == entry2.EndTime.Format(time.RFC3339)
 }
 
-// TODO: move this code to testutils
-
-var fakeHistoryTimestamp int64 = 1666068191
-
-func ResetFakeHistoryTimestamp() {
-	fakeHistoryTimestamp = 1666068191
-}
-
-func MakeFakeHistoryEntry(command string) HistoryEntry {
-	fakeHistoryTimestamp += 5
-	return HistoryEntry{
-		LocalUsername:           "david",
-		Hostname:                "localhost",
-		Command:                 command,
-		CurrentWorkingDirectory: "/tmp/",
-		HomeDirectory:           "/home/david/",
-		ExitCode:                2,
-		StartTime:               time.Unix(fakeHistoryTimestamp, 0),
-		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0),
-	}
-}
+const (
+	CONFIG_PATH   = ".hishtory.config"
+	HISHTORY_PATH = ".hishtory"
+	DB_PATH       = ".hishtory.db"
+)
