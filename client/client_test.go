@@ -1773,7 +1773,7 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	}
 	fullCommand += " sleep " + sleepAmount + "\n"
 	for _, cmd := range commands {
-		fullCommand += " tmux send -t foo "
+		fullCommand += " tmux send -t foo -- "
 		fullCommand += cmd
 		fullCommand += "\n"
 		fullCommand += " sleep " + sleepAmount + "\n"
@@ -1879,7 +1879,25 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 		}
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-CustomColumns")
+	compareGoldens(t, out, "testControlR-displayedColumns")
+
+	// Add a custom column
+	tester.RunInteractiveShell(t, `hishtory config-add custom-columns foo "echo foo"`)
+	tester.RunInteractiveShell(t, ` hishtory enable`)
+	tester.RunInteractiveShell(t, `ls /`)
+	tester.RunInteractiveShell(t, ` hishtory disable`)
+
+	// And run a query and confirm it is displayed
+	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns foo`)
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail"})
+	out = strings.TrimSpace(out)
+	if tester.ShellName() == "bash" {
+		if !strings.Contains(out, "\n\n\n") {
+			t.Fatalf("failed to find separator in %#v", out)
+		}
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-customColumn")
 
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
