@@ -1017,6 +1017,19 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 	manuallySubmitHistoryEntry(t, userSecret, entry3)
 	out = hishtoryQuery(t, tester, "table")
 	compareGoldens(t, out, "testDisplayTable-customColumns-multiLineCommand")
+
+	// Add a custom column
+	tester.RunInteractiveShell(t, `hishtory config-add custom-columns foo "echo aaaaaaaaaaaaa"`)
+	tester.RunInteractiveShell(t, ` hishtory enable`)
+	tester.RunInteractiveShell(t, `echo table-1`)
+	tester.RunInteractiveShell(t, `echo table-2`)
+	tester.RunInteractiveShell(t, `echo bar`)
+	tester.RunInteractiveShell(t, ` hishtory disable`)
+	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns foo`)
+
+	// And run a query and confirm it is displayed
+	out = hishtoryQuery(t, tester, "table")
+	compareGoldens(t, out, "testDisplayTable-customColumns-trulyCustom")
 }
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {

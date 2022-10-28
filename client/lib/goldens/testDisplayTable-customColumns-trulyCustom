@@ -1,0 +1,10 @@
+Hostname                  Exit Code  Command               CWD              foo            
+Davids-MacBook-Air.local  0          echo table-2          ~/code/hishtory  aaaaaaaaaaaaa  
+Davids-MacBook-Air.local  0          echo table-1          ~/code/hishtory  aaaaaaaaaaaaa  
+Davids-MacBook-Air.local  0          hishtory query table  ~/code/hishtory                 
+localhost                 2          while :               /tmp/                           
+                                     do                                                    
+                                     ls /table/                                            
+                                     done                                                  
+localhost                 3          table_cmd2            ~/foo/                          
+localhost                 2          table_cmd1            /tmp/                           
