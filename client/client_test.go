@@ -1858,6 +1858,17 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	}
 	compareGoldens(t, out, "testControlR-Search")
 
+	// An advanced search and check that the table is updated
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "cwd:/tmp/ SPACE ls"})
+	out = strings.TrimSpace(out)
+	if tester.ShellName() == "bash" {
+		if !strings.Contains(out, "\n\n\n") {
+			t.Fatalf("failed to find separator in %#v", out)
+		}
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-AdvancedSearch")
+
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
 	// And it shouldn't pop up
