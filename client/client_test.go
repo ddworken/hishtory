@@ -998,11 +998,11 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 	manuallySubmitHistoryEntry(t, userSecret, entry2)
 
 	// Query and check the table
+	tester.RunInteractiveShell(t, ` hishtory disable`)
 	out := hishtoryQuery(t, tester, "table")
 	compareGoldens(t, out, "testDisplayTable-defaultColumns")
 
 	// Adjust the columns that should be displayed
-	tester.RunInteractiveShell(t, ` hishtory disable`)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname Command`)
 
 	// And check the table again

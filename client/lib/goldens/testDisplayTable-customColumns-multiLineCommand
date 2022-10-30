@@ -1,8 +1,7 @@
-Hostname                  Exit Code  Command               CWD              
-ghaction-runner-hostname  0          hishtory query table  ~/code/hishtory  
-localhost                 2          while :               /tmp/            
-                                     do                                     
-                                     ls /table/                             
-                                     done                                   
-localhost                 3          table_cmd2            ~/foo/           
-localhost                 2          table_cmd1            /tmp/            
+Hostname   Exit Code  Command     CWD     
+localhost  2          while :     /tmp/   
+                      do                  
+                      ls /table/          
+                      done                
+localhost  3          table_cmd2  ~/foo/  
+localhost  2          table_cmd1  /tmp/   

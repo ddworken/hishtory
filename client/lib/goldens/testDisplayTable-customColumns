@@ -1,4 +1,3 @@
-Hostname                  Command               
-ghaction-runner-hostname  hishtory query table  
-localhost                 table_cmd2            
-localhost                 table_cmd1            
+Hostname   Command     
+localhost  table_cmd2  
+localhost  table_cmd1  

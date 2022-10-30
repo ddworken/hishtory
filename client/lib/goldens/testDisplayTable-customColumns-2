@@ -1,4 +1,3 @@
-Hostname                  Exit Code  Command               
-ghaction-runner-hostname  0          hishtory query table  
-localhost                 3          table_cmd2            
-localhost                 2          table_cmd1            
+Hostname   Exit Code  Command     
+localhost  3          table_cmd2  
+localhost  2          table_cmd1  
