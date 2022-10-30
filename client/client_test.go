@@ -1754,7 +1754,7 @@ func compareGoldens(t *testing.T, out, goldenName string) {
 	if diff := cmp.Diff(string(expected), out); diff != "" {
 		if os.Getenv("HISHTORY_UPDATE_GOLDENS") == "" {
 			_, filename, line, _ := runtime.Caller(1)
-			t.Fatalf("hishtory golden mismatch at %s:%d (-expected +got):\n%s", filename, line, diff)
+			t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s", goldenName, filename, line, diff)
 		} else {
 			testutils.Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
 		}
