@@ -1,6 +1,6 @@
 Hostname                  Exit Code  Command               CWD              foo            
-ghaction-runner-hostname  0          echo table-2          ~/code/hishtory  aaaaaaaaaaaaa  
-ghaction-runner-hostname  0          echo table-1          ~/code/hishtory  aaaaaaaaaaaaa  
+ghaction-runner-hostname  0          echo table-2          /                aaaaaaaaaaaaa  
+ghaction-runner-hostname  0          echo table-1          /                aaaaaaaaaaaaa  
 ghaction-runner-hostname  0          hishtory query table  ~/code/hishtory                 
 localhost                 2          while :               /tmp/                           
                                      do                                                    

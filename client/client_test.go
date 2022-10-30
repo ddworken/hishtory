@@ -29,6 +29,8 @@ func skipSlowTests() bool {
 	return os.Getenv("FAST") != ""
 }
 
+var initialWd string
+
 func TestMain(m *testing.M) {
 	defer testutils.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -38,6 +40,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to build client: %v", err))
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Sprintf("failed to os.Getwd(): %v", err))
+	}
+	initialWd = cwd
 	m.Run()
 }
 
@@ -1020,6 +1027,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// Add a custom column
 	tester.RunInteractiveShell(t, `hishtory config-add custom-columns foo "echo aaaaaaaaaaaaa"`)
+	testutils.Check(t, os.Chdir("/"))
 	tester.RunInteractiveShell(t, ` hishtory enable`)
 	tester.RunInteractiveShell(t, `echo table-1`)
 	tester.RunInteractiveShell(t, `echo table-2`)
@@ -1734,7 +1742,7 @@ func normalizeHostnames(data string) string {
 
 func compareGoldens(t *testing.T, out, goldenName string) {
 	out = normalizeHostnames(out)
-	goldenPath := path.Join("client/lib/goldens/", goldenName)
+	goldenPath := path.Join(initialWd, "client/lib/goldens/", goldenName)
 	expected, err := os.ReadFile(goldenPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -1938,7 +1946,10 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
 		t.Fatalf("hishtory overrode control-r even when this was disabled? out=%#v", out)
 	}
-	compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
+	if os.Getenv("GITHUB_ACTION") == "" {
+		// This bit is broken on actions since actions run as a different user
+		compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
+	}
 }
 
 type deviceSet struct {

@@ -59,9 +59,9 @@ func DeleteBakFiles(t *testing.T) {
 func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	ResetFakeHistoryTimestamp()
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to retrieve homedir: %v", err)
-	}
+	Check(t, err)
+	initialWd, err := os.Getwd()
+	Check(t, err)
 
 	renameFiles := []string{
 		path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH),
@@ -102,6 +102,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		if err != nil && err.Error() != "exit status 1" {
 			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 		}
+		checkError(os.Chdir(initialWd))
 	}
 }
 
