@@ -1837,9 +1837,9 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string) {
-	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" && shellName == "bash" {
-		t.Skip() // TODO: further debug this. example failure: https://github.com/ddworken/hishtory/actions/runs/3309097201/jobs/5461940137
-	}
+	// if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" && shellName == "bash" {
+	// t.Skip() // TODO: further debug this. example failure: https://github.com/ddworken/hishtory/actions/runs/3309097201/jobs/5461940137
+	// }
 
 	// Setup
 	defer testutils.BackupAndRestore(t)()
