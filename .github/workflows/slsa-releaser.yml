@@ -35,7 +35,6 @@ jobs:
       go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
-      compile-generator: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-darwin-amd64:
     permissions:
       id-token: write
@@ -49,7 +48,6 @@ jobs:
       go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
-      compile-generator: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-darwin-arm64:
     permissions:
       id-token: write
@@ -63,7 +61,6 @@ jobs:
       go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
-      compile-generator: true # See github.com/slsa-framework/slsa-github-generator/issues/942
       
   # Sign the binaries and upload the signed binaries
   macos_signer:
