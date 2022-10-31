@@ -29,7 +29,7 @@ jobs:
       contents: write
       actions: read
     needs: args
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.ymlv1.2.1
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.1
     with:
       config-file: .slsa-goreleaser-linux-amd64.yml
       go-version: 1.18
