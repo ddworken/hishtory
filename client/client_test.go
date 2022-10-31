@@ -1698,6 +1698,7 @@ func TestFish(t *testing.T) {
 	installHishtory(t, tester, "")
 
 	// Test recording in fish
+	testutils.Check(t, os.Chdir("/"))
 	out := captureTerminalOutputWithShellName(t, tester, "fish", []string{
 		"echo SPACE foo ENTER",
 		"ENTER",
@@ -1709,11 +1710,17 @@ func TestFish(t *testing.T) {
 	})
 	compareGoldens(t, out, "TestFish-capturedPane")
 
+	// Check export
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
 	expectedOutput := "echo foo\necho bar\nls /tmp/\nls /bar/ &\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
+
+	// Check a table to see some other metadata
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns CWD Hostname 'Exit Code' Command`)
+	out = hishtoryQuery(t, tester, "-pipefail")
+	compareGoldens(t, out, "TestFish-table")
 }
 
 func normalizeHostnames(data string) string {
