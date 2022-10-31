@@ -1,0 +1,31 @@
+bash-5.2$ source /Users/david/.bashrc
+bash-5.2$ hishtory tquery -pipefail
+
+
+
+Search Query: > -pipefail
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Exit Code  git_remote                            Command                                                                                                                                │
+│─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ 0          git@github.com:ddworken/hishtory.git  source /Users/david/.bashrc                                                                                                            │
+│ 0          git@github.com:ddworken/hishtory.git  hishtory config-set displayed-columns 'Exit Code' git_remote Command                                                                   │
+│ 0                                                echo bar                                                                                                                               │
+│ 0                                                cd /                                                                                                                                   │
+│ 0          git@github.com:ddworken/hishtory.git  echo foo                                                                                                                               │
+│ 0          git@github.com:ddworken/hishtory.git  hishtory config-add custom-column git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || … │
+│ 0                                                echo baz                                                                                                                               │
+│ 0                                                cd /                                                                                                                                   │
+│ 0                                                echo $FOOBAR world                                                                                                                     │
+│ 0                                                export FOOBAR='hello'                                                                                                                  │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+│                                                                                                                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

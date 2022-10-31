@@ -1,0 +1,4 @@
+export FOOBAR='hello'
+echo $FOOBAR world
+cd /
+echo baz

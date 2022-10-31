@@ -166,6 +166,8 @@ func main() {
 		config := hctx.GetConf(ctx)
 		key := os.Args[2]
 		switch key {
+		case "custom-column":
+			fallthrough
 		case "custom-columns":
 			columnName := os.Args[3]
 			command := os.Args[4]

@@ -155,6 +155,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
 		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName()) })
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
+		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 	}
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish") })
 }
@@ -1701,6 +1702,7 @@ func TestFish(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fish is not installed")
 	}
+	// TODO: migrate this to the wrapper function
 	out := tester.RunInteractiveShell(t, ` export SHELL=`+fishLocation+`
  tmux kill-session -t foo || true
  tmux -u new-session -d -x 200 -y 50 -s foo
@@ -1950,6 +1952,43 @@ func testControlR(t *testing.T, tester shellTester, shellName string) {
 		// This bit is broken on actions since actions run as a different user
 		compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 	}
+}
+
+func testCustomColumns(t *testing.T, tester shellTester) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Record a few commands with no custom columns
+	out := tester.RunInteractiveShell(t, `export FOOBAR='hello'
+echo $FOOBAR world
+cd /
+echo baz`)
+	if out != "hello world\nbaz\n" {
+		t.Fatalf("unexpected command output=%#v", out)
+	}
+
+	// Check that the hishtory is saved correctly
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	compareGoldens(t, out, "testCustomColumns-initHistory")
+
+	// Configure a custom column
+	tester.RunInteractiveShell(t, `hishtory config-add custom-column git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'`)
+
+	// Run a few commands, some of which will have a git_remote
+	out = tester.RunInteractiveShell(t, `echo foo
+cd /
+echo bar`)
+	if out != "foo\nbar\n" {
+		t.Fatalf("unexpected command output=%#v", out)
+	}
+
+	// And check that it is all recorded correctly
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command `)
+	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
+	compareGoldens(t, out, "testCustomColumns-query")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	compareGoldens(t, out, "testCustomColumns-tquery")
 }
 
 type deviceSet struct {
