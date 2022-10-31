@@ -1,0 +1,19 @@
+Welcome to fish, the friendly interactive shell
+Type help for instructions on how to use fish
+david@Davids-MacBook-Air ~/c/hishtory (master)> echo foo
+foo
+david@Davids-MacBook-Air ~/c/hishtory (master)>
+david@Davids-MacBook-Air ~/c/hishtory (master)>  echo baz
+baz
+david@Davids-MacBook-Air ~/c/hishtory (master)> echo bar
+bar
+david@Davids-MacBook-Air ~/c/hishtory (master)> ls /tmp/
+client*                       com.google.Keystone/          powerlog/                     tmux-501/
+com.apple.launchd.vphqfEpkYH/ fseventsd-uuid                server*
+david@Davids-MacBook-Air ~/c/hishtory (master)>  echo foobar
+foobar
+david@Davids-MacBook-Air ~/c/hishtory (master)> ls /bar/ &
+ls: /bar/: No such file or directory
+
+fish: Job 1, 'ls /bar/ &' has ended
+david@Davids-MacBook-Air ~/c/hishtory (master) [1]>

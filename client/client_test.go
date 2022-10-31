@@ -1698,34 +1698,16 @@ func TestFish(t *testing.T) {
 	installHishtory(t, tester, "")
 
 	// Test recording in fish
-	fishLocation, err := exec.LookPath("fish")
-	if err != nil {
-		t.Fatalf("fish is not installed")
-	}
-	// TODO: migrate this to the wrapper function
-	out := tester.RunInteractiveShell(t, ` export SHELL=`+fishLocation+`
- tmux kill-session -t foo || true
- tmux -u new-session -d -x 200 -y 50 -s foo
- tmux send -t foo ps -p $$ ENTER 
- sleep 0.5
- tmux send -t foo echo SPACE foo ENTER
- sleep 0.5
- tmux send -t foo ENTER
- sleep 0.5
- tmux send -t foo SPACE echo SPACE baz ENTER
- sleep 0.5
- tmux send -t foo echo SPACE bar ENTER
- sleep 0.5
- tmux send -t foo ls SPACE /tmp/ ENTER
- sleep 0.5
- tmux send -t foo SPACE echo SPACE foobar ENTER
- tmux send -t foo ls SPACE /bar/ SPACE '&' ENTER
- sleep 0.5
- tmux capture-pane -p
- tmux kill-session -t foo`)
-	if !strings.Contains(out, "fish") {
-		t.Fatalf("unexpected shell")
-	}
+	out := captureTerminalOutputWithShellName(t, tester, "fish", []string{
+		"echo SPACE foo ENTER",
+		"ENTER",
+		"SPACE echo SPACE baz ENTER",
+		"echo SPACE bar ENTER",
+		"ls SPACE /tmp/ ENTER",
+		"SPACE echo SPACE foobar ENTER",
+		"ls SPACE /bar/ SPACE '&' ENTER",
+	})
+	compareGoldens(t, out, "TestFish-capturedPane")
 
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
 	expectedOutput := "echo foo\necho bar\nls /tmp/\nls /bar/ &\n"
