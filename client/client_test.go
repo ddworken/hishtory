@@ -1704,15 +1704,18 @@ func TestFish(t *testing.T) {
 		"ENTER",
 		"SPACE echo SPACE baz ENTER",
 		"echo SPACE bar ENTER",
-		"ls SPACE /tmp/ ENTER",
+		"echo SPACE '\"foo\"' ENTER",
 		"SPACE echo SPACE foobar ENTER",
 		"ls SPACE /bar/ SPACE '&' ENTER",
 	})
-	compareGoldens(t, out, "TestFish-capturedPane")
+	if os.Getenv("GITHUB_ACTION") == "" {
+		// This bit is broken on actions since actions run as a different user
+		compareGoldens(t, out, "TestFish-capturedPane")
+	}
 
 	// Check export
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
-	expectedOutput := "echo foo\necho bar\nls /tmp/\nls /bar/ &\n"
+	expectedOutput := "echo foo\necho bar\necho \"foo\"\nls /bar/ &\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1828,10 +1831,6 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string) {
-	// if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" && shellName == "bash" {
-	// t.Skip() // TODO: further debug this. example failure: https://github.com/ddworken/hishtory/actions/runs/3309097201/jobs/5461940137
-	// }
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")

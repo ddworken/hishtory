@@ -7,9 +7,8 @@ david@Davids-MacBook-Air />  echo baz
 baz
 david@Davids-MacBook-Air /> echo bar
 bar
-david@Davids-MacBook-Air /> ls /tmp/
-client*                       com.google.Keystone/          powerlog/                     tmux-501/
-com.apple.launchd.vphqfEpkYH/ fseventsd-uuid                server*
+david@Davids-MacBook-Air /> echo "foo"
+foo
 david@Davids-MacBook-Air />  echo foobar
 foobar
 david@Davids-MacBook-Air /> ls /bar/ &
