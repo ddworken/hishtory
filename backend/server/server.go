@@ -566,7 +566,21 @@ func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 
 func slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 	// returns "OK" unless there is a current SLSA bug
-	w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
+	v := getHishtoryVersion(r)
+	if !strings.Contains(v, "v0.") {
+		w.Write([]byte("OK"))
+		return
+	}
+	vNum, err := strconv.Atoi(strings.Split(v, ".")[1])
+	if err != nil {
+		w.Write([]byte("OK"))
+		return
+	}
+	if vNum < 158 {
+		w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
+		return
+	}
+	w.Write([]byte("OK"))
 }
 
 type loggedResponseData struct {
