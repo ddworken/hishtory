@@ -2,7 +2,6 @@ package data
 
 import (
 	"testing"
-	"time"
 )
 
 func TestEncryptDecrypt(t *testing.T) {
@@ -18,54 +17,6 @@ func TestEncryptDecrypt(t *testing.T) {
 	checkError(t, err)
 	if string(plaintext) != "hello world!" {
 		t.Fatalf("Expected decrypt(encrypt(x)) to work, but it didn't!")
-	}
-}
-
-func TestParseTimeGenerously(t *testing.T) {
-	ts, err := parseTimeGenerously("2006-01-02T15:04:00-08:00")
-	checkError(t, err)
-	if ts.Unix() != 1136243040 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02 T15:04:00 -08:00")
-	checkError(t, err)
-	if ts.Unix() != 1136243040 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02_T15:04:00_-08:00")
-	checkError(t, err)
-	if ts.Unix() != 1136243040 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02T15:04:00")
-	checkError(t, err)
-	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02_T15:04:00")
-	checkError(t, err)
-	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02_15:04:00")
-	checkError(t, err)
-	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02T15:04")
-	checkError(t, err)
-	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02_15:04")
-	checkError(t, err)
-	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
-	}
-	ts, err = parseTimeGenerously("2006-01-02")
-	checkError(t, err)
-	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 0 || ts.Minute() != 0 || ts.Second() != 0 {
-		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 }
 

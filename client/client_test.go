@@ -653,6 +653,9 @@ func testUpdate(t *testing.T, tester shellTester) {
 	if !isExpected {
 		t.Fatalf("hishtory update returned unexpected out=%#v", out)
 	}
+	if strings.Contains(out, "skipping SLSA validation") {
+		t.Fatalf("SLSA validation was skipped, out=%#v", out)
+	}
 
 	// Update again and assert that it skipped the update
 	out = tester.RunInteractiveShell(t, `hishtory update`)
@@ -675,6 +678,8 @@ func testUpdate(t *testing.T, tester shellTester) {
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
+
+	// TODO: write a test that updates from v.prev to latest rather than v.Unknown to latest
 }
 
 func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
@@ -1983,9 +1988,9 @@ echo bar`)
 	// And check that it is all recorded correctly
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command `)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
-	compareGoldens(t, out, "testCustomColumns-query")
+	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", (os.Getenv("GITHUB_ACTION") != "")))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	compareGoldens(t, out, "testCustomColumns-tquery")
+	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-tquery-isAction=%v", (os.Getenv("GITHUB_ACTION") != "")))
 }
 
 type deviceSet struct {

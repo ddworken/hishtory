@@ -576,7 +576,7 @@ func slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 		return
 	}
-	if vNum < 158 {
+	if vNum < 2000000 {
 		w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
 		return
 	}
