@@ -178,7 +178,8 @@ func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
 		}
 		err = cmd.Wait()
 		if err != nil {
-			return nil, fmt.Errorf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
+			// Log a warning, but don't crash. This way commands can exit with a different status and still work.
+			hctx.GetLogger().Printf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
 		}
 		ccv := data.CustomColumn{
 			Name: cc.ColumnName,
