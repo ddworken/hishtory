@@ -119,6 +119,29 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 	tbl.Print()
 }
 
+func statsHandler(w http.ResponseWriter, r *http.Request) {
+	var numDevices int64 = 0
+	checkGormResult(GLOBAL_DB.Model(&shared.Device{}).Count(&numDevices))
+	type numEntriesProcessed struct {
+		Total int
+	}
+	nep := numEntriesProcessed{}
+	checkGormResult(GLOBAL_DB.Model(&UsageData{}).Select("SUM(num_entries_handled) as total").Find(&nep))
+	var numDbEntries int64 = 0
+	checkGormResult(GLOBAL_DB.Model(&shared.EncHistoryEntry{}).Count(&numDbEntries))
+
+	lastWeek := time.Now().AddDate(0, 0, -7)
+	var weeklyActiveInstalls int64 = 0
+	checkGormResult(GLOBAL_DB.Model(&UsageData{}).Where("last_used > ?", lastWeek).Count(&weeklyActiveInstalls))
+	var weeklyQueryUsers int64 = 0
+	checkGormResult(GLOBAL_DB.Model(&UsageData{}).Where("last_queried > ?", lastWeek).Count(&weeklyQueryUsers))
+	w.Write([]byte(fmt.Sprintf("Num devices: %d\n", numDevices)))
+	w.Write([]byte(fmt.Sprintf("Num history entries processed: %d\n", nep.Total)))
+	w.Write([]byte(fmt.Sprintf("Num DB entries: %d\n", numDbEntries)))
+	w.Write([]byte(fmt.Sprintf("Weekly active installs: %d\n", weeklyActiveInstalls)))
+	w.Write([]byte(fmt.Sprintf("Weekly active queries: %d\n", weeklyQueryUsers)))
+}
+
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -541,6 +564,11 @@ func apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+func slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
+	// returns "OK" unless there is a current SLSA bug
+	w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
+}
+
 type loggedResponseData struct {
 	size int
 }
@@ -610,8 +638,10 @@ func main() {
 	http.Handle("/api/v1/trigger-cron", withLogging(triggerCronHandler))
 	http.Handle("/api/v1/get-deletion-requests", withLogging(getDeletionRequestsHandler))
 	http.Handle("/api/v1/add-deletion-request", withLogging(addDeletionRequestHandler))
+	http.Handle("/api/v1/slsa-status", withLogging(slsaStatusHandler))
 	http.Handle("/healthcheck", withLogging(healthCheckHandler))
 	http.Handle("/internal/api/v1/usage-stats", withLogging(usageStatsHandler))
+	http.Handle("/internal/api/v1/stats", withLogging(statsHandler))
 	if isTestEnvironment() {
 		http.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
 	}
