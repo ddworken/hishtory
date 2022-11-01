@@ -1990,7 +1990,7 @@ echo bar`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", (os.Getenv("GITHUB_ACTION") != "")))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-tquery-isAction=%v", (os.Getenv("GITHUB_ACTION") != "")))
+	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-tquery-%s-isAction=%v", tester.ShellName(), (os.Getenv("GITHUB_ACTION") != "")))
 }
 
 type deviceSet struct {
