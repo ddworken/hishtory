@@ -96,20 +96,7 @@ The `hishtory` CLI is written in Go. It hooks into the shell in order to track i
 
 ### Syncing Design 
 
-When `hishtory` is installed, it generates a random secret key. Computers that share a history share this secret key (done via having the user manually copy the key). It then generates two additional secrets:
-
-1. `UserId = HMAC(SecretKey, "user_id")`
-2. `EncryptionKey = HMAC(SecretKey, "encryption_key")`
-3. `DeviceId = randomUuid()`
-
-At installation time, `hishtory` registers itself with the backend which stores the tuple `(UserId, DeviceId)` which represents a one-to-many relationship between user and devices. In addition, it creates a `DumpRequest` to signify that a new device was created and it needs a copy of the existing bash history. 
-
-When a command is run:
-
-1. `hishtory` encrypts (via AES-GCM with `EncryptionKey`) the command (and all the metadata) and sends it to the backend along with the `UserId` to persist it for. The backend retrieves a list of all associated `DeviceId`s and stores a copy of the encrypted blob for each device associated with that user. Once a given device has read an encrypted blob, that entry can be deleted in order to save space (in essence this is a per-device queue, but implemented on top of postgres because this is small scale and I already am running a postgres instance). 
-2. `hishtory` checks for any pending `DumpRequest`s. If it finds one, it sends a complete (encrypted) copy of the local SQLite DB to the requesting device. 
-
-When the user runs `hishtory query`, it retrieves all unread blobs from the backend, decrypts them, and adds them to the local SQLite DB. 
+See [hiSHtory: Cross-device Encrypted Syncing Design](https://blog.daviddworken.com/posts/hishtory-explained/) to learn how syncing works. 
 
 ## Security
 
