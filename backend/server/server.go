@@ -24,9 +24,7 @@ import (
 )
 
 const (
-	// This password is for the postgres cluster running in my k8s cluster that is not publicly accessible. Some day I'll migrate it out of the code and rotate the password, but until then, this is fine.
-	// TODO: Migrate this
-	PostgresDb = "postgresql://postgres:O74Ji4735C@postgres:5432/hishtory?sslmode=disable"
+	PostgresDb = "postgresql://postgres:%s@postgres:5432/hishtory?sslmode=disable"
 )
 
 var (
@@ -390,7 +388,7 @@ func OpenDB() (*gorm.DB, error) {
 		return db, nil
 	}
 
-	postgresDb := PostgresDb
+	postgresDb := fmt.Sprintf(PostgresDb, os.Getenv("POSTGRESQL_PASSWORD"))
 	if os.Getenv("HISHTORY_POSTGRES_DB") != "" {
 		postgresDb = os.Getenv("HISHTORY_POSTGRES_DB")
 	}
