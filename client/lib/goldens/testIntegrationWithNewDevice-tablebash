@@ -1,0 +1,24 @@
+Hostname                  Exit Code  Command                                                             
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory config-set displayed-columns Hostname 'Exit Code' Command  
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory export | grep -v pipefail | grep -v '/tmp/client install'  
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory reupload                                                   
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory query                                                      
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+localhost                 2          othercomputer                                                       
+ghaction-runner-hostname  0          hishtory query                                                      
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          echo mynewercommand                                                 
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory query                                                      
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory query                                                      
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          echo mynewcommand                                                   
+ghaction-runner-hostname  0          set -emo pipefail                                                   
+ghaction-runner-hostname  0          hishtory query                                                      
+ghaction-runner-hostname  0          set -emo pipefail                                                   

@@ -273,6 +273,15 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
+
+	// And test the export for each shell without anything filtered out
+	out = tester.RunInteractiveShell(t, `hishtory export | grep -v 'hishtory init '`)
+	compareGoldens(t, out, "testIntegrationWithNewDevice-"+tester.ShellName())
+
+	// And test the table but with a subset of columns that is static
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
+	out = tester.RunInteractiveShell(t, `hishtory query | grep -v 'hishtory init '`)
+	compareGoldens(t, out, "testIntegrationWithNewDevice-table"+tester.ShellName())
 }
 
 func installHishtory(t *testing.T, tester shellTester, userSecret string) string {
