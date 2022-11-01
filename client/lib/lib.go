@@ -28,6 +28,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/araddon/dateparse"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/rodaine/table"
@@ -1221,7 +1222,7 @@ func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) (
 }
 
 func Redact(ctx *context.Context, query string, force bool) error {
-	tx, err := data.MakeWhereQueryFromSearch(hctx.GetDb(ctx), query)
+	tx, err := MakeWhereQueryFromSearch(ctx, hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
 	}
@@ -1244,7 +1245,7 @@ func Redact(ctx *context.Context, query string, force bool) error {
 			return nil
 		}
 	}
-	tx, err = data.MakeWhereQueryFromSearch(hctx.GetDb(ctx), query)
+	tx, err = MakeWhereQueryFromSearch(ctx, hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
 	}
@@ -1285,7 +1286,7 @@ func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.Histor
 
 func Reupload(ctx *context.Context) error {
 	config := hctx.GetConf(ctx)
-	entries, err := data.Search(hctx.GetDb(ctx), "", 0)
+	entries, err := Search(ctx, hctx.GetDb(ctx), "", 0)
 	if err != nil {
 		return fmt.Errorf("failed to reupload due to failed search: %v", err)
 	}
@@ -1393,4 +1394,159 @@ func tweakConfigForTests(configContents string) (string, error) {
 		return "", fmt.Errorf("failed to find substitution line in configConents=%#v", configContents)
 	}
 	return ret, nil
+}
+
+func parseTimeGenerously(input string) (time.Time, error) {
+	input = strings.ReplaceAll(input, "_", " ")
+	return dateparse.ParseLocal(input)
+}
+
+func MakeWhereQueryFromSearch(ctx *context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
+	tokens, err := tokenize(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to tokenize query: %v", err)
+	}
+	tx := db.Model(&data.HistoryEntry{}).Where("true")
+	for _, token := range tokens {
+		if strings.HasPrefix(token, "-") {
+			if strings.Contains(token, ":") {
+				query, v1, v2, err := parseAtomizedToken(ctx, token[1:])
+				if err != nil {
+					return nil, err
+				}
+				tx = tx.Where("NOT "+query, v1, v2)
+			} else {
+				query, v1, v2, v3, err := parseNonAtomizedToken(token[1:])
+				if err != nil {
+					return nil, err
+				}
+				tx = tx.Where("NOT "+query, v1, v2, v3)
+			}
+		} else if strings.Contains(token, ":") {
+			query, v1, v2, err := parseAtomizedToken(ctx, token)
+			if err != nil {
+				return nil, err
+			}
+			tx = tx.Where(query, v1, v2)
+		} else {
+			query, v1, v2, v3, err := parseNonAtomizedToken(token)
+			if err != nil {
+				return nil, err
+			}
+			tx = tx.Where(query, v1, v2, v3)
+		}
+	}
+	return tx, nil
+}
+
+func Search(ctx *context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
+	if ctx == nil && query != "" {
+		return nil, fmt.Errorf("lib.Search called with a nil context and a non-empty query (this should never happen)")
+	}
+
+	tx, err := MakeWhereQueryFromSearch(ctx, db, query)
+	if err != nil {
+		return nil, err
+	}
+	tx = tx.Order("end_time DESC")
+	if limit > 0 {
+		tx = tx.Limit(limit)
+	}
+	var historyEntries []*data.HistoryEntry
+	result := tx.Find(&historyEntries)
+	if result.Error != nil {
+		return nil, fmt.Errorf("DB query error: %v", result.Error)
+	}
+	return historyEntries, nil
+}
+
+func parseNonAtomizedToken(token string) (string, interface{}, interface{}, interface{}, error) {
+	wildcardedToken := "%" + token + "%"
+	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
+}
+
+func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}, interface{}, error) {
+	splitToken := strings.SplitN(token, ":", 2)
+	field := splitToken[0]
+	val := splitToken[1]
+	switch field {
+	case "user":
+		return "(local_username = ?)", val, nil, nil
+	case "host":
+		fallthrough
+	case "hostname":
+		return "(instr(hostname, ?) > 0)", val, nil, nil
+	case "cwd":
+		return "(instr(current_working_directory, ?) > 0 OR instr(REPLACE(current_working_directory, '~/', home_directory), ?) > 0)", strings.TrimSuffix(val, "/"), strings.TrimSuffix(val, "/"), nil
+	case "exit_code":
+		return "(exit_code = ?)", val, nil, nil
+	case "before":
+		t, err := parseTimeGenerously(val)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to parse before:%s as a timestamp: %v", val, err)
+		}
+		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) < ?)", t.Unix(), nil, nil
+	case "after":
+		t, err := parseTimeGenerously(val)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+		}
+		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) > ?)", t.Unix(), nil, nil
+	default:
+		knownCustomColumns := make([]string, 0)
+		// Get custom columns that are defined on this machine
+		conf := hctx.GetConf(ctx)
+		for _, c := range conf.CustomColumns {
+			knownCustomColumns = append(knownCustomColumns, c.ColumnName)
+		}
+		// Also get all ones that are in the DB
+		names, err := getAllCustomColumnNames(ctx)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to get custom column names from the DB: %v", err)
+		}
+		knownCustomColumns = append(knownCustomColumns, names...)
+		// Check if the atom is for a custom column that exists and if it isn't, return an error
+		isCustomColumn := false
+		for _, ccName := range knownCustomColumns {
+			if ccName == field {
+				isCustomColumn = true
+			}
+		}
+		if !isCustomColumn {
+			return "", nil, nil, fmt.Errorf("search query contains unknown search atom %s", field)
+		}
+		// Build the where clause for the custom column
+		return "EXISTS (SELECT 1 FROM json_each(custom_columns) WHERE json_extract(value, '$.name') = ? and instr(json_extract(value, '$.value'), ?) > 0)", field, val, nil
+	}
+}
+
+func getAllCustomColumnNames(ctx *context.Context) ([]string, error) {
+	db := hctx.GetDb(ctx)
+	query := `
+	SELECT DISTINCT json_extract(value, '$.name') as cc_name
+	FROM history_entries 
+	JOIN json_each(custom_columns)
+	WHERE value IS NOT NULL
+	LIMIT 10`
+	rows, err := db.Raw(query).Rows()
+	if err != nil {
+		return nil, err
+	}
+	ccNames := make([]string, 0)
+	for rows.Next() {
+		var ccName string
+		err = rows.Scan(&ccName)
+		if err != nil {
+			return nil, err
+		}
+		ccNames = append(ccNames, ccName)
+	}
+	return ccNames, nil
+}
+
+func tokenize(query string) ([]string, error) {
+	if query == "" {
+		return []string{}, nil
+	}
+	return strings.Split(query, " "), nil
 }

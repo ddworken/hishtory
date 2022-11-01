@@ -57,7 +57,7 @@ func main() {
 	case "init":
 		db, err := hctx.OpenLocalSqliteDb()
 		lib.CheckFatalError(err)
-		data, err := data.Search(db, "", 10)
+		data, err := lib.Search(nil, db, "", 10)
 		lib.CheckFatalError(err)
 		if len(data) > 0 {
 			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset? [y/N]")
@@ -75,7 +75,7 @@ func main() {
 		if os.Getenv("HISHTORY_TEST") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
-			data, err := data.Search(db, "", 10)
+			data, err := lib.Search(nil, db, "", 10)
 			lib.CheckFatalError(err)
 			if len(data) < 10 {
 				fmt.Println("Importing existing shell history...")
@@ -299,7 +299,7 @@ func query(ctx *context.Context, query string) {
 		}
 	}
 	lib.CheckFatalError(displayBannerIfSet(ctx))
-	data, err := data.Search(db, query, 25)
+	data, err := lib.Search(ctx, db, query, 25)
 	lib.CheckFatalError(err)
 	lib.CheckFatalError(lib.DisplayResults(ctx, data))
 }
@@ -327,7 +327,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	// Upload the missing entries
 	db := hctx.GetDb(ctx)
 	query := fmt.Sprintf("after:%s", time.Unix(config.MissedUploadTimestamp, 0).Format("2006-01-02"))
-	entries, err := data.Search(db, query, 0)
+	entries, err := lib.Search(ctx, db, query, 0)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
 	}
@@ -400,7 +400,7 @@ func saveHistoryEntry(ctx *context.Context) {
 	}
 	if len(dumpRequests) > 0 {
 		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
-		entries, err := data.Search(db, "", 0)
+		entries, err := lib.Search(ctx, db, "", 0)
 		lib.CheckFatalError(err)
 		var encEntries []*shared.EncHistoryEntry
 		for _, entry := range entries {
@@ -427,7 +427,7 @@ func export(ctx *context.Context, query string) {
 			lib.CheckFatalError(err)
 		}
 	}
-	data, err := data.Search(db, query, 0)
+	data, err := lib.Search(ctx, db, query, 0)
 	lib.CheckFatalError(err)
 	for i := len(data) - 1; i >= 0; i-- {
 		fmt.Println(data[i].Command)

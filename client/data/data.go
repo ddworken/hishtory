@@ -11,18 +11,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
-	"github.com/araddon/dateparse"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 const (
 	KdfUserID        = "user_id"
 	KdfEncryptionKey = "encryption_key"
+	CONFIG_PATH      = ".hishtory.config"
+	HISHTORY_PATH    = ".hishtory"
+	DB_PATH          = ".hishtory.db"
 )
 
 type HistoryEntry struct {
@@ -153,110 +153,6 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	return decryptedEntry, nil
 }
 
-func parseTimeGenerously(input string) (time.Time, error) {
-	input = strings.ReplaceAll(input, "_", " ")
-	return dateparse.ParseLocal(input)
-}
-
-func MakeWhereQueryFromSearch(db *gorm.DB, query string) (*gorm.DB, error) {
-	tokens, err := tokenize(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to tokenize query: %v", err)
-	}
-	tx := db.Model(&HistoryEntry{}).Where("true")
-	for _, token := range tokens {
-		if strings.HasPrefix(token, "-") {
-			if strings.Contains(token, ":") {
-				query, v1, v2, err := parseAtomizedToken(token[1:])
-				if err != nil {
-					return nil, err
-				}
-				tx = tx.Where("NOT "+query, v1, v2)
-			} else {
-				query, v1, v2, v3, err := parseNonAtomizedToken(token[1:])
-				if err != nil {
-					return nil, err
-				}
-				tx = tx.Where("NOT "+query, v1, v2, v3)
-			}
-		} else if strings.Contains(token, ":") {
-			query, v1, v2, err := parseAtomizedToken(token)
-			if err != nil {
-				return nil, err
-			}
-			tx = tx.Where(query, v1, v2)
-		} else {
-			query, v1, v2, v3, err := parseNonAtomizedToken(token)
-			if err != nil {
-				return nil, err
-			}
-			tx = tx.Where(query, v1, v2, v3)
-		}
-	}
-	return tx, nil
-}
-
-func Search(db *gorm.DB, query string, limit int) ([]*HistoryEntry, error) {
-	tx, err := MakeWhereQueryFromSearch(db, query)
-	if err != nil {
-		return nil, err
-	}
-	tx = tx.Order("end_time DESC")
-	if limit > 0 {
-		tx = tx.Limit(limit)
-	}
-	var historyEntries []*HistoryEntry
-	result := tx.Find(&historyEntries)
-	if result.Error != nil {
-		return nil, fmt.Errorf("DB query error: %v", result.Error)
-	}
-	return historyEntries, nil
-}
-
-func parseNonAtomizedToken(token string) (string, interface{}, interface{}, interface{}, error) {
-	wildcardedToken := "%" + token + "%"
-	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
-}
-
-func parseAtomizedToken(token string) (string, interface{}, interface{}, error) {
-	splitToken := strings.SplitN(token, ":", 2)
-	field := splitToken[0]
-	val := splitToken[1]
-	switch field {
-	case "user":
-		return "(local_username = ?)", val, nil, nil
-	case "host":
-		fallthrough
-	case "hostname":
-		return "(instr(hostname, ?) > 0)", val, nil, nil
-	case "cwd":
-		return "(instr(current_working_directory, ?) > 0 OR instr(REPLACE(current_working_directory, '~/', home_directory), ?) > 0)", strings.TrimSuffix(val, "/"), strings.TrimSuffix(val, "/"), nil
-	case "exit_code":
-		return "(exit_code = ?)", val, nil, nil
-	case "before":
-		t, err := parseTimeGenerously(val)
-		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to parse before:%s as a timestamp: %v", val, err)
-		}
-		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) < ?)", t.Unix(), nil, nil
-	case "after":
-		t, err := parseTimeGenerously(val)
-		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
-		}
-		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) > ?)", t.Unix(), nil, nil
-	default:
-		return "", nil, nil, fmt.Errorf("search query contains unknown search atom %s", field)
-	}
-}
-
-func tokenize(query string) ([]string, error) {
-	if query == "" {
-		return []string{}, nil
-	}
-	return strings.Split(query, " "), nil
-}
-
 func EntryEquals(entry1, entry2 HistoryEntry) bool {
 	return entry1.LocalUsername == entry2.LocalUsername &&
 		entry1.Hostname == entry2.Hostname &&
@@ -267,9 +163,3 @@ func EntryEquals(entry1, entry2 HistoryEntry) bool {
 		entry1.StartTime.Format(time.RFC3339) == entry2.StartTime.Format(time.RFC3339) &&
 		entry1.EndTime.Format(time.RFC3339) == entry2.EndTime.Format(time.RFC3339)
 }
-
-const (
-	CONFIG_PATH   = ".hishtory.config"
-	HISHTORY_PATH = ".hishtory"
-	DB_PATH       = ".hishtory.db"
-)

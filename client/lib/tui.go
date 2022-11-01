@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
@@ -199,7 +198,7 @@ func (m model) View() string {
 
 func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, int, error) {
 	db := hctx.GetDb(ctx)
-	data, err := data.Search(db, query, numEntries)
+	data, err := Search(ctx, db, query, numEntries)
 	if err != nil {
 		return nil, 0, err
 	}

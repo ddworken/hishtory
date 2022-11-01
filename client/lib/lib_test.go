@@ -187,7 +187,7 @@ func TestSearch(t *testing.T) {
 	db.Create(entry2)
 
 	// Search for data
-	results, err := data.Search(db, "ls", 5)
+	results, err := lib.Search(ctx, db, "ls", 5)
 	testutils.Check(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2!", len(results))
