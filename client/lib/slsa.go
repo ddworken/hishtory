@@ -46,6 +46,14 @@ func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag 
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
+	resp, err := ApiGet("/api/v1/slsa-status?newVersion=" + versionTag)
+	if err != nil {
+		return nil
+	}
+	if string(resp) != "OK" {
+		fmt.Printf("SLSA verification is currently broken (%s), skipping SLSA validation...\n", string(resp))
+		return nil
+	}
 
 	if err := checkForDowngrade(Version, versionTag); err != nil && os.Getenv("HISHTORY_ALLOW_DOWNGRADE") == "true" {
 		return err
