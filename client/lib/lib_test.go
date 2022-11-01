@@ -178,7 +178,8 @@ func TestPersist(t *testing.T) {
 func TestSearch(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	testutils.Check(t, hctx.InitConfig())
-	db := hctx.GetDb(hctx.MakeContext())
+	ctx := hctx.MakeContext()
+	db := hctx.GetDb(ctx)
 
 	// Insert data
 	entry1 := testutils.MakeFakeHistoryEntry("ls /foo")
@@ -187,7 +188,7 @@ func TestSearch(t *testing.T) {
 	db.Create(entry2)
 
 	// Search for data
-	results, err := lib.Search(ctx, db, "ls", 5)
+	results, err := Search(ctx, db, "ls", 5)
 	testutils.Check(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2!", len(results))
