@@ -12,7 +12,7 @@ To install `hishtory` on your first machine:
 curl https://hishtory.dev/install.py | python3 -
 ```
 
-At this point, `hishtory` is already managing your shell history. Give it a try with `hishtory query` and see below for more details on the advanced query features. 
+At this point, `hishtory` is already managing your shell history (for bash, zsh, and fish!). Give it a try with `hishtory query` and see below for more details on the advanced query features. 
 
 Then to install `hishtory` on your other computers, you need your secret key. Get this by running `hishtory status`. Once you have it, you follow similar steps to install hiSHtory on your other computers:
 
@@ -58,13 +58,37 @@ If you want to temporarily turn on/off hiSHtory recording, you can do so via `hi
 
 To update `hishtory` to the latest version, just run `hishtory update` to securely download and apply the latest update. 
 
-### Multi-Shell and Multi-OS Support
+### Advanced Features
 
-`hishtory` supports `bash`, `zsh`, and `fish` on Linux and macOS. If you'd like support for another shell, please open an issue!
+<details>
+<summary>Changing the displayed columns</summary>
 
-### Disabling Control-R integration
+You can customize the columns that are displayed via `hishtory config-set displayed-columns`. For example, to display only the cwd and command:
 
+```
+hishtory config-set displayed-columns CWD Command
+```
+
+</details>
+
+
+<details>
+<summary>Custom Columns</summary>
+
+You can create custom column definitions that are populated from arbitrary commands. For example, if you want to create a new column named `git_remote` that contains the git remote if the cwd is in a git directory, you can run:
+
+```
+hishtory config-add custom-column git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'
+hishtory config-add displayed-columns git_remote
+```
+
+</details>
+
+<details>
+<summary>Disabling Control-R integration</summary>
 If you'd like to disable the control-R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
+</details>
+
 
 ## Design
 
