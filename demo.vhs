@@ -33,6 +33,8 @@ Sleep 400ms
 Type "of
 Sleep 400ms
 Type "mt"
-Sleep 8000ms
+Sleep 1000ms
+Type " cwd:~/code/hishtory/"
+Sleep 7000ms
 Enter
 Sleep 6000ms
