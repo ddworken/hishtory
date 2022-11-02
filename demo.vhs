@@ -1,35 +1,38 @@
 # Demo file used https://github.com/charmbracelet/vhs
 Output backend/web/landing/www/img/demo.gif
 Set FontSize 22
-Set Width 2500
+Set Width 2300
 Set Height 1050
 
 # Set up 
 Hide 
 Type "zsh" 
 Enter 
+Type "setopt interactivecomments"
+Enter
 Type "clear"
 Enter
+Set TypingSpeed 0.1
 Show 
 
 Type "find . -iname '*.go' | xargs -I {} -- gofmt -w {}"
 Enter 
-Sleep 2000ms
+Sleep 4000ms
 
 Type "ssh server"
 Enter
-Sleep 200ms
+Sleep 400ms
 Type "# Then press control + r to search your history"
 Enter 
-Sleep 2800ms
+Sleep 3800ms
 
 Ctrl+R
-Sleep 4000ms
+Sleep 6000ms
 Type "g"
 Sleep 400ms
 Type "of
 Sleep 400ms
 Type "mt"
-Sleep 6000ms
+Sleep 8000ms
 Enter
-Sleep 5000ms
+Sleep 6000ms
