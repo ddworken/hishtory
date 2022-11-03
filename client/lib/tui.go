@@ -92,8 +92,11 @@ func (m model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-func runQueryAndUpdateTable(m model) model {
-	if m.runQuery != nil && *m.runQuery != m.lastQuery {
+func runQueryAndUpdateTable(m model, updateTable bool) model {
+	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || updateTable {
+		if m.runQuery == nil {
+			m.runQuery = &m.lastQuery
+		}
 		rows, numEntries, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
 		if err != nil {
 			m.searchErr = err
@@ -102,6 +105,14 @@ func runQueryAndUpdateTable(m model) model {
 			m.searchErr = nil
 		}
 		m.numEntries = numEntries
+		if updateTable {
+			t, err := makeTable(m.ctx, rows)
+			if err != nil {
+				m.err = err
+				return m
+			}
+			m.table = t
+		}
 		m.table.SetRows(rows)
 		m.table.SetCursor(0)
 		m.lastQuery = *m.runQuery
@@ -136,9 +147,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.queryInput = i
 			searchQuery := m.queryInput.Value()
 			m.runQuery = &searchQuery
-			m = runQueryAndUpdateTable(m)
+			m = runQueryAndUpdateTable(m, false)
 			return m, tea.Batch(cmd1, cmd2)
 		}
+	case tea.WindowSizeMsg:
+		m = runQueryAndUpdateTable(m, true)
+		return m, nil
 	case errMsg:
 		m.err = msg
 		return m, nil
