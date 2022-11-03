@@ -1574,6 +1574,10 @@ func tokenize(query string) ([]string, error) {
 }
 
 func stripLines(filePath, lines string) error {
+	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+		// File does not exist, nothing to do
+		return nil
+	}
 	origContents, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
