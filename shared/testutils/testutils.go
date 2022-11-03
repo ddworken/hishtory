@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -43,17 +42,8 @@ func BackupAndRestore(t *testing.T) func() {
 	return BackupAndRestoreWithId(t, "")
 }
 
-func DeleteBakFiles(t *testing.T) {
-	homedir, err := os.UserHomeDir()
-	checkError(err)
-	entries, err := ioutil.ReadDir(path.Join(homedir, data.HISHTORY_PATH))
-	checkError(err)
-	for _, entry := range entries {
-		fmt.Println(entry.Name())
-		if strings.HasSuffix(entry.Name(), ".bak") {
-			checkError(os.Remove(path.Join(homedir, data.HISHTORY_PATH, entry.Name())))
-		}
-	}
+func getBackPath(file, id string) string {
+	return strings.Replace(file, data.HISHTORY_PATH, data.HISHTORY_PATH+".test", 1) + id
 }
 
 func BackupAndRestoreWithId(t *testing.T, id string) func() {
@@ -62,6 +52,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	Check(t, err)
 	initialWd, err := os.Getwd()
 	Check(t, err)
+	Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH+".test"), os.ModePerm))
 
 	renameFiles := []string{
 		path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH),
@@ -77,7 +68,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
-		_ = os.Rename(file, file+id+".bak")
+		_ = os.Rename(file, getBackPath(file, id))
 	}
 	copyFiles := []string{
 		path.Join(homedir, ".zshrc"),
@@ -85,17 +76,18 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	}
 	for _, file := range copyFiles {
 		touchFile(file)
-		_ = copy(file, file+id+".bak")
+		_ = copy(file, getBackPath(file, id))
 	}
 	configureZshrc(homedir)
 	touchFile(path.Join(homedir, ".bash_history"))
 	touchFile(path.Join(homedir, ".zsh_history"))
 	return func() {
+		Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH), os.ModePerm))
 		for _, file := range renameFiles {
-			checkError(os.Rename(file+id+".bak", file))
+			checkError(os.Rename(getBackPath(file, id), file))
 		}
 		for _, file := range copyFiles {
-			checkError(copy(file+id+".bak", file))
+			checkError(copy(getBackPath(file, id), file))
 		}
 		cmd := exec.Command("killall", "hishtory")
 		stdout, err := cmd.Output()

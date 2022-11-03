@@ -1,0 +1,7 @@
+david@Davids-MacBook-Air hishtory % echo foo
+foo
+david@Davids-MacBook-Air hishtory % hishtory
+zsh: command not found: hishtory
+david@Davids-MacBook-Air hishtory % echo bar
+bar
+david@Davids-MacBook-Air hishtory %

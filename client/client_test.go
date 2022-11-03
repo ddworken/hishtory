@@ -156,6 +156,7 @@ func TestParameterized(t *testing.T) {
 		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName()) })
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
+		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 	}
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish") })
 }
@@ -2001,6 +2002,40 @@ echo bar`)
 	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", (os.Getenv("GITHUB_ACTION") != "")))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-tquery-%s-isAction=%v", tester.ShellName(), (os.Getenv("GITHUB_ACTION") != "")))
+}
+
+func testUninstall(t *testing.T, tester shellTester) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Record a few commands and check that they get recorded
+	tester.RunInteractiveShell(t, `echo foo
+echo baz`)
+	out := tester.RunInteractiveShell(t, `hishtory export -pipefail`)
+	compareGoldens(t, out, "testUninstall-recorded")
+
+	// And then uninstall
+	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory uninstall`)
+	testutils.Check(t, err)
+	compareGoldens(t, out, "testUninstall-uninstall")
+
+	// And check that hishtory has been uninstalled
+	out, err = tester.RunInteractiveShellRelaxed(t, `echo foo
+hishtory
+echo bar`)
+	testutils.Check(t, err)
+	compareGoldens(t, out, "testUninstall-post-uninstall")
+
+	// And check again, but in a way that shows the full terminal output
+	if os.Getenv("GITHUB_ACTION") == "" {
+		out = captureTerminalOutput(t, tester, []string{
+			"echo SPACE foo ENTER",
+			"hishtory ENTER",
+			"echo SPACE bar ENTER",
+		})
+		compareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName())
+	}
 }
 
 type deviceSet struct {

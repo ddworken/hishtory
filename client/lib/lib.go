@@ -672,6 +672,10 @@ func handleUpgradedFeatures() error {
 	return hctx.SetConfig(config)
 }
 
+func getFishConfigPath(homedir string) string {
+	return path.Join(homedir, data.HISHTORY_PATH, "config.fish")
+}
+
 func configureFish(homedir, binaryPath string) error {
 	// Check if fish is installed
 	_, err := exec.LookPath("fish")
@@ -679,7 +683,6 @@ func configureFish(homedir, binaryPath string) error {
 		return nil
 	}
 	// Create the file we're going to source. Do this no matter what in case there are updates to it.
-	fishConfigPath := path.Join(homedir, data.HISHTORY_PATH, "config.fish")
 	configContents := ConfigFishContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		testConfig, err := tweakConfigForTests(ConfigFishContents)
@@ -688,7 +691,7 @@ func configureFish(homedir, binaryPath string) error {
 		}
 		configContents = testConfig
 	}
-	err = ioutil.WriteFile(fishConfigPath, []byte(configContents), 0o644)
+	err = ioutil.WriteFile(getFishConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
 	}
@@ -710,11 +713,15 @@ func configureFish(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to ~/.config/fish/config.fish: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + fishConfigPath + "\n")
+	_, err = f.WriteString(getFishConfigFragment(homedir))
 	if err != nil {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
 	return nil
+}
+
+func getFishConfigFragment(homedir string) string {
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getFishConfigPath(homedir) + "\n"
 }
 
 func isFishConfigured(homedir string) (bool, error) {
@@ -722,16 +729,19 @@ func isFishConfigured(homedir string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
+	fishConfig, err := ioutil.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
 	if err != nil {
 		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %v", err)
 	}
-	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
+	return strings.Contains(string(fishConfig), "# Hishtory Config:"), nil
+}
+
+func getZshConfigPath(homedir string) string {
+	return path.Join(homedir, data.HISHTORY_PATH, "config.zsh")
 }
 
 func configureZshrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our zshrc. Do this no matter what in case there are updates to it.
-	zshConfigPath := path.Join(homedir, data.HISHTORY_PATH, "config.zsh")
 	configContents := ConfigZshContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		testConfig, err := tweakConfigForTests(configContents)
@@ -740,7 +750,7 @@ func configureZshrc(homedir, binaryPath string) error {
 		}
 		configContents = testConfig
 	}
-	err := ioutil.WriteFile(zshConfigPath, []byte(configContents), 0o644)
+	err := ioutil.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
 	}
@@ -758,11 +768,15 @@ func configureZshrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + zshConfigPath + "\n")
+	_, err = f.WriteString(getZshConfigFragment(homedir))
 	if err != nil {
 		return fmt.Errorf("failed to append to zshrc: %v", err)
 	}
 	return nil
+}
+
+func getZshConfigFragment(homedir string) string {
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getZshConfigPath(homedir) + "\n"
 }
 
 func isZshConfigured(homedir string) (bool, error) {
@@ -777,9 +791,12 @@ func isZshConfigured(homedir string) (bool, error) {
 	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
 }
 
+func getBashConfigPath(homedir string) string {
+	return path.Join(homedir, data.HISHTORY_PATH, "config.sh")
+}
+
 func configureBashrc(homedir, binaryPath string) error {
 	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
-	bashConfigPath := path.Join(homedir, data.HISHTORY_PATH, "config.sh")
 	configContents := ConfigShContents
 	if os.Getenv("HISHTORY_TEST") != "" {
 		testConfig, err := tweakConfigForTests(ConfigShContents)
@@ -788,7 +805,7 @@ func configureBashrc(homedir, binaryPath string) error {
 		}
 		configContents = testConfig
 	}
-	err := ioutil.WriteFile(bashConfigPath, []byte(configContents), 0o644)
+	err := ioutil.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.sh file: %v", err)
 	}
@@ -806,11 +823,15 @@ func configureBashrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + bashConfigPath + "\n")
+	_, err = f.WriteString(getBashConfigFragment(homedir))
 	if err != nil {
 		return fmt.Errorf("failed to append to bashrc: %v", err)
 	}
 	return nil
+}
+
+func getBashConfigFragment(homedir string) string {
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
 }
 
 func isBashConfigured(homedir string) (bool, error) {
@@ -1550,4 +1571,47 @@ func tokenize(query string) ([]string, error) {
 		return []string{}, nil
 	}
 	return strings.Split(query, " "), nil
+}
+
+func stripLines(filePath, lines string) error {
+	origContents, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	linesToBeRemoved := make(map[string]bool, 0)
+	for _, line := range strings.Split(lines, "\n") {
+		if strings.TrimSpace(line) != "" {
+			linesToBeRemoved[line] = true
+		}
+	}
+	ret := ""
+	for _, line := range strings.Split(string(origContents), "\n") {
+		if !linesToBeRemoved[line] {
+			ret += line
+			ret += "\n"
+		}
+	}
+	return os.WriteFile(filePath, []byte(ret), 0644)
+}
+
+func Uninstall(ctx *context.Context) error {
+	homedir := hctx.GetHome(ctx)
+	err := stripLines(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
+	if err != nil {
+		return err
+	}
+	err = stripLines(path.Join(homedir, ".zshrc"), getZshConfigFragment(homedir))
+	if err != nil {
+		return err
+	}
+	err = stripLines(path.Join(homedir, ".config/fish/config.fish"), getFishConfigFragment(homedir))
+	if err != nil {
+		return err
+	}
+	err = os.RemoveAll(path.Join(homedir, ".hishtory"))
+	if err != nil {
+		return err
+	}
+	fmt.Println("Successfully uninstalled hishtory, please restart your terminal...")
+	return nil
 }
