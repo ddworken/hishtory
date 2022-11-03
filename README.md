@@ -89,6 +89,21 @@ hishtory config-add displayed-columns git_remote
 If you'd like to disable the control-R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
 </details>
 
+<details>
+<summary>Offline Install</summary>
+If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode. 
+
+Download the latest binary from [Github Releases](https://github.com/ddworken/hishtory/releases), and then run `./hishtory-binary install --offline` to install hiSHtory in a fully offline mode. This disables syncing and it is not possible to re-enable syncing after doing this.
+</details>
+
+<details>
+<summary>Self-Hosting</summary>
+By default, hiSHtory relies on a backend for syncing. All data is end-to-end encrypted, so the backend can't view your history. 
+
+But if you'd like to self-host the hishtory backend, you can! The backend is a simple go binary in `backend/server/server.go` that uses postgres to store data. It reads the connection string for the postgres database from `HISHTORY_POSTGRES_DB`. 
+
+More details coming soon!
+</details>
 
 <details>
 <summary>Uninstalling</summary>

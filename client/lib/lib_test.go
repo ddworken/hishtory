@@ -32,6 +32,34 @@ func TestSetup(t *testing.T) {
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
 	}
+	config := hctx.GetConf(hctx.MakeContext())
+	if config.IsOffline != false {
+		t.Fatalf("hishtory config should have been offline")
+	}
+}
+
+func TestSetupOffline(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.RunTestServer()()
+
+	homedir, err := os.UserHomeDir()
+	testutils.Check(t, err)
+	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err == nil {
+		t.Fatalf("hishtory secret file already exists!")
+	}
+	testutils.Check(t, Setup([]string{"", "", "--offline"}))
+	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err != nil {
+		t.Fatalf("hishtory secret file does not exist after Setup()!")
+	}
+	data, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
+	testutils.Check(t, err)
+	if len(data) < 10 {
+		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
+	}
+	config := hctx.GetConf(hctx.MakeContext())
+	if config.IsOffline != true {
+		t.Fatalf("hishtory config should have been offline, actual=%#v", string(data))
+	}
 }
 
 func TestBuildHistoryEntry(t *testing.T) {

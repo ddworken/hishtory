@@ -334,8 +334,16 @@ func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, er
 
 func Setup(args []string) error {
 	userSecret := uuid.Must(uuid.NewRandom()).String()
+	isOffline := false
 	if len(args) > 2 && args[2] != "" {
-		userSecret = args[2]
+		if args[2] == "--offline" {
+			isOffline = true
+		} else {
+			if args[2][0] == '-' {
+				return fmt.Errorf("refusing to set user secret to %#v since it looks like a flag", args[2])
+			}
+			userSecret = args[2]
+		}
 	}
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
@@ -345,6 +353,7 @@ func Setup(args []string) error {
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
 	config.ControlRSearchEnabled = true
+	config.IsOffline = isOffline
 	err := hctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %v", err)
@@ -358,6 +367,9 @@ func Setup(args []string) error {
 	db.Exec("DELETE FROM history_entries")
 
 	// Bootstrap from remote date
+	if config.IsOffline {
+		return nil
+	}
 	_, err = ApiGet("/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %v", err)
@@ -1217,10 +1229,10 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 					return nil
 				}
 			}
-			return err
+			return fmt.Errorf("unrecoverable sqlite error: %v", err)
 		}
 		if err != nil && err.Error() != "database is locked (5) (SQLITE_BUSY)" {
-			return err
+			return fmt.Errorf("unrecoverable sqlite error: %v", err)
 		}
 	}
 	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
@@ -1287,6 +1299,9 @@ func Redact(ctx *context.Context, query string, force bool) error {
 
 func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.HistoryEntry) error {
 	config := hctx.GetConf(ctx)
+	if config.IsOffline {
+		return nil
+	}
 
 	var deletionRequest shared.DeletionRequest
 	deletionRequest.SendTime = time.Now()
@@ -1308,6 +1323,9 @@ func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.Histor
 
 func Reupload(ctx *context.Context) error {
 	config := hctx.GetConf(ctx)
+	if config.IsOffline {
+		return nil
+	}
 	entries, err := Search(ctx, hctx.GetDb(ctx), "", 0)
 	if err != nil {
 		return fmt.Errorf("failed to reupload due to failed search: %v", err)
@@ -1340,6 +1358,9 @@ func chunks[k any](slice []k, chunkSize int) [][]k {
 func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
+	if config.IsOffline {
+		return nil
+	}
 	respBody, err := ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
 	if IsOfflineError(err) {
 		return nil
@@ -1364,7 +1385,9 @@ func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
 
 func ProcessDeletionRequests(ctx *context.Context) error {
 	config := hctx.GetConf(ctx)
-
+	if config.IsOffline {
+		return nil
+	}
 	resp, err := ApiGet("/api/v1/get-deletion-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
 	if IsOfflineError(err) {
 		return nil
@@ -1391,6 +1414,9 @@ func ProcessDeletionRequests(ctx *context.Context) error {
 
 func GetBanner(ctx *context.Context, gitCommit string) ([]byte, error) {
 	config := hctx.GetConf(ctx)
+	if config.IsOffline {
+		return []byte{}, nil
+	}
 	url := "/api/v1/banner?commit_hash=" + gitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	return ApiGet(url)
 }

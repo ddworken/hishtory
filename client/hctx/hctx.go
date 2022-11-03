@@ -161,6 +161,8 @@ type ClientConfig struct {
 	DisplayedColumns []string `json:"displayed_columns"`
 	// Custom columns
 	CustomColumns []CustomColumnDefinition `json:"custom_columns"`
+	// Whether this is an offline instance of hishtory with no syncing
+	IsOffline bool `json:"is_offline"`
 }
 
 type CustomColumnDefinition struct {

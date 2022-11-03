@@ -29,13 +29,7 @@ func ResetLocalState(t *testing.T) {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH))
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, DB_WAL_PATH))
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "hishtory"))
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "config.sh"))
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "config.zsh"))
-	_ = os.Remove(path.Join(homedir, data.HISHTORY_PATH, "config.fish"))
+	_ = os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -43,7 +37,10 @@ func BackupAndRestore(t *testing.T) func() {
 }
 
 func getBackPath(file, id string) string {
-	return strings.Replace(file, data.HISHTORY_PATH, data.HISHTORY_PATH+".test", 1) + id
+	if strings.Contains(file, "/"+data.HISHTORY_PATH+"/") {
+		return strings.Replace(file, data.HISHTORY_PATH, data.HISHTORY_PATH+".test", 1) + id
+	}
+	return file + ".bak" + id
 }
 
 func BackupAndRestoreWithId(t *testing.T, id string) func() {

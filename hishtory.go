@@ -287,6 +287,9 @@ func printDumpStatus(config hctx.ClientConfig) {
 }
 
 func getDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
+	if config.IsOffline {
+		return make([]*shared.DumpRequest, 0), nil
+	}
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
 	if lib.IsOfflineError(err) {
 		return []*shared.DumpRequest{}, nil
@@ -332,6 +335,9 @@ func displayBannerIfSet(ctx *context.Context) error {
 func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	config := hctx.GetConf(ctx)
 	if !config.HaveMissedUploads {
+		return nil
+	}
+	if config.IsOffline {
 		return nil
 	}
 
@@ -382,19 +388,21 @@ func saveHistoryEntry(ctx *context.Context) {
 	lib.CheckFatalError(err)
 
 	// Persist it remotely
-	jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
-	lib.CheckFatalError(err)
-	_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-	if err != nil {
-		if lib.IsOfflineError(err) {
-			hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
-			if !config.HaveMissedUploads {
-				config.HaveMissedUploads = true
-				config.MissedUploadTimestamp = time.Now().Unix()
-				lib.CheckFatalError(hctx.SetConfig(config))
+	if !config.IsOffline {
+		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
+		lib.CheckFatalError(err)
+		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		if err != nil {
+			if lib.IsOfflineError(err) {
+				hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
+				if !config.HaveMissedUploads {
+					config.HaveMissedUploads = true
+					config.MissedUploadTimestamp = time.Now().Unix()
+					lib.CheckFatalError(hctx.SetConfig(config))
+				}
+			} else {
+				lib.CheckFatalError(err)
 			}
-		} else {
-			lib.CheckFatalError(err)
 		}
 	}
 
@@ -422,8 +430,10 @@ func saveHistoryEntry(ctx *context.Context) {
 		reqBody, err := json.Marshal(encEntries)
 		lib.CheckFatalError(err)
 		for _, dumpRequest := range dumpRequests {
-			_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
-			lib.CheckFatalError(err)
+			if !config.IsOffline {
+				_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+				lib.CheckFatalError(err)
+			}
 		}
 	}
 }

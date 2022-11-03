@@ -124,6 +124,13 @@ func (z zshTester) ShellName() string {
 
 var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
 
+type OnlineStatus int64
+
+const (
+	Online OnlineStatus = iota
+	Offline
+)
+
 func TestParameterized(t *testing.T) {
 	if skipSlowTests() {
 		shellTesters = shellTesters[:1]
@@ -135,7 +142,8 @@ func TestParameterized(t *testing.T) {
 		t.Run("testExcludeHiddenCommand/"+tester.ShellName(), func(t *testing.T) { testExcludeHiddenCommand(t, tester) })
 		t.Run("testUpdate/"+tester.ShellName(), func(t *testing.T) { testUpdate(t, tester) })
 		t.Run("testAdvancedQuery/"+tester.ShellName(), func(t *testing.T) { testAdvancedQuery(t, tester) })
-		t.Run("testIntegration/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester) })
+		t.Run("testIntegration/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Online) })
+		t.Run("testIntegration/offline/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Offline) })
 		t.Run("testIntegrationWithNewDevice/"+tester.ShellName(), func(t *testing.T) { testIntegrationWithNewDevice(t, tester) })
 		t.Run("testHishtoryBackgroundSaving/"+tester.ShellName(), func(t *testing.T) { testHishtoryBackgroundSaving(t, tester) })
 		t.Run("testDisplayTable/"+tester.ShellName(), func(t *testing.T) { testDisplayTable(t, tester) })
@@ -149,24 +157,26 @@ func TestParameterized(t *testing.T) {
 		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
 		t.Run("testHishtoryOffline/"+tester.ShellName(), func(t *testing.T) { testHishtoryOffline(t, tester) })
 		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
-		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester) })
+		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester, Online) })
+		t.Run("testLocalRedaction/offline/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester, Offline) })
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
-		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName()) })
+		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
+		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 	}
-	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish") })
+	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 }
 
-func testIntegration(t *testing.T, tester shellTester) {
+func testIntegration(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	// Set up
 	defer testutils.BackupAndRestore(t)()
 
 	// Run the test
-	testBasicUserFlow(t, tester)
+	testBasicUserFlow(t, tester, onlineStatus)
 }
 
 func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
@@ -174,7 +184,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Run the test
-	userSecret := testBasicUserFlow(t, tester)
+	userSecret := testBasicUserFlow(t, tester, Online)
 
 	// Clear all local state
 	testutils.ResetLocalState(t)
@@ -183,7 +193,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	installHishtory(t, tester, userSecret)
 
 	// Querying should show the history from the previous run
-	out := hishtoryQuery(t, tester, "")
+	out := tester.RunInteractiveShell(t, `hishtory query`)
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
@@ -295,9 +305,28 @@ func installHishtory(t *testing.T, tester shellTester, userSecret string) string
 	return matches[1]
 }
 
-func testBasicUserFlow(t *testing.T, tester shellTester) string {
+func initFromOnlineStatus(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
+	if onlineStatus == Online {
+		return installHishtory(t, tester, "")
+	} else {
+		return installHishtory(t, tester, "--offline")
+	}
+}
+
+func assertOnlineStatus(t *testing.T, onlineStatus OnlineStatus) {
+	config := hctx.GetConf(hctx.MakeContext())
+	if onlineStatus == Online && config.IsOffline == true {
+		t.Fatalf("We're supposed to be online, yet config.IsOffline=%#v (config=%#v)", config.IsOffline, config)
+	}
+	if onlineStatus == Offline && config.IsOffline == false {
+		t.Fatalf("We're supposed to be offline, yet config.IsOffline=%#v (config=%#v)", config.IsOffline, config)
+	}
+}
+
+func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
 	// Test install
-	userSecret := installHishtory(t, tester, "")
+	userSecret := initFromOnlineStatus(t, tester, onlineStatus)
+	assertOnlineStatus(t, onlineStatus)
 
 	// Test the status subcommand
 	out := tester.RunInteractiveShell(t, `hishtory status`)
@@ -319,13 +348,15 @@ func testBasicUserFlow(t *testing.T, tester shellTester) string {
 	}
 
 	// Test the banner
-	os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
-	defer os.Setenv("FORCED_BANNER", "")
-	out = hishtoryQuery(t, tester, "")
-	if !strings.Contains(out, "HELLO_FROM_SERVER\nHostname") {
-		t.Fatalf("hishtory query didn't show the banner message! out=%#v", out)
+	if onlineStatus == Online {
+		os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
+		defer os.Setenv("FORCED_BANNER", "")
+		out = hishtoryQuery(t, tester, "")
+		if !strings.Contains(out, "HELLO_FROM_SERVER\nHostname") {
+			t.Fatalf("hishtory query didn't show the banner message! out=%#v", out)
+		}
+		os.Setenv("FORCED_BANNER", "")
 	}
-	os.Setenv("FORCED_BANNER", "")
 
 	// Test recording commands
 	out, err = tester.RunInteractiveShellRelaxed(t, `ls /a
@@ -1491,12 +1522,11 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	}
 }
 
-func testLocalRedaction(t *testing.T, tester shellTester) {
+func testLocalRedaction(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-
-	// Install hishtory
-	installHishtory(t, tester, "")
+	initFromOnlineStatus(t, tester, onlineStatus)
+	assertOnlineStatus(t, onlineStatus)
 
 	// Record some commands
 	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
@@ -1855,10 +1885,11 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
-func testControlR(t *testing.T, tester shellTester, shellName string) {
+func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	installHishtory(t, tester, "")
+	initFromOnlineStatus(t, tester, onlineStatus)
+	assertOnlineStatus(t, onlineStatus)
 
 	// Disable recording so that all our testing commands don't get recorded
 	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
