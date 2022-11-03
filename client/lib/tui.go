@@ -244,6 +244,10 @@ func calculateColumnWidths(rows []table.Row) []int {
 	return neededColumnWidth
 }
 
+func getTerminalSize() (int, int, error) {
+	return term.GetSize(2)
+}
+
 var bigQueryResults []table.Row
 
 func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
@@ -266,7 +270,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 	maximumColumnWidths := calculateColumnWidths(bigQueryResults)
 
 	// Get the actual terminal width. If we're below this, opportunistically add some padding aiming for the maximum column widths
-	terminalWidth, _, err := term.GetSize(2)
+	terminalWidth, _, err := getTerminalSize()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get terminal size: %v", err)
 	}
@@ -311,6 +315,12 @@ func max(a, b int) int {
 	}
 	return b
 }
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
 
 func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 	config := hctx.GetConf(ctx)
@@ -344,11 +354,17 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 			key.WithHelp("end", "go to end"),
 		),
 	}
+	_, terminalHeight, err := getTerminalSize()
+	if err != nil {
+		return table.Model{}, err
+	}
+	// panic(terminalHeight)
+	tableHeight := min(TABLE_HEIGHT, terminalHeight-10)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(TABLE_HEIGHT),
+		table.WithHeight(tableHeight),
 		table.WithKeyMap(km),
 	)
 
