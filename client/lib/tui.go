@@ -358,8 +358,7 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 	if err != nil {
 		return table.Model{}, err
 	}
-	// panic(terminalHeight)
-	tableHeight := min(TABLE_HEIGHT, terminalHeight-10)
+	tableHeight := min(TABLE_HEIGHT, terminalHeight-12)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),

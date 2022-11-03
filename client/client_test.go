@@ -1808,6 +1808,13 @@ func TestTui(t *testing.T) {
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
 	}
+
+	// Check the output when the size is adjusted
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-SmallTerminal")
 }
 
 func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
@@ -1815,6 +1822,10 @@ func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) 
 }
 
 func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overriddenShellName string, commands []string) string {
+	return captureTerminalOutputWithShellNameAndDimensions(t, tester, overriddenShellName, 200, 50, commands)
+}
+
+func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []string) string {
 	sleepAmount := "0.1"
 	if runtime.GOOS == "linux" {
 		sleepAmount = "0.2"
@@ -1825,7 +1836,7 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	}
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
-	fullCommand += " tmux -u new-session -d -x 200 -y 50 -s foo " + overriddenShellName + "\n"
+	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
 	fullCommand += " sleep 1\n"
 	if overriddenShellName == "bash" {
 		fullCommand += " tmux send -t foo source SPACE ~/.bashrc ENTER\n"
