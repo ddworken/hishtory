@@ -268,8 +268,9 @@ Supported commands:
 		history from another machine. 
 	'hishtory init': Set the secret key to enable syncing shell commands from another 
 		machine with a matching secret key. 
+	'hishtory uninstall': Permanently uninstall hishtory
 	'hishtory help': View this help page
-`) // TODO; Update ^ to document the config-get and config-set options
+		`) // TODO; Update ^ to document the config-get and config-set options
 	default:
 		lib.CheckFatalError(fmt.Errorf("unknown command: %s", os.Args[1]))
 	}

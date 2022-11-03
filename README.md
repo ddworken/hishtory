@@ -90,6 +90,11 @@ If you'd like to disable the control-R integration in your shell, you can do so 
 </details>
 
 
+<details>
+<summary>Uninstalling</summary>
+If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
+</details>
+
 ## Design
 
 The `hishtory` CLI is written in Go. It hooks into the shell in order to track information about all commands that are run. It takes this data and saves it in a local SQLite DB managed via [GORM](https://gorm.io/). This data is then encrypted and sent to your other devices through a backend that essentially functions as a one-to-many queue. When you run `hishtory query`, a SQL query is run to find matching entries in the local SQLite DB. 
