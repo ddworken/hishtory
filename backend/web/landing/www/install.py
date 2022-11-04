@@ -26,12 +26,15 @@ else:
 
 with urllib.request.urlopen(download_url) as response:
     hishtory_binary = response.read()
-if os.path.exists('/tmp/hishtory-client'):
-    os.remove('/tmp/hishtory-client')
-with open('/tmp/hishtory-client', 'wb') as f:
+
+tmpdir = os.environ.get('TMPDIR', '') or '/tmp/'
+tmpFilePath = tmpdir+'hishtory-client'
+if os.path.exists(tmpFilePath):
+    os.remove(tmpFilePath)
+with open(tmpFilePath, 'wb') as f:
     f.write(hishtory_binary)
-os.system('chmod +x /tmp/hishtory-client')
-exitCode = os.system('/tmp/hishtory-client install')
+os.system('chmod +x ' + tmpFilePath)
+exitCode = os.system(tmpFilePath + ' install')
 if exitCode != 0:
-    raise Exception("failed to install downloaded hishtory client via `/tmp/hishtory-client install`!")
+    raise Exception("failed to install downloaded hishtory client via `" + tmpFilePath +" install` (is that directory mounted noexec? Consider setting an alternate directory via the TMPDIR environment variable)!")
 print('Succesfully installed hishtory! Open a new terminal, try running a command, and then running `hishtory query`.')

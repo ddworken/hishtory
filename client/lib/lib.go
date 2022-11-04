@@ -922,6 +922,14 @@ func GetDownloadData() (shared.UpdateInfo, error) {
 	return downloadData, nil
 }
 
+func getTmpClientPath() string {
+	tmpDir := "/tmp/"
+	if os.Getenv("TMPDIR") != "" {
+		tmpDir = os.Getenv("TMPDIR")
+	}
+	return path.Join(tmpDir, "hishtory-client")
+}
+
 func Update(ctx *context.Context) error {
 	// Download the binary
 	downloadData, err := GetDownloadData()
@@ -940,9 +948,9 @@ func Update(ctx *context.Context) error {
 	// Verify the SLSA attestation
 	var slsaError error
 	if runtime.GOOS == "darwin" {
-		slsaError = verifyBinaryMac(ctx, "/tmp/hishtory-client", downloadData)
+		slsaError = verifyBinaryMac(ctx, getTmpClientPath(), downloadData)
 	} else {
-		slsaError = verifyBinary(ctx, "/tmp/hishtory-client", "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
+		slsaError = verifyBinary(ctx, getTmpClientPath(), getTmpClientPath()+".intoto.jsonl", downloadData.Version)
 	}
 	if slsaError != nil {
 		err = handleSlsaFailure(slsaError)
@@ -961,7 +969,7 @@ func Update(ctx *context.Context) error {
 	}
 
 	// Install the new one
-	cmd := exec.Command("chmod", "+x", "/tmp/hishtory-client")
+	cmd := exec.Command("chmod", "+x", getTmpClientPath())
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
@@ -970,13 +978,13 @@ func Update(ctx *context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to chmod +x the update (stdout=%#v, stderr=%#v): %v", stdout.String(), stderr.String(), err)
 	}
-	cmd = exec.Command("/tmp/hishtory-client", "install")
+	cmd = exec.Command(getTmpClientPath(), "install")
 	cmd.Stdout = os.Stdout
 	stderr = bytes.Buffer{}
 	cmd.Stdin = os.Stdin
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to install update (stderr=%#v): %v", stderr.String(), err)
+		return fmt.Errorf("failed to install update (stderr=%#v), is %s in a noexec directory? (if so, set the TMPDIR environment variable): %v", stderr.String(), getTmpClientPath(), err)
 	}
 	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", Version, downloadData.Version)
 	return nil
@@ -1024,7 +1032,7 @@ func verifyBinaryMac(ctx *context.Context, binaryPath string, downloadData share
 	}
 
 	// Step 4: Use SLSA to verify the unsigned binary
-	return verifyBinary(ctx, unsignedBinaryPath, "/tmp/hishtory-client.intoto.jsonl", downloadData.Version)
+	return verifyBinary(ctx, unsignedBinaryPath, getTmpClientPath()+".intoto.jsonl", downloadData.Version)
 }
 
 func assertIdenticalBinaries(bin1Path, bin2Path string) error {
@@ -1089,11 +1097,11 @@ func downloadFiles(updateInfo shared.UpdateInfo) error {
 	} else {
 		return fmt.Errorf("no update info found for GOOS=%s, GOARCH=%s", runtime.GOOS, runtime.GOARCH)
 	}
-	err := downloadFile("/tmp/hishtory-client", clientUrl)
+	err := downloadFile(getTmpClientPath(), clientUrl)
 	if err != nil {
 		return err
 	}
-	err = downloadFile("/tmp/hishtory-client.intoto.jsonl", clientProvenanceUrl)
+	err = downloadFile(getTmpClientPath()+".intoto.jsonl", clientProvenanceUrl)
 	if err != nil {
 		return err
 	}
