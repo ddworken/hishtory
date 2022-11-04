@@ -60,7 +60,7 @@ func main() {
 		data, err := lib.Search(nil, db, "", 10)
 		lib.CheckFatalError(err)
 		if len(data) > 0 {
-			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset? [y/N]")
+			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset?\nNote: This won't clear any imported history entries from your existing shell\n[y/N]")
 			reader := bufio.NewReader(os.Stdin)
 			resp, err := reader.ReadString('\n')
 			lib.CheckFatalError(err)
@@ -70,6 +70,16 @@ func main() {
 			}
 		}
 		lib.CheckFatalError(lib.Setup(os.Args))
+		if os.Getenv("HISHTORY_TEST") == "" {
+			fmt.Println("Importing existing shell history...")
+			ctx := hctx.MakeContext()
+			numImported, err := lib.ImportHistory(ctx, false)
+			lib.CheckFatalError(err)
+			if numImported > 0 {
+				fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
+			}
+		}
+
 	case "install":
 		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_TEST") == "" {
