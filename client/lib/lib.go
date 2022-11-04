@@ -730,16 +730,7 @@ func configureFish(homedir, binaryPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create fish config directory: %v", err)
 	}
-	f, err := os.OpenFile(path.Join(homedir, ".config/fish/config.fish"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to append to ~/.config/fish/config.fish: %v", err)
-	}
-	defer f.Close()
-	_, err = f.WriteString(getFishConfigFragment(homedir))
-	if err != nil {
-		return fmt.Errorf("failed to append to zshrc: %v", err)
-	}
-	return nil
+	return addToShellConfig(path.Join(homedir, ".config/fish/config.fish"), getFishConfigFragment(homedir))
 }
 
 func getFishConfigFragment(homedir string) string {
@@ -785,16 +776,7 @@ func configureZshrc(homedir, binaryPath string) error {
 		return nil
 	}
 	// Add to zshrc
-	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to append to zshrc: %v", err)
-	}
-	defer f.Close()
-	_, err = f.WriteString(getZshConfigFragment(homedir))
-	if err != nil {
-		return fmt.Errorf("failed to append to zshrc: %v", err)
-	}
-	return nil
+	return addToShellConfig(path.Join(homedir, ".zshrc"), getZshConfigFragment(homedir))
 }
 
 func getZshConfigFragment(homedir string) string {
@@ -831,23 +813,40 @@ func configureBashrc(homedir, binaryPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to write config.sh file: %v", err)
 	}
-	// Check if we need to configure the bashrc
-	bashIsConfigured, err := isBashConfigured(homedir)
+	// Check if we need to configure the bashrc and configure it if so
+	bashRcIsConfigured, err := isBashRcConfigured(homedir)
 	if err != nil {
 		return fmt.Errorf("failed to check ~/.bashrc: %v", err)
 	}
-	if bashIsConfigured {
-		return nil
+	if !bashRcIsConfigured {
+		err = addToShellConfig(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
+		if err != nil {
+			return err
+		}
 	}
-	// Add to bashrc
-	f, err := os.OpenFile(path.Join(homedir, ".bashrc"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	// Check if we need to configure the bash_profile and configure it if so
+	bashProfileIsConfigured, err := isBashProfileConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to append to bashrc: %v", err)
+		return fmt.Errorf("failed to check ~/.bash_profile: %v", err)
+	}
+	if !bashProfileIsConfigured {
+		err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func addToShellConfig(shellConfigPath, configFragment string) error {
+	f, err := os.OpenFile(shellConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to append to %s: %v", shellConfigPath, err)
 	}
 	defer f.Close()
-	_, err = f.WriteString(getBashConfigFragment(homedir))
+	_, err = f.WriteString(configFragment)
 	if err != nil {
-		return fmt.Errorf("failed to append to bashrc: %v", err)
+		return fmt.Errorf("failed to append to %s: %v", shellConfigPath, err)
 	}
 	return nil
 }
@@ -856,7 +855,7 @@ func getBashConfigFragment(homedir string) string {
 	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
 }
 
-func isBashConfigured(homedir string) (bool, error) {
+func isBashRcConfigured(homedir string) (bool, error) {
 	_, err := os.Stat(path.Join(homedir, ".bashrc"))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
@@ -864,6 +863,22 @@ func isBashConfigured(homedir string) (bool, error) {
 	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
 	if err != nil {
 		return false, fmt.Errorf("failed to read bashrc: %v", err)
+	}
+	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
+}
+
+func isBashProfileConfigured(homedir string) (bool, error) {
+	if runtime.GOOS != "darwin" {
+		// We only need to configure the bash_profile for macos. See https://github.com/ddworken/hishtory/issues/14
+		return true, nil
+	}
+	_, err := os.Stat(path.Join(homedir, ".bash_profile"))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bash_profile"))
+	if err != nil {
+		return false, fmt.Errorf("failed to read bash_profile: %v", err)
 	}
 	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
 }

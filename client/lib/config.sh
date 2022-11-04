@@ -1,5 +1,10 @@
 # This script should be sourced inside of .bashrc to integrate bash with hishtory
 
+# Include guard. This file is sourced in multiple places, but we want it to only execute once. 
+# This trick is from https://stackoverflow.com/questions/7518584/is-there-any-mechanism-in-shell-script-alike-include-guard-in-c
+if [ -n "$__hishtory_bash_config_sourced" ]; then return; fi
+__hishtory_bash_config_sourced=`date`
+
 # Implementation of running before/after every command based on https://jichu4n.com/posts/debug-trap-and-prompt_command-in-bash/
 function __hishtory_precommand() {
   if [ -z "$HISHTORY_AT_PROMPT" ]; then
