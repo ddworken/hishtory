@@ -533,6 +533,11 @@ func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
+	extraEntries, err = parseFishHistory(homedir)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse fish history: %v", err)
+	}
+	historyEntries = append(historyEntries, extraEntries...)
 	if shouldReadStdin {
 		extraEntries, err = readStdin()
 		if err != nil {
@@ -550,7 +555,7 @@ func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
 		return 0, err
 	}
 	for _, cmd := range historyEntries {
-		if isZshWeirdness(cmd) || isBashWeirdness(cmd) {
+		if isZshWeirdness(cmd) || isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
 			// Skip it
 			continue
 		}
@@ -596,6 +601,21 @@ func readStdin() ([]string, error) {
 		s = strings.TrimSpace(s)
 		if s != "" {
 			ret = append(ret, s)
+		}
+	}
+	return ret, nil
+}
+
+func parseFishHistory(homedir string) ([]string, error) {
+	lines, err := readFileToArray(filepath.Join(homedir, ".local/share/fish/fish_history"))
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]string, 0)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "- cmd: ") {
+			ret = append(ret, strings.SplitN(line, ": ", 2)[1])
 		}
 	}
 	return ret, nil

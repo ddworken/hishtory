@@ -79,7 +79,6 @@ func main() {
 				fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
 			}
 		}
-
 	case "install":
 		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_TEST") == "" {

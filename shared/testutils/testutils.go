@@ -62,6 +62,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 		path.Join(homedir, data.HISHTORY_PATH, "config.fish"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
+		path.Join(homedir, ".local/share/fish/fish_history"),
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
@@ -79,6 +80,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	configureZshrc(homedir)
 	touchFile(path.Join(homedir, ".bash_history"))
 	touchFile(path.Join(homedir, ".zsh_history"))
+	touchFile(path.Join(homedir, ".local/share/fish/fish_history"))
 	return func() {
 		Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH), os.ModePerm))
 		for _, file := range renameFiles {
