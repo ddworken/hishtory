@@ -71,7 +71,6 @@ hishtory config-set displayed-columns CWD Command
 
 </details>
 
-
 <details>
 <summary>Custom Columns</summary>
 
@@ -81,12 +80,20 @@ You can create custom column definitions that are populated from arbitrary comma
 hishtory config-add custom-column git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'
 hishtory config-add displayed-columns git_remote
 ```
-
 </details>
 
 <details>
 <summary>Disabling Control-R integration</summary>
 If you'd like to disable the control-R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
+</details>
+
+<details>
+<summary>Filtering duplicate entries</summary>
+By default, hishtory query will show all results even if this includes duplicate history entries. This helps you keep track of how many times you've run a command and in what contexts. If you'd rather disable this so that hiSHtory won't show duplicate entries, you can run:
+
+```
+hishtory config-set filter-duplicate-commands true
+```
 </details>
 
 <details>

@@ -135,6 +135,8 @@ func main() {
 		switch key {
 		case "enable-control-r":
 			fmt.Printf("%v", config.ControlRSearchEnabled)
+		case "filter-duplicate-commands":
+			fmt.Printf("%v", config.FilterDuplicateCommands)
 		case "displayed-columns":
 			for _, col := range config.DisplayedColumns {
 				if strings.Contains(col, " ") {
@@ -161,6 +163,13 @@ func main() {
 				log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
 			}
 			config.ControlRSearchEnabled = (val == "true")
+			lib.CheckFatalError(hctx.SetConfig(config))
+		case "filter-duplicate-commands":
+			val := os.Args[3]
+			if val != "true" && val != "false" {
+				log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+			}
+			config.FilterDuplicateCommands = (val == "true")
 			lib.CheckFatalError(hctx.SetConfig(config))
 		case "displayed-columns":
 			vals := os.Args[3:]
@@ -313,9 +322,10 @@ func query(ctx *context.Context, query string) {
 		}
 	}
 	lib.CheckFatalError(displayBannerIfSet(ctx))
-	data, err := lib.Search(ctx, db, query, 25)
+	numResults := 25
+	data, err := lib.Search(ctx, db, query, numResults*5)
 	lib.CheckFatalError(err)
-	lib.CheckFatalError(lib.DisplayResults(ctx, data))
+	lib.CheckFatalError(lib.DisplayResults(ctx, data, numResults))
 }
 
 func displayBannerIfSet(ctx *context.Context) error {

@@ -461,7 +461,7 @@ func stringArrayToAnyArray(arr []string) []any {
 	return ret
 }
 
-func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
+func DisplayResults(ctx *context.Context, results []*data.HistoryEntry, numResults int) error {
 	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
 
@@ -472,12 +472,22 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry) error {
 	tbl := table.New(columns...)
 	tbl.WithHeaderFormatter(headerFmt)
 
-	for _, result := range results {
-		row, err := buildTableRow(ctx, config.DisplayedColumns, *result)
+	lastCommand := ""
+	numRows := 0
+	for _, entry := range results {
+		if entry != nil && entry.Command == lastCommand && config.FilterDuplicateCommands {
+			continue
+		}
+		row, err := buildTableRow(ctx, config.DisplayedColumns, *entry)
 		if err != nil {
 			return err
 		}
 		tbl.AddRow(stringArrayToAnyArray(row)...)
+		numRows += 1
+		lastCommand = entry.Command
+		if numRows >= numResults {
+			break
+		}
 	}
 
 	tbl.Print()

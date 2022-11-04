@@ -20,7 +20,7 @@ import (
 )
 
 const TABLE_HEIGHT = 20
-const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 3
+const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
 
 var selectedRow string = ""
 
@@ -212,20 +212,26 @@ func (m model) View() string {
 
 func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, int, error) {
 	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
 	data, err := Search(ctx, db, query, numEntries)
 	if err != nil {
 		return nil, 0, err
 	}
 	var rows []table.Row
+	lastCommand := ""
 	for i := 0; i < numEntries; i++ {
 		if i < len(data) {
 			entry := data[i]
+			if entry.Command == lastCommand && config.FilterDuplicateCommands {
+				continue
+			}
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", " ") // TODO: handle multi-line commands better here
 			row, err := buildTableRow(ctx, columnNames, *entry)
 			if err != nil {
 				return nil, 0, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
 			}
 			rows = append(rows, row)
+			lastCommand = entry.Command
 		} else {
 			rows = append(rows, table.Row{})
 		}

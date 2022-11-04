@@ -2069,6 +2069,38 @@ echo bar`)
 	}
 }
 
+func TestRemoveDuplicateRows(t *testing.T) {
+	// Setup
+	tester := bashTester{}
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Record a few commands and check that they get recorded and all are displayed in a table
+	tester.RunInteractiveShell(t, `echo foo
+echo foo
+echo baz
+echo baz
+echo foo`)
+	out := tester.RunInteractiveShell(t, `hishtory export -pipefail`)
+	compareGoldens(t, out, "testRemoveDuplicateRows-export")
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' Command`)
+	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
+	compareGoldens(t, out, "testRemoveDuplicateRows-query")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "testRemoveDuplicateRows-tquery")
+
+	// And change the config to filter out duplicate rows
+	tester.RunInteractiveShell(t, `hishtory config-set filter-duplicate-commands true`)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail`)
+	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-export")
+	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
+	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
+}
+
 type deviceSet struct {
 	deviceMap     *map[device]deviceOp
 	currentDevice *device

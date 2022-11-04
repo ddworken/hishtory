@@ -163,6 +163,8 @@ type ClientConfig struct {
 	CustomColumns []CustomColumnDefinition `json:"custom_columns"`
 	// Whether this is an offline instance of hishtory with no syncing
 	IsOffline bool `json:"is_offline"`
+	// Whether duplicate commands should be displayed
+	FilterDuplicateCommands bool `json:"filter_duplicate_commands"`
 }
 
 type CustomColumnDefinition struct {

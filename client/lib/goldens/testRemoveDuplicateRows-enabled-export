@@ -1,0 +1,8 @@
+echo foo
+echo foo
+echo baz
+echo baz
+echo foo
+hishtory config-set displayed-columns 'Exit Code' Command
+source /Users/david/.bashrc
+hishtory config-set filter-duplicate-commands true

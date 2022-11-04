@@ -1,0 +1,7 @@
+Exit Code  Command                                                    
+0          hishtory config-set filter-duplicate-commands true         
+0          source /Users/david/.bashrc                                
+0          hishtory config-set displayed-columns 'Exit Code' Command  
+0          echo foo                                                   
+0          echo baz                                                   
+0          echo foo                                                   
