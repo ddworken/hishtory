@@ -888,10 +888,6 @@ func isBashRcConfigured(homedir string) (bool, error) {
 }
 
 func isBashProfileConfigured(homedir string) (bool, error) {
-	if runtime.GOOS != "darwin" {
-		// We only need to configure the bash_profile for macos. See https://github.com/ddworken/hishtory/issues/14
-		return true, nil
-	}
 	_, err := os.Stat(path.Join(homedir, ".bash_profile"))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
