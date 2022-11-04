@@ -1477,6 +1477,7 @@ func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Record some commands before installing hishtory
+	captureTerminalOutputWithShellName(t, tester, "fish", []string{"echo SPACE fishcommand ENTER"})
 	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
 	randomCmd := fmt.Sprintf(`echo %v-foo
 echo %v-bar`, randomCmdUuid, randomCmdUuid)
@@ -1509,7 +1510,7 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 
 	// Check that the previously recorded commands are in hishtory
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\n/tmp/client install \nhishtory export %s\nstdincommand\necho stdincommand | hishtory import\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
+	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\n/tmp/client install \nhishtory export %s\necho fishcommand\nstdincommand\necho stdincommand | hishtory import\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
