@@ -2071,7 +2071,7 @@ echo bar`)
 
 func TestRemoveDuplicateRows(t *testing.T) {
 	// Setup
-	tester := bashTester{}
+	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
