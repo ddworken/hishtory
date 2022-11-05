@@ -9,5 +9,4 @@ task:
     - pkg install -y bash zsh fish curl go tmux 
     - sudo hostname ghaction-runner-hostname  #  Set a consistent hostname so we can run tests that depend on it
   test_script:
-    - echo $HOME
     - make test
