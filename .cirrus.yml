@@ -2,7 +2,11 @@ freebsd_instance:
   image: freebsd-12-2-release-amd64
 task:
   name: freebsd-test
+  env:
+    TZ: 'America/Los_Angeles'  # Force the time zone so that test output is consistent
+    GITHUB_ACTION: 'true'
   setup_script:
     - pkg install -y bash zsh fish curl go tmux 
+    - sudo hostname ghaction-runner-hostname  #  Set a consistent hostname so we can run tests that depend on it
   test_script:
     - make test
