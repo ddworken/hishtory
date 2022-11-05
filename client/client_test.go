@@ -436,7 +436,7 @@ echo thisisrecorded`)
 	}
 
 	// Add a complex command
-	complexCommand := "echo hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\""
+	complexCommand := "echo hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\" # mycommand"
 	_, _ = tester.RunInteractiveShellRelaxed(t, complexCommand)
 
 	// Query for it
