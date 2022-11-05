@@ -1,5 +1,4 @@
 bash-5.2$ source /Users/runner/.bashrc
-hishtory tquery -pipefail
 bash-5.2$ hishtory tquery -pipefail
 
 

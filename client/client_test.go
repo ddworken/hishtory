@@ -388,7 +388,7 @@ echo thisisrecorded`)
 	// Test the actual table output
 	hostnameMatcher := `\S+`
 	tableDividerMatcher := `\s+`
-	pathMatcher := `~?/?[a-zA-Z_0-9/-]+`
+	pathMatcher := `~?/[a-zA-Z_0-9/-]+`
 	datetimeMatcher := `[a-zA-Z]{3}\s\d{1,2}\s\d{4}\s[0-9:]+\s([A-Z]{3}|[+-]\d{4})`
 	runtimeMatcher := `[0-9.ms]+`
 	exitCodeMatcher := `0`
@@ -845,7 +845,7 @@ echo hello2
 }
 
 func getPidofCommand() string {
-	if runtime.GOOS == "darwin" || runtime.GOOS == "freebsd" {
+	if runtime.GOOS == "darwin" {
 		// MacOS doesn't have pidof by default
 		return "pgrep"
 	}
@@ -919,9 +919,6 @@ func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 }
 
 func testTableDisplayCwd(t *testing.T, tester shellTester) {
-	if runtime.GOOS == "freebsd" {
-		t.Skip()
-	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -1027,9 +1024,6 @@ echo foo`)
 }
 
 func testDisplayTable(t *testing.T, tester shellTester) {
-	if runtime.GOOS == "freebsd" {
-		t.Skip()
-	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -1744,9 +1738,6 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 }
 
 func TestFish(t *testing.T) {
-	if runtime.GOOS == "freebsd" {
-		t.Skip()
-	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
@@ -2013,9 +2004,6 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 }
 
 func testCustomColumns(t *testing.T, tester shellTester) {
-	if runtime.GOOS == "freebsd" {
-		t.Skip()
-	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
