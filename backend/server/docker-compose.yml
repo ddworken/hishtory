@@ -1,7 +1,7 @@
 # A docker-compose file to host a hiSHtory backend. To use:
 #   1. Update TODO_YOUR_POSTGRES_PASSWORD_HERE
 #   2. `docker compose -f backend/server/docker-compose.yml build`
-#   3.  `docker compose -f backend/server/docker-compose.yml up`
+#   3. `docker compose -f backend/server/docker-compose.yml up`
 #   4. Point your hiSHtory client at the server by putting `export HISHTORY_SERVER=http://1.2.3.4` in your shellrc
 #   5. Run `hishtory init` to initialize hiSHtory with the local server
 #   6. [Optional, but recommended] Add a TLS proxy to enable https
