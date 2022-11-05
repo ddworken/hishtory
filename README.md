@@ -123,7 +123,12 @@ The `hishtory` CLI is written in Go. It hooks into the shell in order to track i
 
 ### Syncing Design 
 
-See [hiSHtory: Cross-device Encrypted Syncing Design](https://blog.daviddworken.com/posts/hishtory-explained/) to learn how syncing works. 
+See [hiSHtory: Cross-device Encrypted Syncing Design](https://blog.daviddworken.com/posts/hishtory-explained/) to learn how syncing works. The tl;dr is that everything magically works so that:
+
+* The backend can't read your history. 
+* Your history is queryable from all your devices. 
+* You can delete items from your history as needed. 
+* If you go offline, you'll have an offline copy of your history. And once you come back online, syncing will transparently resume.
 
 ## Security
 
