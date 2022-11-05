@@ -1,3 +1,4 @@
 web/landing/www/binaries/hishtory-linux
 hishtory
 backend/server/server
+postgres-data/
