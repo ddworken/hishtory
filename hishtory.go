@@ -156,8 +156,9 @@ func main() {
 			}
 			fmt.Print("\n")
 		case "custom-columns":
-			// TODO: better formatting for this
-			fmt.Printf("%#v", config.CustomColumns)
+			for _, cc := range config.CustomColumns {
+				fmt.Println(cc.ColumnName + ":   " + cc.ColumnCommand)
+			}
 		default:
 			log.Fatalf("Unrecognized config key: %s", key)
 		}
