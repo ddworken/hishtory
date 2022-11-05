@@ -1866,6 +1866,9 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 		// Fish is considerably slower so this is sadly necessary
 		sleepAmount = "0.5"
 	}
+	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" {
+		sleepAmount = "0.5"
+	}
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
 	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
