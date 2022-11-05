@@ -29,7 +29,7 @@ jobs:
           sudo apt-get install -y zsh fish || true
           brew install fish tmux bash || true
           export TZ='America/Los_Angeles' # Force the time zone so that test output is consistent
-          sudo chmod 0755 -R /usr/share/zsh/ || true  # Work around a weird bug where zsh on ubuntu actiosn gives that diretory 0777 which makes zsh refuse to start
+          sudo chmod 0755 -R /usr/share/zsh/ || true  # Work around a weird bug where zsh on ubuntu actions gives that diretory 0777 which makes zsh refuse to start
           sudo hostname ghaction-runner-hostname || true # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname || true
           make test
