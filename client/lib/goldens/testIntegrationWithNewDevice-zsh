@@ -13,7 +13,7 @@ set -eo pipefail
 hishtory query
 set -eo pipefail
 hishtory query foo
-echo hello | grep complex | sed s/h/i/g; echo baz && echo "fo 'o"
+echo hello | grep complex | sed s/h/i/g; echo baz && echo "fo 'o" # mycommand
 set -eo pipefail
 hishtory query complex
 set -eo pipefail
