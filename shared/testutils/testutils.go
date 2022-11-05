@@ -165,7 +165,7 @@ func buildServer() {
 		if err != nil {
 			panic(fmt.Sprintf("failed to getwd: %v", err))
 		}
-		if strings.HasSuffix(wd, "/hishtory") {
+		if strings.HasSuffix(wd, "/hishtory") || strings.HasSuffix(wd, "/cirrus-ci-build") {
 			break
 		}
 		err = os.Chdir("../")
