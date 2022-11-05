@@ -6,8 +6,9 @@ task:
     TZ: 'America/Los_Angeles'  # Force the time zone so that test output is consistent
     GITHUB_ACTION: 'true'
   setup_script:
+    - echo $USER
     - pkg install -y bash zsh fish curl go tmux 
     - sudo hostname ghaction-runner-hostname  #  Set a consistent hostname so we can run tests that depend on it
   test_script:
-    - echo $USER
+    - echo $USER  
     - make test
