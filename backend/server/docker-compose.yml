@@ -1,0 +1,34 @@
+# A docker-compose file to host a hiSHtory backend. To use:
+#   1. Update TODO_YOUR_POSTGRES_PASSWORD_HERE
+#   2. `docker compose up`
+#   3. Point your hiSHtory client at the server by putting `export HISHTORY_SERVER=http://1.2.3.4` in your shellrc
+#   4. [Optional, but recommended] Add a TLS proxy to enable https
+networks:
+  hishtory:
+    driver: bridge
+services:
+  postgres:
+    image: postgres
+    restart: unless-stopped
+    networks:
+      - hishtory
+    environment:
+      POSTGRES_PASSWORD: TODO_YOUR_POSTGRES_PASSWORD_HERE
+      POSTGRES_DB: hishtory
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+  hishtory:
+    image: hishtory
+    depends_on:
+      - postgres
+    networks:
+      - hishtory
+    build:
+      context: ./
+      dockerfile: ./backend/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      POSTGRESQL_PASSWORD: TODO_YOUR_POSTGRES_PASSWORD_HERE
+    ports:
+      - 80:8080
