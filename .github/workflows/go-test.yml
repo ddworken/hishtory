@@ -23,6 +23,7 @@ jobs:
         go-version: 1.18
     # - uses: mxschmitt/action-tmate@v3
     - name: Go test
+      shell: bash
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           sudo apt-get update || true 
