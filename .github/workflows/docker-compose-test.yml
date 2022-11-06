@@ -31,4 +31,4 @@ jobs:
           ./hishtory install
           source ~/.bashrc
           ls 
-          hishtory query 
+          ./hishtory query 
