@@ -1,8 +1,7 @@
-hishtory.dev:80 {
+hishtory.dev:80, localhost:80 {
     root /srv/landing
     gzip
     ext .html
     log stdout
     tls off
-    # redir / https://github.com/ddworken/hishtory
 }
