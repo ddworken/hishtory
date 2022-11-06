@@ -182,7 +182,11 @@ func buildServer() {
 	}
 	version, err := os.ReadFile("VERSION")
 	if err != nil {
-		panic(fmt.Sprintf("failed to read VERSION file: %v", err))
+		if runtime.GOOS == "windows" {
+			version = []byte("174")
+		} else {
+			panic(fmt.Sprintf("failed to read VERSION file: %v", err))
+		}
 	}
 	cmd := exec.Command("go", "build", "-o", "/tmp/server", "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
 	var stdout bytes.Buffer
