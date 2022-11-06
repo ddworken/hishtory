@@ -25,7 +25,7 @@ jobs:
           sudo chmod 0755 -R /usr/share/zsh/ || true  # Work around a weird bug where zsh on ubuntu actions gives that diretory 0777 which makes zsh refuse to start
           sudo hostname ghaction-runner-hostname  # Set a consistent hostname so we can run tests that depend on it
           docker compose -f backend/server/docker-compose.yml build
-          docker compose -f backend/server/docker-compose.yml up
+          docker compose -f backend/server/docker-compose.yml up -d 
           export HISHTORY_SERVER=http://localhost
           go build
           ./hishtory install
