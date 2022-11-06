@@ -415,7 +415,7 @@ func saveHistoryEntry(ctx *context.Context) {
 		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 		if err != nil {
 			if lib.IsOfflineError(err) {
-				hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because the device is offline!")
+				hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
 				if !config.HaveMissedUploads {
 					config.HaveMissedUploads = true
 					config.MissedUploadTimestamp = time.Now().Unix()
@@ -433,7 +433,7 @@ func saveHistoryEntry(ctx *context.Context) {
 		if lib.IsOfflineError(err) {
 			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
 			dumpRequests = []*shared.DumpRequest{}
-			hctx.GetLogger().Printf("Failed to check for dump requests because the device is offline!")
+			hctx.GetLogger().Printf("Failed to check for dump requests because we failed to connect to the remote server!")
 		} else {
 			lib.CheckFatalError(err)
 		}
