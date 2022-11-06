@@ -183,6 +183,7 @@ func buildServer() {
 	version, err := os.ReadFile("VERSION")
 	if err != nil {
 		if runtime.GOOS == "windows" {
+			// TODO: Figure out why it can't read the VERSION file
 			version = []byte("174")
 		} else {
 			panic(fmt.Sprintf("failed to read VERSION file: %v", err))
