@@ -153,7 +153,6 @@ func TestParameterized(t *testing.T) {
 		t.Run("testInstallViaPythonScript/"+tester.ShellName(), func(t *testing.T) { testInstallViaPythonScript(t, tester) })
 		t.Run("testExportWithQuery/"+tester.ShellName(), func(t *testing.T) { testExportWithQuery(t, tester) })
 		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
-		t.Run("testStripBashTimePrefix/"+tester.ShellName(), func(t *testing.T) { testStripBashTimePrefix(t, tester) })
 		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
 		t.Run("testHishtoryOffline/"+tester.ShellName(), func(t *testing.T) { testHishtoryOffline(t, tester) })
 		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
@@ -1318,13 +1317,10 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 	}
 }
 
-func testStripBashTimePrefix(t *testing.T, tester shellTester) {
-	if tester.ShellName() != "bash" {
-		t.Skip()
-	}
-
+func TestStripBashTimePrefix(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
+	tester := bashTester{}
 	installHishtory(t, tester, "")
 
 	// Add a HISTTIMEFORMAT to the bashrc
@@ -1892,7 +1888,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
 	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" {
-		t.Skip() // See the mysterious failure here: https://github.com/ddworken/hishtory/actions/runs/3390515329/jobs/5634750567
+		t.Skip() // TODO: See the mysterious failure here: https://github.com/ddworken/hishtory/actions/runs/3390515329/jobs/5634750567
 	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
