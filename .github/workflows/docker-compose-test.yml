@@ -29,4 +29,5 @@ jobs:
           export HISHTORY_SERVER=http://localhost
           go build
           ./hishtory install
-          
+          ls 
+          hishtory query 
