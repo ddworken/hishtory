@@ -162,22 +162,20 @@ func checkError(err error) {
 }
 
 func buildServer() {
-	if runtime.GOOS != "windows" {
-		for {
-			wd, err := os.Getwd()
-			if err != nil {
-				panic(fmt.Sprintf("failed to getwd: %v", err))
-			}
-			if strings.HasSuffix(wd, "/hishtory") {
-				break
-			}
-			err = os.Chdir("../")
-			if err != nil {
-				panic(fmt.Sprintf("failed to chdir: %v", err))
-			}
-			if wd == "/" {
-				panic("failed to cd into hishtory dir!")
-			}
+	for i := 0; i < 100; i++ {
+		wd, err := os.Getwd()
+		if err != nil {
+			panic(fmt.Sprintf("failed to getwd: %v", err))
+		}
+		if strings.HasSuffix(wd, "hishtory") {
+			break
+		}
+		err = os.Chdir("../")
+		if err != nil {
+			panic(fmt.Sprintf("failed to chdir: %v", err))
+		}
+		if wd == "/" {
+			panic("failed to cd into hishtory dir!")
 		}
 	}
 	version, err := os.ReadFile("VERSION")
