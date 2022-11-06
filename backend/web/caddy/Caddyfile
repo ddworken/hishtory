@@ -4,5 +4,5 @@ hishtory.dev:80 {
     ext .html
     log stdout
     tls off
-    redir / https://github.com/ddworken/hishtory
+    # redir / https://github.com/ddworken/hishtory
 }
