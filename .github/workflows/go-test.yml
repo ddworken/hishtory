@@ -21,7 +21,6 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    # - uses: mxschmitt/action-tmate@v3
     - name: Go test
       shell: bash
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
@@ -34,3 +33,8 @@ jobs:
           sudo hostname ghaction-runner-hostname || true # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname || true
           make test
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
