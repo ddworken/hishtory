@@ -161,7 +161,7 @@ func checkError(err error) {
 	}
 }
 
-func buildServer() {
+func buildServer() string {
 	for i := 0; i < 100; i++ {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -187,7 +187,10 @@ func buildServer() {
 			panic(fmt.Sprintf("failed to read VERSION file: %v", err))
 		}
 	}
-	cmd := exec.Command("go", "build", "-o", "/tmp/server", "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
+	f, err := os.CreateTemp("", "server")
+	checkError(err)
+	fn := f.Name()
+	cmd := exec.Command("go", "build", "-o", fn, "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
@@ -201,12 +204,13 @@ func buildServer() {
 		wd, _ := os.Getwd()
 		panic(fmt.Sprintf("failed to build server: %v, wd=%#v, stderr=%#v, stdout=%#v", err, wd, stderr.String(), stdout.String()))
 	}
+	return fn
 }
 
 func RunTestServer() func() {
 	os.Setenv("HISHTORY_SERVER", "http://localhost:8080")
-	buildServer()
-	cmd := exec.Command("/tmp/server")
+	fn := buildServer()
+	cmd := exec.Command(fn)
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
