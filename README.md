@@ -68,7 +68,6 @@ You can customize the columns that are displayed via `hishtory config-set displa
 ```
 hishtory config-set displayed-columns CWD Command
 ```
-
 </details>
 
 <details>
@@ -108,6 +107,11 @@ Download the latest binary from [Github Releases](https://github.com/ddworken/hi
 By default, hiSHtory relies on a backend for syncing. All data is end-to-end encrypted, so the backend can't view your history. 
 
 But if you'd like to self-host the hishtory backend, you can! The backend is a simple go binary in `backend/server/server.go` that uses postgres to store data. Check out the [`docker-compose.yml`](https://github.com/ddworken/hishtory/blob/master/backend/server/docker-compose.yml) file for an example config to start a hiSHtory server and how to configure it. 
+</details>
+
+<details>
+<summary>Importing existing history</summary>
+hiSHtory imports your existing shell history by default. If for some reason this didn't work (e.g. you had your shell history in a non-standard file), you can import it by piping it into `hishtory import` (e.g. `cat ~/.my_history | hishtory import`).
 </details>
 
 <details>
