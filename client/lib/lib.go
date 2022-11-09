@@ -622,7 +622,11 @@ func parseFishHistory(homedir string) ([]string, error) {
 }
 
 func parseBashHistory(homedir string) ([]string, error) {
-	return readFileToArray(filepath.Join(homedir, ".bash_history"))
+	histfile := os.Getenv("HISTFILE")
+	if histfile == "" {
+		histfile = filepath.Join(homedir, ".bash_history")
+	}
+	return readFileToArray(histfile)
 }
 
 func readFileToArray(path string) ([]string, error) {
