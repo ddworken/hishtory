@@ -407,6 +407,12 @@ func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 		p.Send(doneDownloadingMsg{})
 	}()
 	go func() {
+		err := ProcessDeletionRequests(ctx)
+		if err != nil {
+			p.Send(err)
+		}
+	}()
+	go func() {
 		banner, err := GetBanner(ctx, gitCommit)
 		if err != nil {
 			if IsOfflineError(err) {
