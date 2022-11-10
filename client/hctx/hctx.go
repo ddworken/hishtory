@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"sync"
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -21,13 +22,11 @@ import (
 )
 
 var (
-	hishtoryLogger *log.Logger
+	hishtoryLogger *logrus.Logger
 	getLoggerOnce  sync.Once
 )
 
-// TODO: Can we auto-rotate the log file?
-
-func GetLogger() *log.Logger {
+func GetLogger() *logrus.Logger {
 	getLoggerOnce.Do(func() {
 		homedir, err := os.UserHomeDir()
 		if err != nil {
@@ -37,12 +36,22 @@ func GetLogger() *log.Logger {
 		if err != nil {
 			panic(err)
 		}
-		f, err := os.OpenFile(path.Join(homedir, data.HISHTORY_PATH, "hishtory.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o660)
-		if err != nil {
-			panic(fmt.Errorf("failed to open hishtory.log: %v", err))
+
+		lumberjackLogger := &lumberjack.Logger{
+			Filename:   path.Join(homedir, data.HISHTORY_PATH, "hishtory.log"),
+			MaxSize:    1, // MB
+			MaxBackups: 10,
+			MaxAge:     30, // days
 		}
-		// Purposefully not closing the file. Yes, this is a dangling file handle. But hishtory is short lived so this is okay.
-		hishtoryLogger = log.New(f, "\n", log.LstdFlags|log.Lshortfile)
+
+		logFormatter := new(logrus.TextFormatter)
+		logFormatter.TimestampFormat = time.RFC3339
+		logFormatter.FullTimestamp = true
+
+		hishtoryLogger = logrus.New()
+		hishtoryLogger.SetFormatter(logFormatter)
+		hishtoryLogger.SetLevel(logrus.InfoLevel)
+		hishtoryLogger.SetOutput(lumberjackLogger)
 	})
 	return hishtoryLogger
 }
@@ -68,9 +77,8 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	hishtoryLogger := GetLogger()
 	newLogger := logger.New(
-		hishtoryLogger,
+		GetLogger(),
 		logger.Config{
 			SlowThreshold:             100 * time.Millisecond,
 			LogLevel:                  logger.Warn,

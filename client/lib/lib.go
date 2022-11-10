@@ -69,7 +69,7 @@ func getCwd(ctx *context.Context) (string, string, error) {
 
 func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
-		hctx.GetLogger().Printf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
+		hctx.GetLogger().Warnf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
 		return nil, nil
 	}
 	shell := args[2]
@@ -179,7 +179,7 @@ func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
 		err = cmd.Wait()
 		if err != nil {
 			// Log a warning, but don't crash. This way commands can exit with a different status and still work.
-			hctx.GetLogger().Printf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
+			hctx.GetLogger().Warnf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
 		}
 		ccv := data.CustomColumn{
 			Name: cc.ColumnName,
@@ -1100,9 +1100,8 @@ func assertIdenticalBinaries(bin1Path, bin2Path string) error {
 			differences = append(differences, fmt.Sprintf("diff at index %d: %s[%d]=%x, %s[%d]=%x", i, bin1Path, i, b1, bin2Path, i, b2))
 		}
 	}
-	logger := hctx.GetLogger()
 	for _, d := range differences {
-		logger.Printf("comparing binaries: %#v\n", d)
+		hctx.GetLogger().Infof("comparing binaries: %#v\n", d)
 	}
 	if len(differences) > 5 {
 		return fmt.Errorf("found %d differences in the binary", len(differences))
@@ -1218,7 +1217,7 @@ func ApiGet(path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
 	}
 	duration := time.Since(start)
-	hctx.GetLogger().Printf("ApiGet(%#v): %s\n", path, duration.String())
+	hctx.GetLogger().Infof("ApiGet(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 
@@ -1246,7 +1245,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
 	}
 	duration := time.Since(start)
-	hctx.GetLogger().Printf("ApiPost(%#v): %s\n", path, duration.String())
+	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", path, duration.String())
 	return respBody, nil
 }
 

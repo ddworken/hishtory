@@ -368,7 +368,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
 	}
-	hctx.GetLogger().Printf("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
+	hctx.GetLogger().Infof("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
 	jsonValue, err := lib.EncryptAndMarshal(config, entries)
 	if err != nil {
 		return err
@@ -392,13 +392,13 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 func saveHistoryEntry(ctx *context.Context) {
 	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
-		hctx.GetLogger().Printf("Skipping saving a history entry because hishtory is disabled\n")
+		hctx.GetLogger().Infof("Skipping saving a history entry because hishtory is disabled\n")
 		return
 	}
 	entry, err := lib.BuildHistoryEntry(ctx, os.Args)
 	lib.CheckFatalError(err)
 	if entry == nil {
-		hctx.GetLogger().Printf("Skipping saving a history entry because we did not build a history entry (was the command prefixed with a space and/or empty?)\n")
+		hctx.GetLogger().Infof("Skipping saving a history entry because we did not build a history entry (was the command prefixed with a space and/or empty?)\n")
 		return
 	}
 
@@ -414,7 +414,7 @@ func saveHistoryEntry(ctx *context.Context) {
 		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 		if err != nil {
 			if lib.IsOfflineError(err) {
-				hctx.GetLogger().Printf("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
+				hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
 				if !config.HaveMissedUploads {
 					config.HaveMissedUploads = true
 					config.MissedUploadTimestamp = time.Now().Unix()
@@ -432,7 +432,7 @@ func saveHistoryEntry(ctx *context.Context) {
 		if lib.IsOfflineError(err) {
 			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
 			dumpRequests = []*shared.DumpRequest{}
-			hctx.GetLogger().Printf("Failed to check for dump requests because we failed to connect to the remote server!")
+			hctx.GetLogger().Infof("Failed to check for dump requests because we failed to connect to the remote server!")
 		} else {
 			lib.CheckFatalError(err)
 		}

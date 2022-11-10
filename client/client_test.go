@@ -1882,7 +1882,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 	fullCommand += " sleep 0.5\n"
 	fullCommand += " tmux capture-pane -p\n"
 	fullCommand += " tmux kill-session -t foo\n"
-	hctx.GetLogger().Printf("Running tmux command: " + fullCommand)
+	hctx.GetLogger().Infof("Running tmux command: " + fullCommand)
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
@@ -2126,7 +2126,6 @@ type deviceOp struct {
 }
 
 func createDevice(t *testing.T, tester shellTester, devices *deviceSet, key, deviceId string) {
-	hctx.GetLogger().Printf("devices=%#v\n", devices)
 	d := device{key, deviceId}
 	_, ok := (*devices.deviceMap)[d]
 	if ok {
