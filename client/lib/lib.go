@@ -475,7 +475,7 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry, numResul
 	lastCommand := ""
 	numRows := 0
 	for _, entry := range results {
-		if entry != nil && entry.Command == lastCommand && config.FilterDuplicateCommands {
+		if entry != nil && strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
 			continue
 		}
 		row, err := buildTableRow(ctx, config.DisplayedColumns, *entry)

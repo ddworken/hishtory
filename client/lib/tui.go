@@ -222,7 +222,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 	for i := 0; i < numEntries; i++ {
 		if i < len(data) {
 			entry := data[i]
-			if entry.Command == lastCommand && config.FilterDuplicateCommands {
+			if strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
 				continue
 			}
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", " ") // TODO: handle multi-line commands better here
