@@ -44,7 +44,7 @@ Both support the same query format, see the below annotated queries:
 | `service before:2022-02-01` | Find all commands containing `service` run before February 1st 2022 |
 | `service after:2022-02-01` | Find all commands containing `service` run after February 1st 2022 |
 
-For true power users, you can even query in SQLite via `sqlite3 ~/.hishtory/.hishtory.db`. 
+For true power users, you can even query in SQLite via `sqlite3 -cmd 'PRAGMA journal_mode = WAL' ~/.hishtory/.hishtory.db`. 
 
 ### Enable/Disable
 

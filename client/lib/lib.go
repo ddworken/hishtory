@@ -584,6 +584,8 @@ func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
 	}
+	// Trigger a checkpoint so that these bulk entries are added from the WAL to the main DB
+	db.Exec("PRAGMA wal_checkpoint")
 	return len(historyEntries), nil
 }
 

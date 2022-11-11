@@ -112,7 +112,6 @@ func main() {
 		if numImported > 0 {
 			fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
 		}
-		// TODO: maybe trigger a checkpoint? I suspect that is the root cause of #24
 	case "enable":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.Enable(ctx))
