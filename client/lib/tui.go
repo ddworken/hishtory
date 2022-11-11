@@ -430,3 +430,5 @@ func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 	fmt.Printf("%s\n", selectedRow)
 	return nil
 }
+
+// TODO: handle control-c
