@@ -1853,6 +1853,8 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	return captureTerminalOutputWithShellNameAndDimensions(t, tester, overriddenShellName, 200, 50, commands)
 }
 
+// TODO: add tests for auto-resizing. They can use the tmux resize-pane command
+
 func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []string) string {
 	sleepAmount := "0.1"
 	if runtime.GOOS == "linux" {

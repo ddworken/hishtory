@@ -112,6 +112,7 @@ func main() {
 		if numImported > 0 {
 			fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
 		}
+		// TODO: maybe trigger a checkpoint? I suspect that is the root cause of #24
 	case "enable":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.Enable(ctx))
@@ -476,3 +477,6 @@ func export(ctx *context.Context, query string) {
 }
 
 // TODO(feature): Add a session_id column that corresponds to the shell session the command was run in
+
+// TODO: add  a config option for timestamp formatting
+// TODO: handle control-c in the TUI

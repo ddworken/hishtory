@@ -86,6 +86,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 			Colorful:                  false,
 		},
 	)
+	// TODO: should I specify WAL here: https://stackoverflow.com/questions/57118674/go-sqlite3-with-journal-mode-wal-gives-database-is-locked-error
 	db, err := gorm.Open(sqlite.Open(path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH)), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
