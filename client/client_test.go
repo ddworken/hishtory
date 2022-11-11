@@ -2087,7 +2087,7 @@ func TestRemoveDuplicateRows(t *testing.T) {
 	// Record a few commands and check that they get recorded and all are displayed in a table
 	tester.RunInteractiveShell(t, `echo foo
 echo foo
-echo baz
+echo baz 
 echo baz
 echo foo`)
 	out := tester.RunInteractiveShell(t, `hishtory export -pipefail`)
