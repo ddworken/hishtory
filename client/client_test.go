@@ -1970,12 +1970,37 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail"})
 	out = strings.TrimSpace(out)
 	if tester.ShellName() == "bash" {
-		if !strings.Contains(out, "\n\n\n") {
-			t.Fatalf("failed to find separator in %#v", out)
-		}
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
 	compareGoldens(t, out, "testControlR-customColumn")
+
+	// Start with a search query, and then press control-r and it shows results for that query
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"ls", "C-R"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-InitialSearch")
+
+	// Start with a search query, and then press control-r, then make the query more specific
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"e", "C-R", "cho"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-InitialSearchExpanded")
+
+	// Start with a search query for which there are no results
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-InitialSearchNoResults")
+
+	// Start with a search query for which there are no results
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R", "BSpace BSpace BSpace BSpace echo"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-InitialSearchNoResultsThenFoundResults")
 
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)

@@ -257,6 +257,15 @@ func getTerminalSize() (int, int, error) {
 var bigQueryResults []table.Row
 
 func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
+	// Handle an initial query with no results
+	if len(rows) == 0 || len(rows[0]) == 0 {
+		allRows, _, err := getRows(ctx, columnNames, "", 25)
+		if err != nil {
+			return nil, err
+		}
+		return makeTableColumns(ctx, columnNames, allRows)
+	}
+
 	// Calculate the minimum amount of space that we need for each column for the current actual search
 	columnWidths := calculateColumnWidths(rows)
 	totalWidth := 20
