@@ -32,6 +32,10 @@ func skipSlowTests() bool {
 var initialWd string
 
 func TestMain(m *testing.M) {
+	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")
+	os.Setenv("HISHTORY_TEST", "1")
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")
+	os.Setenv("HISHTORY_SKIP_INIT_IMPORT", "1")
 	defer testutils.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
 	cmd.Env = os.Environ()
@@ -704,7 +708,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 	}
 
 	// Check that the history was preserved after the update
-	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
+	out = tester.RunInteractiveShell(t, "hishtory export -pipefail | grep -v '/tmp/client install'")
 	expectedOutput := "echo hello\nhishtory status\nhishtory update\nhishtory update\nhishtory status\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -1471,10 +1475,12 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")
+	os.Setenv("HISHTORY_SKIP_INIT_IMPORT", "")
 
 	// Record some commands before installing hishtory
-	captureTerminalOutputWithShellName(t, tester, "fish", []string{"echo SPACE fishcommand ENTER"})
 	randomCmdUuid := uuid.Must(uuid.NewRandom()).String()
+	captureTerminalOutputWithShellName(t, tester, "fish", []string{fmt.Sprintf("echo SPACE %s-fishcommand ENTER", randomCmdUuid)})
 	randomCmd := fmt.Sprintf(`echo %v-foo
 echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	tester.RunInteractiveShell(t, randomCmd)
@@ -1482,40 +1488,20 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	// Install hishtory
 	installHishtory(t, tester, "")
 
-	// Check that hishtory export doesn't have the commands yet
-	out := tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid)
-	expectedOutput := ""
+	// Check that hishtory export has the commands
+	out := tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid[:5])
+	expectedOutput := strings.ReplaceAll(`echo UUID-foo
+echo UUID-bar
+echo UUID-fishcommand
+`, "UUID", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 
-	// Trigger an import
-	out = tester.RunInteractiveShell(t, "echo stdincommand | hishtory import")
-	r := regexp.MustCompile(`Imported (.+) history entries from your existing shell history`)
-	matches := r.FindStringSubmatch(out)
-	if len(matches) != 2 {
-		t.Fatalf("Failed to extract history entries count from output: matches=%#v, out=%#v", matches, out)
-	}
-	num, err := strconv.Atoi(matches[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if num <= 2 {
-		t.Fatalf("hishtory didn't import enough entries, only found %v entries", num)
-	}
-
-	// Check that the previously recorded commands are in hishtory
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\n/tmp/client install \nhishtory export %s\necho fishcommand\nstdincommand\necho stdincommand | hishtory import\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
-	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
-	}
-
-	// And check a different way
-	out = tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid)
-	expectedOutput = fmt.Sprintf("hishtory export %s\necho %s-foo\necho %s-bar\nhishtory export %s\n", randomCmdUuid, randomCmdUuid, randomCmdUuid, randomCmdUuid)
-	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	// Compare the rest of the hishtory export
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -`+randomCmdUuid[:5])
+	if out != "" {
+		t.Fatalf("expected hishtory export to be empty, was=%v", out)
 	}
 }
 
@@ -1534,7 +1520,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	tester.RunInteractiveShell(t, randomCmd)
 
 	// Check that the previously recorded commands are in hishtory
-	out := tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	out := tester.RunInteractiveShell(t, `hishtory export -pipefail`)
 	expectedOutput := fmt.Sprintf("echo %s-foo\necho %s-bas\necho foo\nls /tmp\n", randomCmdUuid, randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -1616,7 +1602,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	installHishtory(t, tester, userSecret)
 
 	// And confirm that it has the commands too
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail`)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1781,7 +1767,7 @@ func compareGoldens(t *testing.T, out, goldenName string) {
 	expected, err := os.ReadFile(goldenPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			expected = []byte{}
+			expected = []byte("ERR_FILE_NOT_FOUND")
 		} else {
 			testutils.Check(t, err)
 		}

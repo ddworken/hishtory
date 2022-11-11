@@ -528,15 +528,18 @@ func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse bash history: %v", err)
 	}
+	hctx.GetLogger().Printf("DDWORKENDEBUG: bashEntries=%#v", historyEntries)
 	extraEntries, err := parseZshHistory(homedir)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
+	hctx.GetLogger().Printf("DDWORKENDEBUG: zshEntries=%#v", extraEntries)
 	historyEntries = append(historyEntries, extraEntries...)
 	extraEntries, err = parseFishHistory(homedir)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse fish history: %v", err)
 	}
+	hctx.GetLogger().Printf("DDWORKENDEBUG: fishEntries=%#v", extraEntries)
 	historyEntries = append(historyEntries, extraEntries...)
 	if shouldReadStdin {
 		extraEntries, err = readStdin()
@@ -625,7 +628,7 @@ func parseFishHistory(homedir string) ([]string, error) {
 
 func parseBashHistory(homedir string) ([]string, error) {
 	histfile := os.Getenv("HISTFILE")
-	if histfile == "" {
+	if histfile == "" || !strings.Contains(os.Getenv("SHELL"), "bash") {
 		histfile = filepath.Join(homedir, ".bash_history")
 	}
 	return readFileToArray(histfile)
@@ -658,7 +661,7 @@ func readFileToArray(path string) ([]string, error) {
 
 func parseZshHistory(homedir string) ([]string, error) {
 	histfile := os.Getenv("HISTFILE")
-	if histfile == "" {
+	if histfile == "" || !strings.Contains(os.Getenv("SHELL"), "zsh") {
 		histfile = filepath.Join(homedir, ".zsh_history")
 	}
 	return readFileToArray(histfile)

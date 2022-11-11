@@ -69,7 +69,7 @@ func main() {
 			}
 		}
 		lib.CheckFatalError(lib.Setup(os.Args))
-		if os.Getenv("HISHTORY_TEST") == "" {
+		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") != "" {
 			fmt.Println("Importing existing shell history...")
 			ctx := hctx.MakeContext()
 			numImported, err := lib.ImportHistory(ctx, false)
@@ -80,7 +80,7 @@ func main() {
 		}
 	case "install":
 		lib.CheckFatalError(lib.Install())
-		if os.Getenv("HISHTORY_TEST") == "" {
+		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
 			data, err := lib.Search(nil, db, "", 10)
