@@ -166,11 +166,11 @@ func TestParameterized(t *testing.T) {
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
 		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
-		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 	}
+	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 }
 
@@ -2007,7 +2007,13 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-ControlC-"+shellName)
+	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
+		t.Fatalf("hishtory is showing a table even after control-c? out=%#v", out)
+	}
+	if os.Getenv("GITHUB_ACTION") == "" {
+		// This bit is broken on actions since actions run as a different user
+		compareGoldens(t, out, "testControlR-ControlC-"+shellName)
+	}
 
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
