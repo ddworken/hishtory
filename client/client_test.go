@@ -230,7 +230,8 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	}
 
 	// Set the secret key to the previous secret key
-	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory init `+userSecret)
+	out, err := tester.RunInteractiveShellRelaxed(t, ` export HISHTORY_SKIP_INIT_IMPORT=1
+yes | hishtory init `+userSecret)
 	testutils.Check(t, err)
 	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
 		t.Fatalf("Failed to re-init with the user secret: %v", out)
@@ -2119,7 +2120,7 @@ func TestTimestampFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load timezone: %v", err)
 	}
-	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1")
+	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
 	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
 	manuallySubmitHistoryEntry(t, userSecret, entry1)
