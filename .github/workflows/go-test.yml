@@ -22,7 +22,6 @@ jobs:
       with:
         go-version: 1.18
     - name: Go test
-      shell: bash
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           sudo apt-get update || true 
