@@ -2098,6 +2098,39 @@ echo bar`)
 	}
 }
 
+func TestTimestampFormat(t *testing.T) {
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	userSecret := installHishtory(t, tester, "")
+
+	// Add some entries with fixed timestamps
+	tmz, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("failed to load timezone: %v", err)
+	}
+	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1")
+	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
+	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
+	manuallySubmitHistoryEntry(t, userSecret, entry1)
+	entry2 := testutils.MakeFakeHistoryEntry("table_cmd2")
+	entry2.StartTime = time.Unix(1650096196, 0).In(tmz)
+	entry2.EndTime = time.Unix(1650096220, 0).In(tmz)
+	entry2.CurrentWorkingDirectory = "~/foo/"
+	entry2.ExitCode = 3
+	manuallySubmitHistoryEntry(t, userSecret, entry2)
+
+	// Set a custom timestamp format
+	tester.RunInteractiveShell(t, ` hishtory config-set timestamp-format '2006/Jan/2 15:04'`)
+
+	// And check that it is displayed in both the tui and the classic view
+	out := hishtoryQuery(t, tester, "-pipefail")
+	compareGoldens(t, out, "TestTimestampFormat-query")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTimestampFormat-tquery")
+}
+
 func TestRemoveDuplicateRows(t *testing.T) {
 	// Setup
 	tester := zshTester{}

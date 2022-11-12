@@ -115,6 +115,11 @@ hiSHtory imports your existing shell history by default. If for some reason this
 </details>
 
 <details>
+<summary>Custom timestamp formats</summary>
+You can configure a custom timestamp format for hiSHtory via `hishtory config-set timestamp-format '2006/Jan/2 15:04'`. The timestamp format string should be in [the format used by Go's `time.Format(...)`](https://pkg.go.dev/time#Time.Format). 
+</details>
+
+<details>
 <summary>Uninstalling</summary>
 If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
 </details>

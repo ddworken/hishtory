@@ -435,7 +435,7 @@ func buildTableRow(ctx *context.Context, columnNames []string, entry data.Histor
 		case "CWD":
 			row = append(row, entry.CurrentWorkingDirectory)
 		case "Timestamp":
-			row = append(row, entry.StartTime.Format("Jan 2 2006 15:04:05 MST"))
+			row = append(row, entry.StartTime.Format(hctx.GetConf(ctx).TimestampFormat))
 		case "Runtime":
 			row = append(row, entry.EndTime.Sub(entry.StartTime).Round(time.Millisecond).String())
 		case "Exit Code":

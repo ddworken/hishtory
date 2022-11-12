@@ -174,6 +174,8 @@ type ClientConfig struct {
 	IsOffline bool `json:"is_offline"`
 	// Whether duplicate commands should be displayed
 	FilterDuplicateCommands bool `json:"filter_duplicate_commands"`
+	// A format string for the timestamp
+	TimestampFormat string `json:"timestamp_format"`
 }
 
 type CustomColumnDefinition struct {
@@ -214,6 +216,9 @@ func GetConfig() (ClientConfig, error) {
 	}
 	if config.DisplayedColumns == nil || len(config.DisplayedColumns) == 0 {
 		config.DisplayedColumns = []string{"Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command"}
+	}
+	if config.TimestampFormat == "" {
+		config.TimestampFormat = "Jan 2 2006 15:04:05 MST"
 	}
 	return config, nil
 }

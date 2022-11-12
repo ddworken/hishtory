@@ -184,6 +184,10 @@ func main() {
 			vals := os.Args[3:]
 			config.DisplayedColumns = vals
 			lib.CheckFatalError(hctx.SetConfig(config))
+		case "timestamp-format":
+			val := os.Args[3]
+			config.TimestampFormat = val
+			lib.CheckFatalError(hctx.SetConfig(config))
 		case "custom-columns":
 			log.Fatalf("Please use config-add and config-delete to interact with custom-columns")
 		default:
@@ -257,7 +261,6 @@ func main() {
 		default:
 			log.Fatalf("Unrecognized config key: %s", key)
 		}
-
 	case "reupload":
 		// Purposefully undocumented since this command is generally not necessary to run
 		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
@@ -476,6 +479,3 @@ func export(ctx *context.Context, query string) {
 }
 
 // TODO(feature): Add a session_id column that corresponds to the shell session the command was run in
-
-// TODO: add  a config option for timestamp formatting
-// TODO: handle control-c in the TUI
