@@ -35,7 +35,7 @@ PROMPT_COMMAND="__hishtory_postcommand; $PROMPT_COMMAND"
 export HISTTIMEFORMAT=$HISTTIMEFORMAT
 
 __history_control_r() {
-	READLINE_LINE=$(hishtory tquery "$READLINE_LINE" | tr -d '\n')
+	READLINE_LINE=$(HISHTORY_TERM_INTEGRATION=1 hishtory tquery "$READLINE_LINE" | tr -d '\n')
 	READLINE_POINT=0x7FFFFFFF
 }
 

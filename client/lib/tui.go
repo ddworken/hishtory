@@ -196,6 +196,9 @@ func (m model) View() string {
 		selectedRow = m.table.SelectedRow()[indexOfCommand]
 		return ""
 	}
+	if m.quitting {
+		return ""
+	}
 	loadingMessage := ""
 	if m.isLoading {
 		loadingMessage = fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View())
@@ -415,12 +418,14 @@ func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 		}
 		p.Send(doneDownloadingMsg{})
 	}()
+	// Async: Process deletion requests
 	go func() {
 		err := ProcessDeletionRequests(ctx)
 		if err != nil {
 			p.Send(err)
 		}
 	}()
+	// Async: Check for any banner from the server
 	go func() {
 		banner, err := GetBanner(ctx, gitCommit)
 		if err != nil {
@@ -432,12 +437,15 @@ func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 		}
 		p.Send(bannerMsg{banner: string(banner)})
 	}()
+	// Blocking: Start the TUI
 	err = p.Start()
 	if err != nil {
 		return err
 	}
+	if selectedRow == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
+		// Print out the initialQuery instead so that we don't clear the terminal
+		selectedRow = initialQuery
+	}
 	fmt.Printf("%s\n", selectedRow)
 	return nil
 }
-
-// TODO: handle control-c

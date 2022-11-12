@@ -24,7 +24,7 @@ function _hishtory_precmd() {
 }
 
 _hishtory_widget() {
-    BUFFER=$(hishtory tquery $BUFFER | tr -d '\n')
+    BUFFER=$(HISHTORY_TERM_INTEGRATION=1 hishtory tquery $BUFFER | tr -d '\n')
     CURSOR=${#BUFFER}
     zle reset-prompt
 }

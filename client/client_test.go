@@ -2002,6 +2002,13 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	}
 	compareGoldens(t, out, "testControlR-InitialSearchNoResultsThenFoundResults")
 
+	// Search, hit control-c, and the table should be cleared
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"echo", "C-R", "c", "C-C"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-ControlC-"+shellName)
+
 	// Disable control-r
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
 	// And it shouldn't pop up
