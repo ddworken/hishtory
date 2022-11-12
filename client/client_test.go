@@ -2138,7 +2138,11 @@ func TestTimestampFormat(t *testing.T) {
 	compareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTimestampFormat-tquery")
+	goldenName := "TestTimestampFormat-tquery"
+	if os.Getenv("GITHUB_ACTION") != "" {
+		goldenName += "-isAction"
+	}
+	compareGoldens(t, out, goldenName)
 }
 
 func TestRemoveDuplicateRows(t *testing.T) {
