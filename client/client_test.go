@@ -2111,6 +2111,9 @@ func TestTimestampFormat(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
+	// Add an entry just to ensure we get consistent table sizing
+	tester.RunInteractiveShell(t, "echo tablesizing")
+
 	// Add some entries with fixed timestamps
 	tmz, err := time.LoadLocation("America/Los_Angeles")
 	if err != nil {
@@ -2131,9 +2134,9 @@ func TestTimestampFormat(t *testing.T) {
 	tester.RunInteractiveShell(t, ` hishtory config-set timestamp-format '2006/Jan/2 15:04'`)
 
 	// And check that it is displayed in both the tui and the classic view
-	out := hishtoryQuery(t, tester, "-pipefail")
+	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	compareGoldens(t, out, "TestTimestampFormat-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTimestampFormat-tquery")
 }
