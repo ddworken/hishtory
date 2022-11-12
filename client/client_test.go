@@ -1869,7 +1869,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 		fullCommand += " sleep " + sleepAmount + "\n"
 	}
 	fullCommand += " sleep 0.5\n"
-	fullCommand += " tmux capture-pane -p\n"
+	fullCommand += " tmux capture-pane -t foo -p\n"
 	fullCommand += " tmux kill-session -t foo\n"
 	hctx.GetLogger().Infof("Running tmux command: " + fullCommand)
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
