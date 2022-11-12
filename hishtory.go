@@ -69,7 +69,7 @@ func main() {
 			}
 		}
 		lib.CheckFatalError(lib.Setup(os.Args))
-		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") != "" {
+		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			fmt.Println("Importing existing shell history...")
 			ctx := hctx.MakeContext()
 			numImported, err := lib.ImportHistory(ctx, false)

@@ -236,8 +236,13 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 		t.Fatalf("Failed to re-init with the user secret: %v", out)
 	}
 
-	// Querying should show the history from the previous run
+	// Querying shouldn't show the entry from the previous account
 	out = hishtoryQuery(t, tester, "")
+	if strings.Contains(out, "notinthehistory") {
+		t.Fatalf("output contains the unexpected item: notinthehistory: \n%s", out)
+	}
+
+	// And it should show the history from the previous run on this account
 	expected = []string{"echo thisisrecorded", "echo mynewcommand", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
 		if !strings.Contains(out, item) {
@@ -246,10 +251,6 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
-	}
-	// But not from the previous account
-	if strings.Contains(out, "notinthehistory") {
-		t.Fatalf("output contains the unexpected item: notinthehistory")
 	}
 
 	tester.RunInteractiveShell(t, "echo mynewercommand")
