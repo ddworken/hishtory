@@ -1851,7 +1851,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 		// Fish is considerably slower so this is sadly necessary
 		sleepAmount = "0.5"
 	}
-	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" {
+	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
 		sleepAmount = "0.5"
 	}
 	fullCommand := ""
@@ -1876,7 +1876,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
-	if os.Getenv("GITHUB_ACTION") != "" && runtime.GOOS == "darwin" {
+	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
 		t.Skip() // TODO: See the mysterious failure here: https://github.com/ddworken/hishtory/actions/runs/3390515329/jobs/5634750567
 	}
 	// Setup
@@ -2011,7 +2011,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
 		t.Fatalf("hishtory is showing a table even after control-c? out=%#v", out)
 	}
-	if os.Getenv("GITHUB_ACTION") == "" {
+	if !testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
 		compareGoldens(t, out, "testControlR-ControlC-"+shellName)
 	}
@@ -2023,7 +2023,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
 		t.Fatalf("hishtory overrode control-r even when this was disabled? out=%#v", out)
 	}
-	if os.Getenv("GITHUB_ACTION") == "" {
+	if !testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
 		compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 	}
@@ -2061,10 +2061,10 @@ echo bar`)
 	// And check that it is all recorded correctly
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command `)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
-	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", (os.Getenv("GITHUB_ACTION") != "")))
+	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
-	if os.Getenv("GITHUB_ACTION") != "" {
+	if testutils.IsGithubAction() {
 		testName += "-isAction"
 		testName += "-" + runtime.GOOS
 	}
@@ -2095,7 +2095,7 @@ echo bar`)
 	compareGoldens(t, out, "testUninstall-post-uninstall")
 
 	// And check again, but in a way that shows the full terminal output
-	if os.Getenv("GITHUB_ACTION") == "" {
+	if !testutils.IsGithubAction() {
 		out = captureTerminalOutput(t, tester, []string{
 			"echo SPACE foo ENTER",
 			"hishtory ENTER",
@@ -2139,7 +2139,7 @@ func TestTimestampFormat(t *testing.T) {
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	goldenName := "TestTimestampFormat-tquery"
-	if os.Getenv("GITHUB_ACTION") != "" {
+	if testutils.IsGithubAction() {
 		goldenName += "-isAction"
 	}
 	compareGoldens(t, out, goldenName)

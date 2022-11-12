@@ -277,3 +277,7 @@ func MakeFakeHistoryEntry(command string) data.HistoryEntry {
 		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0),
 	}
 }
+
+func IsGithubAction() bool {
+	return os.Getenv("GITHUB_ACTION") != ""
+}
