@@ -1859,7 +1859,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
 	fullCommand += " sleep 1\n"
 	if overriddenShellName == "bash" {
-		fullCommand += " tmux send -t foo source SPACE ~/.bashrc ENTER\n"
+		fullCommand += " tmux send -t foo SPACE source SPACE ~/.bashrc ENTER\n"
 	}
 	fullCommand += " sleep " + sleepAmount + "\n"
 	for _, cmd := range commands {
