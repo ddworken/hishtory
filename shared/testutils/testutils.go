@@ -29,6 +29,7 @@ func ResetLocalState(t *testing.T) {
 		t.Fatalf("failed to retrieve homedir: %v", err)
 	}
 
+	_ = BackupAndRestoreWithId(t, "-reset-local-state")
 	_ = os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH))
 }
 
