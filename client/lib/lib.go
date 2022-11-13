@@ -190,22 +190,27 @@ func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
 	return ccs, nil
 }
 
-func isZshWeirdness(cmd string) bool {
-	// Zsh has this weird behavior where the currently running command is persisted to
-	// the history file with a weird prefix. This only matters to us when running
-	// an import, in which case we want to just skip it.
-	// For example, if the running command was echo foo the command would
-	// show up in the history file as `: 1663823053:0;echo foo`
+func stripZshWeirdness(cmd string) string {
+	// Zsh has this weird behavior where sometimes commands are saved in the hishtory file
+	// with a weird prefix. I've never been able to figure out why this happens, but we
+	// can at least strip it.
 	firstCommandBugRegex := regexp.MustCompile(`: \d+:\d;(.*)`)
 	matches := firstCommandBugRegex.FindStringSubmatch(cmd)
-	return len(matches) == 2
+	if len(matches) == 2 {
+		return matches[1]
+	}
+	return cmd
 }
 
 func isBashWeirdness(cmd string) bool {
 	// Bash has this weird behavior where the it has entries like `#1664342754` in the
 	// history file. We want to skip these.
-	firstCommandBugRegex := regexp.MustCompile(`#\d+`)
-	return firstCommandBugRegex.MatchString(cmd)
+	firstCommandBugRegex := regexp.MustCompile(`^#\d+\s+$`)
+	result := firstCommandBugRegex.MatchString(cmd)
+	if result {
+		fmt.Println("BASH: " + cmd)
+	}
+	return result
 }
 
 func buildRegexFromTimeFormat(timeFormat string) string {
@@ -517,9 +522,9 @@ func CheckFatalError(err error) {
 	}
 }
 
-func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
+func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, error) {
 	config := hctx.GetConf(ctx)
-	if config.HaveCompletedInitialImport {
+	if config.HaveCompletedInitialImport && !force {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
 		return 0, nil
 	}
@@ -555,7 +560,8 @@ func ImportHistory(ctx *context.Context, shouldReadStdin bool) (int, error) {
 		return 0, err
 	}
 	for _, cmd := range historyEntries {
-		if isZshWeirdness(cmd) || isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
+		cmd := stripZshWeirdness(cmd)
+		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
 			// Skip it
 			continue
 		}

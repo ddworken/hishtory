@@ -71,7 +71,7 @@ func main() {
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			fmt.Println("Importing existing shell history...")
 			ctx := hctx.MakeContext()
-			numImported, err := lib.ImportHistory(ctx, false)
+			numImported, err := lib.ImportHistory(ctx, false, false)
 			lib.CheckFatalError(err)
 			if numImported > 0 {
 				fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
@@ -87,7 +87,7 @@ func main() {
 			if len(data) < 10 {
 				fmt.Println("Importing existing shell history...")
 				ctx := hctx.MakeContext()
-				numImported, err := lib.ImportHistory(ctx, false)
+				numImported, err := lib.ImportHistory(ctx, false, false)
 				lib.CheckFatalError(err)
 				if numImported > 0 {
 					fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
@@ -106,7 +106,7 @@ func main() {
 		lib.CheckFatalError(lib.Uninstall(hctx.MakeContext()))
 	case "import":
 		ctx := hctx.MakeContext()
-		numImported, err := lib.ImportHistory(ctx, true)
+		numImported, err := lib.ImportHistory(ctx, true, true)
 		lib.CheckFatalError(err)
 		if numImported > 0 {
 			fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)

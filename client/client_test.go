@@ -1474,6 +1474,8 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 	}
 }
 
+// TODO: tests for hishtory import
+
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()

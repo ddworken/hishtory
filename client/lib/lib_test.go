@@ -369,18 +369,18 @@ func TestChunks(t *testing.T) {
 
 func TestZshWeirdness(t *testing.T) {
 	testcases := []struct {
-		input   string
-		isWeird bool
+		input  string
+		output string
 	}{
-		{": 1666062975:0;bash", true},
-		{": 16660:0;ls", true},
-		{"ls", false},
-		{"0", false},
-		{"hgffddxsdsrzsz xddfgdxfdv gdfc ghcvhgfcfg vgv", false},
+		{": 1666062975:0;bash", "bash"},
+		{": 16660:0;ls", "ls"},
+		{"ls", "ls"},
+		{"0", "0"},
+		{"hgffddxsdsrzsz xddfgdxfdv gdfc ghcvhgfcfg vgv", "hgffddxsdsrzsz xddfgdxfdv gdfc ghcvhgfcfg vgv"},
 	}
 	for _, tc := range testcases {
-		actual := isZshWeirdness(tc.input)
-		if !reflect.DeepEqual(actual, tc.isWeird) {
+		actual := stripZshWeirdness(tc.input)
+		if !reflect.DeepEqual(actual, tc.output) {
 			t.Fatalf("weirdness failure for %#v", tc.input)
 		}
 	}
