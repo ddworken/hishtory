@@ -301,7 +301,7 @@ yes | hishtory init `+userSecret)
 }
 
 func installHishtory(t *testing.T, tester shellTester, userSecret string) string {
-	out := tester.RunInteractiveShell(t, `/tmp/client install `+userSecret)
+	out := tester.RunInteractiveShell(t, ` /tmp/client install `+userSecret)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
