@@ -291,12 +291,12 @@ yes | hishtory init `+userSecret)
 	}
 
 	// And test the export for each shell without anything filtered out
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v 'hishtory init '`)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail | grep -v 'hishtory init '`)
 	compareGoldens(t, out, "testIntegrationWithNewDevice-"+tester.ShellName())
 
 	// And test the table but with a subset of columns that is static
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
-	out = tester.RunInteractiveShell(t, `hishtory query | grep -v 'hishtory init '`)
+	out = tester.RunInteractiveShell(t, `hishtory query -pipefail | grep -v 'hishtory init '`)
 	compareGoldens(t, out, "testIntegrationWithNewDevice-table"+tester.ShellName())
 }
 
@@ -606,7 +606,7 @@ hishtory disable`)
 	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
 		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
 	}
-	out = hishtoryQuery(t, tester, `-echo`)
+	out = hishtoryQuery(t, tester, `-echo -pipefail`)
 	if strings.Contains(out, "echo") {
 		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
 	}
@@ -1545,7 +1545,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact s
 	out = tester.RunInteractiveShell(t, `hishtory redact --force s`)
-	if out != "Permanently deleting 10 entries\n" {
+	if out != "Permanently deleting 10 entries\n" && out != "Permanently deleting 11 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
@@ -2263,7 +2263,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	// Check that the right commands were recorded for user1
 	for i, d := range []device{u1d1, u1d2} {
 		switchToDevice(&devices, d)
-		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export`)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -pipefail`)
 		testutils.Check(t, err)
 		expectedOutput := "echo u1d1\necho u1d2\necho u1d1-b\necho u1d1-c\necho u1d2-b\necho u1d2-c\n"
 		for j := 0; j < i; j++ {

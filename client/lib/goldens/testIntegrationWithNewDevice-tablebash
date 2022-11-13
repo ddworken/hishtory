@@ -1,24 +1,24 @@
-Hostname                  Exit Code  Command                                                             
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory config-set displayed-columns Hostname 'Exit Code' Command  
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory export | grep -v pipefail | grep -v '/tmp/client install'  
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory reupload                                                   
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory query                                                      
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-localhost                 2          othercomputer                                                       
-ghaction-runner-hostname  0          hishtory query                                                      
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          echo mynewercommand                                                 
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory query                                                      
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory query                                                      
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          echo mynewcommand                                                   
-ghaction-runner-hostname  0          set -emo pipefail                                                   
-ghaction-runner-hostname  0          hishtory query                                                      
-ghaction-runner-hostname  0          set -emo pipefail                                                   
+Hostname                  Exit Code  Command                                                                        
+ghaction-runner-hostname  0          hishtory config-set displayed-columns Hostname 'Exit Code' Command             
+ghaction-runner-hostname  0          hishtory reupload                                                              
+ghaction-runner-hostname  0          hishtory query                                                                 
+localhost                 2          othercomputer                                                                  
+ghaction-runner-hostname  0          hishtory query                                                                 
+ghaction-runner-hostname  0          echo mynewercommand                                                            
+ghaction-runner-hostname  0          hishtory query                                                                 
+ghaction-runner-hostname  0          hishtory query                                                                 
+ghaction-runner-hostname  0          echo mynewcommand                                                              
+ghaction-runner-hostname  0          hishtory query                                                                 
+ghaction-runner-hostname  0          hishtory query complex                                                         
+ghaction-runner-hostname  0          echo hello | grep complex | sed s/h/i/g; echo baz && echo "fo 'o" # mycommand  
+ghaction-runner-hostname  0          hishtory query foo                                                             
+ghaction-runner-hostname  0          hishtory query                                                                 
+ghaction-runner-hostname  0          echo thisisrecorded                                                            
+ghaction-runner-hostname  0          hishtory enable                                                                
+ghaction-runner-hostname  0          echo bar                                                                       
+ghaction-runner-hostname  0          echo foo                                                                       
+ghaction-runner-hostname  1          ls /foo                                                                        
+ghaction-runner-hostname  1          ls /bar                                                                        
+ghaction-runner-hostname  1          ls /a                                                                          
+ghaction-runner-hostname  0          hishtory query                                                                 
+ghaction-runner-hostname  0          hishtory status                                                                

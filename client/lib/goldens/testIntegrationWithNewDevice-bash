@@ -1,6 +1,4 @@
-set -emo pipefail
 hishtory status
-set -emo pipefail
 hishtory query
 ls /a
 ls /bar
@@ -9,30 +7,16 @@ echo foo
 echo bar
 hishtory enable
 echo thisisrecorded
-set -emo pipefail
 hishtory query
-set -emo pipefail
 hishtory query foo
 echo hello | grep complex | sed s/h/i/g; echo baz && echo "fo 'o" # mycommand
-set -emo pipefail
 hishtory query complex
-set -emo pipefail
 hishtory query
-set -emo pipefail
 echo mynewcommand
-set -emo pipefail
 hishtory query
-set -emo pipefail
 hishtory query
-set -emo pipefail
 echo mynewercommand
-set -emo pipefail
 hishtory query
 othercomputer
-set -emo pipefail
 hishtory query
-set -emo pipefail
 hishtory reupload
-set -emo pipefail
-hishtory export | grep -v pipefail | grep -v '/tmp/client install'
-set -emo pipefail
