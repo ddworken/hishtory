@@ -219,7 +219,7 @@ func TestSearch(t *testing.T) {
 	results, err := Search(ctx, db, "ls", 5)
 	testutils.Check(t, err)
 	if len(results) != 2 {
-		t.Fatalf("Search() returned %d results, expected 2!", len(results))
+		t.Fatalf("Search() returned %d results, expected 2, results=%#v", len(results), results)
 	}
 	if !data.EntryEquals(*results[0], entry2) {
 		t.Fatalf("Search()[0]=%#v, expected: %#v", results[0], entry2)
@@ -251,7 +251,7 @@ func TestAddToDbIfNew(t *testing.T) {
 		t.Fatal(result.Error)
 	}
 	if len(entries) != 2 {
-		t.Fatalf("entries has an incorrect length: %d", len(entries))
+		t.Fatalf("entries has an incorrect length: %d, entries=%#v", len(entries), entries)
 	}
 }
 
