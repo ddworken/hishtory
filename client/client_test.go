@@ -2280,7 +2280,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u2d3-c`)
 
 	// Check that the right commands were recorded for user2
-	for i, d := range []device{u2d1, u2d2, u2d3} {
+	for _, d := range []device{u2d1, u2d2, u2d3} {
 		switchToDevice(&devices, d)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
 		testutils.Check(t, err)
