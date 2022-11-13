@@ -529,11 +529,13 @@ func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, erro
 		return 0, nil
 	}
 	homedir := hctx.GetHome(ctx)
-	historyEntries, err := parseBashHistory(homedir)
+	bashHistPath := filepath.Join(homedir, ".bash_history")
+	historyEntries, err := readFileToArray(bashHistPath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse bash history: %v", err)
 	}
-	extraEntries, err := parseZshHistory(homedir)
+	zshHistPath := filepath.Join(homedir, ".zsh_history")
+	extraEntries, err := readFileToArray(zshHistPath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
 	}
@@ -543,6 +545,13 @@ func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, erro
 		return 0, fmt.Errorf("failed to parse fish history: %v", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
+	if histfile := os.Getenv("HISTFILE"); histfile != "" && histfile != zshHistPath && histfile != bashHistPath {
+		extraEntries, err := readFileToArray(histfile)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse histfile: %v", err)
+		}
+		historyEntries = append(historyEntries, extraEntries...)
+	}
 	if shouldReadStdin {
 		extraEntries, err = readStdin()
 		if err != nil {
@@ -629,14 +638,6 @@ func parseFishHistory(homedir string) ([]string, error) {
 	return ret, nil
 }
 
-func parseBashHistory(homedir string) ([]string, error) {
-	histfile := os.Getenv("HISTFILE")
-	if histfile == "" || !strings.Contains(os.Getenv("SHELL"), "bash") {
-		histfile = filepath.Join(homedir, ".bash_history")
-	}
-	return readFileToArray(histfile)
-}
-
 func readFileToArray(path string) ([]string, error) {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		return []string{}, nil
@@ -660,14 +661,6 @@ func readFileToArray(path string) ([]string, error) {
 	}
 
 	return lines, nil
-}
-
-func parseZshHistory(homedir string) ([]string, error) {
-	histfile := os.Getenv("HISTFILE")
-	if histfile == "" || !strings.Contains(os.Getenv("SHELL"), "zsh") {
-		histfile = filepath.Join(homedir, ".zsh_history")
-	}
-	return readFileToArray(histfile)
 }
 
 func Install() error {

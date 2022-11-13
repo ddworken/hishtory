@@ -1503,7 +1503,7 @@ echo UUID-fishcommand
 	}
 
 	// Compare the rest of the hishtory export
-	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -`+randomCmdUuid[:5])
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -/tmp/client -`+randomCmdUuid[:5])
 	if out != "" {
 		t.Fatalf("expected hishtory export to be empty, was=%v", out)
 	}
