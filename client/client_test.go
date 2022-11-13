@@ -2282,12 +2282,9 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	// Check that the right commands were recorded for user2
 	for i, d := range []device{u2d1, u2d2, u2d3} {
 		switchToDevice(&devices, d)
-		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export`)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
 		testutils.Check(t, err)
 		expectedOutput := "echo u2d1\necho u2d2\necho u2d3\necho u1d1-b\necho u1d1-c\necho u2d3-b\necho u2d3-c\n"
-		for j := 0; j < i; j++ {
-			expectedOutput += "hishtory export\n"
-		}
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 		}

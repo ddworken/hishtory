@@ -311,11 +311,11 @@ func parseCrossPlatformInt(data string) (int64, error) {
 func getLastCommand(history string) (string, error) {
 	split := strings.SplitN(strings.TrimSpace(history), " ", 2)
 	if len(split) <= 1 {
-		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug", history)
+		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
 	}
 	split = strings.SplitN(split[1], " ", 2)
 	if len(split) <= 1 {
-		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug", history)
+		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
 	}
 	return split[1], nil
 }

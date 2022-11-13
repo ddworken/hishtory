@@ -17,8 +17,5 @@ ghaction-runner-hostname  0          echo thisisrecorded
 ghaction-runner-hostname  0          hishtory enable                                                                
 ghaction-runner-hostname  0          echo bar                                                                       
 ghaction-runner-hostname  0          echo foo                                                                       
-ghaction-runner-hostname  1          ls /foo                                                                        
-ghaction-runner-hostname  1          ls /bar                                                                        
-ghaction-runner-hostname  1          ls /a                                                                          
 ghaction-runner-hostname  0          hishtory query                                                                 
 ghaction-runner-hostname  0          hishtory status                                                                
