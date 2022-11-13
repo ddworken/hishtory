@@ -631,7 +631,7 @@ hishtory disable`)
 	// Test filtering out a search item that also looks like it could be a search for a flag
 	entry = testutils.MakeFakeHistoryEntry("foo -echo")
 	manuallySubmitHistoryEntry(t, userSecret, entry)
-	out = hishtoryQuery(t, tester, `-echo -install`)
+	out = hishtoryQuery(t, tester, `-echo -install -pipefail`)
 	if strings.Contains(out, "echo") {
 		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
 	}
