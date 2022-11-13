@@ -135,7 +135,7 @@ const (
 	Offline
 )
 
-func TestParameterized(t *testing.T) {
+func TestP(t *testing.T) {
 	if skipSlowTests() {
 		shellTesters = shellTesters[:1]
 	}
@@ -1235,7 +1235,7 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 
 	// And test that it recorded that command
 	time.Sleep(time.Second)
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail`)
 	if out != "hishtory status\n" {
 		t.Fatalf("unexpected output from hishtory export=%#v", out)
 	}
@@ -2397,7 +2397,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 		keyToCommands[op.device.key] = val
 
 		// Run hishtory export and check the output
-		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
 		testutils.Check(t, err)
 		expectedOutput := keyToCommands[op.device.key]
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
@@ -2408,7 +2408,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 	// Check that hishtory export has the expected results
 	for _, op := range ops {
 		switchToDevice(&devices, op.device)
-		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export | grep -v export`)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
 		testutils.Check(t, err)
 		expectedOutput := keyToCommands[op.device.key]
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
