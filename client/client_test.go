@@ -296,7 +296,7 @@ yes | hishtory init `+userSecret)
 
 	// And test the table but with a subset of columns that is static
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
-	out = tester.RunInteractiveShell(t, `hishtory query -pipefail | grep -v 'hishtory init '`)
+	out = tester.RunInteractiveShell(t, `hishtory query -pipefail | grep -v 'hishtory init ' | grep -v 'ls /'`)
 	compareGoldens(t, out, "testIntegrationWithNewDevice-table"+tester.ShellName())
 }
 
@@ -2261,14 +2261,11 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	_, _ = tester.RunInteractiveShellRelaxed(t, `echo u1d2-c`)
 
 	// Check that the right commands were recorded for user1
-	for i, d := range []device{u1d1, u1d2} {
+	for _, d := range []device{u1d1, u1d2} {
 		switchToDevice(&devices, d)
-		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -pipefail`)
+		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -pipefail -export`)
 		testutils.Check(t, err)
 		expectedOutput := "echo u1d1\necho u1d2\necho u1d1-b\necho u1d1-c\necho u1d2-b\necho u1d2-c\n"
-		for j := 0; j < i; j++ {
-			expectedOutput += "hishtory export\n"
-		}
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 		}
@@ -2421,6 +2418,7 @@ func FuzzTestMultipleUsers(f *testing.F) {
 	if skipSlowTests() {
 		f.Skip("skipping slow tests")
 	}
+	defer testutils.RunTestServer()()
 	// Format:
 	//   $Op = $Key;$Device|$Command\n
 	//         $Key;$Device|$Command\n$Op
