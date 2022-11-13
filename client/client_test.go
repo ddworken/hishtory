@@ -32,9 +32,9 @@ func skipSlowTests() bool {
 var initialWd string
 
 func TestMain(m *testing.M) {
-	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")
+	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 	os.Setenv("HISHTORY_TEST", "1")
-	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")()
 	os.Setenv("HISHTORY_SKIP_INIT_IMPORT", "1")
 	defer testutils.RunTestServer()()
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -1479,7 +1479,7 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")()
 	os.Setenv("HISHTORY_SKIP_INIT_IMPORT", "")
 
 	// Record some commands before installing hishtory
