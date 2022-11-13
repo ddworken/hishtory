@@ -791,13 +791,20 @@ func configureZshrc(homedir, binaryPath string) error {
 	// Check if we need to configure the zshrc
 	zshIsConfigured, err := isZshConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to check ~/.zshrc: %v", err)
+		return fmt.Errorf("failed to check .zshrc: %v", err)
 	}
 	if zshIsConfigured {
 		return nil
 	}
 	// Add to zshrc
-	return addToShellConfig(path.Join(homedir, ".zshrc"), getZshConfigFragment(homedir))
+	return addToShellConfig(getZshRcPath(homedir), getZshConfigFragment(homedir))
+}
+
+func getZshRcPath(homedir string) string {
+	if zdotdir := os.Getenv("ZDOTDIR"); zdotdir != "" {
+		return path.Join(zdotdir, ".zshrc")
+	}
+	return path.Join(homedir, ".zshrc")
 }
 
 func getZshConfigFragment(homedir string) string {
@@ -805,11 +812,11 @@ func getZshConfigFragment(homedir string) string {
 }
 
 func isZshConfigured(homedir string) (bool, error) {
-	_, err := os.Stat(path.Join(homedir, ".zshrc"))
+	_, err := os.Stat(getZshRcPath(homedir))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".zshrc"))
+	bashrc, err := ioutil.ReadFile(getZshRcPath(homedir))
 	if err != nil {
 		return false, fmt.Errorf("failed to read zshrc: %v", err)
 	}
@@ -1679,7 +1686,7 @@ func Uninstall(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = stripLines(path.Join(homedir, ".zshrc"), getZshConfigFragment(homedir))
+	err = stripLines(getZshRcPath(homedir), getZshConfigFragment(homedir))
 	if err != nil {
 		return err
 	}

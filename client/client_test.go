@@ -2148,6 +2148,34 @@ func TestTimestampFormat(t *testing.T) {
 	compareGoldens(t, out, goldenName)
 }
 
+func TestZDotDir(t *testing.T) {
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("failed to get homedir: %v", err)
+	}
+	os.Setenv("ZDOTDIR", path.Join(homedir, data.HISHTORY_PATH))
+	installHishtory(t, tester, "")
+
+	// Run a command and check that it was recorded
+	tester.RunInteractiveShell(t, `echo foo`)
+	out := tester.RunInteractiveShell(t, `hishtory export -pipefail -install`)
+	if out != "echo foo\n" {
+		t.Fatalf("hishtory export had unexpected out=%#v", out)
+	}
+
+	// Check that hishtory respected ZDOTDIR
+	zshrc, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, ".zshrc"))
+	zshrc = []byte(tester.RunInteractiveShell(t, `cat ~/.hishtory/.zshrc`))
+	testutils.Check(t, err)
+	if string(zshrc) != "\n# Hishtory Config:\nexport PATH=\"$PATH:/Users/david/.hishtory\"\nsource /Users/david/.hishtory/config.zsh\n" {
+		t.Fatalf("zshrc had unexpected contents=%#v", string(zshrc))
+	}
+}
+
 func TestRemoveDuplicateRows(t *testing.T) {
 	// Setup
 	tester := zshTester{}
