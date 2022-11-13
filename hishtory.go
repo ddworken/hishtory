@@ -28,7 +28,6 @@ func main() {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
 		saveHistoryEntry(ctx)
-		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 	case "query":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
@@ -459,6 +458,9 @@ func saveHistoryEntry(ctx *context.Context) {
 			}
 		}
 	}
+
+	// Handle deletion requests
+	lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 }
 
 func export(ctx *context.Context, query string) {
