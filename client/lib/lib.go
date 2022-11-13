@@ -206,11 +206,7 @@ func isBashWeirdness(cmd string) bool {
 	// Bash has this weird behavior where the it has entries like `#1664342754` in the
 	// history file. We want to skip these.
 	firstCommandBugRegex := regexp.MustCompile(`^#\d+\s+$`)
-	result := firstCommandBugRegex.MatchString(cmd)
-	if result {
-		fmt.Println("BASH: " + cmd)
-	}
-	return result
+	return firstCommandBugRegex.MatchString(cmd)
 }
 
 func buildRegexFromTimeFormat(timeFormat string) string {
