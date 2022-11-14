@@ -1641,17 +1641,17 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 
 	// Config-get and set for enable-control-r
 	out := tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "true" {
+	if out != "true\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r false`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "false" {
+	if out != "false\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r true`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "true" {
+	if out != "true\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 
@@ -2073,7 +2073,7 @@ echo baz`)
 	compareGoldens(t, out, "testCustomColumns-initHistory")
 
 	// Configure a custom column
-	tester.RunInteractiveShell(t, `hishtory config-add custom-column git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'`)
+	tester.RunInteractiveShell(t, `hishtory config-add custom-columns git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'`)
 
 	// Run a few commands, some of which will have a git_remote
 	out = tester.RunInteractiveShell(t, `echo foo

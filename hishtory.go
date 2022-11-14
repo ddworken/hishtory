@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ddworken/hishtory/client/cmd"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -135,131 +136,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to update hishtory: %v", err)
 		}
-	case "config-get":
-		ctx := hctx.MakeContext()
-		config := hctx.GetConf(ctx)
-		key := os.Args[2]
-		switch key {
-		case "enable-control-r":
-			fmt.Printf("%v", config.ControlRSearchEnabled)
-		case "filter-duplicate-commands":
-			fmt.Printf("%v", config.FilterDuplicateCommands)
-		case "displayed-columns":
-			for _, col := range config.DisplayedColumns {
-				if strings.Contains(col, " ") {
-					fmt.Printf("%q ", col)
-				} else {
-					fmt.Print(col + " ")
-				}
-			}
-			fmt.Print("\n")
-		case "custom-columns":
-			for _, cc := range config.CustomColumns {
-				fmt.Println(cc.ColumnName + ":   " + cc.ColumnCommand)
-			}
-		default:
-			log.Fatalf("Unrecognized config key: %s", key)
-		}
 	case "config-set":
-		ctx := hctx.MakeContext()
-		config := hctx.GetConf(ctx)
-		key := os.Args[2]
-		switch key {
-		case "enable-control-r":
-			val := os.Args[3]
-			if val != "true" && val != "false" {
-				log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
-			}
-			config.ControlRSearchEnabled = (val == "true")
-			lib.CheckFatalError(hctx.SetConfig(config))
-		case "filter-duplicate-commands":
-			val := os.Args[3]
-			if val != "true" && val != "false" {
-				log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
-			}
-			config.FilterDuplicateCommands = (val == "true")
-			lib.CheckFatalError(hctx.SetConfig(config))
-		case "displayed-columns":
-			vals := os.Args[3:]
-			config.DisplayedColumns = vals
-			lib.CheckFatalError(hctx.SetConfig(config))
-		case "timestamp-format":
-			val := os.Args[3]
-			config.TimestampFormat = val
-			lib.CheckFatalError(hctx.SetConfig(config))
-		case "custom-columns":
-			log.Fatalf("Please use config-add and config-delete to interact with custom-columns")
-		default:
-			log.Fatalf("Unrecognized config key: %s", key)
-		}
+		fallthrough
+	case "config-get":
+		fallthrough
 	case "config-add":
-		ctx := hctx.MakeContext()
-		config := hctx.GetConf(ctx)
-		key := os.Args[2]
-		switch key {
-		case "custom-column":
-			fallthrough
-		case "custom-columns":
-			columnName := os.Args[3]
-			command := os.Args[4]
-			ctx := hctx.MakeContext()
-			config := hctx.GetConf(ctx)
-			if config.CustomColumns == nil {
-				config.CustomColumns = make([]hctx.CustomColumnDefinition, 0)
-			}
-			config.CustomColumns = append(config.CustomColumns, hctx.CustomColumnDefinition{ColumnName: columnName, ColumnCommand: command})
-			lib.CheckFatalError(hctx.SetConfig(config))
-		case "displayed-columns":
-			vals := os.Args[3:]
-			config.DisplayedColumns = append(config.DisplayedColumns, vals...)
-			lib.CheckFatalError(hctx.SetConfig(config))
-		default:
-			log.Fatalf("Unrecognized config key: %s", key)
-		}
+		fallthrough
 	case "config-delete":
-		ctx := hctx.MakeContext()
-		config := hctx.GetConf(ctx)
-		key := os.Args[2]
-		switch key {
-		case "custom-columns":
-			columnName := os.Args[2]
-			ctx := hctx.MakeContext()
-			config := hctx.GetConf(ctx)
-			if config.CustomColumns == nil {
-				return
-			}
-			newColumns := make([]hctx.CustomColumnDefinition, 0)
-			deletedColumns := false
-			for _, c := range config.CustomColumns {
-				if c.ColumnName != columnName {
-					newColumns = append(newColumns, c)
-					deletedColumns = true
-				}
-			}
-			if !deletedColumns {
-				log.Fatalf("Did not find a column with name %#v to delete (current columns = %#v)", columnName, config.CustomColumns)
-			}
-			config.CustomColumns = newColumns
-			lib.CheckFatalError(hctx.SetConfig(config))
-		case "displayed-columns":
-			deletedColumns := os.Args[3:]
-			newColumns := make([]string, 0)
-			for _, c := range config.DisplayedColumns {
-				isDeleted := false
-				for _, d := range deletedColumns {
-					if c == d {
-						isDeleted = true
-					}
-				}
-				if !isDeleted {
-					newColumns = append(newColumns, c)
-				}
-			}
-			config.DisplayedColumns = newColumns
-			lib.CheckFatalError(hctx.SetConfig(config))
-		default:
-			log.Fatalf("Unrecognized config key: %s", key)
-		}
+		cmd.Execute()
 	case "reupload":
 		// Purposefully undocumented since this command is generally not necessary to run
 		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
