@@ -2169,9 +2169,8 @@ func TestZDotDir(t *testing.T) {
 
 	// Check that hishtory respected ZDOTDIR
 	zshrc, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, ".zshrc"))
-	zshrc = []byte(tester.RunInteractiveShell(t, `cat ~/.hishtory/.zshrc`))
 	testutils.Check(t, err)
-	if string(zshrc) != "\n# Hishtory Config:\nexport PATH=\"$PATH:/Users/david/.hishtory\"\nsource /Users/david/.hishtory/config.zsh\n" {
+	if !strings.Contains(string(zshrc), "# Hishtory Config:") {
 		t.Fatalf("zshrc had unexpected contents=%#v", string(zshrc))
 	}
 }
