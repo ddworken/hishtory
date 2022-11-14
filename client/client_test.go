@@ -2159,6 +2159,7 @@ func TestZDotDir(t *testing.T) {
 	}
 	os.Setenv("ZDOTDIR", path.Join(homedir, data.HISHTORY_PATH))
 	installHishtory(t, tester, "")
+	defer os.Remove(path.Join(homedir, data.HISHTORY_PATH, ".zshrc"))
 
 	// Run a command and check that it was recorded
 	tester.RunInteractiveShell(t, `echo foo`)

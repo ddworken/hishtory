@@ -150,7 +150,11 @@ func copy(src, dst string) error {
 func BackupAndRestoreEnv(k string) func() {
 	origValue := os.Getenv(k)
 	return func() {
-		os.Setenv(k, origValue)
+		if origValue == "" {
+			os.Unsetenv(k)
+		} else {
+			os.Setenv(k, origValue)
+		}
 	}
 }
 
