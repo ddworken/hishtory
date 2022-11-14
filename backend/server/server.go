@@ -392,14 +392,29 @@ func OpenDB() (*gorm.DB, error) {
 		return db, nil
 	}
 
-	postgresDb := fmt.Sprintf(PostgresDb, os.Getenv("POSTGRESQL_PASSWORD"))
-	if os.Getenv("HISHTORY_POSTGRES_DB") != "" {
-		postgresDb = os.Getenv("HISHTORY_POSTGRES_DB")
+	var sqliteDb string
+
+	if os.Getenv("HISHTORY_SQLITE_DB") != "" {
+		sqliteDb = os.Getenv("HISHTORY_SQLITE_DB")
 	}
-	db, err := gorm.Open(postgres.Open(postgresDb), &gorm.Config{})
+
+	var db *gorm.DB
+	var err error
+
+	if sqliteDb != "" {
+		db, err = gorm.Open(sqlite.Open(sqliteDb), &gorm.Config{})
+	} else {
+		postgresDb := fmt.Sprintf(PostgresDb, os.Getenv("POSTGRESQL_PASSWORD"))
+		if os.Getenv("HISHTORY_POSTGRES_DB") != "" {
+			postgresDb = os.Getenv("HISHTORY_POSTGRES_DB")
+		}
+		db, err = gorm.Open(postgres.Open(postgresDb), &gorm.Config{})
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
+
 	db.AutoMigrate(&shared.EncHistoryEntry{})
 	db.AutoMigrate(&shared.Device{})
 	db.AutoMigrate(&UsageData{})
