@@ -6,6 +6,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/ddworken/hishtory/client/lib"
 	"github.com/spf13/cobra"
 )
 
@@ -28,4 +29,5 @@ func init() {
 	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_QUERYING, Title: "History Searching"})
 	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_MANAGEMENT, Title: "History Management"})
 	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_CONFIG, Title: "Configuration"})
+	rootCmd.Version = "v0." + lib.Version
 }

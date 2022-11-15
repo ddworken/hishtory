@@ -13,7 +13,5 @@ func main() {
 /*
 Remaining things:
 * Support exclusions in searches
-* Figure out how to hide certain things from the help doc
-* Figure out how to reorder the docs
 * Acutally migrate saveHistoryEntry to cobra
 */
