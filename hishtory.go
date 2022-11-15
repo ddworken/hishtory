@@ -9,8 +9,3 @@ func main() {
 }
 
 // TODO(feature): Add a session_id column that corresponds to the shell session the command was run in
-
-/*
-Remaining things:
-* Acutally migrate saveHistoryEntry to cobra
-*/

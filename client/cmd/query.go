@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -57,7 +56,7 @@ var exportCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
-		export(ctx, strings.Join(os.Args[2:], " "))
+		export(ctx, strings.Join(args, " "))
 	},
 }
 

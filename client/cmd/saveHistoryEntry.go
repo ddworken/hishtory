@@ -18,6 +18,7 @@ var saveHistoryEntryCmd = &cobra.Command{
 	Use:    "saveHistoryEntry",
 	Hidden: true,
 	Short:  "[Internal-only] The command used to save history entries",
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
