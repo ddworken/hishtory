@@ -13,7 +13,7 @@ var verbose *bool
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Get the hishtory status",
+	Short: "View status info including the secret key which is needed to sync shell	history from another machine",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
