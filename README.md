@@ -120,6 +120,11 @@ You can configure a custom timestamp format for hiSHtory via `hishtory config-se
 </details>
 
 <details>
+<summary>Viewing debug logs</summary>
+Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues, these may contain useful information.
+</details>
+
+<details>
 <summary>Uninstalling</summary>
 If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
 </details>
