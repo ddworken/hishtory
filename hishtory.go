@@ -73,11 +73,10 @@ func main() {
 		fallthrough
 	case "config-add":
 		fallthrough
+	case "reupload":
+		fallthrough
 	case "config-delete":
 		cmd.Execute()
-	case "reupload":
-		// Purposefully undocumented since this command is generally not necessary to run
-		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
 	case "-h":
 		fallthrough
 	case "help":
