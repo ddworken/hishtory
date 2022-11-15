@@ -1206,6 +1206,10 @@ echo other`)
 }
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
+	if !testutils.IsOnline() {
+		t.Skip("skipping because we're currently offline")
+	}
+
 	// Set up
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
@@ -1314,7 +1318,7 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 
 	// Test the help command
 	out := tester.RunInteractiveShell(t, `hishtory help`)
-	if !strings.HasPrefix(out, "hiSHtory: Better shell history\n\nSupported commands:\n") {
+	if !strings.HasPrefix(out, "hiSHtory: Better shell history") {
 		t.Fatalf("expected hishtory help to contain intro, actual=%#v", out)
 	}
 	out2 := tester.RunInteractiveShell(t, `hishtory -h`)
@@ -1708,7 +1712,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 	// And check that hishtory says it is false by default
 	out := tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "false" {
+	if out != "false\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 
@@ -1718,7 +1722,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 	// Now it should be enabled
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "true" {
+	if out != "true\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 }

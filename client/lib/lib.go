@@ -652,7 +652,7 @@ func readFileToArray(path string) ([]string, error) {
 	return lines, nil
 }
 
-func Install() error {
+func Install(offline bool) error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
@@ -683,8 +683,8 @@ func Install() error {
 	}
 	_, err = hctx.GetConfig()
 	if err != nil {
-		// No config, so set up a new installation with a new key and in online mode
-		return Setup("", false)
+		// No config, so set up a new installation with a new key
+		return Setup("", offline)
 	}
 	return nil
 }

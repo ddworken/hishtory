@@ -71,4 +71,5 @@ var deleteDisplayedColumnCommand = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(configDeleteCmd)
 	configDeleteCmd.AddCommand(deleteCustomColumnsCmd)
+	configDeleteCmd.AddCommand(deleteDisplayedColumnCommand)
 }
