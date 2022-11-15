@@ -12,6 +12,5 @@ func main() {
 
 /*
 Remaining things:
-* Support exclusions in searches
 * Acutally migrate saveHistoryEntry to cobra
 */

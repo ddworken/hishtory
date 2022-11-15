@@ -1531,27 +1531,27 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Redact foo
-	out = tester.RunInteractiveShell(t, `hishtory redact --force foo`)
+	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact foo`)
 	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Check that the commands are redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\nhishtory redact --force foo\n", randomCmdUuid)
+	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\nHISHTORY_REDACT_FORCE=1 hishtory redact foo\n", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 
 	// Redact s
-	out = tester.RunInteractiveShell(t, `hishtory redact --force s`)
+	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact s`)
 	if out != "Permanently deleting 10 entries\n" && out != "Permanently deleting 11 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Check that the commands are redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "hishtory redact --force s\n"
+	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1559,12 +1559,12 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Record another command
 	tester.RunInteractiveShell(t, `echo hello`)
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "hishtory redact --force s\necho hello\n"
+	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\necho hello\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 
-	// Redact it without --force
+	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	testutils.Check(t, err)
 	if out != "This will permanently delete 1 entries, are you sure? [y/N]" {
@@ -1573,7 +1573,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// And check it was redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "hishtory redact --force s\nyes | hishtory redact hello\n"
+	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\nyes | hishtory redact hello\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1614,14 +1614,14 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Restore the first client, and redact some commands
 	restoreInstall2 := testutils.BackupAndRestoreWithId(t, "-2")
 	restoreInstall1()
-	out = tester.RunInteractiveShell(t, `hishtory redact --force `+randomCmdUuid)
+	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+randomCmdUuid)
 	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Confirm that client1 doesn't have the commands
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("echo foo\nls /tmp\nhishtory redact --force %s\n", randomCmdUuid)
+	expectedOutput = fmt.Sprintf("echo foo\nls /tmp\nHISHTORY_REDACT_FORCE=1 hishtory redact %s\n", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -2413,7 +2413,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 			testutils.Check(t, err)
 		}
 		if op.redactQuery != "" {
-			_, err := tester.RunInteractiveShellRelaxed(t, `hishtory redact --force `+op.redactQuery)
+			_, err := tester.RunInteractiveShellRelaxed(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+op.redactQuery)
 			testutils.Check(t, err)
 		}
 
@@ -2436,7 +2436,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 				filteredLines = append(filteredLines, line)
 			}
 			val = strings.Join(filteredLines, "\n")
-			val += `hishtory redact --force ` + op.redactQuery + "\n"
+			val += `HISHTORY_REDACT_FORCE=1 hishtory redact ` + op.redactQuery + "\n"
 		}
 		keyToCommands[op.device.key] = val
 

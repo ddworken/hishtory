@@ -24,10 +24,11 @@ var EXAMPLE_QUERIES string = `Example queries:
 var GROUP_ID_QUERYING string = "group_id:querying"
 
 var queryCmd = &cobra.Command{
-	Use:     "query",
-	Short:   "Query your shell history and display the results in an ASCII art table",
-	GroupID: GROUP_ID_QUERYING,
-	Long:    strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "query"),
+	Use:                "query",
+	Short:              "Query your shell history and display the results in an ASCII art table",
+	GroupID:            GROUP_ID_QUERYING,
+	Long:               strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "query"),
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
@@ -36,10 +37,11 @@ var queryCmd = &cobra.Command{
 }
 
 var tqueryCmd = &cobra.Command{
-	Use:     "tquery",
-	Short:   "Interactively query your shell history in a TUI interface",
-	GroupID: GROUP_ID_QUERYING,
-	Long:    strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "tquery"),
+	Use:                "tquery",
+	Short:              "Interactively query your shell history in a TUI interface",
+	GroupID:            GROUP_ID_QUERYING,
+	Long:               strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "tquery"),
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.TuiQuery(ctx, strings.Join(args, " ")))
@@ -47,10 +49,11 @@ var tqueryCmd = &cobra.Command{
 }
 
 var exportCmd = &cobra.Command{
-	Use:     "export",
-	Short:   "Export your shell history and display just the raw commands",
-	GroupID: GROUP_ID_QUERYING,
-	Long:    strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "export"),
+	Use:                "export",
+	Short:              "Export your shell history and display just the raw commands",
+	GroupID:            GROUP_ID_QUERYING,
+	Long:               strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "export"),
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
