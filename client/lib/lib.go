@@ -48,6 +48,7 @@ var ConfigZshContents string
 var ConfigFishContents string
 
 var Version string = "Unknown"
+var GitCommit string = "Unknown"
 
 // 256KB ought to be enough for any reasonable cmd
 var maxSupportedLineLengthForImport = 256_000
@@ -333,18 +334,9 @@ func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, er
 	return false, nil
 }
 
-func Setup(args []string) error {
-	userSecret := uuid.Must(uuid.NewRandom()).String()
-	isOffline := false
-	if len(args) > 2 && args[2] != "" {
-		if args[2] == "--offline" {
-			isOffline = true
-		} else {
-			if args[2][0] == '-' {
-				return fmt.Errorf("refusing to set user secret to %#v since it looks like a flag", args[2])
-			}
-			userSecret = args[2]
-		}
+func Setup(userSecret string, isOffline bool) error {
+	if userSecret == "" {
+		userSecret = uuid.Must(uuid.NewRandom()).String()
 	}
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
@@ -691,8 +683,8 @@ func Install() error {
 	}
 	_, err = hctx.GetConfig()
 	if err != nil {
-		// No config, so set up a new installation
-		return Setup(os.Args)
+		// No config, so set up a new installation with a new key and in online mode
+		return Setup("", false)
 	}
 	return nil
 }
@@ -1470,12 +1462,12 @@ func ProcessDeletionRequests(ctx *context.Context) error {
 	return nil
 }
 
-func GetBanner(ctx *context.Context, gitCommit string) ([]byte, error) {
+func GetBanner(ctx *context.Context) ([]byte, error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return []byte{}, nil
 	}
-	url := "/api/v1/banner?commit_hash=" + gitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
+	url := "/api/v1/banner?commit_hash=" + GitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
 	return ApiGet(url)
 }
 
@@ -1702,4 +1694,20 @@ func Uninstall(ctx *context.Context) error {
 	}
 	fmt.Println("Successfully uninstalled hishtory, please restart your terminal...")
 	return nil
+}
+
+func GetDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
+	if config.IsOffline {
+		return make([]*shared.DumpRequest, 0), nil
+	}
+	resp, err := ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
+	if IsOfflineError(err) {
+		return []*shared.DumpRequest{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var dumpRequests []*shared.DumpRequest
+	err = json.Unmarshal(resp, &dumpRequests)
+	return dumpRequests, err
 }

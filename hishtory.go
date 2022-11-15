@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -16,8 +14,6 @@ import (
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 )
-
-var GitCommit string = "Unknown"
 
 func main() {
 	if len(os.Args) == 1 {
@@ -35,7 +31,7 @@ func main() {
 		query(ctx, strings.Join(os.Args[2:], " "))
 	case "tquery":
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(lib.TuiQuery(ctx, GitCommit, strings.Join(os.Args[2:], " ")))
+		lib.CheckFatalError(lib.TuiQuery(ctx, strings.Join(os.Args[2:], " ")))
 	case "export":
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
@@ -54,88 +50,23 @@ func main() {
 		}
 		lib.CheckFatalError(lib.Redact(ctx, query, force))
 	case "init":
-		db, err := hctx.OpenLocalSqliteDb()
-		lib.CheckFatalError(err)
-		data, err := lib.Search(nil, db, "", 10)
-		lib.CheckFatalError(err)
-		if len(data) > 0 {
-			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset?\nNote: This won't clear any imported history entries from your existing shell\n[y/N]")
-			reader := bufio.NewReader(os.Stdin)
-			resp, err := reader.ReadString('\n')
-			lib.CheckFatalError(err)
-			if strings.TrimSpace(resp) != "y" {
-				fmt.Printf("Aborting init per user response of %#v\n", strings.TrimSpace(resp))
-				return
-			}
-		}
-		lib.CheckFatalError(lib.Setup(os.Args))
-		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
-			fmt.Println("Importing existing shell history...")
-			ctx := hctx.MakeContext()
-			numImported, err := lib.ImportHistory(ctx, false, false)
-			lib.CheckFatalError(err)
-			if numImported > 0 {
-				fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
-			}
-		}
+		fallthrough
 	case "install":
-		lib.CheckFatalError(lib.Install())
-		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
-			db, err := hctx.OpenLocalSqliteDb()
-			lib.CheckFatalError(err)
-			data, err := lib.Search(nil, db, "", 10)
-			lib.CheckFatalError(err)
-			if len(data) < 10 {
-				fmt.Println("Importing existing shell history...")
-				ctx := hctx.MakeContext()
-				numImported, err := lib.ImportHistory(ctx, false, false)
-				lib.CheckFatalError(err)
-				if numImported > 0 {
-					fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
-				}
-			}
-		}
+		fallthrough
 	case "uninstall":
-		fmt.Printf("Are you sure you want to uninstall hiSHtory and delete all locally saved history data [y/N]")
-		reader := bufio.NewReader(os.Stdin)
-		resp, err := reader.ReadString('\n')
-		lib.CheckFatalError(err)
-		if strings.TrimSpace(resp) != "y" {
-			fmt.Printf("Aborting uninstall per user response of %#v\n", strings.TrimSpace(resp))
-			return
-		}
-		lib.CheckFatalError(lib.Uninstall(hctx.MakeContext()))
+		fallthrough
 	case "import":
-		ctx := hctx.MakeContext()
-		numImported, err := lib.ImportHistory(ctx, true, true)
-		lib.CheckFatalError(err)
-		if numImported > 0 {
-			fmt.Printf("Imported %v history entries from your existing shell history\n", numImported)
-		}
+		fallthrough
 	case "enable":
-		ctx := hctx.MakeContext()
-		lib.CheckFatalError(lib.Enable(ctx))
+		fallthrough
 	case "disable":
-		ctx := hctx.MakeContext()
-		lib.CheckFatalError(lib.Disable(ctx))
+		fallthrough
 	case "version":
 		fallthrough
 	case "status":
-		ctx := hctx.MakeContext()
-		config := hctx.GetConf(ctx)
-		fmt.Printf("hiSHtory: v0.%s\nEnabled: %v\n", lib.Version, config.IsEnabled)
-		fmt.Printf("Secret Key: %s\n", config.UserSecret)
-		if len(os.Args) == 3 && os.Args[2] == "-v" {
-			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))
-			fmt.Printf("Device ID: %s\n", config.DeviceId)
-			printDumpStatus(config)
-		}
-		fmt.Printf("Commit Hash: %s\n", GitCommit)
+		fallthrough
 	case "update":
-		err := lib.Update(hctx.MakeContext())
-		if err != nil {
-			log.Fatalf("Failed to update hishtory: %v", err)
-		}
+		fallthrough
 	case "config-set":
 		fallthrough
 	case "config-get":
@@ -181,32 +112,6 @@ Supported commands:
 	}
 }
 
-func printDumpStatus(config hctx.ClientConfig) {
-	dumpRequests, err := getDumpRequests(config)
-	lib.CheckFatalError(err)
-	fmt.Printf("Dump Requests: ")
-	for _, d := range dumpRequests {
-		fmt.Printf("%#v, ", *d)
-	}
-	fmt.Print("\n")
-}
-
-func getDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
-	if config.IsOffline {
-		return make([]*shared.DumpRequest, 0), nil
-	}
-	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
-	if lib.IsOfflineError(err) {
-		return []*shared.DumpRequest{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var dumpRequests []*shared.DumpRequest
-	err = json.Unmarshal(resp, &dumpRequests)
-	return dumpRequests, err
-}
-
 func query(ctx *context.Context, query string) {
 	db := hctx.GetDb(ctx)
 	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
@@ -225,7 +130,7 @@ func query(ctx *context.Context, query string) {
 }
 
 func displayBannerIfSet(ctx *context.Context) error {
-	respBody, err := lib.GetBanner(ctx, GitCommit)
+	respBody, err := lib.GetBanner(ctx)
 	if lib.IsOfflineError(err) {
 		return nil
 	}
@@ -313,7 +218,7 @@ func saveHistoryEntry(ctx *context.Context) {
 	}
 
 	// Check if there is a pending dump request and reply to it if so
-	dumpRequests, err := getDumpRequests(config)
+	dumpRequests, err := lib.GetDumpRequests(config)
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests

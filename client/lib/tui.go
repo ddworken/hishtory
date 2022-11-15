@@ -408,7 +408,7 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 	return t, nil
 }
 
-func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
+func TuiQuery(ctx *context.Context, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
 	rows, numEntries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
@@ -435,7 +435,7 @@ func TuiQuery(ctx *context.Context, gitCommit, initialQuery string) error {
 	}()
 	// Async: Check for any banner from the server
 	go func() {
-		banner, err := GetBanner(ctx, gitCommit)
+		banner, err := GetBanner(ctx)
 		if err != nil {
 			if IsOfflineError(err) {
 				p.Send(offlineMsg{})
