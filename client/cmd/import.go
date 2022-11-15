@@ -9,9 +9,10 @@ import (
 )
 
 var importCmd = &cobra.Command{
-	Use:   "import",
-	Short: "Re-import history entries from your existing shell history",
-	Long:  "Note that you must pipe commands to be imported in via stdin. For example `history | hishtory import`.",
+	Use:    "import",
+	Hidden: true,
+	Short:  "Re-import history entries from your existing shell history",
+	Long:   "Note that you must pipe commands to be imported in via stdin. For example `history | hishtory import`.",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		numImported, err := lib.ImportHistory(ctx, true, true)

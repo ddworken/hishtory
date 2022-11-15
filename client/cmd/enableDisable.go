@@ -7,8 +7,9 @@ import (
 )
 
 var enableCmd = &cobra.Command{
-	Use:   "enable",
-	Short: "Enable hiSHtory recording",
+	Use:     "enable",
+	Short:   "Enable hiSHtory recording",
+	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.Enable(ctx))
@@ -16,8 +17,9 @@ var enableCmd = &cobra.Command{
 }
 
 var disableCmd = &cobra.Command{
-	Use:   "disable",
-	Short: "Disable hiSHtory recording",
+	Use:     "disable",
+	Short:   "Disable hiSHtory recording",
+	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.Disable(ctx))

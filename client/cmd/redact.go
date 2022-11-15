@@ -10,10 +10,14 @@ import (
 
 var force *bool
 
+var GROUP_ID_MANAGEMENT string = "group_id_management"
+
 var redactCmd = &cobra.Command{
-	Use:   "redact",
-	Short: "Query for matching commands and remove them from your shell history",
-	Long:  "This removes history entries on the current machine and on all remote machines. Supports the same query format as 'hishtory query'.",
+	Use:     "redact",
+	Aliases: []string{"delete"},
+	Short:   "Query for matching commands and remove them from your shell history",
+	Long:    "This removes history entries on the current machine and on all remote machines. Supports the same query format as 'hishtory query'.",
+	GroupID: GROUP_ID_MANAGEMENT,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))

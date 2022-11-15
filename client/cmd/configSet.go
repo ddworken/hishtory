@@ -9,8 +9,9 @@ import (
 )
 
 var configSetCmd = &cobra.Command{
-	Use:   "config-set",
-	Short: "Set the value of a config option",
+	Use:     "config-set",
+	Short:   "Set the value of a config option",
+	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},

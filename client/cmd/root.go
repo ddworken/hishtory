@@ -24,4 +24,8 @@ func Execute() {
 	}
 }
 
-func init() {}
+func init() {
+	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_QUERYING, Title: "History Searching"})
+	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_MANAGEMENT, Title: "History Management"})
+	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_CONFIG, Title: "Configuration"})
+}

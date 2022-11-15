@@ -10,8 +10,9 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Copy this binary to ~/.hishtory/ and configure your shell to use it for recording your shell history",
+	Use:    "install",
+	Hidden: true,
+	Short:  "Copy this binary to ~/.hishtory/ and configure your shell to use it for recording your shell history",
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(lib.Install())
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {

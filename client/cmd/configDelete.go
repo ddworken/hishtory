@@ -9,8 +9,9 @@ import (
 )
 
 var configDeleteCmd = &cobra.Command{
-	Use:   "config-delete",
-	Short: "Delete a config option",
+	Use:     "config-delete",
+	Short:   "Delete a config option",
+	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},

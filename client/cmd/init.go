@@ -14,9 +14,10 @@ import (
 var offline *bool
 
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Re-initialize hiSHtory with a specified secret key",
-	Args:  cobra.MaximumNArgs(1),
+	Use:     "init",
+	Short:   "Re-initialize hiSHtory with a specified secret key",
+	GroupID: GROUP_ID_CONFIG,
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Flag("offline").Value.String()
 		db, err := hctx.OpenLocalSqliteDb()

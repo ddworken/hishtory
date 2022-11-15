@@ -7,8 +7,9 @@ import (
 )
 
 var reuploadCmd = &cobra.Command{
-	Use:   "reupload",
-	Short: "[Debug Only] Reupload your entire hiSHtory to all other devices",
+	Use:    "reupload",
+	Hidden: true,
+	Short:  "[Debug Only] Reupload your entire hiSHtory to all other devices",
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(lib.Reupload(hctx.MakeContext()))
 	},

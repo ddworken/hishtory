@@ -7,8 +7,9 @@ import (
 )
 
 var configAddCmd = &cobra.Command{
-	Use:   "config-add",
-	Short: "Add a config option",
+	Use:     "config-add",
+	Short:   "Add a config option",
+	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},

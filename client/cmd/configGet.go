@@ -8,9 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var GROUP_ID_CONFIG string = "group_id_config"
+
 var configGetCmd = &cobra.Command{
-	Use:   "config-get",
-	Short: "Get the value of a config option",
+	Use:     "config-get",
+	Short:   "Get the value of a config option",
+	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
