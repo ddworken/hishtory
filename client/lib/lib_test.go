@@ -190,7 +190,7 @@ func TestPersist(t *testing.T) {
 	db := hctx.GetDb(hctx.MakeContext())
 
 	entry := testutils.MakeFakeHistoryEntry("ls ~/")
-	db.Create(entry)
+	testutils.Check(t, db.Create(entry).Error)
 	var historyEntries []*data.HistoryEntry
 	result := db.Find(&historyEntries)
 	testutils.Check(t, result.Error)
@@ -211,9 +211,9 @@ func TestSearch(t *testing.T) {
 
 	// Insert data
 	entry1 := testutils.MakeFakeHistoryEntry("ls /foo")
-	db.Create(entry1)
+	testutils.Check(t, db.Create(entry1).Error)
 	entry2 := testutils.MakeFakeHistoryEntry("ls /bar")
-	db.Create(entry2)
+	testutils.Check(t, db.Create(entry2).Error)
 
 	// Search for data
 	results, err := Search(ctx, db, "ls", 5)

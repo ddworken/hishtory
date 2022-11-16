@@ -87,7 +87,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 		},
 	)
 	dbFilePath := path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH)
-	dsn := fmt.Sprintf("file:%s?cache=shared&mode=rwc&_journal_mode=WAL", dbFilePath)
+	dsn := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL", dbFilePath)
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)

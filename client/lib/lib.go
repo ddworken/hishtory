@@ -409,6 +409,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	tx.Limit(1).Find(&results)
 	if len(results) == 0 {
 		db.Create(entry)
+		// TODO: check the error here and bubble it up
 	}
 }
 

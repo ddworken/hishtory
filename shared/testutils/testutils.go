@@ -67,7 +67,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
-		_ = os.Rename(file, getBackPath(file, id))
+		Check(t, os.Rename(file, getBackPath(file, id)))
 	}
 	copyFiles := []string{
 		path.Join(homedir, ".zshrc"),
@@ -76,26 +76,27 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	}
 	for _, file := range copyFiles {
 		touchFile(file)
-		_ = copy(file, getBackPath(file, id))
+		Check(t, copy(file, getBackPath(file, id)))
 	}
 	configureZshrc(homedir)
 	touchFile(path.Join(homedir, ".bash_history"))
 	touchFile(path.Join(homedir, ".zsh_history"))
 	touchFile(path.Join(homedir, ".local/share/fish/fish_history"))
 	return func() {
+		if runtime.GOOS != "windows" {
+			cmd := exec.Command("killall", "hishtory", "tmux")
+			stdout, err := cmd.Output()
+			if err != nil && err.Error() != "exit status 1" {
+				t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
+			}
+		}
+		Check(t, os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH)))
 		Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH), os.ModePerm))
 		for _, file := range renameFiles {
 			checkError(os.Rename(getBackPath(file, id), file))
 		}
 		for _, file := range copyFiles {
 			checkError(copy(getBackPath(file, id), file))
-		}
-		if runtime.GOOS != "windows" {
-			cmd := exec.Command("killall", "hishtory")
-			stdout, err := cmd.Output()
-			if err != nil && err.Error() != "exit status 1" {
-				t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
-			}
 		}
 		checkError(os.Chdir(initialWd))
 	}
@@ -284,4 +285,16 @@ func MakeFakeHistoryEntry(command string) data.HistoryEntry {
 
 func IsGithubAction() bool {
 	return os.Getenv("GITHUB_ACTION") != ""
+}
+
+func TestLog(t *testing.T, line string) {
+	f, err := os.OpenFile("/tmp/test.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		Check(t, err)
+	}
+	defer f.Close()
+	_, err = f.WriteString(line + "\n")
+	if err != nil {
+		Check(t, err)
+	}
 }

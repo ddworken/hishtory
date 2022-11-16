@@ -310,7 +310,7 @@ func installHishtory(t *testing.T, tester shellTester, userSecret string) string
 	return matches[1]
 }
 
-func initFromOnlineStatus(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
+func installWithOnlineStatus(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
 	if onlineStatus == Online {
 		return installHishtory(t, tester, "")
 	} else {
@@ -330,7 +330,7 @@ func assertOnlineStatus(t *testing.T, onlineStatus OnlineStatus) {
 
 func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
 	// Test install
-	userSecret := initFromOnlineStatus(t, tester, onlineStatus)
+	userSecret := installWithOnlineStatus(t, tester, onlineStatus)
 	assertOnlineStatus(t, onlineStatus)
 
 	// Test the status subcommand
@@ -1512,7 +1512,7 @@ echo UUID-fishcommand
 func testLocalRedaction(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	initFromOnlineStatus(t, tester, onlineStatus)
+	installWithOnlineStatus(t, tester, onlineStatus)
 	assertOnlineStatus(t, onlineStatus)
 
 	// Record some commands
@@ -1797,8 +1797,8 @@ func TestTui(t *testing.T) {
 
 	// Insert a couple hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
-	db.Create(testutils.MakeFakeHistoryEntry("ls ~/"))
-	db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
 
 	// Check the initial output when there is no search
 	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
@@ -1874,7 +1874,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 	fullCommand += " sleep 0.5\n"
 	fullCommand += " tmux capture-pane -t foo -p\n"
 	fullCommand += " tmux kill-session -t foo\n"
-	hctx.GetLogger().Infof("Running tmux command: " + fullCommand)
+	testutils.TestLog(t, "Running tmux command: "+fullCommand)
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
@@ -1884,7 +1884,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	initFromOnlineStatus(t, tester, onlineStatus)
+	installWithOnlineStatus(t, tester, onlineStatus)
 	assertOnlineStatus(t, onlineStatus)
 
 	// Disable recording so that all our testing commands don't get recorded
@@ -1897,11 +1897,18 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
 	e1.ExitCode = 127
-	db.Create(e1)
-	db.Create(testutils.MakeFakeHistoryEntry("ls ~/foo/"))
-	db.Create(testutils.MakeFakeHistoryEntry("ls ~/bar/"))
-	db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'"))
-	db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &"))
+	testutils.Check(t, db.Create(e1).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/foo/")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/bar/")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &")).Error)
+
+	// Check that they're there
+	var historyEntries []*data.HistoryEntry
+	db.Model(&data.HistoryEntry{}).Find(&historyEntries)
+	if len(historyEntries) != 5 {
+		t.Fatalf("expected to find 5 history entries, actual found %d: %#v", len(historyEntries), historyEntries)
+	}
 
 	// And check that the control-r binding brings up the search
 	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
@@ -2030,6 +2037,21 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 		// This bit is broken on actions since actions run as a different user
 		compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 	}
+
+	// Re-enable control-r
+	out, err := tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
+	testutils.Check(t, err)
+	if out != "" {
+		t.Fatalf("config-set out is unexpected: %#v", out)
+	}
+
+	// And check that the control-r bindings work again
+	out = captureTerminalOutputWithShellName(t, tester, "fish", []string{"C-R", "-pipefail SPACE -exit_code:0"})
+	if !strings.Contains(out, "\n\n\n") {
+		t.Fatalf("failed to find separator in %#v", out)
+	}
+	out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	compareGoldens(t, out, "testControlR-Final")
 }
 
 func testCustomColumns(t *testing.T, tester shellTester) {

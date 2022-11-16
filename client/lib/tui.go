@@ -242,8 +242,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 	return rows, len(data), nil
 }
 
-func calculateColumnWidths(rows []table.Row) []int {
-	numColumns := len(rows[0])
+func calculateColumnWidths(rows []table.Row, numColumns int) []int {
 	neededColumnWidth := make([]int, numColumns)
 	for _, row := range rows {
 		for i, v := range row {
@@ -266,11 +265,20 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 		if err != nil {
 			return nil, err
 		}
+		if len(allRows) == 0 || len(allRows[0]) == 0 {
+			// There are truly zero history entries. Let's still display a table in this case rather than erroring out.
+			allRows = make([]table.Row, 0)
+			row := make([]string, 0)
+			for range columnNames {
+				row = append(row, " ")
+			}
+			allRows = append(allRows, row)
+		}
 		return makeTableColumns(ctx, columnNames, allRows)
 	}
 
 	// Calculate the minimum amount of space that we need for each column for the current actual search
-	columnWidths := calculateColumnWidths(rows)
+	columnWidths := calculateColumnWidths(rows, len(columnNames))
 	totalWidth := 20
 	for i, name := range columnNames {
 		columnWidths[i] = max(columnWidths[i], len(name))
@@ -285,7 +293,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 		}
 		bigQueryResults = bigRows
 	}
-	maximumColumnWidths := calculateColumnWidths(bigQueryResults)
+	maximumColumnWidths := calculateColumnWidths(bigQueryResults, len(columnNames))
 
 	// Get the actual terminal width. If we're below this, opportunistically add some padding aiming for the maximum column widths
 	terminalWidth, _, err := getTerminalSize()
