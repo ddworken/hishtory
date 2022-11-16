@@ -11,7 +11,7 @@ import (
 )
 
 var EXAMPLE_QUERIES string = `Example queries:
-'hishtory SUBCOMMAND apt-get'  			# Find shell commands containing 'apt-get'
+'hishtory SUBCOMMAND apt-get'  		# Find shell commands containing 'apt-get'
 'hishtory SUBCOMMAND apt-get install'  	# Find shell commands containing 'apt-get' and 'install'
 'hishtory SUBCOMMAND curl cwd:/tmp/'  	# Find shell commands containing 'curl' run in '/tmp/'
 'hishtory SUBCOMMAND curl user:david'	# Find shell commands containing 'curl' run by 'david'
