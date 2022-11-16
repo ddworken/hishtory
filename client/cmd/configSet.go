@@ -75,19 +75,10 @@ var setTimestampFormatCmd = &cobra.Command{
 	},
 }
 
-var setCustomColumnsCmd = &cobra.Command{
-	Use:   "custom-columns",
-	Short: "The list of custom columns that hishtory is tracking",
-	Run: func(cmd *cobra.Command, args []string) {
-		log.Fatalf("Please use config-add and config-delete to interact with custom-columns")
-	},
-}
-
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
 	configSetCmd.AddCommand(setFilterDuplicateCommandsCmd)
 	configSetCmd.AddCommand(setDisplayedColumnsCmd)
 	configSetCmd.AddCommand(setTimestampFormatCmd)
-	configSetCmd.AddCommand(setCustomColumnsCmd)
 }
