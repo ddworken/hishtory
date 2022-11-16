@@ -127,6 +127,8 @@ Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues,
 <details>
 <summary>Uninstalling</summary>
 If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
+
+Note that if you're uninstalling hishtory due to bad latency, try running `hishtory update` first! Latency has been improved over 100x since the first release so I'd highly recommend checking out the latest version. 
 </details>
 
 ## Design
