@@ -25,10 +25,8 @@ const (
 
 func ResetLocalState(t *testing.T) {
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to retrieve homedir: %v", err)
-	}
-
+	Check(t, err)
+	persistLog()
 	_ = BackupAndRestoreWithId(t, "-reset-local-state")
 	_ = os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH))
 }
@@ -90,6 +88,7 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 				t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 			}
 		}
+		persistLog()
 		Check(t, os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH)))
 		Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH), os.ModePerm))
 		for _, file := range renameFiles {
@@ -297,4 +296,21 @@ func TestLog(t *testing.T, line string) {
 	if err != nil {
 		Check(t, err)
 	}
+}
+
+func persistLog() {
+	homedir, err := os.UserHomeDir()
+	checkError(err)
+	fp := path.Join(homedir, data.HISHTORY_PATH, "hishtory.log")
+	log, err := os.ReadFile(fp)
+	if err != nil {
+		return
+	}
+	f, err := os.OpenFile("/tmp/hishtory.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	checkError(err)
+	defer f.Close()
+	_, err = f.Write(log)
+	checkError(err)
+	_, err = f.WriteString("\n")
+	checkError(err)
 }

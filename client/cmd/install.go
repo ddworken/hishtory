@@ -18,8 +18,13 @@ var installCmd = &cobra.Command{
 	Use:    "install",
 	Hidden: true,
 	Short:  "Copy this binary to ~/.hishtory/ and configure your shell to use it for recording your shell history",
+	Args:   cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		lib.CheckFatalError(lib.Install(*offlineInstall))
+		secretKey := ""
+		if len(args) > 0 {
+			secretKey = args[0]
+		}
+		lib.CheckFatalError(lib.Install(secretKey, *offlineInstall))
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
