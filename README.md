@@ -106,7 +106,11 @@ Download the latest binary from [Github Releases](https://github.com/ddworken/hi
 <summary>Self-Hosting</summary>
 By default, hiSHtory relies on a backend for syncing. All data is end-to-end encrypted, so the backend can't view your history. 
 
-But if you'd like to self-host the hishtory backend, you can! The backend is a simple go binary in `backend/server/server.go` that uses postgres to store data. Check out the [`docker-compose.yml`](https://github.com/ddworken/hishtory/blob/master/backend/server/docker-compose.yml) file for an example config to start a hiSHtory server and how to configure it. 
+But if you'd like to self-host the hishtory backend, you can! The backend is a simple go binary in `backend/server/server.go`. It can either use SQLite or Postgres for persistence. 
+
+Check out the [`docker-compose.yml`](https://github.com/ddworken/hishtory/blob/master/backend/server/docker-compose.yml) file for an example config to start a hiSHtory server using postgres.
+
+If you want to use a SQLite backend, you can do so by setting the `HISHTORY_SQLITE_DB` environment variable to point to a file. It will then create a SQLite DB at the given location.
 </details>
 
 <details>

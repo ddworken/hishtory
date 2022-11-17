@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/user"
 	"runtime"
 	"strconv"
 	"strings"
@@ -371,11 +370,7 @@ func wipeDbHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func isTestEnvironment() bool {
-	u, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	return os.Getenv("HISHTORY_TEST") != "" || u.Username == "david"
+	return os.Getenv("HISHTORY_TEST") != ""
 }
 
 func OpenDB() (*gorm.DB, error) {
@@ -394,7 +389,6 @@ func OpenDB() (*gorm.DB, error) {
 	}
 
 	var sqliteDb string
-
 	if os.Getenv("HISHTORY_SQLITE_DB") != "" {
 		sqliteDb = os.Getenv("HISHTORY_SQLITE_DB")
 	}
@@ -411,7 +405,6 @@ func OpenDB() (*gorm.DB, error) {
 		}
 		db, err = gorm.Open(postgres.Open(postgresDb), &gorm.Config{})
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 	}
