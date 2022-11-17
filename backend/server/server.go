@@ -42,12 +42,6 @@ type UsageData struct {
 	Version           string    `json:"version"`
 }
 
-type Feedback struct {
-	UserId   string    `json:"user_id" gorm:"not null"`
-	Date     time.Time `json:"date" gorm:"not null"`
-	Feedback string    `json:"feedback"`
-}
-
 func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	val := r.URL.Query().Get(queryParam)
 	if val == "" {
@@ -404,7 +398,7 @@ func OpenDB() (*gorm.DB, error) {
 		db.AutoMigrate(&UsageData{})
 		db.AutoMigrate(&shared.DumpRequest{})
 		db.AutoMigrate(&shared.DeletionRequest{})
-		db.AutoMigrate(&Feedback{})
+		db.AutoMigrate(&shared.Feedback{})
 		db.Exec("PRAGMA journal_mode = WAL")
 		return db, nil
 	}
@@ -620,7 +614,7 @@ func feedbackHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	var feedback Feedback
+	var feedback shared.Feedback
 	err = json.Unmarshal(data, &feedback)
 	if err != nil {
 		panic(fmt.Sprintf("feedbackHandler: body=%#v, err=%v", data, err))

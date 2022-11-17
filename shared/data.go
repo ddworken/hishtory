@@ -85,3 +85,9 @@ func (m *MessageIdentifiers) Scan(value interface{}) error {
 func (m MessageIdentifiers) Value() (driver.Value, error) {
 	return json.Marshal(m)
 }
+
+type Feedback struct {
+	UserId   string    `json:"user_id" gorm:"not null"`
+	Date     time.Time `json:"date" gorm:"not null"`
+	Feedback string    `json:"feedback"`
+}
