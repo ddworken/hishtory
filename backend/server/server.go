@@ -42,6 +42,12 @@ type UsageData struct {
 	Version           string    `json:"version"`
 }
 
+type Feedback struct {
+	UserId   string    `json:"user_id" gorm:"not null"`
+	Date     time.Time `json:"date" gorm:"not null"`
+	Feedback string    `json:"feedback"`
+}
+
 func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	val := r.URL.Query().Get(queryParam)
 	if val == "" {
@@ -398,6 +404,7 @@ func OpenDB() (*gorm.DB, error) {
 		db.AutoMigrate(&UsageData{})
 		db.AutoMigrate(&shared.DumpRequest{})
 		db.AutoMigrate(&shared.DeletionRequest{})
+		db.AutoMigrate(&Feedback{})
 		db.Exec("PRAGMA journal_mode = WAL")
 		return db, nil
 	}
@@ -608,6 +615,20 @@ func slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+func feedbackHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	var feedback Feedback
+	err = json.Unmarshal(data, &feedback)
+	if err != nil {
+		panic(fmt.Sprintf("feedbackHandler: body=%#v, err=%v", data, err))
+	}
+	fmt.Printf("feedbackHandler: received request containg feedback %#v\n", feedback)
+	checkGormResult(GLOBAL_DB.Create(feedback))
+}
+
 type loggedResponseData struct {
 	size int
 }
@@ -678,6 +699,7 @@ func main() {
 	http.Handle("/api/v1/get-deletion-requests", withLogging(getDeletionRequestsHandler))
 	http.Handle("/api/v1/add-deletion-request", withLogging(addDeletionRequestHandler))
 	http.Handle("/api/v1/slsa-status", withLogging(slsaStatusHandler))
+	http.Handle("/api/v1/feedback", withLogging(feedbackHandler))
 	http.Handle("/healthcheck", withLogging(healthCheckHandler))
 	http.Handle("/internal/api/v1/usage-stats", withLogging(usageStatsHandler))
 	http.Handle("/internal/api/v1/stats", withLogging(statsHandler))
