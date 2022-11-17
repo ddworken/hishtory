@@ -1,10 +1,10 @@
-Exit Code  git_remote                            Command                                                                                                                                     
-0          https://github.com/ddworken/hishtory  hishtory config-set displayed-columns 'Exit Code' git_remote Command                                                                        
-0                                                echo bar                                                                                                                                    
-0                                                cd /                                                                                                                                        
-0          https://github.com/ddworken/hishtory  echo foo                                                                                                                                    
+Exit Code  git_remote                            Command                                                                                                                                      
+0          https://github.com/ddworken/hishtory  hishtory config-set displayed-columns 'Exit Code' git_remote Command                                                                         
+0                                                echo bar                                                                                                                                     
+0                                                cd /                                                                                                                                         
+0          https://github.com/ddworken/hishtory  echo foo                                                                                                                                     
 0          https://github.com/ddworken/hishtory  hishtory config-add custom-columns git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'  
-0                                                echo baz                                                                                                                                    
-0                                                cd /                                                                                                                                        
-0                                                echo $FOOBAR world                                                                                                                          
-0                                                export FOOBAR='hello'                                                                                                                       
+0                                                echo baz                                                                                                                                     
+0                                                cd /                                                                                                                                         
+0                                                echo $FOOBAR world                                                                                                                           
+0                                                export FOOBAR='hello'                                                                                                                        
