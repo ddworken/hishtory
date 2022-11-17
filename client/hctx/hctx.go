@@ -78,7 +78,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 		return nil, err
 	}
 	newLogger := logger.New(
-		GetLogger(),
+		GetLogger().WithField("fromSQL", true),
 		logger.Config{
 			SlowThreshold:             100 * time.Millisecond,
 			LogLevel:                  logger.Warn,

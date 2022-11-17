@@ -82,7 +82,7 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 		COUNT(DISTINCT devices.device_id) as num_devices,
 		SUM(usage_data.num_entries_handled) as num_history_entries,
 		MAX(usage_data.last_used) as last_active,
-		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ', ') FILTER (WHERE usage_data.last_ip != 'Unknown'), 'Unknown')  as ip_addresses,
+		COALESCE(STRING_AGG(DISTINCT usage_data.last_ip, ', ') FILTER (WHERE usage_data.last_ip != 'Unknown' AND usage_data.last_ip != 'UnknownIp'), 'Unknown')  as ip_addresses,
 		COALESCE(SUM(usage_data.num_queries), 0) as num_queries,
 		COALESCE(MAX(usage_data.last_queried), 'January 1, 1970') as last_queried,
 		STRING_AGG(DISTINCT usage_data.version, ', ') as versions
@@ -177,6 +177,7 @@ func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	tx := GLOBAL_DB.Where("user_id = ?", userId)
 	var historyEntries []*shared.EncHistoryEntry
 	checkGormResult(tx.Find(&historyEntries))
+	fmt.Printf("apiBootstrapHandler: Found %d entries\n", len(historyEntries))
 	resp, err := json.Marshal(historyEntries)
 	if err != nil {
 		panic(err)
@@ -216,7 +217,7 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 func getRemoteAddr(r *http.Request) string {
 	addr, ok := r.Header["X-Real-Ip"]
 	if !ok || len(addr) == 0 {
-		return "Unknown"
+		return "UnknownIp"
 	}
 	return addr[0]
 }

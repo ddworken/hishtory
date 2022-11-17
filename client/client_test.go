@@ -1206,6 +1206,10 @@ echo other`)
 }
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
+	if !testutils.IsOnline() {
+		t.Skip("skipping because we're currently offline")
+	}
+
 	// Set up
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
@@ -1314,7 +1318,7 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 
 	// Test the help command
 	out := tester.RunInteractiveShell(t, `hishtory help`)
-	if !strings.HasPrefix(out, "hiSHtory: Better shell history\n\nSupported commands:\n") {
+	if !strings.HasPrefix(out, "hiSHtory: Better shell history") {
 		t.Fatalf("expected hishtory help to contain intro, actual=%#v", out)
 	}
 	out2 := tester.RunInteractiveShell(t, `hishtory -h`)
@@ -1531,27 +1535,27 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Redact foo
-	out = tester.RunInteractiveShell(t, `hishtory redact --force foo`)
+	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact foo`)
 	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Check that the commands are redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\nhishtory redact --force foo\n", randomCmdUuid)
+	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\nHISHTORY_REDACT_FORCE=1 hishtory redact foo\n", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 
 	// Redact s
-	out = tester.RunInteractiveShell(t, `hishtory redact --force s`)
+	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact s`)
 	if out != "Permanently deleting 10 entries\n" && out != "Permanently deleting 11 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Check that the commands are redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "hishtory redact --force s\n"
+	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1559,12 +1563,12 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Record another command
 	tester.RunInteractiveShell(t, `echo hello`)
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "hishtory redact --force s\necho hello\n"
+	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\necho hello\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
 
-	// Redact it without --force
+	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	testutils.Check(t, err)
 	if out != "This will permanently delete 1 entries, are you sure? [y/N]" {
@@ -1573,7 +1577,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// And check it was redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "hishtory redact --force s\nyes | hishtory redact hello\n"
+	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\nyes | hishtory redact hello\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1614,14 +1618,14 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Restore the first client, and redact some commands
 	restoreInstall2 := testutils.BackupAndRestoreWithId(t, "-2")
 	restoreInstall1()
-	out = tester.RunInteractiveShell(t, `hishtory redact --force `+randomCmdUuid)
+	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+randomCmdUuid)
 	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Confirm that client1 doesn't have the commands
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("echo foo\nls /tmp\nhishtory redact --force %s\n", randomCmdUuid)
+	expectedOutput = fmt.Sprintf("echo foo\nls /tmp\nHISHTORY_REDACT_FORCE=1 hishtory redact %s\n", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1641,17 +1645,17 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 
 	// Config-get and set for enable-control-r
 	out := tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "true" {
+	if out != "true\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r false`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "false" {
+	if out != "false\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 	tester.RunInteractiveShell(t, `hishtory config-set enable-control-r true`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "true" {
+	if out != "true\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 
@@ -1708,7 +1712,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 	// And check that hishtory says it is false by default
 	out := tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "false" {
+	if out != "false\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 
@@ -1718,7 +1722,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 	// Now it should be enabled
 	out = tester.RunInteractiveShell(t, `hishtory config-get enable-control-r`)
-	if out != "true" {
+	if out != "true\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 }
@@ -2073,7 +2077,7 @@ echo baz`)
 	compareGoldens(t, out, "testCustomColumns-initHistory")
 
 	// Configure a custom column
-	tester.RunInteractiveShell(t, `hishtory config-add custom-column git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'`)
+	tester.RunInteractiveShell(t, `hishtory config-add custom-columns git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'`)
 
 	// Run a few commands, some of which will have a git_remote
 	out = tester.RunInteractiveShell(t, `echo foo
@@ -2413,7 +2417,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 			testutils.Check(t, err)
 		}
 		if op.redactQuery != "" {
-			_, err := tester.RunInteractiveShellRelaxed(t, `hishtory redact --force `+op.redactQuery)
+			_, err := tester.RunInteractiveShellRelaxed(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+op.redactQuery)
 			testutils.Check(t, err)
 		}
 
@@ -2436,7 +2440,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 				filteredLines = append(filteredLines, line)
 			}
 			val = strings.Join(filteredLines, "\n")
-			val += `hishtory redact --force ` + op.redactQuery + "\n"
+			val += `HISHTORY_REDACT_FORCE=1 hishtory redact ` + op.redactQuery + "\n"
 		}
 		keyToCommands[op.device.key] = val
 

@@ -23,7 +23,7 @@ func TestSetup(t *testing.T) {
 	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	testutils.Check(t, Setup([]string{}))
+	testutils.Check(t, Setup("", false))
 	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
@@ -47,7 +47,7 @@ func TestSetupOffline(t *testing.T) {
 	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	testutils.Check(t, Setup([]string{"", "", "--offline"}))
+	testutils.Check(t, Setup("", true))
 	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
@@ -65,7 +65,7 @@ func TestSetupOffline(t *testing.T) {
 func TestBuildHistoryEntry(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
-	testutils.Check(t, Setup([]string{}))
+	testutils.Check(t, Setup("", false))
 
 	// Test building an actual entry for bash
 	entry, err := BuildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958"})
@@ -158,7 +158,7 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 	defer testutils.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
-	testutils.Check(t, Setup([]string{}))
+	testutils.Check(t, Setup("", false))
 
 	testcases := []struct {
 		input, histtimeformat, expectedCommand string
