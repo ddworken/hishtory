@@ -342,14 +342,24 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	var count int64
-	checkGormResult(GLOBAL_DB.Model(&shared.EncHistoryEntry{}).Count(&count))
-	if count < 100 {
-		panic("Suspiciously few enc history entries!")
+	db, err := GLOBAL_DB.DB()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get DB: %v", err))
 	}
-	checkGormResult(GLOBAL_DB.Model(&shared.Device{}).Count(&count))
-	if count < 50 {
-		panic("Suspiciously few devices!")
+	err = db.Ping()
+	if err != nil {
+		panic(fmt.Sprintf("failed to ping DB: %v", err))
+	}
+	if isProductionEnvironment(r) {
+		var count int64
+		checkGormResult(GLOBAL_DB.Model(&shared.EncHistoryEntry{}).Count(&count))
+		if count < 100 {
+			panic("Suspiciously few enc history entries!")
+		}
+		checkGormResult(GLOBAL_DB.Model(&shared.Device{}).Count(&count))
+		if count < 50 {
+			panic("Suspiciously few devices!")
+		}
 	}
 	ok := "OK"
 	w.Write([]byte(ok))
@@ -371,6 +381,10 @@ func wipeDbHandler(w http.ResponseWriter, r *http.Request) {
 
 func isTestEnvironment() bool {
 	return os.Getenv("HISHTORY_TEST") != ""
+}
+
+func isProductionEnvironment(r *http.Request) bool {
+	return r.Host == "api.hishtory.dev"
 }
 
 func OpenDB() (*gorm.DB, error) {
