@@ -30,3 +30,5 @@ var uninstallCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(uninstallCmd)
 }
+
+// TODO: maybe prompt users for feedback on why they're uninstalling?
