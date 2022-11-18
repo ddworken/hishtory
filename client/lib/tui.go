@@ -228,7 +228,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 			if strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
 				continue
 			}
-			entry.Command = strings.ReplaceAll(entry.Command, "\n", " ") // TODO: handle multi-line commands better here
+			entry.Command = strings.ReplaceAll(entry.Command, "\n", "; ")
 			row, err := buildTableRow(ctx, columnNames, *entry)
 			if err != nil {
 				return nil, 0, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
