@@ -351,15 +351,26 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 		panic(fmt.Sprintf("failed to ping DB: %v", err))
 	}
 	if isProductionEnvironment(r) {
+		// Check that we have a reasonable looking set of devices/entries in the DB
 		var count int64
 		checkGormResult(GLOBAL_DB.Model(&shared.EncHistoryEntry{}).Count(&count))
-		if count < 100 {
+		if count < 1000 {
 			panic("Suspiciously few enc history entries!")
 		}
 		checkGormResult(GLOBAL_DB.Model(&shared.Device{}).Count(&count))
-		if count < 50 {
+		if count < 100 {
 			panic("Suspiciously few devices!")
 		}
+		// Check that we can write to the DB. This entry will get written and then eventually cleaned by the cron.
+		checkGormResult(GLOBAL_DB.Create(&shared.EncHistoryEntry{
+			EncryptedData: []byte("data"),
+			Nonce:         []byte("nonce"),
+			DeviceId:      "healthcheck_device_id",
+			UserId:        "healthcheck_user_id",
+			Date:          time.Now(),
+			EncryptedId:   "healthcheck_enc_id",
+			ReadCount:     10000,
+		}))
 	}
 	ok := "OK"
 	w.Write([]byte(ok))
