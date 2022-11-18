@@ -2043,11 +2043,8 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	}
 
 	// Re-enable control-r
-	out, err := tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
+	_, err := tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
 	testutils.Check(t, err)
-	if out != "" {
-		t.Fatalf("config-set out is unexpected: %#v", out)
-	}
 
 	// And check that the control-r bindings work again
 	out = captureTerminalOutputWithShellName(t, tester, "fish", []string{"C-R", "-pipefail SPACE -exit_code:0"})

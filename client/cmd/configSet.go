@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -31,6 +32,7 @@ var setEnableControlRCmd = &cobra.Command{
 		config := hctx.GetConf(ctx)
 		config.ControlRSearchEnabled = (val == "true")
 		lib.CheckFatalError(hctx.SetConfig(config))
+		fmt.Println("Updated the control-r integration, please restart your shell for this to take effect...")
 	},
 }
 
