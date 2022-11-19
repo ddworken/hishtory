@@ -86,3 +86,5 @@ func init() {
 	offlineInit = initCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
 	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
 }
+
+// TODO: warn people if they're using bash 3.2 or less
