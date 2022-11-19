@@ -132,11 +132,17 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 	checkGormResult(GLOBAL_DB.Model(&UsageData{}).Where("last_used > ?", lastWeek).Count(&weeklyActiveInstalls))
 	var weeklyQueryUsers int64 = 0
 	checkGormResult(GLOBAL_DB.Model(&UsageData{}).Where("last_queried > ?", lastWeek).Count(&weeklyQueryUsers))
+	var lastRegistration string = ""
+	err := GLOBAL_DB.Raw("select to_char(max(registration_date), 'DD Month YYYY HH24:MI') from devices").Row().Scan(&lastRegistration)
+	if err != nil {
+		panic(err)
+	}
 	w.Write([]byte(fmt.Sprintf("Num devices: %d\n", numDevices)))
 	w.Write([]byte(fmt.Sprintf("Num history entries processed: %d\n", nep.Total)))
 	w.Write([]byte(fmt.Sprintf("Num DB entries: %d\n", numDbEntries)))
 	w.Write([]byte(fmt.Sprintf("Weekly active installs: %d\n", weeklyActiveInstalls)))
 	w.Write([]byte(fmt.Sprintf("Weekly active queries: %d\n", weeklyQueryUsers)))
+	w.Write([]byte(fmt.Sprintf("Last registration: %s\n", lastRegistration)))
 }
 
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
