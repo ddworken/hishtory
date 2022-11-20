@@ -26,7 +26,7 @@ function __hishtory_on_control_r
 	set -l res $status
 	commandline -f repaint
 	if [ -s $tmp ]
-		commandline -r (cat $tmp)
+		commandline -r -- (cat $tmp)
 	end
 	rm -f $tmp
 end

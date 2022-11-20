@@ -2047,12 +2047,37 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	testutils.Check(t, err)
 
 	// And check that the control-r bindings work again
-	out = captureTerminalOutputWithShellName(t, tester, "fish", []string{"C-R", "-pipefail SPACE -exit_code:0"})
-	if !strings.Contains(out, "\n\n\n") {
-		t.Fatalf("failed to find separator in %#v", out)
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail SPACE -exit_code:0"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	compareGoldens(t, out, "testControlR-Final")
+
+	// Record a multi-line command
+	tester.RunInteractiveShell(t, ` hishtory enable`)
+	tester.RunInteractiveShell(t, `ls \
+-Slah \
+/`)
+	tester.RunInteractiveShell(t, ` hishtory disable`)
+
+	// Check that we display it in the table reasonably
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	compareGoldens(t, out, "testControlR-DisplayMultiline-"+shellName)
+
+	// Check that we can select it correctly
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"})
+	if strings.Contains(out, "\n\n\n") {
+		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	if !strings.Contains(out, "-Slah") {
+		t.Fatalf("out has unexpected output missing the selected row: \n%s", out)
+	}
+	if !testutils.IsGithubAction() {
+		compareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
+	}
 }
 
 func testCustomColumns(t *testing.T, tester shellTester) {
