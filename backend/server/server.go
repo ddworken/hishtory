@@ -446,6 +446,7 @@ func OpenDB() (*gorm.DB, error) {
 	db.AutoMigrate(&UsageData{})
 	db.AutoMigrate(&shared.DumpRequest{})
 	db.AutoMigrate(&shared.DeletionRequest{})
+	db.AutoMigrate(&shared.Feedback{})
 	return db, nil
 }
 
