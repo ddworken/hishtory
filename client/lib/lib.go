@@ -492,18 +492,6 @@ func IsEnabled(ctx *context.Context) (bool, error) {
 	return hctx.GetConf(ctx).IsEnabled, nil
 }
 
-func Enable(ctx *context.Context) error {
-	config := hctx.GetConf(ctx)
-	config.IsEnabled = true
-	return hctx.SetConfig(config)
-}
-
-func Disable(ctx *context.Context) error {
-	config := hctx.GetConf(ctx)
-	config.IsEnabled = false
-	return hctx.SetConfig(config)
-}
-
 func CheckFatalError(err error) {
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
