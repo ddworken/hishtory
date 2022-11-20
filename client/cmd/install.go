@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -40,6 +41,7 @@ var installCmd = &cobra.Command{
 				}
 			}
 		}
+		lib.CheckFatalError(warnIfUnsupportedBashVersion())
 	},
 }
 
@@ -80,11 +82,26 @@ var initCmd = &cobra.Command{
 	},
 }
 
+func warnIfUnsupportedBashVersion() error {
+	_, err := exec.LookPath("bash")
+	if err != nil {
+		// bash is not installed, do nothing
+		return nil
+	}
+	cmd := exec.Command("bash", "--version")
+	bashVersion, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to check bash version: %v", err)
+	}
+	if strings.Contains(string(bashVersion), "version 3.") {
+		fmt.Printf("Warning: Your current bash version does not support overriding control-r. Please upgrade to at least bash 5 to enable the control-r integration.\n")
+	}
+	return nil
+}
+
 func init() {
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(initCmd)
 	offlineInit = initCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
 	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
 }
-
-// TODO: warn people if they're using bash 3.2 or less
