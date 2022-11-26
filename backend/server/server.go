@@ -216,9 +216,6 @@ func apiQueryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 	updateUsageData(ctx, r, userId, deviceId, 0, true)
-	// Increment the count
-	// TODO(optimization): Have this run in a background thread to avoid slowing down the entire response
-	checkGormResult(GLOBAL_DB.WithContext(ctx).Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId))
 
 	// Delete any entries that match a pending deletion request
 	var deletionRequests []*shared.DeletionRequest
@@ -230,7 +227,7 @@ func apiQueryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// Then retrieve, to avoid a race condition
+	// Then retrieve
 	tx := GLOBAL_DB.WithContext(ctx).Where("device_id = ? AND read_count < 5", deviceId)
 	var historyEntries []*shared.EncHistoryEntry
 	checkGormResult(tx.Find(&historyEntries))
@@ -240,7 +237,27 @@ func apiQueryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 		panic(err)
 	}
 	w.Write(resp)
+
+	// And finally, kick off a background goroutine that will increment the read count. Doing it in the background avoids
+	// blocking the entire response. This does have a potential race condition, but that is fine.
+	if isProductionEnvironment() {
+		go func() {
+			span, ctx := tracer.StartSpanFromContext(ctx, "apiQueryHandler.incrementReadCount")
+			err = incrementReadCounts(ctx, deviceId)
+			span.Finish(tracer.WithError(err))
+		}()
+	} else {
+		err = incrementReadCounts(ctx, deviceId)
+		if err != nil {
+			panic(fmt.Sprintf("failed to increment read counts"))
+		}
+	}
+
 	GLOBAL_STATSD.Incr("hishtory.query", []string{}, 1.0)
+}
+
+func incrementReadCounts(ctx context.Context, deviceId string) error {
+	return GLOBAL_DB.WithContext(ctx).Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId).Error
 }
 
 func getRemoteAddr(r *http.Request) string {

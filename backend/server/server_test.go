@@ -64,7 +64,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	if dbEntry.UserId != data.UserId("key") {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
-	if dbEntry.ReadCount != 1 {
+	if dbEntry.ReadCount != 0 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
@@ -92,7 +92,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	if dbEntry.UserId != data.UserId("key") {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
-	if dbEntry.ReadCount != 1 {
+	if dbEntry.ReadCount != 0 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err = data.DecryptHistoryEntry("key", *dbEntry)
@@ -270,7 +270,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		if dbEntry.UserId != userId {
 			t.Fatalf("Response contains an incorrect user ID: %#v", *dbEntry)
 		}
-		if dbEntry.ReadCount != 1 {
+		if dbEntry.ReadCount != 0 {
 			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
@@ -381,7 +381,7 @@ func TestDeletionRequests(t *testing.T) {
 		if dbEntry.UserId != data.UserId("dkey") {
 			t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 		}
-		if dbEntry.ReadCount != 1 {
+		if dbEntry.ReadCount != 0 {
 			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
@@ -406,6 +406,7 @@ func TestDeletionRequests(t *testing.T) {
 	addDeletionRequestHandler(context.Background(), nil, req)
 
 	// Query again for device id 1 and get a single result
+	time.Sleep(10 * time.Millisecond)
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	apiQueryHandler(context.Background(), w, searchReq)
@@ -424,7 +425,7 @@ func TestDeletionRequests(t *testing.T) {
 	if dbEntry.UserId != data.UserId("dkey") {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
-	if dbEntry.ReadCount != 2 {
+	if dbEntry.ReadCount != 1 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
@@ -452,7 +453,7 @@ func TestDeletionRequests(t *testing.T) {
 	if dbEntry.UserId != data.UserId("dOtherkey") {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
-	if dbEntry.ReadCount != 1 {
+	if dbEntry.ReadCount != 0 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err = data.DecryptHistoryEntry("dOtherkey", *dbEntry)
