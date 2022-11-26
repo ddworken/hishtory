@@ -179,12 +179,20 @@ func apiSubmitHandler(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		panic(fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", entries[0].UserId))
 	}
 	fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
-	for _, device := range devices {
-		for _, entry := range entries {
-			entry.DeviceId = device.DeviceId
+	err = GLOBAL_DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, device := range devices {
+			for _, entry := range entries {
+				entry.DeviceId = device.DeviceId
+			}
+			// Chunk the inserts to prevent the `extended protocol limited to 65535 parameters` error
+			for _, entriesChunk := range shared.Chunks(entries, 1000) {
+				checkGormResult(tx.Create(&entriesChunk))
+			}
 		}
-		// TODO(bug): This fails with gorm if entries is VERY large. Chunk it.
-		checkGormResult(GLOBAL_DB.WithContext(ctx).Create(&entries))
+		return nil
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %v", err))
 	}
 	GLOBAL_STATSD.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
 }

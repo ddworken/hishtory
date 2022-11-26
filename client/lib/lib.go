@@ -1003,7 +1003,7 @@ func Reupload(ctx *context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to reupload due to failed search: %v", err)
 	}
-	for _, chunk := range chunks(entries, 100) {
+	for _, chunk := range shared.Chunks(entries, 100) {
 		jsonValue, err := EncryptAndMarshal(config, chunk)
 		if err != nil {
 			return fmt.Errorf("failed to reupload due to failed encryption: %v", err)
@@ -1014,18 +1014,6 @@ func Reupload(ctx *context.Context) error {
 		}
 	}
 	return nil
-}
-
-func chunks[k any](slice []k, chunkSize int) [][]k {
-	var chunks [][]k
-	for i := 0; i < len(slice); i += chunkSize {
-		end := i + chunkSize
-		if end > len(slice) {
-			end = len(slice)
-		}
-		chunks = append(chunks, slice[i:end])
-	}
-	return chunks
 }
 
 func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {

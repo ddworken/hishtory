@@ -91,3 +91,15 @@ type Feedback struct {
 	Date     time.Time `json:"date" gorm:"not null"`
 	Feedback string    `json:"feedback"`
 }
+
+func Chunks[k any](slice []k, chunkSize int) [][]k {
+	var chunks [][]k
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+		if end > len(slice) {
+			end = len(slice)
+		}
+		chunks = append(chunks, slice[i:end])
+	}
+	return chunks
+}

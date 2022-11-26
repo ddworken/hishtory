@@ -11,6 +11,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
 )
 
@@ -360,13 +361,12 @@ func TestChunks(t *testing.T) {
 		{[]int{1, 2, 3, 4, 5}, 4, [][]int{{1, 2, 3, 4}, {5}}},
 	}
 	for _, tc := range testcases {
-		actual := chunks(tc.input, tc.chunkSize)
+		actual := shared.Chunks(tc.input, tc.chunkSize)
 		if !reflect.DeepEqual(actual, tc.output) {
 			t.Fatal("chunks failure")
 		}
 	}
 }
-
 func TestZshWeirdness(t *testing.T) {
 	testcases := []struct {
 		input  string
