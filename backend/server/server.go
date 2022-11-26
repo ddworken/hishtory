@@ -183,6 +183,7 @@ func apiSubmitHandler(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		for _, entry := range entries {
 			entry.DeviceId = device.DeviceId
 		}
+		// TODO(bug): This fails with gorm if entries is VERY large. Chunk it.
 		checkGormResult(GLOBAL_DB.WithContext(ctx).Create(&entries))
 	}
 	GLOBAL_STATSD.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
@@ -208,6 +209,7 @@ func apiQueryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 	deviceId := getRequiredQueryParam(r, "device_id")
 	updateUsageData(ctx, r, userId, deviceId, 0, true)
 	// Increment the count
+	// TODO(optimization): Have this run in a background thread to avoid slowing down the entire response
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceId))
 
 	// Delete any entries that match a pending deletion request
@@ -373,11 +375,14 @@ func healthCheckHandler(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 	if isProductionEnvironment() {
 		// Check that we have a reasonable looking set of devices/entries in the DB
-		var count int64
-		checkGormResult(GLOBAL_DB.WithContext(ctx).Model(&shared.EncHistoryEntry{}).Count(&count))
-		if count < 1000 {
+		rows, err := GLOBAL_DB.Raw("SELECT true FROM enc_history_entries LIMIT 1 OFFSET 1000").Rows()
+		if err != nil {
+			panic(fmt.Sprintf("failed to count entries in DB: %v", err))
+		}
+		if !rows.Next() {
 			panic("Suspiciously few enc history entries!")
 		}
+		var count int64
 		checkGormResult(GLOBAL_DB.WithContext(ctx).Model(&shared.Device{}).Count(&count))
 		if count < 100 {
 			panic("Suspiciously few devices!")
