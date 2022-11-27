@@ -57,7 +57,7 @@ type model struct {
 	lastQuery string
 
 	// Unrecoverable error.
-	err error
+	fatalErr error
 	// An error while searching. Recoverable and displayed as a warning message.
 	searchErr error
 	// Whether the device is offline. If so, a warning will be displayed.
@@ -98,17 +98,15 @@ func runQueryAndUpdateTable(m model, updateTable bool) model {
 			m.runQuery = &m.lastQuery
 		}
 		rows, numEntries, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
+		m.searchErr = err
 		if err != nil {
-			m.searchErr = err
 			return m
-		} else {
-			m.searchErr = nil
 		}
 		m.numEntries = numEntries
 		if updateTable {
 			t, err := makeTable(m.ctx, rows)
 			if err != nil {
-				m.err = err
+				m.fatalErr = err
 				return m
 			}
 			m.table = t
@@ -154,7 +152,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = runQueryAndUpdateTable(m, true)
 		return m, nil
 	case errMsg:
-		m.err = msg
+		m.fatalErr = msg
 		return m, nil
 	case offlineMsg:
 		m.isOffline = true
@@ -178,8 +176,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if m.err != nil {
-		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.err)
+	if m.fatalErr != nil {
+		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.fatalErr)
 	}
 	if m.selected {
 		indexOfCommand := -1
@@ -412,6 +410,11 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
 	rows, numEntries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
+		if initialQuery != "" {
+			// initialQuery is likely invalid in some way, let's just drop it
+			return TuiQuery(ctx, "")
+		}
+		// Something else has gone wrong, crash
 		return err
 	}
 	t, err := makeTable(ctx, rows)

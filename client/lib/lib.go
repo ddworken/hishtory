@@ -495,7 +495,7 @@ func IsEnabled(ctx *context.Context) (bool, error) {
 func CheckFatalError(err error) {
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
-		log.Fatalf("hishtory fatal error at %s:%d: %v", filename, line, err)
+		log.Fatalf("hishtory v0.%s fatal error at %s:%d: %v", Version, filename, line, err)
 	}
 }
 
@@ -1199,7 +1199,7 @@ func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}
 			}
 		}
 		if !isCustomColumn {
-			return "", nil, nil, fmt.Errorf("search query contains unknown search atom %s", field)
+			return "", nil, nil, fmt.Errorf("search query contains unknown search atom '%s' that doesn't match any column names", field)
 		}
 		// Build the where clause for the custom column
 		return "EXISTS (SELECT 1 FROM json_each(custom_columns) WHERE json_extract(value, '$.name') = ? and instr(json_extract(value, '$.value'), ?) > 0)", field, val, nil

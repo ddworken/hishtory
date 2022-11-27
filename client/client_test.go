@@ -1840,6 +1840,22 @@ func TestTui(t *testing.T) {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
 	}
 
+	// Check the output when the initial search is invalid
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery SPACE foo: ENTER",
+		"ls",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-InitialInvalidSearch")
+
+	// Check the output when the initial search is invalid
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"ls:",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-InvalidSearch")
+
 	// Check the output when the size is adjusted
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []string{
 		"hishtory SPACE tquery ENTER",
