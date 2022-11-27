@@ -625,18 +625,16 @@ func InitDB() {
 	if err != nil {
 		panic(err)
 	}
-	tx, err := GLOBAL_DB.DB()
+	sqlDb, err := GLOBAL_DB.DB()
 	if err != nil {
 		panic(err)
 	}
-	err = tx.Ping()
+	err = sqlDb.Ping()
 	if err != nil {
 		panic(err)
 	}
 	if isProductionEnvironment() {
-		tx.SetMaxIdleConns(10)
-		tx.SetMaxOpenConns(100)
-		tx.SetConnMaxLifetime(time.Minute * 30)
+		sqlDb.SetMaxIdleConns(10)
 	}
 }
 
