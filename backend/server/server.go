@@ -442,10 +442,18 @@ func applyDeletionRequestsToBackend(ctx context.Context, request shared.Deletion
 }
 
 func wipeDbHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	if r.Host == "api.hishtory.dev" {
+	if r.Host == "api.hishtory.dev" || isProductionEnvironment() {
 		panic("refusing to wipe the DB for prod")
 	}
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Exec("DELETE FROM enc_history_entries"))
+}
+
+func getNumConnectionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	sqlDb, err := GLOBAL_DB.DB()
+	if err != nil {
+		panic(err)
+	}
+	w.Write([]byte(fmt.Sprintf("%#v", sqlDb.Stats().OpenConnections)))
 }
 
 func isTestEnvironment() bool {
@@ -635,6 +643,9 @@ func InitDB() {
 	}
 	if isProductionEnvironment() {
 		sqlDb.SetMaxIdleConns(10)
+	}
+	if isTestEnvironment() {
+		sqlDb.SetMaxIdleConns(1)
 	}
 }
 
@@ -828,6 +839,7 @@ func main() {
 	mux.Handle("/internal/api/v1/stats", withLogging(statsHandler))
 	if isTestEnvironment() {
 		mux.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
+		mux.Handle("/api/v1/get-num-connections", withLogging(getNumConnectionsHandler))
 	}
 	fmt.Println("Listening on localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

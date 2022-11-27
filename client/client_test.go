@@ -172,6 +172,9 @@ func TestP(t *testing.T) {
 	}
 	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
 }
 
 func testIntegration(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
@@ -298,6 +301,9 @@ yes | hishtory init `+userSecret)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail | grep -v 'hishtory init ' | grep -v 'ls /'`)
 	compareGoldens(t, out, "testIntegrationWithNewDevice-table"+tester.ShellName())
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
 }
 
 func installHishtory(t *testing.T, tester shellTester, userSecret string) string {
@@ -452,6 +458,9 @@ echo thisisrecorded`)
 	if !strings.Contains(out, complexCommand) {
 		t.Fatalf("hishtory query doesn't contain the expected complex command, out=%#v", out)
 	}
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
 
 	return userSecret
 }
@@ -2078,6 +2087,9 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if !testutils.IsGithubAction() {
 		compareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
 	}
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
 }
 
 func testCustomColumns(t *testing.T, tester shellTester) {
@@ -2522,6 +2534,16 @@ func FuzzTestMultipleUsers(f *testing.F) {
 		fuzzTest(t, bashTester{}, input)
 		fuzzTest(t, zshTester{}, input)
 	})
+}
+
+func assertNoLeakedConnections(t *testing.T) {
+	resp, err := lib.ApiGet("/api/v1/get-num-connections")
+	testutils.Check(t, err)
+	numConnections, err := strconv.Atoi(string(resp))
+	testutils.Check(t, err)
+	if numConnections > 1 {
+		t.Fatalf("DB has %d open connections, expected to have 1 or less", numConnections)
+	}
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

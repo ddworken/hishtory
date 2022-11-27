@@ -16,6 +16,7 @@ import (
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/go-test/deep"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func TestESubmitThenQuery(t *testing.T) {
@@ -113,6 +114,9 @@ func TestESubmitThenQuery(t *testing.T) {
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
+
+	// Assert that we aren't leaking connections
+	assertNoLeakedConnections(t, GLOBAL_DB)
 }
 
 func TestDumpRequestAndResponse(t *testing.T) {
@@ -279,6 +283,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1Dec, entry2Dec)
 		}
 	}
+
+	// Assert that we aren't leaking connections
+	assertNoLeakedConnections(t, GLOBAL_DB)
 }
 
 func TestUpdateReleaseVersion(t *testing.T) {
@@ -308,6 +315,9 @@ func TestUpdateReleaseVersion(t *testing.T) {
 	if !strings.HasPrefix(ReleaseVersion, "v0.") {
 		t.Fatalf("ReleaseVersion wasn't updated to contain a version: %#v", ReleaseVersion)
 	}
+
+	// Assert that we aren't leaking connections
+	assertNoLeakedConnections(t, GLOBAL_DB)
 }
 
 func TestDeletionRequests(t *testing.T) {
@@ -487,5 +497,19 @@ func TestDeletionRequests(t *testing.T) {
 	}
 	if diff := deep.Equal(*deletionRequest, expected); diff != nil {
 		t.Error(diff)
+	}
+
+	// Assert that we aren't leaking connections
+	assertNoLeakedConnections(t, GLOBAL_DB)
+}
+
+func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	numConns := sqlDB.Stats().OpenConnections
+	if numConns > 1 {
+		t.Fatalf("expected DB to have not leak connections, actually have %d", numConns)
 	}
 }
