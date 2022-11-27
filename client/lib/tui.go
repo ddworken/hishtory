@@ -28,8 +28,6 @@ var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
 
-type errMsg error
-
 type model struct {
 	// context
 	ctx *context.Context
@@ -150,9 +148,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m = runQueryAndUpdateTable(m, true)
-		return m, nil
-	case errMsg:
-		m.fatalErr = msg
 		return m, nil
 	case offlineMsg:
 		m.isOffline = true
