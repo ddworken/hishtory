@@ -503,6 +503,24 @@ func TestDeletionRequests(t *testing.T) {
 	assertNoLeakedConnections(t, GLOBAL_DB)
 }
 
+func TestHealthcheck(t *testing.T) {
+	w := httptest.NewRecorder()
+	healthCheckHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/", nil))
+	if w.Code != 200 {
+		t.Fatalf("expected 200 resp code for healthCheckHandler")
+	}
+	res := w.Result()
+	defer res.Body.Close()
+	respBody, err := ioutil.ReadAll(res.Body)
+	testutils.Check(t, err)
+	if string(respBody) != "OK" {
+		t.Fatalf("expected healthcheckHandler to return OK")
+	}
+
+	// Assert that we aren't leaking connections
+	assertNoLeakedConnections(t, GLOBAL_DB)
+}
+
 func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
 	sqlDB, err := db.DB()
 	if err != nil {
