@@ -390,14 +390,6 @@ func addDeletionRequestHandler(ctx context.Context, w http.ResponseWriter, r *ht
 }
 
 func healthCheckHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	db, err := GLOBAL_DB.DB()
-	if err != nil {
-		panic(fmt.Sprintf("failed to get DB: %v", err))
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(fmt.Sprintf("failed to ping DB: %v", err))
-	}
 	if isProductionEnvironment() {
 		// Check that we have a reasonable looking set of devices/entries in the DB
 		rows, err := GLOBAL_DB.Raw("SELECT true FROM enc_history_entries LIMIT 1 OFFSET 1000").Rows()
@@ -422,6 +414,15 @@ func healthCheckHandler(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			EncryptedId:   "healthcheck_enc_id",
 			ReadCount:     10000,
 		}))
+	} else {
+		db, err := GLOBAL_DB.DB()
+		if err != nil {
+			panic(fmt.Sprintf("failed to get DB: %v", err))
+		}
+		err = db.Ping()
+		if err != nil {
+			panic(fmt.Sprintf("failed to ping DB: %v", err))
+		}
 	}
 	ok := "OK"
 	w.Write([]byte(ok))
@@ -628,6 +629,11 @@ func InitDB() {
 	err = tx.Ping()
 	if err != nil {
 		panic(err)
+	}
+	if isProductionEnvironment() {
+		tx.SetMaxIdleConns(10)
+		tx.SetMaxOpenConns(100)
+		tx.SetConnMaxLifetime(time.Minute * 30)
 	}
 }
 
