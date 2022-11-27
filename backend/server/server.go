@@ -106,6 +106,7 @@ func usageStatsHandler(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		panic(err)
 	}
+	defer rows.Close()
 	tbl := table.New("Registration Date", "Num Devices", "Num Entries", "Num Queries", "Last Active", "Last Query", "Versions", "IPs")
 	tbl.WithWriter(w)
 	for rows.Next() {
@@ -145,7 +146,8 @@ func statsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var weeklyQueryUsers int64 = 0
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Model(&UsageData{}).Where("last_queried > ?", lastWeek).Count(&weeklyQueryUsers))
 	var lastRegistration string = ""
-	err := GLOBAL_DB.WithContext(ctx).Raw("select to_char(max(registration_date), 'DD Month YYYY HH24:MI') from devices").Row().Scan(&lastRegistration)
+	row := GLOBAL_DB.WithContext(ctx).Raw("select to_char(max(registration_date), 'DD Month YYYY HH24:MI') from devices").Row()
+	err := row.Scan(&lastRegistration)
 	if err != nil {
 		panic(err)
 	}
@@ -396,6 +398,7 @@ func healthCheckHandler(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			panic(fmt.Sprintf("failed to count entries in DB: %v", err))
 		}
+		defer rows.Close()
 		if !rows.Next() {
 			panic("Suspiciously few enc history entries!")
 		}
