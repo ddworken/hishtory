@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -191,7 +190,7 @@ func GetConfigContents() ([]byte, error) {
 	}
 	dat, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
 	if err != nil {
-		files, err := ioutil.ReadDir(path.Join(homedir, data.HISHTORY_PATH))
+		files, err := os.ReadDir(path.Join(homedir, data.HISHTORY_PATH))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
 		}

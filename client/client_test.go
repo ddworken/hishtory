@@ -2230,12 +2230,10 @@ func TestZDotDir(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to get homedir: %v", err)
-	}
+	testutils.Check(t, err)
 	os.Setenv("ZDOTDIR", path.Join(homedir, data.HISHTORY_PATH))
 	installHishtory(t, tester, "")
-	defer os.Remove(path.Join(homedir, data.HISHTORY_PATH, ".zshrc"))
+	defer testutils.Check(t, os.Remove(path.Join(homedir, data.HISHTORY_PATH, ".zshrc")))
 
 	// Run a command and check that it was recorded
 	tester.RunInteractiveShell(t, `echo foo`)

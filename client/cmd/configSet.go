@@ -14,7 +14,7 @@ var configSetCmd = &cobra.Command{
 	Short:   "Set the value of a config option",
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		lib.CheckFatalError(cmd.Help())
 	},
 }
 

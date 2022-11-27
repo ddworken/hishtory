@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -51,7 +51,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	apiQueryHandler(context.Background(), w, searchReq)
 	res := w.Result()
 	defer res.Body.Close()
-	respBody, err := ioutil.ReadAll(res.Body)
+	respBody, err := io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
@@ -80,7 +80,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	apiQueryHandler(context.Background(), w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
@@ -108,7 +108,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	apiBootstrapHandler(context.Background(), w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
@@ -144,7 +144,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
 	res := w.Result()
 	defer res.Body.Close()
-	respBody, err := ioutil.ReadAll(res.Body)
+	respBody, err := io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	var dumpRequests []*shared.DumpRequest
 	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
@@ -164,7 +164,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
 	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
@@ -184,7 +184,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id=foo&device_id=bar", nil))
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
@@ -195,7 +195,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id=%20&device_id=%20", nil))
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
@@ -218,7 +218,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
@@ -228,7 +228,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId2, nil))
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	if string(respBody) != "[]" {
 		t.Fatalf("got unexpected respBody: %#v", string(respBody))
@@ -239,7 +239,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
 	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
@@ -260,7 +260,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	apiQueryHandler(context.Background(), w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
@@ -377,7 +377,7 @@ func TestDeletionRequests(t *testing.T) {
 	apiQueryHandler(context.Background(), w, searchReq)
 	res := w.Result()
 	defer res.Body.Close()
-	respBody, err := ioutil.ReadAll(res.Body)
+	respBody, err := io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
@@ -422,7 +422,7 @@ func TestDeletionRequests(t *testing.T) {
 	apiQueryHandler(context.Background(), w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
@@ -450,7 +450,7 @@ func TestDeletionRequests(t *testing.T) {
 	apiQueryHandler(context.Background(), w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
@@ -478,7 +478,7 @@ func TestDeletionRequests(t *testing.T) {
 	getDeletionRequestsHandler(context.Background(), w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
-	respBody, err = ioutil.ReadAll(res.Body)
+	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	var deletionRequests []*shared.DeletionRequest
 	testutils.Check(t, json.Unmarshal(respBody, &deletionRequests))
@@ -511,7 +511,7 @@ func TestHealthcheck(t *testing.T) {
 	}
 	res := w.Result()
 	defer res.Body.Close()
-	respBody, err := ioutil.ReadAll(res.Body)
+	respBody, err := io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	if string(respBody) != "OK" {
 		t.Fatalf("expected healthcheckHandler to return OK")

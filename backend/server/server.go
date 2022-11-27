@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -160,7 +160,7 @@ func statsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 }
 
 func apiSubmitHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -301,7 +301,7 @@ func apiSubmitDumpHandler(ctx context.Context, w http.ResponseWriter, r *http.Re
 	userId := getRequiredQueryParam(r, "user_id")
 	srcDeviceId := getRequiredQueryParam(r, "source_device_id")
 	requestingDeviceId := getRequiredQueryParam(r, "requesting_device_id")
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -358,7 +358,7 @@ func getDeletionRequestsHandler(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func addDeletionRequestHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -570,7 +570,7 @@ func updateReleaseVersion() error {
 	if err != nil {
 		return fmt.Errorf("failed to get latest release version: %v", err)
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read github API response body: %v", err)
 	}
@@ -707,7 +707,7 @@ func slsaStatusHandler(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func feedbackHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
 	}

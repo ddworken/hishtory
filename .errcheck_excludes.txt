@@ -1,6 +1,11 @@
 (net/http.ResponseWriter).Write
 (*gorm.io/gorm.DB).AutoMigrate
 os.Setenv
+os.Unsetenv
 (*os.File).Close
 (io.ReadCloser).Close
 (*github.com/gofrs/flock.Flock).Unlock
+(*database/sql.Rows).Close
+(*github.com/DataDog/datadog-go/statsd.Client).Count
+(*github.com/DataDog/datadog-go/statsd.Client).Incr
+(*github.com/DataDog/datadog-go/statsd.Client).Distribution

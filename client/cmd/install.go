@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -234,7 +233,7 @@ func configureFish(homedir, binaryPath string) error {
 		}
 		configContents = testConfig
 	}
-	err = ioutil.WriteFile(getFishConfigPath(homedir), []byte(configContents), 0o644)
+	err = os.WriteFile(getFishConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
 	}
@@ -263,7 +262,7 @@ func isFishConfigured(homedir string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	fishConfig, err := ioutil.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
+	fishConfig, err := os.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
 	if err != nil {
 		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %v", err)
 	}
@@ -284,7 +283,7 @@ func configureZshrc(homedir, binaryPath string) error {
 		}
 		configContents = testConfig
 	}
-	err := ioutil.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
+	err := os.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %v", err)
 	}
@@ -316,7 +315,7 @@ func isZshConfigured(homedir string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	bashrc, err := ioutil.ReadFile(getZshRcPath(homedir))
+	bashrc, err := os.ReadFile(getZshRcPath(homedir))
 	if err != nil {
 		return false, fmt.Errorf("failed to read zshrc: %v", err)
 	}
@@ -337,7 +336,7 @@ func configureBashrc(homedir, binaryPath string) error {
 		}
 		configContents = testConfig
 	}
-	err := ioutil.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
+	err := os.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.sh file: %v", err)
 	}
@@ -388,7 +387,7 @@ func isBashRcConfigured(homedir string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bashrc"))
+	bashrc, err := os.ReadFile(path.Join(homedir, ".bashrc"))
 	if err != nil {
 		return false, fmt.Errorf("failed to read bashrc: %v", err)
 	}
@@ -400,7 +399,7 @@ func isBashProfileConfigured(homedir string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	bashrc, err := ioutil.ReadFile(path.Join(homedir, ".bash_profile"))
+	bashrc, err := os.ReadFile(path.Join(homedir, ".bash_profile"))
 	if err != nil {
 		return false, fmt.Errorf("failed to read bash_profile: %v", err)
 	}

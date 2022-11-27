@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -898,7 +897,7 @@ func ApiGet(path string) ([]byte, error) {
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", getServerHostname(), path, resp.StatusCode)
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
 	}
@@ -926,7 +925,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to POST %s: status_code=%d", path, resp.StatusCode)
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
 	}

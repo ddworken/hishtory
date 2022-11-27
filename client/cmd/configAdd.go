@@ -11,7 +11,7 @@ var configAddCmd = &cobra.Command{
 	Short:   "Add a config option",
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		lib.CheckFatalError(cmd.Help())
 	},
 }
 

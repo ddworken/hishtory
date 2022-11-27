@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/ddworken/hishtory/client/lib"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +16,7 @@ var configGetCmd = &cobra.Command{
 	Short:   "Get the value of a config option",
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		lib.CheckFatalError(cmd.Help())
 	},
 }
 

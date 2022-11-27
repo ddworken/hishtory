@@ -116,14 +116,20 @@ func touchFile(p string) {
 }
 
 func configureZshrc(homedir string) {
-	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	checkError(err)
-	defer f.Close()
-	_, err = f.WriteString(`export HISTFILE=~/.zsh_history
+	zshrcHistConfig := `export HISTFILE=~/.zsh_history
 export HISTSIZE=10000
 export SAVEHIST=1000
 setopt SHARE_HISTORY
-`)
+`
+	dat, err := os.ReadFile(path.Join(homedir, ".zshrc"))
+	checkError(err)
+	if strings.Contains(string(dat), zshrcHistConfig) {
+		return
+	}
+	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	checkError(err)
+	defer f.Close()
+	_, err = f.WriteString(zshrcHistConfig)
 	checkError(err)
 }
 

@@ -444,7 +444,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 		p.Send(bannerMsg{banner: string(banner)})
 	}()
 	// Blocking: Start the TUI
-	err = p.Start()
+	_, err = p.Run()
 	if err != nil {
 		return err
 	}
