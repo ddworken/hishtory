@@ -289,24 +289,6 @@ func TestBuildRegexFromTimeFormat(t *testing.T) {
 	}
 }
 
-func TestGetLastCommand(t *testing.T) {
-	testcases := []struct {
-		input, expectedOutput string
-	}{
-		{"    0  ls", "ls"},
-		{"   33  ls", "ls"},
-		{"   33  ls --aaaa foo bar ", "ls --aaaa foo bar"},
-		{" 2389  [2022-09-28 04:38:32 +0000] echo", "[2022-09-28 04:38:32 +0000] echo"},
-	}
-	for _, tc := range testcases {
-		actualOutput, err := getLastCommand(tc.input)
-		testutils.Check(t, err)
-		if actualOutput != tc.expectedOutput {
-			t.Fatalf("getLastCommand(%#v) returned %#v (expected=%#v)", tc.input, actualOutput, tc.expectedOutput)
-		}
-	}
-}
-
 func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 	defer testutils.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 

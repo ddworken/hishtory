@@ -110,10 +110,7 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 
 	// command
 	if shell == "bash" {
-		cmd, err := getLastCommand(args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to build history entry: %v", err)
-		}
+		cmd := args[4]
 		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
@@ -306,18 +303,6 @@ func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
 func parseCrossPlatformInt(data string) (int64, error) {
 	data = strings.TrimSuffix(data, "N")
 	return strconv.ParseInt(data, 10, 64)
-}
-
-func getLastCommand(history string) (string, error) {
-	split := strings.SplitN(strings.TrimSpace(history), " ", 2)
-	if len(split) <= 1 {
-		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
-	}
-	split = strings.SplitN(split[1], " ", 2)
-	if len(split) <= 1 {
-		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
-	}
-	return split[1], nil
 }
 
 func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {
