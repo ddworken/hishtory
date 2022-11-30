@@ -455,3 +455,5 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	fmt.Printf("%s\n", strings.ReplaceAll(selectedRow, "\\n", "\n"))
 	return nil
 }
+
+// TODO: there is a bug where if you mvoe the cursor left int he TUI, and type, the cursor gets moved to the right
