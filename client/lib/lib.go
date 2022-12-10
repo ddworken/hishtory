@@ -945,7 +945,8 @@ func IsOfflineError(err error) bool {
 		strings.Contains(err.Error(), ": status_code=502") ||
 		strings.Contains(err.Error(), ": status_code=503") ||
 		strings.Contains(err.Error(), ": i/o timeout") ||
-		strings.Contains(err.Error(), "connect: operation timed out")
+		strings.Contains(err.Error(), "connect: operation timed out") ||
+		strings.Contains(err.Error(), "net/http: TLS handshake timeout")
 }
 
 func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
