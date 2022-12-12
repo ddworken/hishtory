@@ -817,6 +817,9 @@ func downloadFiles(updateInfo shared.UpdateInfo) error {
 	if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
 		clientUrl = updateInfo.LinuxAmd64Url
 		clientProvenanceUrl = updateInfo.LinuxAmd64AttestationUrl
+	} else if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
+		clientUrl = updateInfo.LinuxArm64Url
+		clientProvenanceUrl = updateInfo.LinuxArm64AttestationUrl
 	} else if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
 		clientUrl = updateInfo.DarwinAmd64Url
 		clientProvenanceUrl = updateInfo.DarwinAmd64AttestationUrl
