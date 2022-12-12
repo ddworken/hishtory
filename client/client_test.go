@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -2288,6 +2289,43 @@ echo foo`)
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
+}
+
+func TestSetConfigNoCorruption(t *testing.T) {
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// A test that tries writing a config many different times in parallel, and confirms there is no corruption
+	conf, err := hctx.GetConfig()
+	testutils.Check(t, err)
+	var doneWg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		doneWg.Add(1)
+		go func(i int) {
+			// Make a new config of a varied length
+			c := conf
+			c.LastSavedHistoryLine = strings.Repeat("A", i)
+			c.DeviceId = strings.Repeat("B", i*2)
+			c.HaveMissedUploads = (i % 2) == 0
+			// Write it
+			err := hctx.SetConfig(c)
+			if err != nil {
+				panic(err)
+			}
+			// Check that we can read
+			c2, err := hctx.GetConfig()
+			if err != nil {
+				panic(err)
+			}
+			if c2.UserSecret != c.UserSecret {
+				panic("user secret mismatch")
+			}
+			doneWg.Done()
+		}(i)
+	}
+	doneWg.Wait()
 }
 
 type deviceSet struct {

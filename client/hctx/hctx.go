@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"gorm.io/gorm"
@@ -237,7 +238,7 @@ func SetConfig(config ClientConfig) error {
 		return err
 	}
 	configPath := path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)
-	stagedConfigPath := configPath + ".tmp"
+	stagedConfigPath := configPath + ".tmp-" + uuid.Must(uuid.NewRandom()).String()
 	err = os.WriteFile(stagedConfigPath, serializedConfig, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config: %v", err)
