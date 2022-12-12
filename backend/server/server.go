@@ -7,6 +7,7 @@ import (
 	"html"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"reflect"
@@ -271,6 +272,17 @@ func getRemoteAddr(r *http.Request) string {
 }
 
 func apiRegisterHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if getMaximumNumberOfAllowedUsers() < math.MaxInt {
+		row := GLOBAL_DB.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices").Row()
+		var numDistinctUsers int64 = 0
+		err := row.Scan(&numDistinctUsers)
+		if err != nil {
+			panic(err)
+		}
+		if numDistinctUsers >= int64(getMaximumNumberOfAllowedUsers()) {
+			panic(fmt.Sprintf("Refusing to allow registration of new device since there are currently %d users and this server allows a max of %d users", numDistinctUsers, getMaximumNumberOfAllowedUsers()))
+		}
+	}
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 	var existingDevicesCount int64 = -1
@@ -850,6 +862,18 @@ func checkGormResult(result *gorm.DB) {
 		_, filename, line, _ := runtime.Caller(1)
 		panic(fmt.Sprintf("DB error at %s:%d: %v", filename, line, result.Error))
 	}
+}
+
+func getMaximumNumberOfAllowedUsers() int {
+	maxNumUsersStr := os.Getenv("HISHTORY_MAX_NUM_USERS")
+	if maxNumUsersStr == "" {
+		return math.MaxInt
+	}
+	maxNumUsers, err := strconv.Atoi(maxNumUsersStr)
+	if err != nil {
+		return math.MaxInt
+	}
+	return maxNumUsers
 }
 
 // TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?

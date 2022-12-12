@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -519,6 +520,27 @@ func TestHealthcheck(t *testing.T) {
 
 	// Assert that we aren't leaking connections
 	assertNoLeakedConnections(t, GLOBAL_DB)
+}
+
+func TestLimitRegistrations(t *testing.T) {
+	// Set up
+	InitDB()
+	defer testutils.BackupAndRestoreEnv("HISHTORY_MAX_NUM_USERS")()
+	os.Setenv("HISHTORY_MAX_NUM_USERS", "2")
+
+	// Register three devices across two users
+	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user1"), nil)
+	apiRegisterHandler(context.Background(), nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user1"), nil)
+	apiRegisterHandler(context.Background(), nil, deviceReq)
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user2"), nil)
+	apiRegisterHandler(context.Background(), nil, deviceReq)
+
+	// And this next one should fail since it is a new user
+	defer func() { _ = recover() }()
+	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user3"), nil)
+	apiRegisterHandler(context.Background(), nil, deviceReq)
+	t.Errorf("expected panic")
 }
 
 func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
