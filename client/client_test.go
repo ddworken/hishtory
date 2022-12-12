@@ -2231,19 +2231,27 @@ func TestZDotDir(t *testing.T) {
 	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
 	homedir, err := os.UserHomeDir()
 	testutils.Check(t, err)
-	os.Setenv("ZDOTDIR", path.Join(homedir, data.HISHTORY_PATH))
-	installHishtory(t, tester, "")
-	defer testutils.Check(t, os.Remove(path.Join(homedir, data.HISHTORY_PATH, ".zshrc")))
+	zdotdir := path.Join(homedir, "foo")
+	testutils.Check(t, os.MkdirAll(zdotdir, 0o744))
+	os.Setenv("ZDOTDIR", zdotdir)
+	userSecret := installHishtory(t, tester, "")
+	defer testutils.Check(t, os.Remove(path.Join(zdotdir, ".zshrc")))
+
+	// Check the status command
+	out := tester.RunInteractiveShell(t, `hishtory status`)
+	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
+		t.Fatalf("status command has unexpected output: %#v", out)
+	}
 
 	// Run a command and check that it was recorded
 	tester.RunInteractiveShell(t, `echo foo`)
-	out := tester.RunInteractiveShell(t, `hishtory export -pipefail -install`)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -install`)
 	if out != "echo foo\n" {
 		t.Fatalf("hishtory export had unexpected out=%#v", out)
 	}
 
 	// Check that hishtory respected ZDOTDIR
-	zshrc, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, ".zshrc"))
+	zshrc, err := os.ReadFile(path.Join(zdotdir, ".zshrc"))
 	testutils.Check(t, err)
 	if !strings.Contains(string(zshrc), "# Hishtory Config:") {
 		t.Fatalf("zshrc had unexpected contents=%#v", string(zshrc))
