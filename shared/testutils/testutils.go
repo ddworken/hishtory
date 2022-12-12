@@ -239,10 +239,11 @@ func RunTestServer() func() {
 		if err != nil && err.Error() != "os: process already finished" {
 			panic(fmt.Sprintf("failed to kill server process: %v", err))
 		}
-		if strings.Contains(stderr.String()+stdout.String(), "failed to") && IsOnline() {
+		allOutput := stdout.String() + stderr.String()
+		if strings.Contains(allOutput, "failed to") && IsOnline() {
 			panic(fmt.Sprintf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
-		if strings.Contains(stderr.String()+stdout.String(), "ERROR:") {
+		if strings.Contains(allOutput, "ERROR:") || strings.Contains(allOutput, "http: panic serving") {
 			panic(fmt.Sprintf("server experienced an error: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
 		// fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())

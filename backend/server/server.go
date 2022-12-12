@@ -252,7 +252,7 @@ func apiQueryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 	} else {
 		err = incrementReadCounts(ctx, deviceId)
 		if err != nil {
-			panic(fmt.Sprintf("failed to increment read counts"))
+			panic("failed to increment read counts")
 		}
 	}
 
@@ -453,9 +453,12 @@ func applyDeletionRequestsToBackend(ctx context.Context, request shared.Deletion
 	return int(result.RowsAffected), nil
 }
 
-func wipeDbHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func wipeDbEntriesHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Host == "api.hishtory.dev" || isProductionEnvironment() {
 		panic("refusing to wipe the DB for prod")
+	}
+	if !isTestEnvironment() {
+		panic("refusing to wipe the DB non-test environment")
 	}
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Exec("DELETE FROM enc_history_entries"))
 }
@@ -478,17 +481,12 @@ func isProductionEnvironment() bool {
 
 func OpenDB() (*gorm.DB, error) {
 	if isTestEnvironment() {
-		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+		db, err := gorm.Open(sqlite.Open("file::memory:?_journal_mode=WAL&cache=shared"), &gorm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 		}
-		db.AutoMigrate(&shared.EncHistoryEntry{})
-		db.AutoMigrate(&shared.Device{})
-		db.AutoMigrate(&UsageData{})
-		db.AutoMigrate(&shared.DumpRequest{})
-		db.AutoMigrate(&shared.DeletionRequest{})
-		db.AutoMigrate(&shared.Feedback{})
 		db.Exec("PRAGMA journal_mode = WAL")
+		AddDatabaseTables(db)
 		return db, nil
 	}
 
@@ -506,10 +504,12 @@ func OpenDB() (*gorm.DB, error) {
 	}
 
 	var db *gorm.DB
-	var err error
-
 	if sqliteDb != "" {
+		var err error
 		db, err = gorm.Open(sqlite.Open(sqliteDb), &gorm.Config{Logger: customLogger})
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+		}
 	} else {
 		postgresDb := fmt.Sprintf(PostgresDb, os.Getenv("POSTGRESQL_PASSWORD"))
 		if os.Getenv("HISHTORY_POSTGRES_DB") != "" {
@@ -521,18 +521,21 @@ func OpenDB() (*gorm.DB, error) {
 			log.Fatal(err)
 		}
 		db, err = gormtrace.Open(postgres.New(postgres.Config{Conn: sqlDb}), &gorm.Config{Logger: customLogger})
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
-	}
+	AddDatabaseTables(db)
+	return db, nil
+}
 
+func AddDatabaseTables(db *gorm.DB) {
 	db.AutoMigrate(&shared.EncHistoryEntry{})
 	db.AutoMigrate(&shared.Device{})
 	db.AutoMigrate(&UsageData{})
 	db.AutoMigrate(&shared.DumpRequest{})
 	db.AutoMigrate(&shared.DeletionRequest{})
 	db.AutoMigrate(&shared.Feedback{})
-	return db, nil
 }
 
 func init() {
@@ -850,7 +853,7 @@ func main() {
 	mux.Handle("/internal/api/v1/usage-stats", withLogging(usageStatsHandler))
 	mux.Handle("/internal/api/v1/stats", withLogging(statsHandler))
 	if isTestEnvironment() {
-		mux.Handle("/api/v1/wipe-db", withLogging(wipeDbHandler))
+		mux.Handle("/api/v1/wipe-db-entries", withLogging(wipeDbEntriesHandler))
 		mux.Handle("/api/v1/get-num-connections", withLogging(getNumConnectionsHandler))
 	}
 	fmt.Println("Listening on localhost:8080")

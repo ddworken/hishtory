@@ -1141,7 +1141,7 @@ echo other`)
 	restoreFirstInstallation := testutils.BackupAndRestoreWithId(t, "-install1")
 
 	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
-	_, err = lib.ApiGet("/api/v1/wipe-db")
+	_, err = lib.ApiGet("/api/v1/wipe-db-entries")
 	if err != nil {
 		t.Fatalf("failed to wipe the DB: %v", err)
 	}

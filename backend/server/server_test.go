@@ -525,6 +525,8 @@ func TestHealthcheck(t *testing.T) {
 func TestLimitRegistrations(t *testing.T) {
 	// Set up
 	InitDB()
+	checkGormResult(GLOBAL_DB.Exec("DELETE FROM enc_history_entries"))
+	checkGormResult(GLOBAL_DB.Exec("DELETE FROM devices"))
 	defer testutils.BackupAndRestoreEnv("HISHTORY_MAX_NUM_USERS")()
 	os.Setenv("HISHTORY_MAX_NUM_USERS", "2")
 
