@@ -2236,7 +2236,9 @@ func TestZDotDir(t *testing.T) {
 	testutils.Check(t, os.MkdirAll(zdotdir, 0o744))
 	os.Setenv("ZDOTDIR", zdotdir)
 	userSecret := installHishtory(t, tester, "")
-	defer testutils.Check(t, os.Remove(path.Join(zdotdir, ".zshrc")))
+	defer func() {
+		testutils.Check(t, os.Remove(path.Join(zdotdir, ".zshrc")))
+	}()
 
 	// Check the status command
 	out := tester.RunInteractiveShell(t, `hishtory status`)
@@ -2246,7 +2248,7 @@ func TestZDotDir(t *testing.T) {
 
 	// Run a command and check that it was recorded
 	tester.RunInteractiveShell(t, `echo foo`)
-	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -install`)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -install -status`)
 	if out != "echo foo\n" {
 		t.Fatalf("hishtory export had unexpected out=%#v", out)
 	}
