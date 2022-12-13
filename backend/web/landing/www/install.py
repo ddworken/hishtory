@@ -16,7 +16,7 @@ download_options = json.loads(resp_body)
 
 if platform.system() == 'Linux' and platform.machine() == "x86_64":
     download_url = download_options['linux_amd_64_url']
-if platform.system() == 'Linux' and platform.machine() == "arm64":
+elif platform.system() == 'Linux' and platform.machine() == "arm64":
     download_url = download_options['linux_arm_64_url']
 elif platform.system() == 'Darwin' and platform.machine() == 'arm64':
     download_url = download_options['darwin_arm_64_url']
