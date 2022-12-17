@@ -349,11 +349,11 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 	}
 	km := table.KeyMap{
 		LineUp: key.NewBinding(
-			key.WithKeys("up", "alt+OA"),
+			key.WithKeys("up", "alt+OA", "ctrl+p"),
 			key.WithHelp("↑", "scroll up"),
 		),
 		LineDown: key.NewBinding(
-			key.WithKeys("down", "alt+OB"),
+			key.WithKeys("down", "alt+OB", "ctrl+n"),
 			key.WithHelp("↓", "scroll down"),
 		),
 		PageUp: key.NewBinding(

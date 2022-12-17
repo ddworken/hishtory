@@ -1966,8 +1966,8 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
 	}
 
-	// Search for something more specific, and then unsearch, and then search for something else
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "fo", "BSpace BSpace", "bar", "Down", "Enter"})
+	// Search for something more specific, and then unsearch, and then search for something else (using an alternate key binding for the down key)
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "fo", "BSpace BSpace", "bar", "C-N", "Enter"})
 	if !strings.HasSuffix(out, " ls ~/bar/") {
 		t.Fatalf("hishtory tquery returned the wrong result, out=%#v", out)
 	}
