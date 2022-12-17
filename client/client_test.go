@@ -1868,12 +1868,22 @@ func TestTui(t *testing.T) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTui-InvalidSearch")
 
-	// Check the output when the size is adjusted
+	// Check the output when the size is smaller
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []string{
 		"hishtory SPACE tquery ENTER",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTui-SmallTerminal")
+
+	// Check that we can use left arrow keys to scroll
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"s",
+		"Left",
+		"l",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-LeftScroll")
 }
 
 func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
