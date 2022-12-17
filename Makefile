@@ -6,6 +6,7 @@ test:
 	HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -p 1 -timeout 30m ./...
 
 ftest:
+	go clean -testcache
 	HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -v -p 1 -run "$(FILTER)" ./...
 
 acttest:
