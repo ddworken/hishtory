@@ -195,7 +195,7 @@ func handleUpgradedFeatures() error {
 func installBinary(homedir string) (string, error) {
 	clientPath, err := exec.LookPath("hishtory")
 	if err != nil {
-		clientPath = path.Join(homedir, data.HISHTORY_PATH, "hishtory")
+		clientPath = path.Join(homedir, data.GetHishtoryPath(), "hishtory")
 	}
 	if _, err := os.Stat(clientPath); err == nil {
 		err = syscall.Unlink(clientPath)
@@ -215,7 +215,7 @@ func installBinary(homedir string) (string, error) {
 }
 
 func getFishConfigPath(homedir string) string {
-	return path.Join(homedir, data.HISHTORY_PATH, "config.fish")
+	return path.Join(homedir, data.GetHishtoryPath(), "config.fish")
 }
 
 func configureFish(homedir, binaryPath string) error {
@@ -254,7 +254,7 @@ func configureFish(homedir, binaryPath string) error {
 }
 
 func getFishConfigFragment(homedir string) string {
-	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getFishConfigPath(homedir) + "\n"
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getFishConfigPath(homedir) + "\n"
 }
 
 func isFishConfigured(homedir string) (bool, error) {
@@ -266,11 +266,11 @@ func isFishConfigured(homedir string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %v", err)
 	}
-	return strings.Contains(string(fishConfig), "# Hishtory Config:"), nil
+	return strings.Contains(string(fishConfig), getFishConfigFragment(homedir)), nil
 }
 
 func getZshConfigPath(homedir string) string {
-	return path.Join(homedir, data.HISHTORY_PATH, "config.zsh")
+	return path.Join(homedir, data.GetHishtoryPath(), "config.zsh")
 }
 
 func configureZshrc(homedir, binaryPath string) error {
@@ -307,7 +307,7 @@ func getZshRcPath(homedir string) string {
 }
 
 func getZshConfigFragment(homedir string) string {
-	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getZshConfigPath(homedir) + "\n"
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getZshConfigPath(homedir) + "\n"
 }
 
 func isZshConfigured(homedir string) (bool, error) {
@@ -319,11 +319,11 @@ func isZshConfigured(homedir string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to read zshrc: %v", err)
 	}
-	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
+	return strings.Contains(string(bashrc), getZshConfigFragment(homedir)), nil
 }
 
 func getBashConfigPath(homedir string) string {
-	return path.Join(homedir, data.HISHTORY_PATH, "config.sh")
+	return path.Join(homedir, data.GetHishtoryPath(), "config.sh")
 }
 
 func configureBashrc(homedir, binaryPath string) error {
@@ -379,7 +379,7 @@ func addToShellConfig(shellConfigPath, configFragment string) error {
 }
 
 func getBashConfigFragment(homedir string) string {
-	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.HISHTORY_PATH) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
 }
 
 func isBashRcConfigured(homedir string) (bool, error) {
@@ -391,7 +391,7 @@ func isBashRcConfigured(homedir string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to read bashrc: %v", err)
 	}
-	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
+	return strings.Contains(string(bashrc), getBashConfigFragment(homedir)), nil
 }
 
 func isBashProfileConfigured(homedir string) (bool, error) {
@@ -403,7 +403,7 @@ func isBashProfileConfigured(homedir string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to read bash_profile: %v", err)
 	}
-	return strings.Contains(string(bashrc), "# Hishtory Config:"), nil
+	return strings.Contains(string(bashrc), getBashConfigFragment(homedir)), nil
 }
 
 func tweakConfigForTests(configContents string) (string, error) {
@@ -472,7 +472,7 @@ func uninstall(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = os.RemoveAll(path.Join(homedir, ".hishtory"))
+	err = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
 	if err != nil {
 		return err
 	}

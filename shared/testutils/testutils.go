@@ -28,7 +28,7 @@ func ResetLocalState(t *testing.T) {
 	Check(t, err)
 	persistLog()
 	_ = BackupAndRestoreWithId(t, "-reset-local-state")
-	_ = os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH))
+	_ = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
 }
 
 func BackupAndRestore(t *testing.T) func() {
@@ -36,8 +36,8 @@ func BackupAndRestore(t *testing.T) func() {
 }
 
 func getBackPath(file, id string) string {
-	if strings.Contains(file, "/"+data.HISHTORY_PATH+"/") {
-		return strings.Replace(file, data.HISHTORY_PATH, data.HISHTORY_PATH+".test", 1) + id
+	if strings.Contains(file, "/"+data.GetHishtoryPath()+"/") {
+		return strings.Replace(file, data.GetHishtoryPath(), data.GetHishtoryPath()+".test", 1) + id
 	}
 	return file + ".bak" + id
 }
@@ -48,17 +48,17 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	Check(t, err)
 	initialWd, err := os.Getwd()
 	Check(t, err)
-	Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH+".test"), os.ModePerm))
+	Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()+".test"), os.ModePerm))
 
 	renameFiles := []string{
-		path.Join(homedir, data.HISHTORY_PATH, data.DB_PATH),
-		path.Join(homedir, data.HISHTORY_PATH, DB_WAL_PATH),
-		path.Join(homedir, data.HISHTORY_PATH, DB_SHM_PATH),
-		path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH),
-		path.Join(homedir, data.HISHTORY_PATH, "hishtory"),
-		path.Join(homedir, data.HISHTORY_PATH, "config.sh"),
-		path.Join(homedir, data.HISHTORY_PATH, "config.zsh"),
-		path.Join(homedir, data.HISHTORY_PATH, "config.fish"),
+		path.Join(homedir, data.GetHishtoryPath(), data.DB_PATH),
+		path.Join(homedir, data.GetHishtoryPath(), DB_WAL_PATH),
+		path.Join(homedir, data.GetHishtoryPath(), DB_SHM_PATH),
+		path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH),
+		path.Join(homedir, data.GetHishtoryPath(), "hishtory"),
+		path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
+		path.Join(homedir, data.GetHishtoryPath(), "config.zsh"),
+		path.Join(homedir, data.GetHishtoryPath(), "config.fish"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
 		path.Join(homedir, ".local/share/fish/fish_history"),
@@ -89,8 +89,8 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 			}
 		}
 		persistLog()
-		Check(t, os.RemoveAll(path.Join(homedir, data.HISHTORY_PATH)))
-		Check(t, os.MkdirAll(path.Join(homedir, data.HISHTORY_PATH), os.ModePerm))
+		Check(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
+		Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
 		for _, file := range renameFiles {
 			checkError(os.Rename(getBackPath(file, id), file))
 		}
@@ -308,7 +308,7 @@ func TestLog(t *testing.T, line string) {
 func persistLog() {
 	homedir, err := os.UserHomeDir()
 	checkError(err)
-	fp := path.Join(homedir, data.HISHTORY_PATH, "hishtory.log")
+	fp := path.Join(homedir, data.GetHishtoryPath(), "hishtory.log")
 	log, err := os.ReadFile(fp)
 	if err != nil {
 		return

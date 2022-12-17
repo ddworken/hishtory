@@ -127,6 +127,11 @@ You can configure a custom timestamp format for hiSHtory via `hishtory config-se
 </details>
 
 <details>
+<summary>Customizing the install folder</summary>
+By default, hiSHtory is installed in `~/.hishtory/`. If you want to customize this, you can do so by setting the `HISHTORY_PATH` environment variable to a path relative to your home directory (e.g. `export HISHTORY_PATH=.config/hishtory`). This must be set both when you install hiSHtory and when you use hiSHtory, so it is recommend to set it in your `.bashrc`/`.zshrc`/`.fishrc` before installing hiSHtory. 
+</details>
+
+<details>
 <summary>Viewing debug logs</summary>
 Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues, these may contain useful information.
 </details>

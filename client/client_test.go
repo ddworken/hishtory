@@ -351,7 +351,7 @@ func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStat
 	if err != nil {
 		t.Fatalf("failed to get homedir: %v", err)
 	}
-	dat, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, "config.sh"))
+	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
@@ -952,7 +952,7 @@ echo other`)
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
-	if !strings.Contains(out, "~/.hishtory") {
+	if !strings.Contains(out, "~/"+data.GetHishtoryPath()) {
 		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
 	}
 	out = hishtoryQuery(t, tester, "echo other")
@@ -992,7 +992,7 @@ CGO_ENABLED=0 go build -o /tmp/client
 	if err != nil {
 		t.Fatalf("failed to get homedir: %v", err)
 	}
-	dat, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, "config.sh"))
+	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
@@ -1215,13 +1215,24 @@ echo other`)
 	}
 }
 
+func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("HISHTORY_PATH")()
+	os.Setenv("HISHTORY_PATH", ".other-path")
+	testInstallViaPythonScriptChild(t, bashTester{})
+}
+
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
+	defer testutils.BackupAndRestore(t)()
+	testInstallViaPythonScriptChild(t, tester)
+}
+
+func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
 
 	// Set up
-	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 
 	// Install via the python script
@@ -1348,7 +1359,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := os.OpenFile(path.Join(homedir, ".hishtory", "config.sh"),
+	f, err := os.OpenFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
 		os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -1373,7 +1384,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err = os.OpenFile(path.Join(homedir, ".hishtory", "config.sh"),
+	f, err = os.OpenFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
 		os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -1702,7 +1713,7 @@ func clearControlRSearchFromConfig(t *testing.T) {
 	configContents = []byte(strings.ReplaceAll(string(configContents), "enable_control_r_search", "something-else"))
 	homedir, err := os.UserHomeDir()
 	testutils.Check(t, err)
-	err = os.WriteFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH), configContents, 0o644)
+	err = os.WriteFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH), configContents, 0o644)
 	testutils.Check(t, err)
 }
 

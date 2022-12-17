@@ -21,14 +21,14 @@ func TestSetup(t *testing.T) {
 
 	homedir, err := os.UserHomeDir()
 	testutils.Check(t, err)
-	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err == nil {
+	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
 	testutils.Check(t, Setup("", false))
-	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err != nil {
+	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
+	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
 	testutils.Check(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
@@ -45,14 +45,14 @@ func TestSetupOffline(t *testing.T) {
 
 	homedir, err := os.UserHomeDir()
 	testutils.Check(t, err)
-	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err == nil {
+	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
 	testutils.Check(t, Setup("", true))
-	if _, err := os.Stat(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH)); err != nil {
+	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, data.HISHTORY_PATH, data.CONFIG_PATH))
+	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
 	testutils.Check(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
@@ -21,8 +22,11 @@ const (
 	KdfUserID        = "user_id"
 	KdfEncryptionKey = "encryption_key"
 	CONFIG_PATH      = ".hishtory.config"
-	HISHTORY_PATH    = ".hishtory"
 	DB_PATH          = ".hishtory.db"
+)
+
+const (
+	defaultHishtoryPath = ".hishtory"
 )
 
 type HistoryEntry struct {
@@ -162,4 +166,12 @@ func EntryEquals(entry1, entry2 HistoryEntry) bool {
 		entry1.ExitCode == entry2.ExitCode &&
 		entry1.StartTime.Format(time.RFC3339) == entry2.StartTime.Format(time.RFC3339) &&
 		entry1.EndTime.Format(time.RFC3339) == entry2.EndTime.Format(time.RFC3339)
+}
+
+func GetHishtoryPath() string {
+	hishtoryPath := os.Getenv("HISHTORY_PATH")
+	if hishtoryPath != "" {
+		return hishtoryPath
+	}
+	return defaultHishtoryPath
 }
