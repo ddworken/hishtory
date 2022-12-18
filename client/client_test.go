@@ -2664,5 +2664,3 @@ func assertNoLeakedConnections(t *testing.T) {
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
-
-// TODO: TUI tests for multiline commands
