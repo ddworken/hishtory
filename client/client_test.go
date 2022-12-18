@@ -1884,6 +1884,18 @@ func TestTui(t *testing.T) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTui-LeftScroll")
+
+	// Check that we can exit the TUI via pressing esc
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"Escape",
+	})
+	if strings.Contains(out, "Search Query:") {
+		t.Fatalf("unexpected out=\n%s", out)
+	}
+	if !testutils.IsGithubAction() {
+		compareGoldens(t, out, "TestTui-Exit")
+	}
 }
 
 func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
