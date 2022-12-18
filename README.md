@@ -68,6 +68,7 @@ You can customize the columns that are displayed via `hishtory config-set displa
 ```
 hishtory config-set displayed-columns CWD Command
 ```
+
 </details>
 
 <details>
@@ -79,31 +80,39 @@ You can create custom column definitions that are populated from arbitrary comma
 hishtory config-add custom-columns git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'
 hishtory config-add displayed-columns git_remote
 ```
+
 </details>
 
 <details>
 <summary>Disabling Control-R integration</summary>
+
 If you'd like to disable the control-R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
+
 </details>
 
 <details>
 <summary>Filtering duplicate entries</summary>
+
 By default, hishtory query will show all results even if this includes duplicate history entries. This helps you keep track of how many times you've run a command and in what contexts. If you'd rather disable this so that hiSHtory won't show duplicate entries, you can run:
 
 ```
 hishtory config-set filter-duplicate-commands true
 ```
+
 </details>
 
 <details>
 <summary>Offline Install</summary>
+
 If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode. 
 
 Download the latest binary from [Github Releases](https://github.com/ddworken/hishtory/releases), and then run `./hishtory-binary install --offline` to install hiSHtory in a fully offline mode. This disables syncing and it is not possible to re-enable syncing after doing this.
+
 </details>
 
 <details>
 <summary>Self-Hosting</summary>
+
 By default, hiSHtory relies on a backend for syncing. All data is end-to-end encrypted, so the backend can't view your history. 
 
 But if you'd like to self-host the hishtory backend, you can! The backend is a simple go binary in `backend/server/server.go`. It can either use SQLite or Postgres for persistence. 
@@ -114,33 +123,44 @@ A few configuration options:
 
 * If you want to use a SQLite backend, you can do so by setting the `HISHTORY_SQLITE_DB` environment variable to point to a file. It will then create a SQLite DB at the given location.
 * If you want to limit the number of users that your server allows (e.g. because you only intend to use the server for yourself), you can set the environment variable `HISHTORY_MAX_NUM_USERS=1` (or to whatever value you wish for the limit to be). Leave it unset to allow registrations with no cap.
+
 </details>
 
 <details>
 <summary>Importing existing history</summary>
+
 hiSHtory imports your existing shell history by default. If for some reason this didn't work (e.g. you had your shell history in a non-standard file), you can import it by piping it into `hishtory import` (e.g. `cat ~/.my_history | hishtory import`).
+
 </details>
 
 <details>
 <summary>Custom timestamp formats</summary>
+
 You can configure a custom timestamp format for hiSHtory via `hishtory config-set timestamp-format '2006/Jan/2 15:04'`. The timestamp format string should be in [the format used by Go's `time.Format(...)`](https://pkg.go.dev/time#Time.Format). 
+
 </details>
 
 <details>
 <summary>Customizing the install folder</summary>
+
 By default, hiSHtory is installed in `~/.hishtory/`. If you want to customize this, you can do so by setting the `HISHTORY_PATH` environment variable to a path relative to your home directory (e.g. `export HISHTORY_PATH=.config/hishtory`). This must be set both when you install hiSHtory and when you use hiSHtory, so it is recommend to set it in your `.bashrc`/`.zshrc`/`.fishrc` before installing hiSHtory. 
+
 </details>
 
 <details>
 <summary>Viewing debug logs</summary>
+
 Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues, these may contain useful information.
+
 </details>
 
 <details>
 <summary>Uninstalling</summary>
+
 If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
 
 Note that if you're uninstalling hishtory due to bad latency, try running `hishtory update` first! Latency has been improved over 100x since the first release so I'd highly recommend checking out the latest version. 
+
 </details>
 
 ## Design
