@@ -1870,7 +1870,7 @@ func TestTui(t *testing.T) {
 
 	// Check the output when the size is smaller
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
-		TmuxCommand{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "hishtory SPACE tquery ENTER"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTui-SmallTerminal")
@@ -1896,6 +1896,15 @@ func TestTui(t *testing.T) {
 	if !testutils.IsGithubAction() {
 		compareGoldens(t, out, "TestTui-Exit")
 	}
+
+	// Check that it resizes after the terminal size is adjusted
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'")).Error)
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{ResizeX: 300, ResizeY: 100},
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-Resize")
 }
 
 func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
@@ -1903,7 +1912,9 @@ func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) 
 }
 
 type TmuxCommand struct {
-	Keys string
+	Keys    string
+	ResizeX int
+	ResizeY int
 }
 
 func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overriddenShellName string, commands []string) string {
@@ -1913,8 +1924,6 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	}
 	return captureTerminalOutputWithShellNameAndDimensions(t, tester, overriddenShellName, 200, 50, sCommands)
 }
-
-// TODO: add tests for auto-resizing. They can use the tmux resize-pane command
 
 func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
 	sleepAmount := "0.1"
@@ -1937,9 +1946,14 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 	}
 	fullCommand += " sleep " + sleepAmount + "\n"
 	for _, cmd := range commands {
-		fullCommand += " tmux send -t foo -- "
-		fullCommand += cmd.Keys
-		fullCommand += "\n"
+		if cmd.Keys != "" {
+			fullCommand += " tmux send -t foo -- "
+			fullCommand += cmd.Keys
+			fullCommand += "\n"
+		}
+		if cmd.ResizeX != 0 && cmd.ResizeY != 0 {
+			fullCommand += fmt.Sprintf(" tmux resize-window -t foo -x %d -y %d\n", cmd.ResizeX, cmd.ResizeY)
+		}
 		fullCommand += " sleep " + sleepAmount + "\n"
 	}
 	fullCommand += " sleep 0.5\n"
