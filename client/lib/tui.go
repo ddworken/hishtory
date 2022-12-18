@@ -203,7 +203,14 @@ func (m model) View() string {
 	if m.searchErr != nil {
 		warning += fmt.Sprintf("Warning: failed to search: %v\n\n", m.searchErr)
 	}
-	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
+	// TODO: change 100 to the actual width
+	hishtoryInfo := ""
+	terminalWidth, _, err := getTerminalSize()
+	if err == nil {
+		hishtoryInfo = lipgloss.PlaceHorizontal(terminalWidth, lipgloss.Center, fmt.Sprintf("hiSHtory v0.%s: search your shell history", Version))
+		hishtoryInfo = lipgloss.NewStyle().Italic(true).Render(hishtoryInfo)
+	}
+	return fmt.Sprintf("\n%s\n%s\n%s%s\nSearch Query: %s\n\n%s\n", hishtoryInfo, loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
 func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, int, error) {
