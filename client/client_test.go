@@ -1869,8 +1869,8 @@ func TestTui(t *testing.T) {
 	compareGoldens(t, out, "TestTui-InvalidSearch")
 
 	// Check the output when the size is smaller
-	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []string{
-		"hishtory SPACE tquery ENTER",
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		TmuxCommand{Keys: "hishtory SPACE tquery ENTER"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTui-SmallTerminal")
@@ -1902,13 +1902,21 @@ func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) 
 	return captureTerminalOutputWithShellName(t, tester, tester.ShellName(), commands)
 }
 
+type TmuxCommand struct {
+	Keys string
+}
+
 func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overriddenShellName string, commands []string) string {
-	return captureTerminalOutputWithShellNameAndDimensions(t, tester, overriddenShellName, 200, 50, commands)
+	sCommands := make([]TmuxCommand, 0)
+	for _, command := range commands {
+		sCommands = append(sCommands, TmuxCommand{Keys: command})
+	}
+	return captureTerminalOutputWithShellNameAndDimensions(t, tester, overriddenShellName, 200, 50, sCommands)
 }
 
 // TODO: add tests for auto-resizing. They can use the tmux resize-pane command
 
-func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []string) string {
+func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
 	sleepAmount := "0.1"
 	if runtime.GOOS == "linux" {
 		sleepAmount = "0.2"
@@ -1930,7 +1938,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 	fullCommand += " sleep " + sleepAmount + "\n"
 	for _, cmd := range commands {
 		fullCommand += " tmux send -t foo -- "
-		fullCommand += cmd
+		fullCommand += cmd.Keys
 		fullCommand += "\n"
 		fullCommand += " sleep " + sleepAmount + "\n"
 	}
