@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -89,15 +88,7 @@ func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.Histor
 	for _, entry := range historyEntries {
 		deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids, shared.MessageIdentifier{Date: entry.EndTime, DeviceId: entry.DeviceId})
 	}
-	data, err := json.Marshal(deletionRequest)
-	if err != nil {
-		return err
-	}
-	_, err = lib.ApiPost("/api/v1/add-deletion-request", "application/json", data)
-	if err != nil {
-		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %v", err)
-	}
-	return nil
+	return lib.SendDeletionRequest(deletionRequest)
 }
 
 func init() {

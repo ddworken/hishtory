@@ -1255,3 +1255,15 @@ func GetDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
 	err = json.Unmarshal(resp, &dumpRequests)
 	return dumpRequests, err
 }
+
+func SendDeletionRequest(deletionRequest shared.DeletionRequest) error {
+	data, err := json.Marshal(deletionRequest)
+	if err != nil {
+		return err
+	}
+	_, err = ApiPost("/api/v1/add-deletion-request", "application/json", data)
+	if err != nil {
+		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %v", err)
+	}
+	return nil
+}
