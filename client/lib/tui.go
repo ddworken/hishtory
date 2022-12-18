@@ -417,6 +417,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 		return err
 	}
 	p := tea.NewProgram(initialModel(ctx, t, initialQuery, numEntries), tea.WithOutput(os.Stderr))
+	// Async: Retrieve additional entries from the backend
 	go func() {
 		err := RetrieveAdditionalEntriesFromRemote(ctx)
 		if err != nil {
