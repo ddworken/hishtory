@@ -545,6 +545,28 @@ func TestLimitRegistrations(t *testing.T) {
 	t.Errorf("expected panic")
 }
 
+func TestCleanDatabaseNoErrors(t *testing.T) {
+	// Init
+	InitDB()
+
+	// Create a user and an entry
+	userId := data.UserId("dkey")
+	devId1 := uuid.Must(uuid.NewRandom()).String()
+	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
+	apiRegisterHandler(context.Background(), nil, deviceReq)
+	entry1 := testutils.MakeFakeHistoryEntry("ls ~/")
+	entry1.DeviceId = devId1
+	encEntry, err := data.EncryptHistoryEntry("dkey", entry1)
+	testutils.Check(t, err)
+	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
+	testutils.Check(t, err)
+	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	apiSubmitHandler(context.Background(), nil, submitReq)
+
+	// Call cleanDatabase and just check that there are no panics
+	testutils.Check(t, cleanDatabase(context.TODO()))
+}
+
 func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
 	sqlDB, err := db.DB()
 	if err != nil {
