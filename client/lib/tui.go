@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
@@ -42,8 +43,8 @@ type model struct {
 
 	// The table used for displaying search results.
 	table table.Model
-	// The number of entries in the table.
-	numEntries int
+	// The entries in the table
+	tableEntries []*data.HistoryEntry
 	// Whether the user has hit enter to select an entry and the TUI is thus about to quit.
 	selected bool
 
@@ -71,7 +72,7 @@ type bannerMsg struct {
 	banner string
 }
 
-func initialModel(ctx *context.Context, t table.Model, initialQuery string, numEntries int) model {
+func initialModel(ctx *context.Context, t table.Model, tableEntries []*data.HistoryEntry, initialQuery string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -83,7 +84,7 @@ func initialModel(ctx *context.Context, t table.Model, initialQuery string, numE
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
-	return model{ctx: ctx, spinner: s, isLoading: true, table: t, runQuery: &initialQuery, queryInput: queryInput, numEntries: numEntries}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: t, tableEntries: tableEntries, runQuery: &initialQuery, queryInput: queryInput}
 }
 
 func (m model) Init() tea.Cmd {
@@ -95,12 +96,12 @@ func runQueryAndUpdateTable(m model, updateTable bool) model {
 		if m.runQuery == nil {
 			m.runQuery = &m.lastQuery
 		}
-		rows, numEntries, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
+		rows, entries, _, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
 		m.searchErr = err
 		if err != nil {
 			return m
 		}
-		m.numEntries = numEntries
+		m.tableEntries = entries
 		if updateTable {
 			t, err := makeTable(m.ctx, rows)
 			if err != nil {
@@ -114,9 +115,9 @@ func runQueryAndUpdateTable(m model, updateTable bool) model {
 		m.lastQuery = *m.runQuery
 		m.runQuery = nil
 	}
-	if m.table.Cursor() >= m.numEntries {
+	if m.table.Cursor() >= len(m.tableEntries) {
 		// Ensure that we can't scroll past the end of the table
-		m.table.SetCursor(m.numEntries - 1)
+		m.table.SetCursor(len(m.tableEntries) - 1)
 	}
 	return m
 }
@@ -129,7 +130,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "enter":
-			if m.numEntries != 0 {
+			if len(m.tableEntries) != 0 {
 				m.selected = true
 			}
 			return m, tea.Quit
@@ -206,12 +207,12 @@ func (m model) View() string {
 	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
-func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, int, error) {
+func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, int, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	data, err := Search(ctx, db, query, numEntries)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 	var rows []table.Row
 	lastCommand := ""
@@ -224,7 +225,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", "\\n")
 			row, err := buildTableRow(ctx, columnNames, *entry)
 			if err != nil {
-				return nil, 0, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
+				return nil, nil, 0, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
 			}
 			rows = append(rows, row)
 			lastCommand = entry.Command
@@ -232,7 +233,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 			rows = append(rows, table.Row{})
 		}
 	}
-	return rows, len(data), nil
+	return rows, data, len(data), nil
 }
 
 func calculateColumnWidths(rows []table.Row, numColumns int) []int {
@@ -254,7 +255,7 @@ var bigQueryResults []table.Row
 func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
 	// Handle an initial query with no results
 	if len(rows) == 0 || len(rows[0]) == 0 {
-		allRows, _, err := getRows(ctx, columnNames, "", 25)
+		allRows, _, _, err := getRows(ctx, columnNames, "", 25)
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +281,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 
 	// Calculate the maximum column width that is useful for each column if we search for the empty string
 	if bigQueryResults == nil {
-		bigRows, _, err := getRows(ctx, columnNames, "", 1000)
+		bigRows, _, _, err := getRows(ctx, columnNames, "", 1000)
 		if err != nil {
 			return nil, err
 		}
@@ -403,7 +404,7 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 
 func TuiQuery(ctx *context.Context, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
-	rows, numEntries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
+	rows, entries, _, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
 		if initialQuery != "" {
 			// initialQuery is likely invalid in some way, let's just drop it
@@ -416,7 +417,7 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	if err != nil {
 		return err
 	}
-	p := tea.NewProgram(initialModel(ctx, t, initialQuery, numEntries), tea.WithOutput(os.Stderr))
+	p := tea.NewProgram(initialModel(ctx, t, entries, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Retrieve additional entries from the backend
 	go func() {
 		err := RetrieveAdditionalEntriesFromRemote(ctx)
