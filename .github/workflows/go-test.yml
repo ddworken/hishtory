@@ -32,8 +32,8 @@ jobs:
           sudo hostname ghaction-runner-hostname || true # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname || true
           make test
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
