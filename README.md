@@ -54,6 +54,8 @@ If you want to temporarily turn on/off hiSHtory recording, you can do so via `hi
 
 `hishtory redact` can be used to delete history entries that you didn't intend to record. It accepts the same search format as `hishtory query`. For example, to delete all history entries containing `psql`, run `hishtory redact psql`. 
 
+Alternatively, you can delete items from within the terminal UI. Press `Control+R` to bring up the TUI, search for the item you want to delete, and then press `Control+K` to delete the currently selected entry.
+
 ### Updating
 
 To update `hishtory` to the latest version, just run `hishtory update` to securely download and apply the latest update. 
@@ -84,9 +86,9 @@ hishtory config-add displayed-columns git_remote
 </details>
 
 <details>
-<summary>Disabling Control-R integration</summary>
+<summary>Disabling Control+R integration</summary>
 
-If you'd like to disable the control-R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
+If you'd like to disable the Control+R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
 
 </details>
 
