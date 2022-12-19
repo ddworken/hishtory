@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	_ "embed" // for embedding config.sh
 
@@ -16,6 +17,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/ddworken/hishtory/shared"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
 )
@@ -96,7 +98,7 @@ func runQueryAndUpdateTable(m model, updateTable bool) model {
 		if m.runQuery == nil {
 			m.runQuery = &m.lastQuery
 		}
-		rows, entries, _, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
+		rows, entries, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
 		m.searchErr = err
 		if err != nil {
 			return m
@@ -134,6 +136,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selected = true
 			}
 			return m, tea.Quit
+		case "ctrl+k":
+			err := deleteHistoryEntry(m.ctx, *m.tableEntries[m.table.Cursor()])
+			if err != nil {
+				m.fatalErr = err
+				return m, nil
+			}
+			m = runQueryAndUpdateTable(m, true)
+			return m, nil
 		default:
 			t, cmd1 := m.table.Update(msg)
 			m.table = t
@@ -207,12 +217,12 @@ func (m model) View() string {
 	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
 }
 
-func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, int, error) {
+func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	data, err := Search(ctx, db, query, numEntries)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, err
 	}
 	var rows []table.Row
 	lastCommand := ""
@@ -225,7 +235,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", "\\n")
 			row, err := buildTableRow(ctx, columnNames, *entry)
 			if err != nil {
-				return nil, nil, 0, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
+				return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
 			}
 			rows = append(rows, row)
 			lastCommand = entry.Command
@@ -233,7 +243,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 			rows = append(rows, table.Row{})
 		}
 	}
-	return rows, data, len(data), nil
+	return rows, data, nil
 }
 
 func calculateColumnWidths(rows []table.Row, numColumns int) []int {
@@ -255,7 +265,7 @@ var bigQueryResults []table.Row
 func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
 	// Handle an initial query with no results
 	if len(rows) == 0 || len(rows[0]) == 0 {
-		allRows, _, _, err := getRows(ctx, columnNames, "", 25)
+		allRows, _, err := getRows(ctx, columnNames, "", 25)
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +291,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 
 	// Calculate the maximum column width that is useful for each column if we search for the empty string
 	if bigQueryResults == nil {
-		bigRows, _, _, err := getRows(ctx, columnNames, "", 1000)
+		bigRows, _, err := getRows(ctx, columnNames, "", 1000)
 		if err != nil {
 			return nil, err
 		}
@@ -402,9 +412,25 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 	return t, nil
 }
 
+func deleteHistoryEntry(ctx *context.Context, entry data.HistoryEntry) error {
+	db := hctx.GetDb(ctx)
+	// Delete locally
+	r := db.Model(&data.HistoryEntry{}).Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.EndTime).Delete(&data.HistoryEntry{})
+	if r.Error != nil {
+		return r.Error
+	}
+	// Delete remotely
+	dr := shared.DeletionRequest{
+		UserId:   data.UserId(hctx.GetConf(ctx).UserSecret),
+		SendTime: time.Now(),
+	}
+	dr.Messages.Ids = append(dr.Messages.Ids, shared.MessageIdentifier{Date: entry.EndTime, DeviceId: entry.DeviceId})
+	return SendDeletionRequest(dr)
+}
+
 func TuiQuery(ctx *context.Context, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
-	rows, entries, _, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
+	rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
 		if initialQuery != "" {
 			// initialQuery is likely invalid in some way, let's just drop it

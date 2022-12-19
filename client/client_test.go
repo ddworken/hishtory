@@ -1905,6 +1905,40 @@ func TestTui(t *testing.T) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	compareGoldens(t, out, "TestTui-Resize")
+
+	// Check that we can delete an entry
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"aaaaaa",
+		"C-K",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-Delete")
+
+	// And that it stays deleted
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-DeleteStill")
+
+	// And that we can then delete another entry
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-K",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-DeleteAgain")
+
+	// And that it stays deleted
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	compareGoldens(t, out, "TestTui-DeleteAgainStill")
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
 }
 
 func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
