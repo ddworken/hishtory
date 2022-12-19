@@ -25,7 +25,7 @@ import (
 const TABLE_HEIGHT = 20
 const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
 
-var selectedRow string = ""
+var selectedCommand string = ""
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
@@ -186,18 +186,7 @@ func (m model) View() string {
 		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.fatalErr)
 	}
 	if m.selected {
-		indexOfCommand := -1
-		for i, columnName := range hctx.GetConf(m.ctx).DisplayedColumns {
-			if columnName == "Command" {
-				indexOfCommand = i
-				break
-			}
-		}
-		if indexOfCommand == -1 {
-			selectedRow = "Error: Table doesn't have a column named `Command`?"
-			return ""
-		}
-		selectedRow = m.table.SelectedRow()[indexOfCommand]
+		selectedCommand = m.tableEntries[m.table.Cursor()].Command
 		return ""
 	}
 	if m.quitting {
@@ -476,10 +465,10 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	if err != nil {
 		return err
 	}
-	if selectedRow == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
+	if selectedCommand == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
 		// Print out the initialQuery instead so that we don't clear the terminal
-		selectedRow = initialQuery
+		selectedCommand = initialQuery
 	}
-	fmt.Printf("%s\n", strings.ReplaceAll(selectedRow, "\\n", "\n"))
+	fmt.Printf("%s\n", strings.ReplaceAll(selectedCommand, "\\n", "\n"))
 	return nil
 }
