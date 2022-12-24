@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	pprofhttp "net/http/pprof"
+
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/jackc/pgx/v4/stdlib"
@@ -27,11 +29,10 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
-	"gorm.io/gorm/logger"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const (
@@ -197,7 +198,9 @@ func apiSubmitHandler(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %v", err))
 	}
-	GLOBAL_STATSD.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
+	if GLOBAL_STATSD != nil {
+		GLOBAL_STATSD.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
+	}
 }
 
 func apiBootstrapHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -256,7 +259,9 @@ func apiQueryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	GLOBAL_STATSD.Incr("hishtory.query", []string{}, 1.0)
+	if GLOBAL_STATSD != nil {
+		GLOBAL_STATSD.Incr("hishtory.query", []string{}, 1.0)
+	}
 }
 
 func incrementReadCounts(ctx context.Context, deviceId string) error {
@@ -293,7 +298,10 @@ func apiRegisterHandler(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		checkGormResult(GLOBAL_DB.WithContext(ctx).Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()}))
 	}
 	updateUsageData(ctx, r, userId, deviceId, 0, false)
-	GLOBAL_STATSD.Incr("hishtory.register", []string{}, 1.0)
+
+	if GLOBAL_STATSD != nil {
+		GLOBAL_STATSD.Incr("hishtory.register", []string{}, 1.0)
+	}
 }
 
 func apiGetPendingDumpRequestsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -555,6 +563,12 @@ func cron(ctx context.Context) error {
 	if err != nil {
 		panic(err)
 	}
+	if GLOBAL_STATSD != nil {
+		err = GLOBAL_STATSD.Flush()
+		if err != nil {
+			panic(err)
+		}
+	}
 	return nil
 }
 
@@ -585,6 +599,7 @@ func updateReleaseVersion() error {
 	if err != nil {
 		return fmt.Errorf("failed to get latest release version: %v", err)
 	}
+	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read github API response body: %v", err)
@@ -635,6 +650,7 @@ func assertValidUpdate(updateInfo shared.UpdateInfo) error {
 		if err != nil {
 			return fmt.Errorf("failed to retrieve URL %#v: %v", url, err)
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
 			return fmt.Errorf("URL %#v returned 404", url)
 		}
@@ -735,7 +751,10 @@ func feedbackHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 	fmt.Printf("feedbackHandler: received request containg feedback %#v\n", feedback)
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Create(feedback))
-	GLOBAL_STATSD.Incr("hishtory.uninstall", []string{}, 1.0)
+
+	if GLOBAL_STATSD != nil {
+		GLOBAL_STATSD.Incr("hishtory.uninstall", []string{}, 1.0)
+	}
 }
 
 type loggedResponseData struct {
@@ -782,8 +801,10 @@ func withLogging(h func(context.Context, http.ResponseWriter, *http.Request)) ht
 
 		duration := time.Since(start)
 		fmt.Printf("%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
-		GLOBAL_STATSD.Distribution("hishtory.request_duration", float64(duration.Microseconds())/1_000, []string{"HANDLER=" + getFunctionName(h)}, 1.0)
-		GLOBAL_STATSD.Incr("hishtory.request", []string{}, 1.0)
+		if GLOBAL_STATSD != nil {
+			GLOBAL_STATSD.Distribution("hishtory.request_duration", float64(duration.Microseconds())/1_000, []string{"HANDLER=" + getFunctionName(h)}, 1.0)
+			GLOBAL_STATSD.Incr("hishtory.request", []string{}, 1.0)
+		}
 	}
 	return http.HandlerFunc(logFn)
 }
@@ -853,7 +874,8 @@ func deepCleanDatabase(ctx context.Context) {
 	}
 }
 
-func configureObservability() func() {
+func configureObservability(mux *httptrace.ServeMux) func() {
+	// Profiler
 	err := profiler.Start(
 		profiler.WithService("hishtory-api"),
 		profiler.WithVersion(ReleaseVersion),
@@ -867,17 +889,27 @@ func configureObservability() func() {
 	if err != nil {
 		fmt.Printf("Failed to start DataDog profiler: %v\n", err)
 	}
+	// Tracer
 	tracer.Start(
 		tracer.WithRuntimeMetrics(),
 		tracer.WithService("hishtory-api"),
 		tracer.WithUDS("/var/run/datadog/apm.socket"),
 	)
 	defer tracer.Stop()
+	// Stats
 	ddStats, err := statsd.New("unix:///var/run/datadog/dsd.socket")
 	if err != nil {
 		fmt.Printf("Failed to start DataDog statsd: %v\n", err)
 	}
 	GLOBAL_STATSD = ddStats
+	// Pprof
+	mux.HandleFunc("/debug/pprof/", pprofhttp.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprofhttp.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprofhttp.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprofhttp.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprofhttp.Trace)
+
+	// Func to stop all of the above
 	return func() {
 		profiler.Stop()
 		tracer.Stop()
@@ -885,12 +917,13 @@ func configureObservability() func() {
 }
 
 func main() {
+	mux := httptrace.NewServeMux()
+
 	if isProductionEnvironment() {
-		go configureObservability()()
+		defer configureObservability(mux)()
 		go deepCleanDatabase(context.Background())
 	}
 
-	mux := httptrace.NewServeMux()
 	mux.Handle("/api/v1/submit", withLogging(apiSubmitHandler))
 	mux.Handle("/api/v1/get-dump-requests", withLogging(apiGetPendingDumpRequestsHandler))
 	mux.Handle("/api/v1/submit-dump", withLogging(apiSubmitDumpHandler))

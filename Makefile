@@ -25,7 +25,7 @@ build-static:
 	docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile .
 
 build-api:
-	rm hishtory
+	rm hishtory server || true
 	docker build -t gcr.io/dworken-k8s/hishtory-api -f backend/server/Dockerfile . 
 
 deploy-static: build-static
