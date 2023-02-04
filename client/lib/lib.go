@@ -1240,20 +1240,21 @@ func tokenize(query string) ([]string, error) {
 	return splitEscaped(query, ' ', -1), nil
 }
 
-func splitEscaped(query string, separator byte, maxSplit int) []string {
-	var token []byte
+func splitEscaped(query string, separator rune, maxSplit int) []string {
+	var token []rune
 	var tokens []string
-	var splits = 1
-	for i := 0; i < len(query); i++ {
-		if (maxSplit < 0 || splits < maxSplit) && query[i] == separator {
+	splits := 1
+	runeQuery := []rune(query)
+	for i := 0; i < len(runeQuery); i++ {
+		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator {
 			tokens = append(tokens, string(token))
 			token = token[:0]
 			splits++
-		} else if query[i] == '\\' && i+1 < len(query) {
-			token = append(token, query[i], query[i+1])
+		} else if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
+			token = append(token, runeQuery[i], runeQuery[i+1])
 			i++
 		} else {
-			token = append(token, query[i])
+			token = append(token, runeQuery[i])
 		}
 	}
 	tokens = append(tokens, string(token))
@@ -1261,10 +1262,11 @@ func splitEscaped(query string, separator byte, maxSplit int) []string {
 }
 
 func containsUnescaped(query string, token string) bool {
-	for i := 0; i < len(query); i++ {
-		if query[i] == '\\' && i+1 < len(query) {
+	runeQuery := []rune(query)
+	for i := 0; i < len(runeQuery); i++ {
+		if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
 			i++
-		} else if query[i:i+len(token)] == token {
+		} else if string(runeQuery[i:i+len(token)]) == token {
 			return true
 		}
 	}
@@ -1272,12 +1274,13 @@ func containsUnescaped(query string, token string) bool {
 }
 
 func deEscape(query string) string {
-	var newQuery []byte
-	for i := 0; i < len(query); i++ {
-		if query[i] == '\\' && i+1 < len(query) {
+	runeQuery := []rune(query)
+	var newQuery []rune
+	for i := 0; i < len(runeQuery); i++ {
+		if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
 			i++
 		}
-		newQuery = append(newQuery, query[i])
+		newQuery = append(newQuery, runeQuery[i])
 	}
 	return string(newQuery)
 }
