@@ -30,8 +30,6 @@ func skipSlowTests() bool {
 	return os.Getenv("FAST") != ""
 }
 
-var initialWd string
-
 func TestMain(m *testing.M) {
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 	os.Setenv("HISHTORY_TEST", "1")
@@ -45,11 +43,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to build client: %v", err))
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(fmt.Sprintf("failed to os.Getwd(): %v", err))
-	}
-	initialWd = cwd
 	m.Run()
 }
 
@@ -296,12 +289,12 @@ yes | hishtory init `+userSecret)
 
 	// And test the export for each shell without anything filtered out
 	out = tester.RunInteractiveShell(t, `hishtory export -pipefail | grep -v 'hishtory init '`)
-	compareGoldens(t, out, "testIntegrationWithNewDevice-"+tester.ShellName())
+	testutils.CompareGoldens(t, out, "testIntegrationWithNewDevice-"+tester.ShellName())
 
 	// And test the table but with a subset of columns that is static
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail | grep -v 'hishtory init ' | grep -v 'ls /'`)
-	compareGoldens(t, out, "testIntegrationWithNewDevice-table"+tester.ShellName())
+	testutils.CompareGoldens(t, out, "testIntegrationWithNewDevice-table"+tester.ShellName())
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1062,30 +1055,30 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 	// Query and check the table
 	tester.RunInteractiveShell(t, ` hishtory disable`)
 	out := hishtoryQuery(t, tester, "table")
-	compareGoldens(t, out, "testDisplayTable-defaultColumns")
+	testutils.CompareGoldens(t, out, "testDisplayTable-defaultColumns")
 
 	// Adjust the columns that should be displayed
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname Command`)
 
 	// And check the table again
 	out = hishtoryQuery(t, tester, "table")
-	compareGoldens(t, out, "testDisplayTable-customColumns")
+	testutils.CompareGoldens(t, out, "testDisplayTable-customColumns")
 
 	// And again
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
 	out = hishtoryQuery(t, tester, "table")
-	compareGoldens(t, out, "testDisplayTable-customColumns-2")
+	testutils.CompareGoldens(t, out, "testDisplayTable-customColumns-2")
 
 	// And again
 	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns CWD`)
 	out = hishtoryQuery(t, tester, "table")
-	compareGoldens(t, out, "testDisplayTable-customColumns-3")
+	testutils.CompareGoldens(t, out, "testDisplayTable-customColumns-3")
 
 	// Test displaying a command with multiple lines
 	entry3 := testutils.MakeFakeHistoryEntry("while :\ndo\nls /table/\ndone")
 	manuallySubmitHistoryEntry(t, userSecret, entry3)
 	out = hishtoryQuery(t, tester, "table")
-	compareGoldens(t, out, "testDisplayTable-customColumns-multiLineCommand")
+	testutils.CompareGoldens(t, out, "testDisplayTable-customColumns-multiLineCommand")
 
 	// Add a custom column
 	tester.RunInteractiveShell(t, `hishtory config-add custom-columns foo "echo aaaaaaaaaaaaa"`)
@@ -1099,7 +1092,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// And run a query and confirm it is displayed
 	out = hishtoryQuery(t, tester, "table")
-	compareGoldens(t, out, "testDisplayTable-customColumns-trulyCustom")
+	testutils.CompareGoldens(t, out, "testDisplayTable-customColumns-trulyCustom")
 }
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
@@ -1779,36 +1772,7 @@ func TestFish(t *testing.T) {
 	// Check a table to see some other metadata
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns CWD Hostname 'Exit Code' Command`)
 	out = hishtoryQuery(t, tester, "-pipefail")
-	compareGoldens(t, out, "TestFish-table")
-}
-
-func normalizeHostnames(data string) string {
-	hostnames := []string{"Davids-MacBook-Air.local", "ghaction-runner-hostname"}
-	for _, hostname := range hostnames {
-		data = strings.ReplaceAll(data, hostname, "ghaction-runner-hostname")
-	}
-	return data
-}
-
-func compareGoldens(t *testing.T, out, goldenName string) {
-	out = normalizeHostnames(out)
-	goldenPath := path.Join(initialWd, "client/lib/goldens/", goldenName)
-	expected, err := os.ReadFile(goldenPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			expected = []byte("ERR_FILE_NOT_FOUND")
-		} else {
-			testutils.Check(t, err)
-		}
-	}
-	if diff := cmp.Diff(string(expected), out); diff != "" {
-		if os.Getenv("HISHTORY_UPDATE_GOLDENS") == "" {
-			_, filename, line, _ := runtime.Caller(1)
-			t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s\nactual=\n%s", goldenName, filename, line, diff, out)
-		} else {
-			testutils.Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
-		}
-	}
+	testutils.CompareGoldens(t, out, "TestFish-table")
 }
 
 func TestTui(t *testing.T) {
@@ -1831,7 +1795,7 @@ func TestTui(t *testing.T) {
 		t.Fatalf("failed to split out=%#v", out)
 	}
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-Initial")
+	testutils.CompareGoldens(t, out, "TestTui-Initial")
 
 	// Check the output when there is a search
 	out = captureTerminalOutput(t, tester, []string{
@@ -1839,7 +1803,7 @@ func TestTui(t *testing.T) {
 		"ls",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-Search")
+	testutils.CompareGoldens(t, out, "TestTui-Search")
 
 	// Check the output when there is a selected result
 	out = captureTerminalOutput(t, tester, []string{
@@ -1858,7 +1822,7 @@ func TestTui(t *testing.T) {
 		"ls",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-InitialInvalidSearch")
+	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
 
 	// Check the output when the initial search is invalid
 	out = captureTerminalOutput(t, tester, []string{
@@ -1866,14 +1830,14 @@ func TestTui(t *testing.T) {
 		"ls:",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-InvalidSearch")
+	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
 
 	// Check the output when the size is smaller
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-SmallTerminal")
+	testutils.CompareGoldens(t, out, "TestTui-SmallTerminal")
 
 	// Check that we can use left arrow keys to scroll
 	out = captureTerminalOutput(t, tester, []string{
@@ -1883,7 +1847,7 @@ func TestTui(t *testing.T) {
 		"l",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-LeftScroll")
+	testutils.CompareGoldens(t, out, "TestTui-LeftScroll")
 
 	// Check that we can exit the TUI via pressing esc
 	out = captureTerminalOutput(t, tester, []string{
@@ -1894,7 +1858,7 @@ func TestTui(t *testing.T) {
 		t.Fatalf("unexpected out=\n%s", out)
 	}
 	if !testutils.IsGithubAction() {
-		compareGoldens(t, out, "TestTui-Exit")
+		testutils.CompareGoldens(t, out, "TestTui-Exit")
 	}
 
 	// Check that it resizes after the terminal size is adjusted
@@ -1904,7 +1868,7 @@ func TestTui(t *testing.T) {
 		{ResizeX: 300, ResizeY: 100},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-Resize")
+	testutils.CompareGoldens(t, out, "TestTui-Resize")
 
 	// Check that we can delete an entry
 	out = captureTerminalOutput(t, tester, []string{
@@ -1913,14 +1877,14 @@ func TestTui(t *testing.T) {
 		"C-K",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-Delete")
+	testutils.CompareGoldens(t, out, "TestTui-Delete")
 
 	// And that it stays deleted
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-DeleteStill")
+	testutils.CompareGoldens(t, out, "TestTui-DeleteStill")
 
 	// And that we can then delete another entry
 	out = captureTerminalOutput(t, tester, []string{
@@ -1928,14 +1892,14 @@ func TestTui(t *testing.T) {
 		"C-K",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-DeleteAgain")
+	testutils.CompareGoldens(t, out, "TestTui-DeleteAgain")
 
 	// And that it stays deleted
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "TestTui-DeleteAgainStill")
+	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -2035,7 +1999,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 		t.Fatalf("failed to find separator in %#v", out)
 	}
 	out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	compareGoldens(t, out, "testControlR-Initial")
+	testutils.CompareGoldens(t, out, "testControlR-Initial")
 
 	// And check that we can scroll down and select an option
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Down Down", "Enter"})
@@ -2072,14 +2036,14 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-Search")
+	testutils.CompareGoldens(t, out, "testControlR-Search")
 
 	// An advanced search and check that the table is updated
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "cwd:/tmp/ SPACE ls"})
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-AdvancedSearch")
+	testutils.CompareGoldens(t, out, "testControlR-AdvancedSearch")
 
 	// Set some different columns to be displayed and check that the table displays those
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
@@ -2087,7 +2051,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-displayedColumns")
+	testutils.CompareGoldens(t, out, "testControlR-displayedColumns")
 
 	// Add a custom column
 	tester.RunInteractiveShell(t, `hishtory config-add custom-columns foo "echo foo"`)
@@ -2102,35 +2066,35 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if tester.ShellName() == "bash" {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-customColumn")
+	testutils.CompareGoldens(t, out, "testControlR-customColumn")
 
 	// Start with a search query, and then press control-r and it shows results for that query
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"ls", "C-R"})
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-InitialSearch")
+	testutils.CompareGoldens(t, out, "testControlR-InitialSearch")
 
 	// Start with a search query, and then press control-r, then make the query more specific
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"e", "C-R", "cho"})
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-InitialSearchExpanded")
+	testutils.CompareGoldens(t, out, "testControlR-InitialSearchExpanded")
 
 	// Start with a search query for which there are no results
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R"})
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-InitialSearchNoResults")
+	testutils.CompareGoldens(t, out, "testControlR-InitialSearchNoResults")
 
 	// Start with a search query for which there are no results
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R", "BSpace BSpace BSpace BSpace echo"})
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-InitialSearchNoResultsThenFoundResults")
+	testutils.CompareGoldens(t, out, "testControlR-InitialSearchNoResultsThenFoundResults")
 
 	// Search, hit control-c, and the table should be cleared
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"echo", "C-R", "c", "C-C"})
@@ -2142,7 +2106,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	}
 	if !testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
-		compareGoldens(t, out, "testControlR-ControlC-"+shellName)
+		testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
 	}
 
 	// Disable control-r
@@ -2154,7 +2118,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	}
 	if !testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
-		compareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
+		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 	}
 
 	// Re-enable control-r
@@ -2166,7 +2130,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-Final")
+	testutils.CompareGoldens(t, out, "testControlR-Final")
 
 	// Record a multi-line command
 	tester.RunInteractiveShell(t, ` hishtory enable`)
@@ -2180,7 +2144,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	compareGoldens(t, out, "testControlR-DisplayMultiline-"+shellName)
+	testutils.CompareGoldens(t, out, "testControlR-DisplayMultiline-"+shellName)
 
 	// Check that we can select it correctly
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"})
@@ -2191,7 +2155,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 		t.Fatalf("out has unexpected output missing the selected row: \n%s", out)
 	}
 	if !testutils.IsGithubAction() {
-		compareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
+		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
 	}
 
 	// Assert there are no leaked connections
@@ -2214,7 +2178,7 @@ echo baz`)
 
 	// Check that the hishtory is saved correctly
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	compareGoldens(t, out, "testCustomColumns-initHistory")
+	testutils.CompareGoldens(t, out, "testCustomColumns-initHistory")
 
 	// Configure a custom column
 	tester.RunInteractiveShell(t, `hishtory config-add custom-columns git_remote '(git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true'`)
@@ -2230,14 +2194,14 @@ echo bar`)
 	// And check that it is all recorded correctly
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command `)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
-	compareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
+	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
 	if testutils.IsGithubAction() {
 		testName += "-isAction"
 		testName += "-" + runtime.GOOS
 	}
-	compareGoldens(t, out, testName)
+	testutils.CompareGoldens(t, out, testName)
 }
 
 func testUninstall(t *testing.T, tester shellTester) {
@@ -2249,19 +2213,19 @@ func testUninstall(t *testing.T, tester shellTester) {
 	tester.RunInteractiveShell(t, `echo foo
 echo baz`)
 	out := tester.RunInteractiveShell(t, `hishtory export -pipefail`)
-	compareGoldens(t, out, "testUninstall-recorded")
+	testutils.CompareGoldens(t, out, "testUninstall-recorded")
 
 	// And then uninstall
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory uninstall`)
 	testutils.Check(t, err)
-	compareGoldens(t, out, "testUninstall-uninstall")
+	testutils.CompareGoldens(t, out, "testUninstall-uninstall")
 
 	// And check that hishtory has been uninstalled
 	out, err = tester.RunInteractiveShellRelaxed(t, `echo foo
 hishtory
 echo bar`)
 	testutils.Check(t, err)
-	compareGoldens(t, out, "testUninstall-post-uninstall")
+	testutils.CompareGoldens(t, out, "testUninstall-post-uninstall")
 
 	// And check again, but in a way that shows the full terminal output
 	if !testutils.IsGithubAction() {
@@ -2270,7 +2234,7 @@ echo bar`)
 			"hishtory ENTER",
 			"echo SPACE bar ENTER",
 		})
-		compareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName())
+		testutils.CompareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName())
 	}
 }
 
@@ -2304,14 +2268,14 @@ func TestTimestampFormat(t *testing.T) {
 
 	// And check that it is displayed in both the tui and the classic view
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
-	compareGoldens(t, out, "TestTimestampFormat-query")
+	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	goldenName := "TestTimestampFormat-tquery"
 	if testutils.IsGithubAction() {
 		goldenName += "-isAction"
 	}
-	compareGoldens(t, out, goldenName)
+	testutils.CompareGoldens(t, out, goldenName)
 }
 
 func TestZDotDir(t *testing.T) {
@@ -2363,23 +2327,23 @@ echo baz
 echo baz
 echo foo`)
 	out := tester.RunInteractiveShell(t, `hishtory export -pipefail`)
-	compareGoldens(t, out, "testRemoveDuplicateRows-export")
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-export")
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
-	compareGoldens(t, out, "testRemoveDuplicateRows-query")
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "testRemoveDuplicateRows-tquery")
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-tquery")
 
 	// And change the config to filter out duplicate rows
 	tester.RunInteractiveShell(t, `hishtory config-set filter-duplicate-commands true`)
 	out = tester.RunInteractiveShell(t, `hishtory export -pipefail`)
-	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-export")
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-export")
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
-	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	compareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 }
 
 func TestSetConfigNoCorruption(t *testing.T) {

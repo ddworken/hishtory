@@ -2,7 +2,11 @@
 
 package table
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ddworken/hishtory/shared/testutils"
+)
 
 func TestFromValues(t *testing.T) {
 	input := "foo1,bar1\nfoo2,bar2\nfoo3,bar3"
@@ -39,6 +43,24 @@ func TestFromValuesWithTabSeparator(t *testing.T) {
 	if !deepEqual(table.rows, expect) {
 		t.Fatal("table rows is not equals to the input")
 	}
+}
+
+func TestHScoll(t *testing.T) {
+	table := New(
+		WithColumns([]Column{{Title: "Column1", Width: 10}, {Title: "Column2", Width: 20}}),
+		WithRows([]Row{
+			{"a1", "a2345"},
+			{"b1", "b23"},
+			{"c1", "c1234567890abcdefghijklmnopqrstuvwxyz"},
+		}),
+	)
+	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable")
+	table.MoveRight(1)
+	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable-right1")
+	table.MoveRight(1)
+	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable-right2")
+	table.MoveRight(1)
+	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable-right3")
 }
 
 func deepEqual(a, b []Row) bool {

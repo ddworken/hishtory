@@ -16,12 +16,31 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/google/go-cmp/cmp"
 )
 
 const (
 	DB_WAL_PATH = data.DB_PATH + "-wal"
 	DB_SHM_PATH = data.DB_PATH + "-shm"
 )
+
+var initialWd string
+
+func init() {
+	initialWd = getInitialWd()
+}
+
+func getInitialWd() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	if !strings.Contains(cwd, "/hishtory/") {
+		return cwd
+	}
+	components := strings.Split(cwd, "/hishtory/")
+	return components[0] + "/hishtory"
+}
 
 func ResetLocalState(t *testing.T) {
 	homedir, err := os.UserHomeDir()
@@ -320,4 +339,33 @@ func persistLog() {
 	checkError(err)
 	_, err = f.WriteString("\n")
 	checkError(err)
+}
+
+func CompareGoldens(t *testing.T, out, goldenName string) {
+	out = normalizeHostnames(out)
+	goldenPath := path.Join(initialWd, "client/lib/goldens/", goldenName)
+	expected, err := os.ReadFile(goldenPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			expected = []byte("ERR_FILE_NOT_FOUND")
+		} else {
+			Check(t, err)
+		}
+	}
+	if diff := cmp.Diff(string(expected), out); diff != "" {
+		if os.Getenv("HISHTORY_UPDATE_GOLDENS") == "" {
+			_, filename, line, _ := runtime.Caller(1)
+			t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s\nactual=\n%s", goldenName, filename, line, diff, out)
+		} else {
+			Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
+		}
+	}
+}
+
+func normalizeHostnames(data string) string {
+	hostnames := []string{"Davids-MacBook-Air.local", "ghaction-runner-hostname"}
+	for _, hostname := range hostnames {
+		data = strings.ReplaceAll(data, hostname, "ghaction-runner-hostname")
+	}
+	return data
 }
