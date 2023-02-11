@@ -1,3 +1,5 @@
+// Forked from https://github.com/charmbracelet/bubbles/blob/master/table/table.go to add horizontal scrolling
+
 package table
 
 import (
@@ -137,9 +139,9 @@ func New(opts ...Option) Model {
 		KeyMap: DefaultKeyMap(),
 		styles: DefaultStyles(),
 
-		hcol:     -1,
-		hstep:    10,
-		hcursor:  0,
+		hcol:    -1,
+		hstep:   10,
+		hcursor: 0,
 	}
 
 	for _, opt := range opts {
@@ -326,7 +328,7 @@ func (m *Model) MaxHScroll() int {
 			maxWidth = max(len(row[index]), maxWidth)
 		}
 	}
-    return max(maxWidth-m.cols[index].Width+1, 0)
+	return max(maxWidth-m.cols[index].Width+1, 0)
 }
 
 // SetWidth sets the width of the viewport of the table.
