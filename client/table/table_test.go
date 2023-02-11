@@ -61,6 +61,8 @@ func TestHScoll(t *testing.T) {
 	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable-right2")
 	table.MoveRight(1)
 	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable-right3")
+	table.MoveLeft(1)
+	testutils.CompareGoldens(t, table.View(), "unittestTable-truncatedTable-right2")
 }
 
 func deepEqual(a, b []Row) bool {
