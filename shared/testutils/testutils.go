@@ -39,7 +39,11 @@ func getInitialWd() string {
 		return cwd
 	}
 	components := strings.Split(cwd, "/hishtory/")
-	return components[0] + "/hishtory"
+	dir := components[0] + "/hishtory"
+	if IsGithubAction() {
+		dir += "/hishtory"
+	}
+	return dir
 }
 
 func ResetLocalState(t *testing.T) {
