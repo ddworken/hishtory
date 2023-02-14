@@ -1274,13 +1274,11 @@ func containsUnescaped(query string, token string) bool {
 }
 
 func stripBackslash(query string) string {
-	runeQuery := []rune(query)
 	var newQuery []rune
-	for i := 0; i < len(runeQuery); i++ {
-		if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
-			i++
+	for _, char := range query {
+		if char != '\\' {
+			newQuery = append(newQuery, char)
 		}
-		newQuery = append(newQuery, runeQuery[i])
 	}
 	return string(newQuery)
 }

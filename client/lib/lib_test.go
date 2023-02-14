@@ -489,6 +489,9 @@ func TestStripBackslash(t *testing.T) {
 		{"f \\bar", "f bar"},
 		{"f\\:bar", "f:bar"},
 		{"f\\:bar\\", "f:bar"},
+		{"\\f\\:bar\\", "f:bar"},
+		{"", ""},
+		{"\\\\", ""},
 	}
 	for _, tc := range testcases {
 		actual := stripBackslash(tc.input)
