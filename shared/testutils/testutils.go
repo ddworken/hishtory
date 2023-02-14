@@ -347,7 +347,7 @@ func CompareGoldens(t *testing.T, out, goldenName string) {
 	expected, err := os.ReadFile(goldenPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			expected = []byte("ERR_FILE_NOT_FOUND")
+			expected = []byte("ERR_FILE_NOT_FOUND:" + goldenPath)
 		} else {
 			Check(t, err)
 		}
