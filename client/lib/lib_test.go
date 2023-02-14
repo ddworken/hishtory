@@ -433,3 +433,73 @@ func TestParseTimeGenerously(t *testing.T) {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 }
+
+func TestStripBackslash(t *testing.T) {
+	testcases := []struct {
+		input  string
+		output string
+	}{
+		{"f bar", "f bar"},
+		{"f \\bar", "f bar"},
+		{"f\\:bar", "f:bar"},
+		{"f\\:bar\\", "f:bar"},
+	}
+	for _, tc := range testcases {
+		actual := stripBackslash(tc.input)
+		if !reflect.DeepEqual(actual, tc.output) {
+			t.Fatalf("unescape failure for %#v, actual=%#v", tc.input, actual)
+		}
+	}
+}
+
+func TestContainsUnescaped(t *testing.T) {
+	testcases := []struct {
+		input    string
+		token    string
+		expected bool
+	}{
+		{"f bar", "f", true},
+		{"f bar", "f bar", true},
+		{"f bar", "f r", false},
+		{"f bar", "f ", true},
+		{"foo:bar", ":", true},
+		{"foo:bar", "-", false},
+		{"foo\\:bar", ":", false},
+		{"foo\\-bar", "-", false},
+		{"foo\\-bar", "foo", true},
+		{"foo\\-bar", "bar", true},
+		{"foo\\-bar", "a", true},
+	}
+	for _, tc := range testcases {
+		actual := containsUnescaped(tc.input, tc.token)
+		if !reflect.DeepEqual(actual, tc.expected) {
+			t.Fatalf("containsUnescaped failure for containsUnescaped(%#v, %#v), actual=%#v", tc.input, tc.token, actual)
+		}
+	}
+}
+
+func TestSplitEscaped(t *testing.T) {
+	testcases := []struct {
+		input    string
+		char     rune
+		limit    int
+		expected []string
+	}{
+		{"foo bar", ' ', 2, []string{"foo", "bar"}},
+		{"foo bar baz", ' ', 2, []string{"foo", "bar baz"}},
+		{"foo bar baz", ' ', 3, []string{"foo", "bar", "baz"}},
+		{"foo bar baz", ' ', 1, []string{"foo bar baz"}},
+		{"foo bar baz", ' ', -1, []string{"foo", "bar", "baz"}},
+		{"foo\\ bar baz", ' ', -1, []string{"foo\\ bar", "baz"}},
+		{"foo\\bar baz", ' ', -1, []string{"foo\\bar", "baz"}},
+		{"foo\\bar baz foob", ' ', 2, []string{"foo\\bar", "baz foob"}},
+		{"foo\\ bar\\ baz", ' ', -1, []string{"foo\\ bar\\ baz"}},
+		{"foo\\ bar\\  baz", ' ', -1, []string{"foo\\ bar\\ ", "baz"}},
+	}
+	for _, tc := range testcases {
+		actual := splitEscaped(tc.input, tc.char, tc.limit)
+		if !reflect.DeepEqual(actual, tc.expected) {
+			t.Fatalf("containsUnescaped failure for splitEscaped(%#v, %#v, %#v), actual=%#v", tc.input, string(tc.char), tc.limit, actual)
+		}
+	}
+}
