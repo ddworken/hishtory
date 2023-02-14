@@ -1901,7 +1901,7 @@ func TestTui(t *testing.T) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
 
-	// Test horizontal scrolling
+	// Test horizontal scrolling by one to the right
 	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo '1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_0_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_1_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_2_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321'")).Error)
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
@@ -1909,6 +1909,14 @@ func TestTui(t *testing.T) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-RightScroll")
+
+	// Test horizontal scrolling by two
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"S-Right S-Right",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
