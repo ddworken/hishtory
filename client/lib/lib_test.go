@@ -228,6 +228,52 @@ func TestSearch(t *testing.T) {
 	if !data.EntryEquals(*results[1], entry1) {
 		t.Fatalf("Search()[0]=%#v, expected: %#v", results[1], entry1)
 	}
+
+	// Search but exclude bar
+	results, err = Search(ctx, db, "ls -bar", 5)
+	testutils.Check(t, err)
+	if len(results) != 1 {
+		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
+	}
+
+	// Search but exclude foo
+	results, err = Search(ctx, db, "ls -foo", 5)
+	testutils.Check(t, err)
+	if len(results) != 1 {
+		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
+	}
+
+	// Search but include / also
+	results, err = Search(ctx, db, "ls /", 5)
+	testutils.Check(t, err)
+	if len(results) != 2 {
+		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
+	}
+
+	// Search but exclude slash
+	results, err = Search(ctx, db, "ls -/", 5)
+	testutils.Check(t, err)
+	if len(results) != 0 {
+		t.Fatalf("Search() returned %d results, expected 0, results=%#v", len(results), results)
+	}
+
+	// Tests for escaping
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls -baz")).Error)
+	results, err = Search(ctx, db, "ls", 5)
+	testutils.Check(t, err)
+	if len(results) != 3 {
+		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
+	}
+	results, err = Search(ctx, db, "ls -baz", 5)
+	testutils.Check(t, err)
+	if len(results) != 2 {
+		t.Fatalf("Search() returned %d results, expected 2, results=%#v", len(results), results)
+	}
+	results, err = Search(ctx, db, "ls \\-baz", 5)
+	testutils.Check(t, err)
+	if len(results) != 1 {
+		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
+	}
 }
 
 func TestAddToDbIfNew(t *testing.T) {
