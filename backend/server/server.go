@@ -493,6 +493,11 @@ func OpenDB() (*gorm.DB, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
 		}
+		underlyingDb, err := db.DB()
+		if err != nil {
+			return nil, fmt.Errorf("failed to access underlying DB: %v", err)
+		}
+		underlyingDb.SetMaxOpenConns(1)
 		db.Exec("PRAGMA journal_mode = WAL")
 		AddDatabaseTables(db)
 		return db, nil

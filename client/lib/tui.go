@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
+	"github.com/ddworken/hishtory/client/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -371,6 +371,14 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 		GotoBottom: key.NewBinding(
 			key.WithKeys("end"),
 			key.WithHelp("end", "go to end"),
+		),
+		MoveLeft: key.NewBinding(
+			key.WithKeys("shift+left"),
+			key.WithHelp("Shift+←", "move left"),
+		),
+		MoveRight: key.NewBinding(
+			key.WithKeys("shift+right"),
+			key.WithHelp("Shift+→", "move right"),
 		),
 	}
 	_, terminalHeight, err := getTerminalSize()
