@@ -659,6 +659,21 @@ hishtory disable`)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
+
+	// Search using an escaped dash
+	out = tester.RunInteractiveShell(t, `hishtory export \\-echo`)
+	expectedOutput = "foo -echo\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Search using a colon that doesn't match a column name
+	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("foo:bar"))
+	out = tester.RunInteractiveShell(t, `hishtory export foo\\:bar`)
+	expectedOutput = "foo:bar\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
 }
 
 func testUpdate(t *testing.T, tester shellTester) {
