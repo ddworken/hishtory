@@ -63,6 +63,20 @@ To update `hishtory` to the latest version, just run `hishtory update` to secure
 ### Advanced Features
 
 <details>
+<summary>TUI key bindings</summary>
+The TUI (opened via `Control+R`) supports a number of key bindings:
+
+| Key                | Result                                                         |
+|--------------------|----------------------------------------------------------------|
+| Left/Right         | Scroll the search query left/right                             |
+| Up/Down            | Scroll the table up/down                                       |
+| Page Up/Down       | Scroll the table up/down by one page                           |
+| Shift + Left/Right | Scroll the table left/right  |
+| Control+K          | Delete the selected command                                    |
+
+</details>
+
+<details>
 <summary>Changing the displayed columns</summary>
 
 You can customize the columns that are displayed via `hishtory config-set displayed-columns`. For example, to display only the cwd and command:
@@ -70,7 +84,6 @@ You can customize the columns that are displayed via `hishtory config-set displa
 ```
 hishtory config-set displayed-columns CWD Command
 ```
-
 </details>
 
 <details>
