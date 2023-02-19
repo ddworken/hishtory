@@ -37,7 +37,7 @@ type HistoryEntry struct {
 	HomeDirectory           string        `json:"home_directory" gorm:"uniqueIndex:compositeindex"`
 	ExitCode                int           `json:"exit_code" gorm:"uniqueIndex:compositeindex"`
 	StartTime               time.Time     `json:"start_time" gorm:"uniqueIndex:compositeindex"`
-	EndTime                 time.Time     `json:"end_time" gorm:"uniqueIndex:compositeindex"`
+	EndTime                 time.Time     `json:"end_time" gorm:"uniqueIndex:compositeindex,index:end_time_index"`
 	DeviceId                string        `json:"device_id" gorm:"uniqueIndex:compositeindex"`
 	CustomColumns           CustomColumns `json:"custom_columns"`
 }
