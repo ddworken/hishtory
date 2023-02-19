@@ -274,6 +274,13 @@ func TestSearch(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
 	}
+
+	// A malformed search query, but we should just ignore the dash since this is a common enough thing
+	results, err = Search(ctx, db, "ls -", 5)
+	testutils.Check(t, err)
+	if len(results) != 3 {
+		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
+	}
 }
 
 func TestAddToDbIfNew(t *testing.T) {

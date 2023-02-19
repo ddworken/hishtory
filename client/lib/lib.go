@@ -1098,6 +1098,11 @@ func MakeWhereQueryFromSearch(ctx *context.Context, db *gorm.DB, query string) (
 	tx := db.Model(&data.HistoryEntry{}).Where("true")
 	for _, token := range tokens {
 		if strings.HasPrefix(token, "-") {
+			if token == "-" {
+				// The entire token is a -, just ignore this token. Otherwise we end up
+				// interpreting "-" as exluding literally all results which is pretty useless.
+				continue
+			}
 			if containsUnescaped(token, ":") {
 				query, v1, v2, err := parseAtomizedToken(ctx, token[1:])
 				if err != nil {
