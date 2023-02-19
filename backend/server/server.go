@@ -648,6 +648,7 @@ func decrementVersionIfInvalid(initialVersion string) string {
 
 func assertValidUpdate(updateInfo shared.UpdateInfo) error {
 	urls := []string{updateInfo.LinuxAmd64Url, updateInfo.LinuxAmd64AttestationUrl, updateInfo.LinuxArm64Url, updateInfo.LinuxArm64AttestationUrl,
+		updateInfo.LinuxArm7Url, updateInfo.LinuxArm7AttestationUrl,
 		updateInfo.DarwinAmd64Url, updateInfo.DarwinAmd64UnsignedUrl, updateInfo.DarwinAmd64AttestationUrl,
 		updateInfo.DarwinArm64Url, updateInfo.DarwinArm64UnsignedUrl, updateInfo.DarwinArm64AttestationUrl}
 	for _, url := range urls {
@@ -706,6 +707,8 @@ func buildUpdateInfo(version string) shared.UpdateInfo {
 		LinuxAmd64AttestationUrl:  fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-amd64.intoto.jsonl", version),
 		LinuxArm64Url:             fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-arm64", version),
 		LinuxArm64AttestationUrl:  fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-arm64.intoto.jsonl", version),
+		LinuxArm7Url:              fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-arm7", version),
+		LinuxArm7AttestationUrl:   fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-linux-arm7.intoto.jsonl", version),
 		DarwinAmd64Url:            fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-amd64", version),
 		DarwinAmd64UnsignedUrl:    fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-amd64-unsigned", version),
 		DarwinAmd64AttestationUrl: fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-darwin-amd64.intoto.jsonl", version),

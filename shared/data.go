@@ -46,6 +46,8 @@ type UpdateInfo struct {
 	LinuxAmd64AttestationUrl  string `json:"linux_amd_64_attestation_url"`
 	LinuxArm64Url             string `json:"linux_arm_64_url"`
 	LinuxArm64AttestationUrl  string `json:"linux_arm_64_attestation_url"`
+	LinuxArm7Url              string `json:"linux_arm_7_url"`
+	LinuxArm7AttestationUrl   string `json:"linux_arm_7_attestation_url"`
 	DarwinAmd64Url            string `json:"darwin_amd_64_url"`
 	DarwinAmd64UnsignedUrl    string `json:"darwin_amd_64_unsigned_url"`
 	DarwinAmd64AttestationUrl string `json:"darwin_amd_64_attestation_url"`

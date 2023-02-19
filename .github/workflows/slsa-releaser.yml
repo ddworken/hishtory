@@ -47,6 +47,18 @@ jobs:
       go-version: 1.18
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
+  build-linux-arm7:
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    needs: args
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.2.1
+    with:
+      config-file: .github/slsa/.slsa-goreleaser-linux-arm7.yml
+      go-version: 1.18
+      evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
+      compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-freebsd-amd64:
     permissions:
       id-token: write
