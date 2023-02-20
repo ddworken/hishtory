@@ -94,7 +94,7 @@ func (m model) Init() tea.Cmd {
 }
 
 func runQueryAndUpdateTable(m model, updateTable bool) model {
-	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || updateTable {
+	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || updateTable || m.searchErr != nil {
 		if m.runQuery == nil {
 			m.runQuery = &m.lastQuery
 		}

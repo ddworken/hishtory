@@ -1839,13 +1839,21 @@ func TestTui(t *testing.T) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
 
-	// Check the output when the initial search is invalid
+	// Check the output when the search is invalid
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 		"ls:",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
+
+	// Check the output when the search is invalid and then edited to become valid
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"ls: BSpace",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
 
 	// Check the output when the size is smaller
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
