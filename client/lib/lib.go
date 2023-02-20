@@ -53,7 +53,7 @@ var GitCommit string = "Unknown"
 var maxSupportedLineLengthForImport = 256_000
 
 func getCwd(ctx *context.Context) (string, string, error) {
-	cwd, err := os.Getwd()
+	cwd, err := getCwdWithoutSubstitution()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
 	}
@@ -65,6 +65,22 @@ func getCwd(ctx *context.Context) (string, string, error) {
 		return strings.Replace(cwd, homedir, "~", 1), homedir, nil
 	}
 	return cwd, homedir, nil
+}
+
+func getCwdWithoutSubstitution() (string, error) {
+	cwd, err := os.Getwd()
+	if err == nil {
+		return cwd, nil
+	}
+	// Fall back to the syscall to see if that works, as an attempt to
+	// fix github.com/ddworken/hishtory/issues/69
+	if syscall.ImplementsGetwd && false {
+		cwd, err = syscall.Getwd()
+		if err == nil {
+			return cwd, nil
+		}
+	}
+	return "", err
 }
 
 func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
