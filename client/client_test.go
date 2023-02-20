@@ -1941,6 +1941,22 @@ func TestTui(t *testing.T) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
 
+	// Test opening the help page
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-h",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-HelpPage")
+
+	// Test closing the help page
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-h C-h",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-HelpPageClosed")
+
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
 }
