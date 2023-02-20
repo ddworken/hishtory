@@ -281,6 +281,14 @@ func TestSearch(t *testing.T) {
 	if len(results) != 3 {
 		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
 	}
+
+	// A search for an entry containing a backslash
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo '\\'")).Error)
+	results, err = Search(ctx, db, "\\\\", 5)
+	testutils.Check(t, err)
+	if len(results) != 1 {
+		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
+	}
 }
 
 func TestAddToDbIfNew(t *testing.T) {
@@ -487,7 +495,7 @@ func TestParseTimeGenerously(t *testing.T) {
 	}
 }
 
-func TestStripBackslash(t *testing.T) {
+func TestUnescape(t *testing.T) {
 	testcases := []struct {
 		input  string
 		output string
@@ -498,10 +506,11 @@ func TestStripBackslash(t *testing.T) {
 		{"f\\:bar\\", "f:bar"},
 		{"\\f\\:bar\\", "f:bar"},
 		{"", ""},
-		{"\\\\", ""},
+		{"\\", ""},
+		{"\\\\", "\\"},
 	}
 	for _, tc := range testcases {
-		actual := stripBackslash(tc.input)
+		actual := unescape(tc.input)
 		if !reflect.DeepEqual(actual, tc.output) {
 			t.Fatalf("unescape failure for %#v, actual=%#v", tc.input, actual)
 		}

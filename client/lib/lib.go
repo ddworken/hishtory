@@ -1174,14 +1174,14 @@ func Search(ctx *context.Context, db *gorm.DB, query string, limit int) ([]*data
 }
 
 func parseNonAtomizedToken(token string) (string, interface{}, interface{}, interface{}, error) {
-	wildcardedToken := "%" + stripBackslash(token) + "%"
+	wildcardedToken := "%" + unescape(token) + "%"
 	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
 }
 
 func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}, interface{}, error) {
 	splitToken := splitEscaped(token, ':', 2)
-	field := stripBackslash(splitToken[0])
-	val := stripBackslash(splitToken[1])
+	field := unescape(splitToken[0])
+	val := unescape(splitToken[1])
 	switch field {
 	case "user":
 		return "(local_username = ?)", val, nil, nil
@@ -1297,11 +1297,15 @@ func containsUnescaped(query string, token string) bool {
 	return false
 }
 
-func stripBackslash(query string) string {
+func unescape(query string) string {
+	runeQuery := []rune(query)
 	var newQuery []rune
-	for _, char := range query {
-		if char != '\\' {
-			newQuery = append(newQuery, char)
+	for i := 0; i < len(runeQuery); i++ {
+		if runeQuery[i] == '\\' {
+			i++
+		}
+		if i < len(runeQuery) {
+			newQuery = append(newQuery, runeQuery[i])
 		}
 	}
 	return string(newQuery)
