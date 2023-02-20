@@ -9,6 +9,7 @@ import (
 
 	_ "embed" // for embedding config.sh
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -31,6 +32,95 @@ var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
 
+type keyMap struct {
+	Up          key.Binding
+	Down        key.Binding
+	PageUp      key.Binding
+	PageDown    key.Binding
+	SelectEntry key.Binding
+	Left        key.Binding
+	Right       key.Binding
+	TableLeft   key.Binding
+	TableRight  key.Binding
+	DeleteEntry key.Binding
+	Help        key.Binding
+	Quit        key.Binding
+}
+
+var fakeTitleKeyBinding key.Binding = key.NewBinding(
+	key.WithKeys(""),
+	key.WithHelp("hiSHtory: Search your shell history", ""),
+)
+
+var fakeEmptyKeyBinding key.Binding = key.NewBinding(
+	key.WithKeys(""),
+	key.WithHelp("", ""),
+)
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{fakeTitleKeyBinding, k.Help}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{fakeTitleKeyBinding, k.Up, k.Left, k.SelectEntry},
+		{fakeEmptyKeyBinding, k.Down, k.Right, k.DeleteEntry},
+		{fakeEmptyKeyBinding, k.PageUp, k.TableLeft, k.Quit},
+		{fakeEmptyKeyBinding, k.PageDown, k.TableRight, k.Help},
+	}
+}
+
+var keys = keyMap{
+	Up: key.NewBinding(
+		key.WithKeys("up", "alt+OA", "ctrl+p"),
+		key.WithHelp("↑", "scroll up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "alt+OB", "ctrl+n"),
+		key.WithHelp("↓", "scroll down"),
+	),
+	PageUp: key.NewBinding(
+		key.WithKeys("pgup"),
+		key.WithHelp("pgup", "page up"),
+	),
+	PageDown: key.NewBinding(
+		key.WithKeys("pgdown"),
+		key.WithHelp("pgdn", "page down"),
+	),
+	SelectEntry: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "select an entry"),
+	),
+	Left: key.NewBinding(
+		key.WithKeys("left"),
+		key.WithHelp("←", "move left"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right"),
+		key.WithHelp("→", "move right"),
+	),
+	TableLeft: key.NewBinding(
+		key.WithKeys("shift+left"),
+		key.WithHelp("shift+←", "scroll the table left"),
+	),
+	TableRight: key.NewBinding(
+		key.WithKeys("shift+right"),
+		key.WithHelp("shift+→", "scroll the table right"),
+	),
+	DeleteEntry: key.NewBinding(
+		key.WithKeys("ctrl+k"),
+		key.WithHelp("ctrl+k", "delete the highlighted entry"),
+	),
+	Help: key.NewBinding(
+		key.WithKeys("ctrl+h"),
+		key.WithHelp("ctrl+h", "help"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("esc", "ctrl+c", "ctrl+d"),
+		key.WithHelp("esc", "exit hiSHtory"),
+	),
+}
+
 type model struct {
 	// context
 	ctx *context.Context
@@ -39,6 +129,9 @@ type model struct {
 	spinner spinner.Model
 	// Whether data is still loading and the spinner should still be displayed.
 	isLoading bool
+
+	// Model for the help bar at the bottom of the page
+	help help.Model
 
 	// Whether the TUI is quitting.
 	quitting bool
@@ -86,7 +179,7 @@ func initialModel(ctx *context.Context, t table.Model, tableEntries []*data.Hist
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
-	return model{ctx: ctx, spinner: s, isLoading: true, table: t, tableEntries: tableEntries, runQuery: &initialQuery, queryInput: queryInput}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: t, tableEntries: tableEntries, runQuery: &initialQuery, queryInput: queryInput, help: help.New()}
 }
 
 func (m model) Init() tea.Cmd {
@@ -127,22 +220,25 @@ func runQueryAndUpdateTable(m model, updateTable bool) model {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+d":
+		switch {
+		case key.Matches(msg, keys.Quit):
 			m.quitting = true
 			return m, tea.Quit
-		case "enter":
+		case key.Matches(msg, keys.SelectEntry):
 			if len(m.tableEntries) != 0 {
 				m.selected = true
 			}
 			return m, tea.Quit
-		case "ctrl+k":
+		case key.Matches(msg, keys.DeleteEntry):
 			err := deleteHistoryEntry(m.ctx, *m.tableEntries[m.table.Cursor()])
 			if err != nil {
 				m.fatalErr = err
 				return m, nil
 			}
 			m = runQueryAndUpdateTable(m, true)
+			return m, nil
+		case key.Matches(msg, keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
 		default:
 			t, cmd1 := m.table.Update(msg)
@@ -158,6 +254,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmd1, cmd2)
 		}
 	case tea.WindowSizeMsg:
+		m.help.Width = msg.Width
 		m = runQueryAndUpdateTable(m, true)
 		return m, nil
 	case offlineMsg:
@@ -203,7 +300,8 @@ func (m model) View() string {
 	if m.searchErr != nil {
 		warning += fmt.Sprintf("Warning: failed to search: %v\n\n", m.searchErr)
 	}
-	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View()))
+	helpView := m.help.View(keys)
+	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View())) + helpView
 }
 
 func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
@@ -348,22 +446,10 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 		return table.Model{}, err
 	}
 	km := table.KeyMap{
-		LineUp: key.NewBinding(
-			key.WithKeys("up", "alt+OA", "ctrl+p"),
-			key.WithHelp("↑", "scroll up"),
-		),
-		LineDown: key.NewBinding(
-			key.WithKeys("down", "alt+OB", "ctrl+n"),
-			key.WithHelp("↓", "scroll down"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys("pgup"),
-			key.WithHelp("pgup", "page up"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys("pgdown"),
-			key.WithHelp("pgdn", "page down"),
-		),
+		LineUp:   keys.Up,
+		LineDown: keys.Down,
+		PageUp:   keys.PageUp,
+		PageDown: keys.PageDown,
 		GotoTop: key.NewBinding(
 			key.WithKeys("home"),
 			key.WithHelp("home", "go to start"),
@@ -372,14 +458,8 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 			key.WithKeys("end"),
 			key.WithHelp("end", "go to end"),
 		),
-		MoveLeft: key.NewBinding(
-			key.WithKeys("shift+left"),
-			key.WithHelp("Shift+←", "move left"),
-		),
-		MoveRight: key.NewBinding(
-			key.WithKeys("shift+right"),
-			key.WithHelp("Shift+→", "move right"),
-		),
+		MoveLeft:  keys.TableLeft,
+		MoveRight: keys.TableRight,
 	}
 	_, terminalHeight, err := getTerminalSize()
 	if err != nil {
