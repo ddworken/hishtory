@@ -1,0 +1,31 @@
+name: Release hishtory server
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "*" 
+
+jobs:
+  releases-matrix:
+    name: Release Go Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64, arm, arm64]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+      - name: Build server binary
+        run: |
+          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -o hishtory-server-${{ matrix.goos }}-${{ matrix.goarch }} backend/server/server.go
+      - name: Release
+        uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
+        if: ${{ startsWith(github.ref, 'refs/tags/') && contains(github.ref, '-') }}
+        with:
+          files: |
+            hishtory-server-${{ matrix.goos }}-${{ matrix.goarch }}
