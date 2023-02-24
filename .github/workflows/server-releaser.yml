@@ -14,6 +14,9 @@ jobs:
       matrix:
         goos: [linux, darwin]
         goarch: [amd64, arm, arm64]
+        exclude:
+          - goos: darwin
+            goarch: arm
     steps:
       - uses: actions/checkout@v2
       - name: Set up Go
