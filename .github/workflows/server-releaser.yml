@@ -1,4 +1,4 @@
-name: Release hishtory server
+name: Server Releaser
 
 on:
   workflow_dispatch:

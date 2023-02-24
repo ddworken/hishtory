@@ -1,4 +1,4 @@
-name: SLSA go releaser
+name: SLSA Client Releaser
 on:
   workflow_dispatch:
   push:
