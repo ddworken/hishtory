@@ -28,7 +28,7 @@ jobs:
           GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -o hishtory-server-${{ matrix.goos }}-${{ matrix.goarch }} backend/server/server.go
       - name: Release
         uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
-        if: ${{ startsWith(github.ref, 'refs/tags/') && contains(github.ref, '-') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         with:
           files: |
             hishtory-server-${{ matrix.goos }}-${{ matrix.goarch }}
