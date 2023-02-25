@@ -6,6 +6,9 @@ on:
     tags:
       - "*" 
 
+permissions:
+  contents: write
+
 jobs:
   releases-matrix:
     name: Release Go Binary
