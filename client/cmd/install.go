@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -352,14 +353,16 @@ func configureBashrc(homedir, binaryPath string) error {
 		}
 	}
 	// Check if we need to configure the bash_profile and configure it if so
-	bashProfileIsConfigured, err := isBashProfileConfigured(homedir)
-	if err != nil {
-		return fmt.Errorf("failed to check ~/.bash_profile: %v", err)
-	}
-	if !bashProfileIsConfigured {
-		err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir))
+	if doesBashProfileNeedConfig(homedir) {
+		bashProfileIsConfigured, err := isBashProfileConfigured(homedir)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to check ~/.bash_profile: %v", err)
+		}
+		if !bashProfileIsConfigured {
+			err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir))
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -392,6 +395,20 @@ func isBashRcConfigured(homedir string) (bool, error) {
 		return false, fmt.Errorf("failed to read bashrc: %v", err)
 	}
 	return strings.Contains(string(bashrc), getBashConfigFragment(homedir)), nil
+}
+
+func doesBashProfileNeedConfig(homedir string) bool {
+	if runtime.GOOS == "darwin" {
+		// Darwin always needs it configured for #14
+		return true
+	}
+	if runtime.GOOS == "linux" {
+		// Only configure it on linux if .bash_profile already exists
+		_, err := os.Stat(path.Join(homedir, ".bash_profile"))
+		return !errors.Is(err, os.ErrNotExist)
+	}
+	// Default to not configuring it
+	return false
 }
 
 func isBashProfileConfigured(homedir string) (bool, error) {
