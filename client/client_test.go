@@ -2018,9 +2018,6 @@ func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellT
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
-	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
-		t.Skip() // TODO: See the mysterious failure here: https://github.com/ddworken/hishtory/actions/runs/3390515329/jobs/5634750567
-	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installWithOnlineStatus(t, tester, onlineStatus)
