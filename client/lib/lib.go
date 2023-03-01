@@ -74,7 +74,7 @@ func getCwdWithoutSubstitution() (string, error) {
 	}
 	// Fall back to the syscall to see if that works, as an attempt to
 	// fix github.com/ddworken/hishtory/issues/69
-	if syscall.ImplementsGetwd && false {
+	if syscall.ImplementsGetwd {
 		cwd, err = syscall.Getwd()
 		if err == nil {
 			return cwd, nil
