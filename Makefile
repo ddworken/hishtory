@@ -22,15 +22,15 @@ release:
 	git push && git push --tags
 
 build-static:
-	docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile .
+	ssh server "cd ~/code/hishtory/; git pull; docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile ."
 
 build-api:
 	rm hishtory server || true
 	docker build -t gcr.io/dworken-k8s/hishtory-api -f backend/server/Dockerfile . 
 
 deploy-static: build-static
-	docker push gcr.io/dworken-k8s/hishtory-static
-	ssh monoserver "cd ~/infra/ && docker compose pull hishtory-static && docker compose up -d --no-deps hishtory-static"
+	ssh server "docker push gcr.io/dworken-k8s/hishtory-static"
+	ssh monoserver "cd ~/infra/ && docker compose pull hishtory-static && docker compose rm -svf hishtory-static && docker compose up -d hishtory-static"
 
 deploy-api: build-api
 	docker push gcr.io/dworken-k8s/hishtory-api
