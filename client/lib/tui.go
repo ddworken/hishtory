@@ -496,7 +496,12 @@ func deleteHistoryEntry(ctx *context.Context, entry data.HistoryEntry) error {
 	if r.Error != nil {
 		return r.Error
 	}
+
 	// Delete remotely
+	config := hctx.GetConf(ctx)
+	if config.IsOffline {
+		return nil
+	}
 	dr := shared.DeletionRequest{
 		UserId:   data.UserId(hctx.GetConf(ctx).UserSecret),
 		SendTime: time.Now(),

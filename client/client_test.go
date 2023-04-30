@@ -1790,6 +1790,8 @@ func TestFish(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestFish-table")
 }
 
+// TODO(ddworken): Run TestTui in online and offline mode
+
 func TestTui(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
