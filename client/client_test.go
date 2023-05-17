@@ -1790,7 +1790,6 @@ func TestFish(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestFish-table")
 }
 
-// TODO(ddworken):Add better tests for filtering out entries
 // TODO(ddworken): Run TestTui in online and offline mode
 
 func TestTui(t *testing.T) {
@@ -2400,6 +2399,9 @@ echo foo`)
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER", "Down Down", "ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
 }
 
 func TestSetConfigNoCorruption(t *testing.T) {
