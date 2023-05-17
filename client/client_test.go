@@ -2401,6 +2401,7 @@ echo foo`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER", "Down Down", "ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = strings.Split(out, "\n")[1]
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
 }
 
