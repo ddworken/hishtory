@@ -307,15 +307,16 @@ func (m model) View() string {
 func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
-	data, err := Search(ctx, db, query, numEntries)
+	searchResults, err := Search(ctx, db, query, numEntries)
 	if err != nil {
 		return nil, nil, err
 	}
 	var rows []table.Row
+	var filteredData []*data.HistoryEntry
 	lastCommand := ""
 	for i := 0; i < numEntries; i++ {
-		if i < len(data) {
-			entry := data[i]
+		if i < len(searchResults) {
+			entry := searchResults[i]
 			if strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
 				continue
 			}
@@ -325,12 +326,13 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 				return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
 			}
 			rows = append(rows, row)
+			filteredData = append(filteredData, entry)
 			lastCommand = entry.Command
 		} else {
 			rows = append(rows, table.Row{})
 		}
 	}
-	return rows, data, nil
+	return rows, filteredData, nil
 }
 
 func calculateColumnWidths(rows []table.Row, numColumns int) []int {
