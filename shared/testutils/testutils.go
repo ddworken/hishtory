@@ -104,12 +104,10 @@ func BackupAndRestoreWithId(t *testing.T, id string) func() {
 	touchFile(path.Join(homedir, ".zsh_history"))
 	touchFile(path.Join(homedir, ".local/share/fish/fish_history"))
 	return func() {
-		if runtime.GOOS != "windows" {
-			cmd := exec.Command("killall", "hishtory", "tmux")
-			stdout, err := cmd.Output()
-			if err != nil && err.Error() != "exit status 1" {
-				t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
-			}
+		cmd := exec.Command("killall", "hishtory", "tmux")
+		stdout, err := cmd.Output()
+		if err != nil && err.Error() != "exit status 1" {
+			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 		}
 		persistLog()
 		Check(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
@@ -214,12 +212,7 @@ func buildServer() string {
 	}
 	version, err := os.ReadFile("VERSION")
 	if err != nil {
-		if runtime.GOOS == "windows" {
-			// TODO: Figure out why it can't read the VERSION file
-			version = []byte("174")
-		} else {
-			panic(fmt.Sprintf("failed to read VERSION file: %v", err))
-		}
+		panic(fmt.Sprintf("failed to read VERSION file: %v", err))
 	}
 	f, err := os.CreateTemp("", "server")
 	checkError(err)
