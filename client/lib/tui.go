@@ -589,3 +589,6 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	fmt.Printf("%s\n", strings.ReplaceAll(SELECTED_COMMAND, "\\n", "\n"))
 	return nil
 }
+
+// TODO: support custom key bindings
+// TODO: make the help page wrap
