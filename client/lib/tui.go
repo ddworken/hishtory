@@ -26,25 +26,26 @@ import (
 const TABLE_HEIGHT = 20
 const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
 
-var selectedCommand string = ""
+var SELECTED_COMMAND string = ""
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
 
 type keyMap struct {
-	Up          key.Binding
-	Down        key.Binding
-	PageUp      key.Binding
-	PageDown    key.Binding
-	SelectEntry key.Binding
-	Left        key.Binding
-	Right       key.Binding
-	TableLeft   key.Binding
-	TableRight  key.Binding
-	DeleteEntry key.Binding
-	Help        key.Binding
-	Quit        key.Binding
+	Up                      key.Binding
+	Down                    key.Binding
+	PageUp                  key.Binding
+	PageDown                key.Binding
+	SelectEntry             key.Binding
+	SelectEntryAndChangeDir key.Binding
+	Left                    key.Binding
+	Right                   key.Binding
+	TableLeft               key.Binding
+	TableRight              key.Binding
+	DeleteEntry             key.Binding
+	Help                    key.Binding
+	Quit                    key.Binding
 }
 
 var fakeTitleKeyBinding key.Binding = key.NewBinding(
@@ -63,7 +64,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{fakeTitleKeyBinding, k.Up, k.Left, k.SelectEntry},
+		{fakeTitleKeyBinding, k.Up, k.Left, k.SelectEntry, k.SelectEntryAndChangeDir},
 		{fakeEmptyKeyBinding, k.Down, k.Right, k.DeleteEntry},
 		{fakeEmptyKeyBinding, k.PageUp, k.TableLeft, k.Quit},
 		{fakeEmptyKeyBinding, k.PageDown, k.TableRight, k.Help},
@@ -73,53 +74,65 @@ func (k keyMap) FullHelp() [][]key.Binding {
 var keys = keyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "alt+OA", "ctrl+p"),
-		key.WithHelp("↑", "scroll up"),
+		key.WithHelp("↑ ", "scroll up "),
 	),
 	Down: key.NewBinding(
 		key.WithKeys("down", "alt+OB", "ctrl+n"),
-		key.WithHelp("↓", "scroll down"),
+		key.WithHelp("↓ ", "scroll down "),
 	),
 	PageUp: key.NewBinding(
 		key.WithKeys("pgup"),
-		key.WithHelp("pgup", "page up"),
+		key.WithHelp("pgup", "page up "),
 	),
 	PageDown: key.NewBinding(
 		key.WithKeys("pgdown"),
-		key.WithHelp("pgdn", "page down"),
+		key.WithHelp("pgdn", "page down "),
 	),
 	SelectEntry: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "select an entry"),
+		key.WithHelp("enter", "select an entry "),
+	),
+	SelectEntryAndChangeDir: key.NewBinding(
+		key.WithKeys("ctrl+x"),
+		key.WithHelp("ctrl+x", "select an entry and cd into that directory"),
 	),
 	Left: key.NewBinding(
 		key.WithKeys("left"),
-		key.WithHelp("←", "move left"),
+		key.WithHelp("← ", "move left "),
 	),
 	Right: key.NewBinding(
 		key.WithKeys("right"),
-		key.WithHelp("→", "move right"),
+		key.WithHelp("→ ", "move right "),
 	),
 	TableLeft: key.NewBinding(
 		key.WithKeys("shift+left"),
-		key.WithHelp("shift+←", "scroll the table left"),
+		key.WithHelp("shift+← ", "scroll the table left "),
 	),
 	TableRight: key.NewBinding(
 		key.WithKeys("shift+right"),
-		key.WithHelp("shift+→", "scroll the table right"),
+		key.WithHelp("shift+→ ", "scroll the table right "),
 	),
 	DeleteEntry: key.NewBinding(
 		key.WithKeys("ctrl+k"),
-		key.WithHelp("ctrl+k", "delete the highlighted entry"),
+		key.WithHelp("ctrl+k", "delete the highlighted entry "),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("ctrl+h"),
-		key.WithHelp("ctrl+h", "help"),
+		key.WithHelp("ctrl+h", "help "),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("esc", "ctrl+c", "ctrl+d"),
-		key.WithHelp("esc", "exit hiSHtory"),
+		key.WithHelp("esc", "exit hiSHtory "),
 	),
 }
+
+type SelectStatus int64
+
+const (
+	NotSelected SelectStatus = iota
+	Selected
+	SelectedWithChangeDir
+)
 
 type model struct {
 	// context
@@ -141,7 +154,7 @@ type model struct {
 	// The entries in the table
 	tableEntries []*data.HistoryEntry
 	// Whether the user has hit enter to select an entry and the TUI is thus about to quit.
-	selected bool
+	selected SelectStatus
 
 	// The search box for the query
 	queryInput textinput.Model
@@ -226,7 +239,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case key.Matches(msg, keys.SelectEntry):
 			if len(m.tableEntries) != 0 {
-				m.selected = true
+				m.selected = Selected
+			}
+			return m, tea.Quit
+		case key.Matches(msg, keys.SelectEntryAndChangeDir):
+			if len(m.tableEntries) != 0 {
+				m.selected = SelectedWithChangeDir
 			}
 			return m, tea.Quit
 		case key.Matches(msg, keys.DeleteEntry):
@@ -282,8 +300,12 @@ func (m model) View() string {
 	if m.fatalErr != nil {
 		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.fatalErr)
 	}
-	if m.selected {
-		selectedCommand = m.tableEntries[m.table.Cursor()].Command
+	if m.selected == Selected || m.selected == SelectedWithChangeDir {
+		SELECTED_COMMAND = m.tableEntries[m.table.Cursor()].Command
+		if m.selected == SelectedWithChangeDir {
+			changeDir := m.tableEntries[m.table.Cursor()].CurrentWorkingDirectory
+			SELECTED_COMMAND = "cd " + changeDir + "; " + SELECTED_COMMAND
+		}
 		return ""
 	}
 	if m.quitting {
@@ -560,10 +582,10 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 	if err != nil {
 		return err
 	}
-	if selectedCommand == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
+	if SELECTED_COMMAND == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
 		// Print out the initialQuery instead so that we don't clear the terminal
-		selectedCommand = initialQuery
+		SELECTED_COMMAND = initialQuery
 	}
-	fmt.Printf("%s\n", strings.ReplaceAll(selectedCommand, "\\n", "\n"))
+	fmt.Printf("%s\n", strings.ReplaceAll(SELECTED_COMMAND, "\\n", "\n"))
 	return nil
 }

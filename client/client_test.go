@@ -1959,6 +1959,14 @@ func TestTui(t *testing.T) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-HelpPageClosed")
 
+	// Test selecting and cd-ing
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-x",
+	})
+	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
+	testutils.CompareGoldens(t, out, "TestTui-SelectAndCd")
+
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
 }
