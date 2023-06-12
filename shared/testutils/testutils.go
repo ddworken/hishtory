@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -217,10 +218,11 @@ func buildServer() string {
 	f, err := os.CreateTemp("", "server")
 	checkError(err)
 	fn := f.Name()
-	cmd := exec.Command("go", "build", "-o", fn, "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
 	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
+
+	cmd := exec.Command("go", "build", "-o", fn, "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Start()
 	if err != nil {
@@ -237,10 +239,11 @@ func buildServer() string {
 func RunTestServer() func() {
 	os.Setenv("HISHTORY_SERVER", "http://localhost:8080")
 	fn := buildServer()
-	cmd := exec.Command(fn)
 	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
+
+	cmd := exec.Command(fn)
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Start()
 	if err != nil {
@@ -273,6 +276,15 @@ func Check(t *testing.T, err error) {
 	}
 }
 
+func CheckEmptyArray(t *testing.T, resp []byte) {
+	t.Helper()
+	respBodyString := strings.TrimSpace(string(resp))
+	if respBodyString != "[]" {
+		_, filename, line, _ := runtime.Caller(1)
+		t.Fatalf("Expected empty array, got %v at %s:%d", respBodyString, filename, line)
+	}
+}
+
 func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
@@ -283,6 +295,18 @@ func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
 func IsOnline() bool {
 	_, err := http.Get("https://hishtory.dev")
 	return err == nil
+}
+
+func RequireEqual[T any](t *testing.T, expected, got T, msgs ...string) {
+	t.Helper()
+	if !reflect.DeepEqual(expected, got) {
+		_, filename, line, _ := runtime.Caller(1)
+		if len(msgs) > 0 {
+			t.Fatalf("Expected %v, got %v at %s:%d! Additional info: %v", expected, got, filename, line, msgs)
+		} else {
+			t.Fatalf("Expected %v, got %v at %s:%d", expected, got, filename, line)
+		}
+	}
 }
 
 var fakeHistoryTimestamp int64 = 1666068191

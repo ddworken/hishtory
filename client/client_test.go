@@ -914,7 +914,7 @@ func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.Hist
 	testutils.Check(t, err)
 	resp, err := http.Post("http://localhost:8080/api/v1/submit", "application/json", bytes.NewBuffer(jsonValue))
 	testutils.Check(t, err)
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
 	}
 }

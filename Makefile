@@ -28,6 +28,9 @@ build-api:
 	rm hishtory server || true
 	docker build -t gcr.io/dworken-k8s/hishtory-api -f backend/server/Dockerfile . 
 
+build-client:
+	go build -o bin/hishtory hishtory.go
+
 deploy-static: build-static
 	ssh server "docker push gcr.io/dworken-k8s/hishtory-static"
 	ssh monoserver "cd ~/infra/ && docker compose pull hishtory-static && docker compose rm -svf hishtory-static && docker compose up -d hishtory-static"

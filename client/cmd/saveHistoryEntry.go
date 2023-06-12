@@ -26,7 +26,7 @@ var saveHistoryEntryCmd = &cobra.Command{
 	},
 }
 
-func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
+func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	if !config.HaveMissedUploads {
 		return nil
@@ -63,7 +63,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	return nil
 }
 
-func saveHistoryEntry(ctx *context.Context) {
+func saveHistoryEntry(ctx context.Context) {
 	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
 		hctx.GetLogger().Infof("Skipping saving a history entry because hishtory is disabled\n")

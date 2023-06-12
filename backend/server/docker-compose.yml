@@ -1,3 +1,4 @@
+version: '2.1'
 # A docker-compose file to host a hiSHtory backend. To use:
 #   1. Update TODO_YOUR_POSTGRES_PASSWORD_HERE
 #   2. `docker compose -f backend/server/docker-compose.yml build`
@@ -10,26 +11,35 @@ networks:
     driver: bridge
 services:
   postgres:
-    image: postgres
+    image: postgres:15-alpine
     restart: unless-stopped
     networks:
       - hishtory
     environment:
       POSTGRES_PASSWORD: TODO_YOUR_POSTGRES_PASSWORD_HERE
       POSTGRES_DB: hishtory
+      POSTGRES_USER: postgres
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d hishtory -U postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
   hishtory:
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - hishtory
     build:
       context: ../../
-      dockerfile: ./backend/server/native-arch-Dockerfile
+      dockerfile: ./backend/server/Dockerfile
     restart: unless-stopped
     environment:
       HISHTORY_POSTGRES_DB: postgresql://postgres:TODO_YOUR_POSTGRES_PASSWORD_HERE@postgres:5432/hishtory?sslmode=disable
     ports:
       - 80:8080
+volumes:
+  postgres-data:

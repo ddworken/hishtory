@@ -33,7 +33,7 @@ var redactCmd = &cobra.Command{
 	},
 }
 
-func redact(ctx *context.Context, query string, force bool) error {
+func redact(ctx context.Context, query string, force bool) error {
 	tx, err := lib.MakeWhereQueryFromSearch(ctx, hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func redact(ctx *context.Context, query string, force bool) error {
 	return nil
 }
 
-func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.HistoryEntry) error {
+func deleteOnRemoteInstances(ctx context.Context, historyEntries []*data.HistoryEntry) error {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil

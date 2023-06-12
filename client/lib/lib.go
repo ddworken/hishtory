@@ -52,7 +52,7 @@ var GitCommit string = "Unknown"
 // 256KB ought to be enough for any reasonable cmd
 var maxSupportedLineLengthForImport = 256_000
 
-func getCwd(ctx *context.Context) (string, string, error) {
+func getCwd(ctx context.Context) (string, string, error) {
 	cwd, err := getCwdWithoutSubstitution()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
@@ -83,7 +83,7 @@ func getCwdWithoutSubstitution() (string, error) {
 	return "", err
 }
 
-func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
+func BuildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
 		hctx.GetLogger().Warnf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
 		return nil, nil
@@ -179,7 +179,7 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	return &entry, nil
 }
 
-func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
+func buildCustomColumns(ctx context.Context) (data.CustomColumns, error) {
 	ccs := data.CustomColumns{}
 	config := hctx.GetConf(ctx)
 	for _, cc := range config.CustomColumns {
@@ -336,7 +336,7 @@ func getLastCommand(history string) (string, error) {
 	return split[1], nil
 }
 
-func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {
+func shouldSkipHiddenCommand(ctx context.Context, historyLine string) (bool, error) {
 	config := hctx.GetConf(ctx)
 	if config.LastSavedHistoryLine == historyLine {
 		return true, nil
@@ -420,7 +420,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
-func getCustomColumnValue(ctx *context.Context, header string, entry data.HistoryEntry) (string, error) {
+func getCustomColumnValue(ctx context.Context, header string, entry data.HistoryEntry) (string, error) {
 	for _, c := range entry.CustomColumns {
 		if strings.EqualFold(c.Name, header) {
 			return c.Val, nil
@@ -435,7 +435,7 @@ func getCustomColumnValue(ctx *context.Context, header string, entry data.Histor
 	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
 }
 
-func buildTableRow(ctx *context.Context, columnNames []string, entry data.HistoryEntry) ([]string, error) {
+func buildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry) ([]string, error) {
 	row := make([]string, 0)
 	for _, header := range columnNames {
 		switch header {
@@ -470,7 +470,7 @@ func stringArrayToAnyArray(arr []string) []any {
 	return ret
 }
 
-func DisplayResults(ctx *context.Context, results []*data.HistoryEntry, numResults int) error {
+func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResults int) error {
 	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
 
@@ -503,7 +503,7 @@ func DisplayResults(ctx *context.Context, results []*data.HistoryEntry, numResul
 	return nil
 }
 
-func IsEnabled(ctx *context.Context) (bool, error) {
+func IsEnabled(ctx context.Context) (bool, error) {
 	return hctx.GetConf(ctx).IsEnabled, nil
 }
 
@@ -514,7 +514,7 @@ func CheckFatalError(err error) {
 	}
 }
 
-func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, error) {
+func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error) {
 	config := hctx.GetConf(ctx)
 	if config.HaveCompletedInitialImport && !force {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
@@ -676,7 +676,7 @@ func getTmpClientPath() string {
 	return path.Join(tmpDir, "hishtory-client")
 }
 
-func Update(ctx *context.Context) error {
+func Update(ctx context.Context) error {
 	// Download the binary
 	downloadData, err := GetDownloadData()
 	if err != nil {
@@ -736,7 +736,7 @@ func Update(ctx *context.Context) error {
 	return nil
 }
 
-func verifyBinaryMac(ctx *context.Context, binaryPath string, downloadData shared.UpdateInfo) error {
+func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared.UpdateInfo) error {
 	// On Mac, binary verification is a bit more complicated since mac binaries are code
 	// signed. To verify a signed binary, we:
 	// 1. Download the unsigned binary
@@ -866,7 +866,7 @@ func downloadFile(filename, url string) error {
 		return fmt.Errorf("failed to download file at %s to %s: %v", url, filename, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download file at %s due to resp_code=%d", url, resp.StatusCode)
 	}
 
@@ -906,22 +906,22 @@ func ApiGet(path string) ([]byte, error) {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	req, err := http.NewRequest("GET", getServerHostname()+path, nil)
+	req, err := http.NewRequest(http.MethodGet, getServerHostname()+path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create GET: %v", err)
+		return nil, fmt.Errorf("failed to create GET: %w", err)
 	}
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	resp, err := httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to GET %s%s: %v", getServerHostname(), path, err)
+		return nil, fmt.Errorf("failed to GET %s%s: %w", getServerHostname(), path, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", getServerHostname(), path, resp.StatusCode)
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
+		return nil, fmt.Errorf("failed to read response body from GET %s%s: %w", getServerHostname(), path, err)
 	}
 	duration := time.Since(start)
 	hctx.GetLogger().Infof("ApiGet(%#v): %s\n", path, duration.String())
@@ -933,7 +933,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	req, err := http.NewRequest("POST", getServerHostname()+path, bytes.NewBuffer(data))
+	req, err := http.NewRequest(http.MethodPost, getServerHostname()+path, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create POST: %v", err)
 	}
@@ -944,7 +944,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to POST %s: %v", path, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to POST %s: status_code=%d", path, resp.StatusCode)
 	}
 	respBody, err := io.ReadAll(resp.Body)
@@ -959,6 +959,9 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 func IsOfflineError(err error) bool {
 	if err == nil {
 		return false
+	}
+	if errors.Is(err, io.EOF) {
+		return true
 	}
 	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
 		strings.Contains(err.Error(), "connect: network is unreachable") ||
@@ -1016,7 +1019,7 @@ func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) (
 	return jsonValue, nil
 }
 
-func Reupload(ctx *context.Context) error {
+func Reupload(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil
@@ -1038,7 +1041,7 @@ func Reupload(ctx *context.Context) error {
 	return nil
 }
 
-func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
+func RetrieveAdditionalEntriesFromRemote(ctx context.Context) error {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
@@ -1066,7 +1069,7 @@ func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
 	return ProcessDeletionRequests(ctx)
 }
 
-func ProcessDeletionRequests(ctx *context.Context) error {
+func ProcessDeletionRequests(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil
@@ -1095,7 +1098,7 @@ func ProcessDeletionRequests(ctx *context.Context) error {
 	return nil
 }
 
-func GetBanner(ctx *context.Context) ([]byte, error) {
+func GetBanner(ctx context.Context) ([]byte, error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return []byte{}, nil
@@ -1109,7 +1112,7 @@ func parseTimeGenerously(input string) (time.Time, error) {
 	return dateparse.ParseLocal(input)
 }
 
-func MakeWhereQueryFromSearch(ctx *context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
+func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
 	tokens, err := tokenize(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to tokenize query: %v", err)
@@ -1152,7 +1155,7 @@ func MakeWhereQueryFromSearch(ctx *context.Context, db *gorm.DB, query string) (
 	return tx, nil
 }
 
-func Search(ctx *context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
+func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
 	if ctx == nil && query != "" {
 		return nil, fmt.Errorf("lib.Search called with a nil context and a non-empty query (this should never happen)")
 	}
@@ -1178,7 +1181,7 @@ func parseNonAtomizedToken(token string) (string, interface{}, interface{}, inte
 	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
 }
 
-func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}, interface{}, error) {
+func parseAtomizedToken(ctx context.Context, token string) (string, interface{}, interface{}, error) {
 	splitToken := splitEscaped(token, ':', 2)
 	field := unescape(splitToken[0])
 	val := unescape(splitToken[1])
@@ -1233,7 +1236,7 @@ func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}
 	}
 }
 
-func getAllCustomColumnNames(ctx *context.Context) ([]string, error) {
+func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
 	db := hctx.GetDb(ctx)
 	query := `
 	SELECT DISTINCT json_extract(value, '$.name') as cc_name

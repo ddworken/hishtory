@@ -13,16 +13,18 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/database"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/go-test/deep"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func TestESubmitThenQuery(t *testing.T) {
-	// Set up
-	InitDB()
+	db, err := InitDB()
+	testutils.Check(t, err)
+
+	s := &server{db}
 
 	// Register a few devices
 	userId := data.UserId("key")
@@ -31,11 +33,11 @@ func TestESubmitThenQuery(t *testing.T) {
 	otherUser := data.UserId("otherkey")
 	otherDev := uuid.Must(uuid.NewRandom()).String()
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev+"&user_id="+otherUser, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 
 	// Submit a few entries for different devices
 	entry := testutils.MakeFakeHistoryEntry("ls ~/")
@@ -44,12 +46,12 @@ func TestESubmitThenQuery(t *testing.T) {
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	apiSubmitHandler(context.Background(), nil, submitReq)
+	s.apiSubmitHandler(nil, submitReq)
 
 	// Query for device id 1
 	w := httptest.NewRecorder()
 	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiQueryHandler(context.Background(), w, searchReq)
+	s.apiQueryHandler(w, searchReq)
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
@@ -78,7 +80,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	// Same for device id 2
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
-	apiQueryHandler(context.Background(), w, searchReq)
+	s.apiQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -106,7 +108,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	// Bootstrap handler should return 2 entries, one for each device
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+data.UserId("key")+"&device_id="+devId1, nil)
-	apiBootstrapHandler(context.Background(), w, searchReq)
+	s.apiBootstrapHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -117,12 +119,13 @@ func TestESubmitThenQuery(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, db)
 }
 
 func TestDumpRequestAndResponse(t *testing.T) {
-	// Set up
-	InitDB()
+	db, err := InitDB()
+	testutils.Check(t, err)
+	s := &server{db}
 
 	// Register a first device for two different users
 	userId := data.UserId("dkey")
@@ -132,17 +135,17 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	otherDev1 := uuid.Must(uuid.NewRandom()).String()
 	otherDev2 := uuid.Must(uuid.NewRandom()).String()
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev1+"&user_id="+otherUser, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev2+"&user_id="+otherUser, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 
 	// Query for dump requests, there should be one for userId
 	w := httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
@@ -162,7 +165,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 
 	// And one for otherUser
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -173,34 +176,26 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
 	dumpRequest = dumpRequests[0]
-	if dumpRequest.RequestingDeviceId != otherDev2 {
-		t.Fatalf("unexpected device ID")
-	}
-	if dumpRequest.UserId != otherUser {
-		t.Fatalf("unexpected user ID")
-	}
+	testutils.RequireEqual(t, dumpRequest.RequestingDeviceId, otherDev2, "unexpected device ID")
+	testutils.RequireEqual(t, dumpRequest.UserId, otherUser, "unexpected user ID")
 
 	// And none if we query for a user ID that doesn't exit
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id=foo&device_id=bar", nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=foo&device_id=bar", nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	testutils.CheckEmptyArray(t, respBody)
 
 	// And none for a missing user ID
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id=%20&device_id=%20", nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id=%20&device_id=%20", nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	testutils.CheckEmptyArray(t, respBody)
 
 	// Now submit a dump for userId
 	entry1Dec := testutils.MakeFakeHistoryEntry("ls ~/")
@@ -212,32 +207,28 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{entry1, entry2})
 	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2+"&source_device_id="+devId1, bytes.NewReader(reqBody))
-	apiSubmitDumpHandler(context.Background(), nil, submitReq)
+	s.apiSubmitDumpHandler(nil, submitReq)
 
 	// Check that the dump request is no longer there for userId for either device ID
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId1, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	testutils.CheckEmptyArray(t, respBody)
 	w = httptest.NewRecorder()
 	// The other user
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId2, nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId2, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	testutils.CheckEmptyArray(t, respBody)
 
 	// But it is there for the other user
 	w = httptest.NewRecorder()
-	apiGetPendingDumpRequestsHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
+	s.apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+otherUser+"&device_id="+otherDev1, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -258,7 +249,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	// And finally, query to ensure that the dumped entries are in the DB
 	w = httptest.NewRecorder()
 	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
-	apiQueryHandler(context.Background(), w, searchReq)
+	s.apiQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -286,7 +277,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, db)
 }
 
 func TestUpdateReleaseVersion(t *testing.T) {
@@ -294,8 +285,8 @@ func TestUpdateReleaseVersion(t *testing.T) {
 		t.Skip("skipping because we're currently offline")
 	}
 
-	// Set up
-	InitDB()
+	db, err := InitDB()
+	testutils.Check(t, err)
 
 	// Check that ReleaseVersion hasn't been set yet
 	if ReleaseVersion != "UNKNOWN" {
@@ -303,8 +294,7 @@ func TestUpdateReleaseVersion(t *testing.T) {
 	}
 
 	// Update it
-	err := updateReleaseVersion()
-	if err != nil {
+	if err := updateReleaseVersion(); err != nil {
 		t.Fatalf("updateReleaseVersion failed: %v", err)
 	}
 
@@ -318,12 +308,14 @@ func TestUpdateReleaseVersion(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, db)
 }
 
 func TestDeletionRequests(t *testing.T) {
-	// Set up
-	InitDB()
+	db, err := InitDB()
+	testutils.Check(t, err)
+
+	s := &server{db}
 
 	// Register two devices for two different users
 	userId := data.UserId("dkey")
@@ -333,13 +325,13 @@ func TestDeletionRequests(t *testing.T) {
 	otherDev1 := uuid.Must(uuid.NewRandom()).String()
 	otherDev2 := uuid.Must(uuid.NewRandom()).String()
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev1+"&user_id="+otherUser, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev2+"&user_id="+otherUser, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 
 	// Add an entry for user1
 	entry1 := testutils.MakeFakeHistoryEntry("ls ~/")
@@ -349,7 +341,7 @@ func TestDeletionRequests(t *testing.T) {
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	apiSubmitHandler(context.Background(), nil, submitReq)
+	s.apiSubmitHandler(nil, submitReq)
 
 	// And another entry for user1
 	entry2 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -359,7 +351,7 @@ func TestDeletionRequests(t *testing.T) {
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	apiSubmitHandler(context.Background(), nil, submitReq)
+	s.apiSubmitHandler(nil, submitReq)
 
 	// And an entry for user2 that has the same timestamp as the previous entry
 	entry3 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -370,12 +362,12 @@ func TestDeletionRequests(t *testing.T) {
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	apiSubmitHandler(context.Background(), nil, submitReq)
+	s.apiSubmitHandler(nil, submitReq)
 
 	// Query for device id 1
 	w := httptest.NewRecorder()
 	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiQueryHandler(context.Background(), w, searchReq)
+	s.apiQueryHandler(w, searchReq)
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
@@ -414,13 +406,13 @@ func TestDeletionRequests(t *testing.T) {
 	reqBody, err = json.Marshal(delReq)
 	testutils.Check(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	addDeletionRequestHandler(context.Background(), nil, req)
+	s.addDeletionRequestHandler(nil, req)
 
 	// Query again for device id 1 and get a single result
 	time.Sleep(10 * time.Millisecond)
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiQueryHandler(context.Background(), w, searchReq)
+	s.apiQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -448,7 +440,7 @@ func TestDeletionRequests(t *testing.T) {
 	// Query for user 2
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev1+"&user_id="+otherUser, nil)
-	apiQueryHandler(context.Background(), w, searchReq)
+	s.apiQueryHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -476,7 +468,7 @@ func TestDeletionRequests(t *testing.T) {
 	// Query for deletion requests
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	getDeletionRequestsHandler(context.Background(), w, searchReq)
+	s.getDeletionRequestsHandler(w, searchReq)
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
@@ -501,12 +493,17 @@ func TestDeletionRequests(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, db)
 }
 
 func TestHealthcheck(t *testing.T) {
+	db, err := InitDB()
+	testutils.Check(t, err)
+
+	s := &server{db}
+
 	w := httptest.NewRecorder()
-	healthCheckHandler(context.Background(), w, httptest.NewRequest(http.MethodGet, "/", nil))
+	s.healthCheckHandler(w, httptest.NewRequest(http.MethodGet, "/", nil))
 	if w.Code != 200 {
 		t.Fatalf("expected 200 resp code for healthCheckHandler")
 	}
@@ -519,41 +516,52 @@ func TestHealthcheck(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, db)
 }
 
 func TestLimitRegistrations(t *testing.T) {
-	// Set up
-	InitDB()
-	checkGormResult(GLOBAL_DB.Exec("DELETE FROM enc_history_entries"))
-	checkGormResult(GLOBAL_DB.Exec("DELETE FROM devices"))
+	db, err := InitDB()
+	testutils.Check(t, err)
+
+	s := &server{db}
+
+	checkGormResult(db.Exec("DELETE FROM enc_history_entries"))
+	checkGormResult(db.Exec("DELETE FROM devices"))
 	defer testutils.BackupAndRestoreEnv("HISHTORY_MAX_NUM_USERS")()
 	os.Setenv("HISHTORY_MAX_NUM_USERS", "2")
 
 	// Register three devices across two users
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user1"), nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user1"), nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user2"), nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 
 	// And this next one should fail since it is a new user
 	defer func() { _ = recover() }()
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+uuid.Must(uuid.NewRandom()).String()+"&user_id="+data.UserId("user3"), nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	t.Errorf("expected panic")
 }
 
 func TestCleanDatabaseNoErrors(t *testing.T) {
 	// Init
-	InitDB()
+	db, err := InitDB()
+	testutils.Check(t, err)
+
+	s := &server{db}
+
+	t.Cleanup(func() {
+		// Call cleanDatabase and just check that there are no panics
+		testutils.Check(t, db.Clean(context.TODO()))
+	})
 
 	// Create a user and an entry
 	userId := data.UserId("dkey")
 	devId1 := uuid.Must(uuid.NewRandom()).String()
 	deviceReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
-	apiRegisterHandler(context.Background(), nil, deviceReq)
+	s.apiRegisterHandler(nil, deviceReq)
 	entry1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	entry1.DeviceId = devId1
 	encEntry, err := data.EncryptHistoryEntry("dkey", entry1)
@@ -561,14 +569,11 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	apiSubmitHandler(context.Background(), nil, submitReq)
-
-	// Call cleanDatabase and just check that there are no panics
-	testutils.Check(t, cleanDatabase(context.TODO()))
+	s.apiSubmitHandler(nil, submitReq)
 }
 
-func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
-	sqlDB, err := db.DB()
+func assertNoLeakedConnections(t *testing.T, db *database.DB) {
+	sqlDB, err := db.SqlDB()
 	if err != nil {
 		t.Fatal(err)
 	}
