@@ -63,9 +63,9 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := hctx.OpenLocalSqliteDb()
 		lib.CheckFatalError(err)
-		data, err := lib.Search(nil, db, "", 10)
-		lib.CheckFatalError(err)
-		if len(data) > 0 {
+		var count int64
+		lib.CheckFatalError(db.Model(&data.HistoryEntry{}).Count(&count).Error)
+		if count > 0 {
 			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset?\nNote: This won't clear any imported history entries from your existing shell\n[y/N]")
 			reader := bufio.NewReader(os.Stdin)
 			resp, err := reader.ReadString('\n')
