@@ -39,9 +39,9 @@ var installCmd = &cobra.Command{
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
-			data, err := lib.Search(nil, db, "", 10)
-			lib.CheckFatalError(err)
-			if len(data) < 10 {
+			var count int64
+			lib.CheckFatalError(db.Model(&data.HistoryEntry{}).Count(&count).Error)
+			if count < 10 {
 				fmt.Println("Importing existing shell history...")
 				ctx := hctx.MakeContext()
 				numImported, err := lib.ImportHistory(ctx, false, false)
