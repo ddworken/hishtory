@@ -1182,7 +1182,11 @@ func Search(ctx *context.Context, db *gorm.DB, query string, limit int) ([]*data
 	if err != nil {
 		return nil, err
 	}
-	tx = tx.Order("start_time DESC")
+	if hctx.GetConf(ctx).BetaMode {
+		tx = tx.Order("start_time DESC")
+	} else {
+		tx = tx.Order("end_time DESC")
+	}
 	if limit > 0 {
 		tx = tx.Limit(limit)
 	}
