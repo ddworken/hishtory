@@ -360,7 +360,7 @@ func CompareGoldens(t *testing.T, out, goldenName string) {
 }
 
 func normalizeHostnames(data string) string {
-	hostnames := []string{"Davids-MacBook-Air.local", "ghaction-runner-hostname"}
+	hostnames := []string{"Davids-MacBook-Air.local", "ghaction-runner-hostname", "Davids-Air"}
 	for _, hostname := range hostnames {
 		data = strings.ReplaceAll(data, hostname, "ghaction-runner-hostname")
 	}

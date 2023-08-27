@@ -179,6 +179,12 @@ type offlineMsg struct{}
 type bannerMsg struct {
 	banner string
 }
+type asyncQueryFinishedMsg struct {
+	rows             []table.Row
+	entries          []*data.HistoryEntry
+	searchErr        error
+	forceUpdateTable bool
+}
 
 func initialModel(ctx *context.Context, t table.Model, tableEntries []*data.HistoryEntry, initialQuery string) model {
 	s := spinner.New()
@@ -199,35 +205,53 @@ func (m model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-func runQueryAndUpdateTable(m model, updateTable bool) model {
-	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || updateTable || m.searchErr != nil {
-		if m.runQuery == nil {
-			m.runQuery = &m.lastQuery
-		}
-		rows, entries, err := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, *m.runQuery, PADDED_NUM_ENTRIES)
-		m.searchErr = err
+func updateTable(m model, forceUpdateTable bool, rows []table.Row, entries []*data.HistoryEntry, searchErr error) model {
+	if m.runQuery == nil {
+		m.runQuery = &m.lastQuery
+	}
+	m.searchErr = searchErr
+	if searchErr != nil {
+		return m
+	}
+	m.tableEntries = entries
+	if forceUpdateTable {
+		t, err := makeTable(m.ctx, rows)
 		if err != nil {
+			m.fatalErr = err
 			return m
 		}
-		m.tableEntries = entries
-		if updateTable {
-			t, err := makeTable(m.ctx, rows)
-			if err != nil {
-				m.fatalErr = err
-				return m
-			}
-			m.table = t
-		}
-		m.table.SetRows(rows)
-		m.table.SetCursor(0)
-		m.lastQuery = *m.runQuery
-		m.runQuery = nil
+		m.table = t
 	}
+	m.table.SetRows(rows)
+	m.table.SetCursor(0)
+	m.lastQuery = *m.runQuery
+	m.runQuery = nil
 	if m.table.Cursor() >= len(m.tableEntries) {
 		// Ensure that we can't scroll past the end of the table
 		m.table.SetCursor(len(m.tableEntries) - 1)
 	}
 	return m
+}
+
+func preventTableOverscrolling(m model) {
+	if m.table.Cursor() >= len(m.tableEntries) {
+		// Ensure that we can't scroll past the end of the table
+		m.table.SetCursor(len(m.tableEntries) - 1)
+	}
+}
+
+func runQueryAndUpdateTable(m model, forceUpdateTable bool) tea.Cmd {
+	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || forceUpdateTable || m.searchErr != nil {
+		query := m.lastQuery
+		if m.runQuery != nil {
+			query = *m.runQuery
+		}
+		return func() tea.Msg {
+			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
+			return asyncQueryFinishedMsg{rows, entries, searchErr, forceUpdateTable}
+		}
+	}
+	return nil
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -253,8 +277,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.fatalErr = err
 				return m, nil
 			}
-			m = runQueryAndUpdateTable(m, true)
-			return m, nil
+			cmd := runQueryAndUpdateTable(m, true)
+			preventTableOverscrolling(m)
+			return m, cmd
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
@@ -268,13 +293,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.queryInput = i
 			searchQuery := m.queryInput.Value()
 			m.runQuery = &searchQuery
-			m = runQueryAndUpdateTable(m, false)
-			return m, tea.Batch(cmd1, cmd2)
+			cmd3 := runQueryAndUpdateTable(m, false)
+			preventTableOverscrolling(m)
+			return m, tea.Batch(cmd1, cmd2, cmd3)
 		}
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
-		m = runQueryAndUpdateTable(m, true)
-		return m, nil
+		cmd := runQueryAndUpdateTable(m, true)
+		return m, cmd
 	case offlineMsg:
 		m.isOffline = true
 		return m, nil
@@ -283,6 +309,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case doneDownloadingMsg:
 		m.isLoading = false
+		return m, nil
+	case asyncQueryFinishedMsg:
+		m = updateTable(m, msg.forceUpdateTable, msg.rows, msg.entries, msg.searchErr)
 		return m, nil
 	default:
 		var cmd tea.Cmd
@@ -592,3 +621,5 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 
 // TODO: support custom key bindings
 // TODO: make the help page wrap
+// TODO: FR: when updating the search query, try to maintain position in the table
+// TODO: FR: when deleting an entry, try to maintain position in the table
