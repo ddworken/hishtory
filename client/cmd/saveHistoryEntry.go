@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -23,6 +25,17 @@ var saveHistoryEntryCmd = &cobra.Command{
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
 		saveHistoryEntry(ctx)
+	},
+}
+
+var presaveHistoryEntryCmd = &cobra.Command{
+	Use:                "presaveHistoryEntry",
+	Hidden:             true,
+	Short:              "[Internal-only] The command used to pre-save history entries that haven't yet finished running",
+	DisableFlagParsing: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		presaveHistoryEntry(ctx)
 	},
 }
 
@@ -63,6 +76,48 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	return nil
 }
 
+func presaveHistoryEntry(ctx *context.Context) {
+	config := hctx.GetConf(ctx)
+	if !config.IsEnabled {
+		return
+	}
+	if !config.BetaMode {
+		return
+	}
+
+	// Build the basic entry with metadata retrieved from runtime
+	entry, err := lib.BuildPreArgsHistoryEntry(ctx)
+	lib.CheckFatalError(err)
+	if entry == nil {
+		return
+	}
+
+	// Augment it with os.Args
+	entry.Command = lib.TrimTrailingWhitespace(os.Args[3])
+	if strings.HasPrefix(" ", entry.Command) {
+		// Don't save commands that start with a space
+		return
+	}
+	fmt.Println(entry.Command)
+	startTime, err := lib.ParseCrossPlatformInt(os.Args[4])
+	lib.CheckFatalError(err)
+	entry.StartTime = time.Unix(startTime, 0)
+	entry.EndTime = time.Unix(0, 0)
+
+	// And persist it locally.
+	db := hctx.GetDb(ctx)
+	err = lib.ReliableDbCreate(db, *entry)
+	lib.CheckFatalError(err)
+	db.Commit()
+
+	// Note that we aren't persisting these half-entries remotely,
+	// since they should be updated with the rest of the information very soon. If they
+	// are never updated (e.g. due to a long-running command that never finishes), then
+	// they will only be available on this device. That isn't perfect since it means
+	// history entries can get out of sync, but it is probably good enough.
+	// TODO: Consider improving this
+}
+
 func saveHistoryEntry(ctx *context.Context) {
 	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
@@ -75,9 +130,24 @@ func saveHistoryEntry(ctx *context.Context) {
 		hctx.GetLogger().Infof("Skipping saving a history entry because we did not build a history entry (was the command prefixed with a space and/or empty?)\n")
 		return
 	}
+	db := hctx.GetDb(ctx)
+
+	// Drop any entries from pre-saving since they're no longer needed
+	if config.BetaMode {
+		tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10))
+		if err != nil {
+			lib.CheckFatalError(fmt.Errorf("failed to query for pre-saved history entries: %s", err))
+		}
+		res := tx.Delete(&data.HistoryEntry{})
+		if res.Error != nil {
+			lib.CheckFatalError(fmt.Errorf("failed to delete pre-saved history entries: %s", res.Error))
+		}
+		if res.RowsAffected > 1 {
+			lib.CheckFatalError(fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected))
+		}
+	}
 
 	// Persist it locally
-	db := hctx.GetDb(ctx)
 	err = lib.ReliableDbCreate(db, *entry)
 	lib.CheckFatalError(err)
 
@@ -133,8 +203,13 @@ func saveHistoryEntry(ctx *context.Context) {
 
 	// Handle deletion requests
 	lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+
+	if config.BetaMode {
+		db.Commit()
+	}
 }
 
 func init() {
 	rootCmd.AddCommand(saveHistoryEntryCmd)
+	rootCmd.AddCommand(presaveHistoryEntryCmd)
 }

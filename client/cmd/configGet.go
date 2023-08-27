@@ -40,6 +40,16 @@ var getFilterDuplicateCommandsCmd = &cobra.Command{
 	},
 }
 
+var getBetaModeCmd = &cobra.Command{
+	Use:   "beta-mode",
+	Short: "Enable beta-mode to opt-in to unreleased features",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.BetaMode)
+	},
+}
+
 var getDisplayedColumnsCmd = &cobra.Command{
 	Use:   "displayed-columns",
 	Short: "The list of columns that hishtory displays",
@@ -87,4 +97,5 @@ func init() {
 	configGetCmd.AddCommand(getDisplayedColumnsCmd)
 	configGetCmd.AddCommand(getTimestampFormatCmd)
 	configGetCmd.AddCommand(getCustomColumnsCmd)
+	configGetCmd.AddCommand(getBetaModeCmd)
 }

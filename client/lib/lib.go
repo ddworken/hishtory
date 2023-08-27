@@ -83,21 +83,8 @@ func getCwdWithoutSubstitution() (string, error) {
 	return "", err
 }
 
-func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
-	if len(args) < 6 {
-		hctx.GetLogger().Warnf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
-		return nil, nil
-	}
-	shell := args[2]
-
+func BuildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) {
 	var entry data.HistoryEntry
-
-	// exitCode
-	exitCode, err := strconv.Atoi(args[3])
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
-	}
-	entry.ExitCode = exitCode
 
 	// user
 	user, err := user.Current()
@@ -114,8 +101,48 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	entry.CurrentWorkingDirectory = cwd
 	entry.HomeDirectory = homedir
 
+	// hostname
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	}
+	entry.Hostname = hostname
+
+	// device ID
+	config := hctx.GetConf(ctx)
+	entry.DeviceId = config.DeviceId
+
+	// custom columns
+	cc, err := buildCustomColumns(ctx)
+	if err != nil {
+		return nil, err
+	}
+	entry.CustomColumns = cc
+
+	return &entry, nil
+}
+
+func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
+	if len(args) < 6 {
+		hctx.GetLogger().Warnf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
+		return nil, nil
+	}
+	shell := args[2]
+
+	entry, err := BuildPreArgsHistoryEntry(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// exitCode
+	exitCode, err := strconv.Atoi(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	}
+	entry.ExitCode = exitCode
+
 	// start time
-	seconds, err := parseCrossPlatformInt(args[5])
+	seconds, err := ParseCrossPlatformInt(args[5])
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[5], err)
 	}
@@ -144,7 +171,7 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 		}
 		entry.Command = cmd
 	} else if shell == "zsh" || shell == "fish" {
-		cmd := strings.TrimSuffix(strings.TrimSuffix(args[4], "\n"), " ")
+		cmd := TrimTrailingWhitespace(args[4])
 		if strings.HasPrefix(cmd, " ") {
 			// Don't save commands that start with a space
 			return nil, nil
@@ -158,25 +185,11 @@ func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 		return nil, nil
 	}
 
-	// hostname
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
-	}
-	entry.Hostname = hostname
+	return entry, nil
+}
 
-	// device ID
-	config := hctx.GetConf(ctx)
-	entry.DeviceId = config.DeviceId
-
-	// custom columns
-	cc, err := buildCustomColumns(ctx)
-	if err != nil {
-		return nil, err
-	}
-	entry.CustomColumns = cc
-
-	return &entry, nil
+func TrimTrailingWhitespace(s string) string {
+	return strings.TrimSuffix(strings.TrimSuffix(s, "\n"), " ")
 }
 
 func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
@@ -319,7 +332,7 @@ func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
 	return re.ReplaceAllLiteralString(cmdLine, ""), nil
 }
 
-func parseCrossPlatformInt(data string) (int64, error) {
+func ParseCrossPlatformInt(data string) (int64, error) {
 	data = strings.TrimSuffix(data, "N")
 	return strconv.ParseInt(data, 10, 64)
 }
@@ -446,7 +459,12 @@ func buildTableRow(ctx *context.Context, columnNames []string, entry data.Histor
 		case "Timestamp":
 			row = append(row, entry.StartTime.Format(hctx.GetConf(ctx).TimestampFormat))
 		case "Runtime":
-			row = append(row, entry.EndTime.Sub(entry.StartTime).Round(time.Millisecond).String())
+			if entry.EndTime == time.Unix(0, 0) {
+				// An EndTime of zero means this is a pre-saved entry that never finished
+				row = append(row, "N/A")
+			} else {
+				row = append(row, entry.EndTime.Sub(entry.StartTime).Round(time.Millisecond).String())
+			}
 		case "Exit Code":
 			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
 		case "Command":
@@ -977,6 +995,9 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 	for i = 0; i < 10; i++ {
 		result := db.Create(entry)
 		err = result.Error
+		if err == nil {
+			return nil
+		}
 		if err != nil {
 			errMsg := err.Error()
 			if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
@@ -1161,7 +1182,7 @@ func Search(ctx *context.Context, db *gorm.DB, query string, limit int) ([]*data
 	if err != nil {
 		return nil, err
 	}
-	tx = tx.Order("end_time DESC")
+	tx = tx.Order("start_time DESC")
 	if limit > 0 {
 		tx = tx.Limit(limit)
 	}
@@ -1205,6 +1226,16 @@ func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}
 			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
 		}
 		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) > ?)", t.Unix(), nil, nil
+	case "start_time":
+		// Note that this atom probably isn't useful for interactive usage since it does exact matching, but we use it
+		// internally for pre-saving history entries.
+		t, err := parseTimeGenerously(val)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+		}
+		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) = ?)", t.Unix(), nil, nil
+	case "command":
+		return "(instr(command, ?) > 0)", val, nil, nil
 	default:
 		knownCustomColumns := make([]string, 0)
 		// Get custom columns that are defined on this machine

@@ -318,12 +318,12 @@ func TestAddToDbIfNew(t *testing.T) {
 }
 
 func TestParseCrossPlatformInt(t *testing.T) {
-	res, err := parseCrossPlatformInt("123")
+	res, err := ParseCrossPlatformInt("123")
 	testutils.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
-	res, err = parseCrossPlatformInt("123N")
+	res, err = ParseCrossPlatformInt("123N")
 	testutils.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
@@ -492,6 +492,11 @@ func TestParseTimeGenerously(t *testing.T) {
 	testutils.Check(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 0 || ts.Minute() != 0 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
+	}
+	ts, err = parseTimeGenerously("1693163976")
+	testutils.Check(t, err)
+	if ts.Year() != 2023 || ts.Month() != time.August || ts.Day() != 27 || ts.Hour() != 12 || ts.Minute() != 19 || ts.Second() != 36 {
+		t.Fatalf("parsed time incorrectly: %d %s", ts.Unix(), ts.GoString())
 	}
 }
 

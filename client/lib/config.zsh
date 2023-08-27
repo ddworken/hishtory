@@ -9,6 +9,9 @@ function _hishtory_add() {
     # $1 contains the command that was run 
     _hishtory_command=$1
     _hishtory_start_time=`date +%s`
+    if ! [ -z "$_hishtory_command " ]; then
+        hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time
+    fi
 }
 
 function _hishtory_precmd() {

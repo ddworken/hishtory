@@ -2,6 +2,7 @@ function _hishtory_post_exec --on-event fish_postexec
     # Runs after <ENTER>, but before the command is executed
     set --global _hishtory_command $argv
     set --global _hishtory_start_time (date +%s)
+    # TODO: Implement pre-saving for fish
 end
 
 set --global _hishtory_first_prompt 1

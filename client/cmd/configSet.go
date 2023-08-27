@@ -53,6 +53,23 @@ var setFilterDuplicateCommandsCmd = &cobra.Command{
 	},
 }
 
+var setBetaModeCommand = &cobra.Command{
+	Use:       "beta-mode",
+	Short:     "Enable beta-mode to opt-in to unreleased features",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		val := args[0]
+		if val != "true" && val != "false" {
+			log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.BetaMode = (val == "true")
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setDisplayedColumnsCmd = &cobra.Command{
 	Use:   "displayed-columns",
 	Short: "The list of columns that hishtory displays",
@@ -83,4 +100,5 @@ func init() {
 	configSetCmd.AddCommand(setFilterDuplicateCommandsCmd)
 	configSetCmd.AddCommand(setDisplayedColumnsCmd)
 	configSetCmd.AddCommand(setTimestampFormatCmd)
+	configSetCmd.AddCommand(setBetaModeCommand)
 }

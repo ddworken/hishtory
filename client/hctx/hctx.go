@@ -178,6 +178,9 @@ type ClientConfig struct {
 	FilterDuplicateCommands bool `json:"filter_duplicate_commands"`
 	// A format string for the timestamp
 	TimestampFormat string `json:"timestamp_format"`
+	// Beta mode, enables unspecified additional beta features
+	// Currently: This enables pre-saving of history entries to better handle long-running commands
+	BetaMode bool `json:"beta_mode"`
 }
 
 type CustomColumnDefinition struct {
