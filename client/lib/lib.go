@@ -158,6 +158,8 @@ func buildTableRow(ctx *context.Context, columnNames []string, entry data.Histor
 			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
 		case "Command":
 			row = append(row, entry.Command)
+		case "User":
+			row = append(row, entry.LocalUsername)
 		default:
 			customColumnValue, err := getCustomColumnValue(ctx, header, entry)
 			if err != nil {
