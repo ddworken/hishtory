@@ -103,7 +103,6 @@ func presaveHistoryEntry(ctx *context.Context) {
 		// Don't save commands that start with a space
 		return
 	}
-	fmt.Println(entry.Command)
 	startTime, err := parseCrossPlatformInt(os.Args[4])
 	lib.CheckFatalError(err)
 	entry.StartTime = time.Unix(startTime, 0)
