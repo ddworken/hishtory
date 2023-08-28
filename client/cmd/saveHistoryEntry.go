@@ -1,12 +1,17 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"os/user"
+	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -86,20 +91,20 @@ func presaveHistoryEntry(ctx *context.Context) {
 	}
 
 	// Build the basic entry with metadata retrieved from runtime
-	entry, err := lib.BuildPreArgsHistoryEntry(ctx)
+	entry, err := buildPreArgsHistoryEntry(ctx)
 	lib.CheckFatalError(err)
 	if entry == nil {
 		return
 	}
 
 	// Augment it with os.Args
-	entry.Command = lib.TrimTrailingWhitespace(os.Args[3])
+	entry.Command = trimTrailingWhitespace(os.Args[3])
 	if strings.HasPrefix(" ", entry.Command) {
 		// Don't save commands that start with a space
 		return
 	}
 	fmt.Println(entry.Command)
-	startTime, err := lib.ParseCrossPlatformInt(os.Args[4])
+	startTime, err := parseCrossPlatformInt(os.Args[4])
 	lib.CheckFatalError(err)
 	entry.StartTime = time.Unix(startTime, 0)
 	entry.EndTime = time.Unix(0, 0)
@@ -124,7 +129,7 @@ func saveHistoryEntry(ctx *context.Context) {
 		hctx.GetLogger().Infof("Skipping saving a history entry because hishtory is disabled\n")
 		return
 	}
-	entry, err := lib.BuildHistoryEntry(ctx, os.Args)
+	entry, err := buildHistoryEntry(ctx, os.Args)
 	lib.CheckFatalError(err)
 	if entry == nil {
 		hctx.GetLogger().Infof("Skipping saving a history entry because we did not build a history entry (was the command prefixed with a space and/or empty?)\n")
@@ -212,4 +217,295 @@ func saveHistoryEntry(ctx *context.Context) {
 func init() {
 	rootCmd.AddCommand(saveHistoryEntryCmd)
 	rootCmd.AddCommand(presaveHistoryEntryCmd)
+}
+
+func buildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) {
+	var entry data.HistoryEntry
+
+	// user
+	user, err := user.Current()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	}
+	entry.LocalUsername = user.Username
+
+	// cwd and homedir
+	cwd, homedir, err := getCwd(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	}
+	entry.CurrentWorkingDirectory = cwd
+	entry.HomeDirectory = homedir
+
+	// hostname
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	}
+	entry.Hostname = hostname
+
+	// device ID
+	config := hctx.GetConf(ctx)
+	entry.DeviceId = config.DeviceId
+
+	// custom columns
+	cc, err := buildCustomColumns(ctx)
+	if err != nil {
+		return nil, err
+	}
+	entry.CustomColumns = cc
+
+	return &entry, nil
+}
+
+func buildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
+	if len(args) < 6 {
+		hctx.GetLogger().Warnf("buildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
+		return nil, nil
+	}
+	shell := args[2]
+
+	entry, err := buildPreArgsHistoryEntry(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// exitCode
+	exitCode, err := strconv.Atoi(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("failed to build history entry: %v", err)
+	}
+	entry.ExitCode = exitCode
+
+	// start time
+	seconds, err := parseCrossPlatformInt(args[5])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[5], err)
+	}
+	entry.StartTime = time.Unix(seconds, 0)
+
+	// end time
+	entry.EndTime = time.Now()
+
+	// command
+	if shell == "bash" {
+		cmd, err := getLastCommand(args[4])
+		if err != nil {
+			return nil, fmt.Errorf("failed to build history entry: %v", err)
+		}
+		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
+		}
+		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return nil, nil
+		}
+		cmd, err = maybeSkipBashHistTimePrefix(cmd)
+		if err != nil {
+			return nil, err
+		}
+		entry.Command = cmd
+	} else if shell == "zsh" || shell == "fish" {
+		cmd := trimTrailingWhitespace(args[4])
+		if strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return nil, nil
+		}
+		entry.Command = cmd
+	} else {
+		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
+	}
+	if strings.TrimSpace(entry.Command) == "" {
+		// Skip recording empty commands where the user just hits enter in their terminal
+		return nil, nil
+	}
+
+	return entry, nil
+}
+
+func trimTrailingWhitespace(s string) string {
+	return strings.TrimSuffix(strings.TrimSuffix(s, "\n"), " ")
+}
+
+func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
+	ccs := data.CustomColumns{}
+	config := hctx.GetConf(ctx)
+	for _, cc := range config.CustomColumns {
+		cmd := exec.Command("bash", "-c", cc.ColumnCommand)
+		var stdout bytes.Buffer
+		cmd.Stdout = &stdout
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Start()
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
+		}
+		err = cmd.Wait()
+		if err != nil {
+			// Log a warning, but don't crash. This way commands can exit with a different status and still work.
+			hctx.GetLogger().Warnf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
+		}
+		ccv := data.CustomColumn{
+			Name: cc.ColumnName,
+			Val:  strings.TrimSpace(stdout.String()),
+		}
+		ccs = append(ccs, ccv)
+	}
+	return ccs, nil
+}
+
+func buildRegexFromTimeFormat(timeFormat string) string {
+	expectedRegex := ""
+	lastCharWasPercent := false
+	for _, char := range timeFormat {
+		if lastCharWasPercent {
+			if char == '%' {
+				expectedRegex += regexp.QuoteMeta(string(char))
+				lastCharWasPercent = false
+				continue
+			} else if char == 't' {
+				expectedRegex += "\t"
+			} else if char == 'F' {
+				expectedRegex += buildRegexFromTimeFormat("%Y-%m-%d")
+			} else if char == 'Y' {
+				expectedRegex += "[0-9]{4}"
+			} else if char == 'G' {
+				expectedRegex += "[0-9]{4}"
+			} else if char == 'g' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'C' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'u' || char == 'w' {
+				expectedRegex += "[0-9]"
+			} else if char == 'm' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'd' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'D' {
+				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
+			} else if char == 'T' {
+				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
+			} else if char == 'H' || char == 'I' || char == 'U' || char == 'V' || char == 'W' || char == 'y' || char == 'Y' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'M' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'j' {
+				expectedRegex += "[0-9]{3}"
+			} else if char == 'S' || char == 'm' {
+				expectedRegex += "[0-9]{2}"
+			} else if char == 'c' {
+				// Note: Specific to the POSIX locale
+				expectedRegex += buildRegexFromTimeFormat("%a %b %e %H:%M:%S %Y")
+			} else if char == 'a' {
+				// Note: Specific to the POSIX locale
+				expectedRegex += "(Sun|Mon|Tue|Wed|Thu|Fri|Sat)"
+			} else if char == 'b' || char == 'h' {
+				// Note: Specific to the POSIX locale
+				expectedRegex += "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+			} else if char == 'e' || char == 'k' || char == 'l' {
+				expectedRegex += "[0-9 ]{2}"
+			} else if char == 'n' {
+				expectedRegex += "\n"
+			} else if char == 'p' {
+				expectedRegex += "(AM|PM)"
+			} else if char == 'P' {
+				expectedRegex += "(am|pm)"
+			} else if char == 's' {
+				expectedRegex += "\\d+"
+			} else if char == 'z' {
+				expectedRegex += "[+-][0-9]{4}"
+			} else if char == 'r' {
+				expectedRegex += buildRegexFromTimeFormat("%I:%M:%S %p")
+			} else if char == 'R' {
+				expectedRegex += buildRegexFromTimeFormat("%H:%M")
+			} else if char == 'x' {
+				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
+			} else if char == 'X' {
+				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
+			} else {
+				panic(fmt.Sprintf("buildRegexFromTimeFormat doesn't support %%%v, please open a bug against github.com/ddworken/hishtory", string(char)))
+			}
+		} else if char != '%' {
+			expectedRegex += regexp.QuoteMeta(string(char))
+		}
+		lastCharWasPercent = false
+		if char == '%' {
+			lastCharWasPercent = true
+		}
+	}
+	return expectedRegex
+}
+
+func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
+	format := os.Getenv("HISTTIMEFORMAT")
+	if format == "" {
+		return cmdLine, nil
+	}
+	re, err := regexp.Compile("^" + buildRegexFromTimeFormat(format))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse regex for HISTTIMEFORMAT variable: %v", err)
+	}
+	return re.ReplaceAllLiteralString(cmdLine, ""), nil
+}
+
+func parseCrossPlatformInt(data string) (int64, error) {
+	data = strings.TrimSuffix(data, "N")
+	return strconv.ParseInt(data, 10, 64)
+}
+
+func getLastCommand(history string) (string, error) {
+	split := strings.SplitN(strings.TrimSpace(history), " ", 2)
+	if len(split) <= 1 {
+		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
+	}
+	split = strings.SplitN(split[1], " ", 2)
+	if len(split) <= 1 {
+		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
+	}
+	return split[1], nil
+}
+
+func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {
+	config := hctx.GetConf(ctx)
+	if config.LastSavedHistoryLine == historyLine {
+		return true, nil
+	}
+	config.LastSavedHistoryLine = historyLine
+	err := hctx.SetConfig(config)
+	if err != nil {
+		return false, err
+	}
+	return false, nil
+}
+
+func getCwd(ctx *context.Context) (string, string, error) {
+	cwd, err := getCwdWithoutSubstitution()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
+	}
+	homedir := hctx.GetHome(ctx)
+	if cwd == homedir {
+		return "~/", homedir, nil
+	}
+	if strings.HasPrefix(cwd, homedir) {
+		return strings.Replace(cwd, homedir, "~", 1), homedir, nil
+	}
+	return cwd, homedir, nil
+}
+
+func getCwdWithoutSubstitution() (string, error) {
+	cwd, err := os.Getwd()
+	if err == nil {
+		return cwd, nil
+	}
+	// Fall back to the syscall to see if that works, as an attempt to
+	// fix github.com/ddworken/hishtory/issues/69
+	if syscall.ImplementsGetwd {
+		cwd, err = syscall.Getwd()
+		if err == nil {
+			return cwd, nil
+		}
+	}
+	return "", err
 }

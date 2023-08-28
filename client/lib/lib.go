@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -51,316 +50,6 @@ var GitCommit string = "Unknown"
 
 // 256KB ought to be enough for any reasonable cmd
 var maxSupportedLineLengthForImport = 256_000
-
-func getCwd(ctx *context.Context) (string, string, error) {
-	cwd, err := getCwdWithoutSubstitution()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
-	}
-	homedir := hctx.GetHome(ctx)
-	if cwd == homedir {
-		return "~/", homedir, nil
-	}
-	if strings.HasPrefix(cwd, homedir) {
-		return strings.Replace(cwd, homedir, "~", 1), homedir, nil
-	}
-	return cwd, homedir, nil
-}
-
-func getCwdWithoutSubstitution() (string, error) {
-	cwd, err := os.Getwd()
-	if err == nil {
-		return cwd, nil
-	}
-	// Fall back to the syscall to see if that works, as an attempt to
-	// fix github.com/ddworken/hishtory/issues/69
-	if syscall.ImplementsGetwd {
-		cwd, err = syscall.Getwd()
-		if err == nil {
-			return cwd, nil
-		}
-	}
-	return "", err
-}
-
-func BuildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) {
-	var entry data.HistoryEntry
-
-	// user
-	user, err := user.Current()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
-	}
-	entry.LocalUsername = user.Username
-
-	// cwd and homedir
-	cwd, homedir, err := getCwd(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
-	}
-	entry.CurrentWorkingDirectory = cwd
-	entry.HomeDirectory = homedir
-
-	// hostname
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
-	}
-	entry.Hostname = hostname
-
-	// device ID
-	config := hctx.GetConf(ctx)
-	entry.DeviceId = config.DeviceId
-
-	// custom columns
-	cc, err := buildCustomColumns(ctx)
-	if err != nil {
-		return nil, err
-	}
-	entry.CustomColumns = cc
-
-	return &entry, nil
-}
-
-func BuildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
-	if len(args) < 6 {
-		hctx.GetLogger().Warnf("BuildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
-		return nil, nil
-	}
-	shell := args[2]
-
-	entry, err := BuildPreArgsHistoryEntry(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// exitCode
-	exitCode, err := strconv.Atoi(args[3])
-	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
-	}
-	entry.ExitCode = exitCode
-
-	// start time
-	seconds, err := ParseCrossPlatformInt(args[5])
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[5], err)
-	}
-	entry.StartTime = time.Unix(seconds, 0)
-
-	// end time
-	entry.EndTime = time.Now()
-
-	// command
-	if shell == "bash" {
-		cmd, err := getLastCommand(args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to build history entry: %v", err)
-		}
-		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
-		}
-		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
-			return nil, nil
-		}
-		cmd, err = maybeSkipBashHistTimePrefix(cmd)
-		if err != nil {
-			return nil, err
-		}
-		entry.Command = cmd
-	} else if shell == "zsh" || shell == "fish" {
-		cmd := TrimTrailingWhitespace(args[4])
-		if strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
-			return nil, nil
-		}
-		entry.Command = cmd
-	} else {
-		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
-	}
-	if strings.TrimSpace(entry.Command) == "" {
-		// Skip recording empty commands where the user just hits enter in their terminal
-		return nil, nil
-	}
-
-	return entry, nil
-}
-
-func TrimTrailingWhitespace(s string) string {
-	return strings.TrimSuffix(strings.TrimSuffix(s, "\n"), " ")
-}
-
-func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
-	ccs := data.CustomColumns{}
-	config := hctx.GetConf(ctx)
-	for _, cc := range config.CustomColumns {
-		cmd := exec.Command("bash", "-c", cc.ColumnCommand)
-		var stdout bytes.Buffer
-		cmd.Stdout = &stdout
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		err := cmd.Start()
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
-		}
-		err = cmd.Wait()
-		if err != nil {
-			// Log a warning, but don't crash. This way commands can exit with a different status and still work.
-			hctx.GetLogger().Warnf("failed to execute custom command named %v (stdout=%#v, stderr=%#v)", cc.ColumnName, stdout.String(), stderr.String())
-		}
-		ccv := data.CustomColumn{
-			Name: cc.ColumnName,
-			Val:  strings.TrimSpace(stdout.String()),
-		}
-		ccs = append(ccs, ccv)
-	}
-	return ccs, nil
-}
-
-func stripZshWeirdness(cmd string) string {
-	// Zsh has this weird behavior where sometimes commands are saved in the hishtory file
-	// with a weird prefix. I've never been able to figure out why this happens, but we
-	// can at least strip it.
-	firstCommandBugRegex := regexp.MustCompile(`: \d+:\d;(.*)`)
-	matches := firstCommandBugRegex.FindStringSubmatch(cmd)
-	if len(matches) == 2 {
-		return matches[1]
-	}
-	return cmd
-}
-
-func isBashWeirdness(cmd string) bool {
-	// Bash has this weird behavior where the it has entries like `#1664342754` in the
-	// history file. We want to skip these.
-	firstCommandBugRegex := regexp.MustCompile(`^#\d+\s+$`)
-	return firstCommandBugRegex.MatchString(cmd)
-}
-
-func buildRegexFromTimeFormat(timeFormat string) string {
-	expectedRegex := ""
-	lastCharWasPercent := false
-	for _, char := range timeFormat {
-		if lastCharWasPercent {
-			if char == '%' {
-				expectedRegex += regexp.QuoteMeta(string(char))
-				lastCharWasPercent = false
-				continue
-			} else if char == 't' {
-				expectedRegex += "\t"
-			} else if char == 'F' {
-				expectedRegex += buildRegexFromTimeFormat("%Y-%m-%d")
-			} else if char == 'Y' {
-				expectedRegex += "[0-9]{4}"
-			} else if char == 'G' {
-				expectedRegex += "[0-9]{4}"
-			} else if char == 'g' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'C' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'u' || char == 'w' {
-				expectedRegex += "[0-9]"
-			} else if char == 'm' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'd' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'D' {
-				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
-			} else if char == 'T' {
-				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
-			} else if char == 'H' || char == 'I' || char == 'U' || char == 'V' || char == 'W' || char == 'y' || char == 'Y' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'M' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'j' {
-				expectedRegex += "[0-9]{3}"
-			} else if char == 'S' || char == 'm' {
-				expectedRegex += "[0-9]{2}"
-			} else if char == 'c' {
-				// Note: Specific to the POSIX locale
-				expectedRegex += buildRegexFromTimeFormat("%a %b %e %H:%M:%S %Y")
-			} else if char == 'a' {
-				// Note: Specific to the POSIX locale
-				expectedRegex += "(Sun|Mon|Tue|Wed|Thu|Fri|Sat)"
-			} else if char == 'b' || char == 'h' {
-				// Note: Specific to the POSIX locale
-				expectedRegex += "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
-			} else if char == 'e' || char == 'k' || char == 'l' {
-				expectedRegex += "[0-9 ]{2}"
-			} else if char == 'n' {
-				expectedRegex += "\n"
-			} else if char == 'p' {
-				expectedRegex += "(AM|PM)"
-			} else if char == 'P' {
-				expectedRegex += "(am|pm)"
-			} else if char == 's' {
-				expectedRegex += "\\d+"
-			} else if char == 'z' {
-				expectedRegex += "[+-][0-9]{4}"
-			} else if char == 'r' {
-				expectedRegex += buildRegexFromTimeFormat("%I:%M:%S %p")
-			} else if char == 'R' {
-				expectedRegex += buildRegexFromTimeFormat("%H:%M")
-			} else if char == 'x' {
-				expectedRegex += buildRegexFromTimeFormat("%m/%d/%y")
-			} else if char == 'X' {
-				expectedRegex += buildRegexFromTimeFormat("%H:%M:%S")
-			} else {
-				panic(fmt.Sprintf("buildRegexFromTimeFormat doesn't support %%%v, please open a bug against github.com/ddworken/hishtory", string(char)))
-			}
-		} else if char != '%' {
-			expectedRegex += regexp.QuoteMeta(string(char))
-		}
-		lastCharWasPercent = false
-		if char == '%' {
-			lastCharWasPercent = true
-		}
-	}
-	return expectedRegex
-}
-
-func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
-	format := os.Getenv("HISTTIMEFORMAT")
-	if format == "" {
-		return cmdLine, nil
-	}
-	re, err := regexp.Compile("^" + buildRegexFromTimeFormat(format))
-	if err != nil {
-		return "", fmt.Errorf("failed to parse regex for HISTTIMEFORMAT variable: %v", err)
-	}
-	return re.ReplaceAllLiteralString(cmdLine, ""), nil
-}
-
-func ParseCrossPlatformInt(data string) (int64, error) {
-	data = strings.TrimSuffix(data, "N")
-	return strconv.ParseInt(data, 10, 64)
-}
-
-func getLastCommand(history string) (string, error) {
-	split := strings.SplitN(strings.TrimSpace(history), " ", 2)
-	if len(split) <= 1 {
-		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
-	}
-	split = strings.SplitN(split[1], " ", 2)
-	if len(split) <= 1 {
-		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
-	}
-	return split[1], nil
-}
-
-func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {
-	config := hctx.GetConf(ctx)
-	if config.LastSavedHistoryLine == historyLine {
-		return true, nil
-	}
-	config.LastSavedHistoryLine = historyLine
-	err := hctx.SetConfig(config)
-	if err != nil {
-		return false, err
-	}
-	return false, nil
-}
 
 func Setup(userSecret string, isOffline bool) error {
 	if userSecret == "" {
@@ -530,6 +219,25 @@ func CheckFatalError(err error) {
 		_, filename, line, _ := runtime.Caller(1)
 		log.Fatalf("hishtory v0.%s fatal error at %s:%d: %v", Version, filename, line, err)
 	}
+}
+
+func stripZshWeirdness(cmd string) string {
+	// Zsh has this weird behavior where sometimes commands are saved in the hishtory file
+	// with a weird prefix. I've never been able to figure out why this happens, but we
+	// can at least strip it.
+	firstCommandBugRegex := regexp.MustCompile(`: \d+:\d;(.*)`)
+	matches := firstCommandBugRegex.FindStringSubmatch(cmd)
+	if len(matches) == 2 {
+		return matches[1]
+	}
+	return cmd
+}
+
+func isBashWeirdness(cmd string) bool {
+	// Bash has this weird behavior where the it has entries like `#1664342754` in the
+	// history file. We want to skip these.
+	firstCommandBugRegex := regexp.MustCompile(`^#\d+\s+$`)
+	return firstCommandBugRegex.MatchString(cmd)
 }
 
 func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, error) {
