@@ -1990,17 +1990,7 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 }
 
 func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
-	sleepAmount := "0.1"
-	if runtime.GOOS == "linux" {
-		sleepAmount = "0.2"
-	}
-	if overriddenShellName == "fish" {
-		// Fish is considerably slower so this is sadly necessary
-		sleepAmount = "0.5"
-	}
-	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
-		sleepAmount = "0.5"
-	}
+	sleepAmount := "0.5"
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
 	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
