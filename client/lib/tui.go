@@ -346,13 +346,14 @@ func (m model) View() string {
 	}
 	warning := ""
 	if m.isOffline {
-		warning += "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale\n\n"
+		warning += "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale"
 	}
 	if m.searchErr != nil {
-		warning += fmt.Sprintf("Warning: failed to search: %v\n\n", m.searchErr)
+		warning += fmt.Sprintf("Warning: failed to search: %v", m.searchErr)
 	}
+	warning += "\n"
 	helpView := m.help.View(keys)
-	return fmt.Sprintf("\n%s\n%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View())) + helpView
+	return fmt.Sprintf("\n%s%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View())) + helpView
 }
 
 func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
