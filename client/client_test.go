@@ -78,9 +78,7 @@ func (b bashTester) RunInteractiveShellRelaxed(t *testing.T, script string) (str
 		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %v", stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
-	if strings.Contains(outStr, "hishtory fatal error") {
-		t.Fatalf("Ran command, but hishtory had a fatal error! out=%#v", outStr)
-	}
+	require.NotContains(t, outStr, "hishtory fatal error", "Ran command, but hishtory had a fatal error!")
 	return outStr, nil
 }
 
@@ -110,9 +108,7 @@ func (z zshTester) RunInteractiveShellRelaxed(t *testing.T, script string) (stri
 		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %v", script, stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
-	if strings.Contains(outStr, "hishtory fatal error") {
-		t.Fatalf("Ran command, but hishtory had a fatal error! out=%#v", outStr)
-	}
+	require.NotContains(t, outStr, "hishtory fatal error")
 	return outStr, nil
 }
 
@@ -196,9 +192,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	out := tester.RunInteractiveShell(t, `hishtory query`)
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item)
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
@@ -206,9 +200,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 
 	tester.RunInteractiveShell(t, "echo mynewcommand")
 	out = hishtoryQuery(t, tester, "")
-	if !strings.Contains(out, "echo mynewcommand") {
-		t.Fatalf("output is missing `echo mynewcommand`")
-	}
+	require.Contains(t, out, "echo mynewcommand")
 	if strings.Count(out, "echo mynewcommand") != 1 {
 		t.Fatalf("output has `echo mynewcommand` the wrong number of times")
 	}
@@ -222,30 +214,22 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	// Run a command that shouldn't be in the hishtory later on
 	tester.RunInteractiveShell(t, `echo notinthehistory`)
 	out = hishtoryQuery(t, tester, "")
-	if !strings.Contains(out, "echo notinthehistory") {
-		t.Fatalf("output is missing `echo notinthehistory`")
-	}
+	require.Contains(t, out, "echo notinthehistory")
 
 	// Set the secret key to the previous secret key
 	out, err := tester.RunInteractiveShellRelaxed(t, ` export HISHTORY_SKIP_INIT_IMPORT=1
 yes | hishtory init `+userSecret)
 	testutils.Check(t, err)
-	if !strings.Contains(out, "Setting secret hishtory key to "+userSecret) {
-		t.Fatalf("Failed to re-init with the user secret: %v", out)
-	}
+	require.Contains(t, out, "Setting secret hishtory key to "+userSecret, "Failed to re-init with the user secret")
 
 	// Querying shouldn't show the entry from the previous account
 	out = hishtoryQuery(t, tester, "")
-	if strings.Contains(out, "notinthehistory") {
-		t.Fatalf("output contains the unexpected item: notinthehistory: \n%s", out)
-	}
+	require.NotContains(t, out, "notinthehistory", "output contains the unexpected item: notinthehistory")
 
 	// And it should show the history from the previous run on this account
 	expected = []string{"echo thisisrecorded", "echo mynewcommand", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item, "output is missing expected item")
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
@@ -253,9 +237,7 @@ yes | hishtory init `+userSecret)
 
 	tester.RunInteractiveShell(t, "echo mynewercommand")
 	out = hishtoryQuery(t, tester, "")
-	if !strings.Contains(out, "echo mynewercommand") {
-		t.Fatalf("output is missing `echo mynewercommand`")
-	}
+	require.Contains(t, out, "echo mynewercommand")
 	if strings.Count(out, "echo mynewercommand") != 1 {
 		t.Fatalf("output has `echo mynewercommand` the wrong number of times")
 	}
@@ -269,18 +251,14 @@ yes | hishtory init `+userSecret)
 
 	// Now check if that is in there when we do hishtory query
 	out = hishtoryQuery(t, tester, "")
-	if !strings.Contains(out, "othercomputer") {
-		t.Fatalf("hishtory query doesn't contain cmd run on another machine! out=%#v", out)
-	}
+	require.Contains(t, out, "othercomputer", "hishtory query doesn't contain cmd run on another machine")
 
 	// Run a reupload just to test that flow
 	tester.RunInteractiveShell(t, "hishtory reupload")
 
 	// Finally, test the export command
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v '/tmp/client install'`)
-	if strings.Contains(out, "thisisnotrecorded") {
-		t.Fatalf("hishtory export contains a command that should not have been recorded, out=%#v", out)
-	}
+	require.NotContains(t, out, "thisisnotrecorded", "hishtory export contains a command that should not have been recorded")
 	expectedOutputWithoutKey := "hishtory status\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\" # mycommand\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nyes | hishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\nhishtory reupload\n"
 	expectedOutput := fmt.Sprintf(expectedOutputWithoutKey, userSecret)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
@@ -348,18 +326,14 @@ func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStat
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
-	if strings.Contains(string(dat), "# Background Run") {
-		t.Fatalf("config.sh is the prod version when it shouldn't be, config.sh=%#v", string(dat))
-	}
+	require.NotContains(t, string(dat), "# Background Run", "config.sh is the prod version when it shouldn't be")
 
 	// Test the banner
 	if onlineStatus == Online {
 		os.Setenv("FORCED_BANNER", "HELLO_FROM_SERVER")
 		defer os.Setenv("FORCED_BANNER", "")
 		out = hishtoryQuery(t, tester, "")
-		if !strings.Contains(out, "HELLO_FROM_SERVER\nHostname") {
-			t.Fatalf("hishtory query didn't show the banner message! out=%#v", out)
-		}
+		require.Contains(t, out, "HELLO_FROM_SERVER\nHostname", "hishtory query didn't show the banner message")
 		os.Setenv("FORCED_BANNER", "")
 	}
 
@@ -383,9 +357,7 @@ echo thisisrecorded`)
 	out = hishtoryQuery(t, tester, "")
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item, "output is missing expected item")
 	}
 
 	// Test the actual table output
@@ -425,17 +397,13 @@ echo thisisrecorded`)
 	expected = []string{"echo foo", "ls /foo"}
 	unexpected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "ls /bar", "ls /a"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item, "output is missing expected item")
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
 	}
 	for _, item := range unexpected {
-		if strings.Contains(out, item) {
-			t.Fatalf("output is containing unexpected item %#v: %#v", item, out)
-		}
+		require.NotContains(t, out, item, "output is containing unexpected item")
 	}
 
 	// Add a complex command
@@ -447,9 +415,7 @@ echo thisisrecorded`)
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
-	if !strings.Contains(out, complexCommand) {
-		t.Fatalf("hishtory query doesn't contain the expected complex command, out=%#v", out)
-	}
+	require.Contains(t, out, complexCommand, "hishtory query doesn't contain the expected complex command")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -474,62 +440,44 @@ hishtory disable`)
 
 	// A super basic query just to ensure the basics are working
 	out := hishtoryQuery(t, tester, `echo`)
-	if !strings.Contains(out, "echo querybydir") {
-		t.Fatalf("hishtory query doesn't contain result matching echo querybydir, out=%#v", out)
-	}
+	require.Contains(t, out, "echo querybydir", "hishtory query doesn't contain result matching echo querybydir")
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on cwd
 	out = hishtoryQuery(t, tester, `cwd:/tmp`)
-	if !strings.Contains(out, "echo querybydir") {
-		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
-	}
-	if strings.Contains(out, "nevershouldappear") {
-		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
-	}
+	require.Contains(t, out, "echo querybydir", "hishtory query doesn't contain result matching cwd:/tmp")
+	require.NotContains(t, out, "nevershouldappear")
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	// And again, but with a strailing slash
 	out = hishtoryQuery(t, tester, `cwd:/tmp/`)
-	if !strings.Contains(out, "echo querybydir") {
-		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
-	}
-	if strings.Contains(out, "nevershouldappear") {
-		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
-	}
+	require.Contains(t, out, "echo querybydir", "hishtory query doesn't contain result matching cwd:/tmp/")
+	require.NotContains(t, out, "nevershouldappear")
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on cwd without the slash
 	out = hishtoryQuery(t, tester, `cwd:tmp`)
-	if !strings.Contains(out, "echo querybydir") {
-		t.Fatalf("hishtory query doesn't contain result matching cwd:tmp, out=%#v", out)
-	}
+	require.Contains(t, out, "echo querybydir")
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on cwd and another term
 	out = hishtoryQuery(t, tester, `cwd:/tmp querybydir`)
-	if !strings.Contains(out, "echo querybydir") {
-		t.Fatalf("hishtory query doesn't contain result matching cwd:/tmp, out=%#v", out)
-	}
-	if strings.Contains(out, "nevershouldappear") {
-		t.Fatalf("hishtory query contains unexpected entry, out=%#v", out)
-	}
+	require.Contains(t, out, "echo querybydir")
+	require.NotContains(t, out, "nevershouldappear")
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on exit_code
 	out = hishtoryQuery(t, tester, `exit_code:127`)
-	if !strings.Contains(out, "notacommand") {
-		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
-	}
+	require.Contains(t, out, "notacommand")
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
@@ -574,9 +522,7 @@ hishtory disable`)
 
 	// Query based on the username that exists
 	out = hishtoryQuery(t, tester, `user:otheruser`)
-	if !strings.Contains(out, "cmd_with_diff_hostname_and_username") {
-		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
-	}
+	require.Contains(t, out, "cmd_with_diff_hostname_and_username")
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
@@ -589,39 +535,27 @@ hishtory disable`)
 
 	// Query based on the hostname
 	out = hishtoryQuery(t, tester, `hostname:otherhostname`)
-	if !strings.Contains(out, "cmd_with_diff_hostname_and_username") {
-		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
-	}
+	require.Contains(t, out, "cmd_with_diff_hostname_and_username")
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Test filtering out a search item
 	out = hishtoryQuery(t, tester, "")
-	if !strings.Contains(out, "cmd_with_diff_hostname_and_username") {
-		t.Fatalf("hishtory query doesn't contain expected result, out=%#v", out)
-	}
+	require.Contains(t, out, "cmd_with_diff_hostname_and_username")
 	out = hishtoryQuery(t, tester, `-cmd_with_diff_hostname_and_username`)
-	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
-		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
-	}
+	require.NotContains(t, out, "cmd_with_diff_hostname_and_username")
 	out = hishtoryQuery(t, tester, `-echo -pipefail`)
-	if strings.Contains(out, "echo") {
-		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
-	}
+	require.NotContains(t, out, "echo")
 	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Test filtering out with an atom
 	out = hishtoryQuery(t, tester, `-hostname:otherhostname`)
-	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
-		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
-	}
+	require.NotContains(t, out, "cmd_with_diff_hostname_and_username")
 	out = hishtoryQuery(t, tester, `-user:otheruser`)
-	if strings.Contains(out, "cmd_with_diff_hostname_and_username") {
-		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
-	}
+	require.NotContains(t, out, "cmd_with_diff_hostname_and_username")
 	out = hishtoryQuery(t, tester, `-exit_code:0`)
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
@@ -631,9 +565,7 @@ hishtory disable`)
 	entry = testutils.MakeFakeHistoryEntry("foo -echo")
 	manuallySubmitHistoryEntry(t, userSecret, entry)
 	out = hishtoryQuery(t, tester, `-echo -install -pipefail`)
-	if strings.Contains(out, "echo") {
-		t.Fatalf("hishtory query contains unexpected result, out=%#v", out)
-	}
+	require.NotContains(t, out, "echo")
 	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
@@ -704,9 +636,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 	if !isExpected {
 		t.Fatalf("hishtory update returned unexpected out=%#v", out)
 	}
-	if strings.Contains(out, "skipping SLSA validation") {
-		t.Fatalf("SLSA validation was skipped, out=%#v", out)
-	}
+	require.NotContains(t, out, "skipping SLSA validation")
 
 	// Update again and assert that it skipped the update
 	out = tester.RunInteractiveShell(t, `hishtory update`)
@@ -716,12 +646,8 @@ func testUpdate(t *testing.T, tester shellTester) {
 
 	// Then check the status command again to confirm the update worked
 	out = tester.RunInteractiveShell(t, `hishtory status`)
-	if !strings.Contains(out, fmt.Sprintf("\nEnabled: true\nSecret Key: %s\nCommit Hash: ", userSecret)) {
-		t.Fatalf("status command has unexpected output: %#v", out)
-	}
-	if strings.Contains(out, "\nCommit Hash: Unknown\n") {
-		t.Fatalf("status command has unexpected output: %#v", out)
-	}
+	require.Contains(t, out, fmt.Sprintf("\nEnabled: true\nSecret Key: %s\nCommit Hash: ", userSecret))
+	require.NotContains(t, out, "\nCommit Hash: Unknown\n")
 
 	// Check that the history was preserved after the update
 	out = tester.RunInteractiveShell(t, "hishtory export -pipefail | grep -v '/tmp/client install'")
@@ -817,9 +743,7 @@ hishtory enable`, i))
 			t.Fatalf("hishtory query #%d has the wrong number of commands=%d, out=%#v", i, strings.Count(out, "echo mycommand"), out)
 		}
 		out = hishtoryQuery(t, tester, "")
-		if strings.Contains(out, "shouldnotshowup") {
-			t.Fatalf("hishtory query contains a result that should not have been recorded, out=%#v", out)
-		}
+		require.NotContains(t, out, "shouldnotshowup")
 	}
 
 	out := tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
@@ -852,9 +776,7 @@ echo hello2
 	if strings.Count(out, "echo hello2") != 1 {
 		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
 	}
-	if strings.Contains(out, "hidden") {
-		t.Fatalf("hishtory query contains a result that should not have been recorded, out=%#v", out)
-	}
+	require.NotContains(t, out, "hidden")
 
 	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
 	expectedOutput := "echo hello1\necho hello2\n"
@@ -932,9 +854,7 @@ func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
 	expectedDate := time.Now().Format("Jan 2 2006")
-	if !strings.Contains(out, expectedDate) {
-		t.Fatalf("hishtory query has an incorrect date: out=%#v", out)
-	}
+	require.Contains(t, out, expectedDate)
 }
 
 func testTableDisplayCwd(t *testing.T, tester shellTester) {
@@ -956,16 +876,12 @@ echo other`)
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
-	if !strings.Contains(out, "~/"+data.GetHishtoryPath()) {
-		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
-	}
+	require.Contains(t, out, "~/"+data.GetHishtoryPath())
 	out = hishtoryQuery(t, tester, "echo other")
 	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
-	if !strings.Contains(out, "/tmp") {
-		t.Fatalf("hishtory query has an incorrect CWD: out=%#v", out)
-	}
+	require.Contains(t, out, "/tmp")
 }
 
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
@@ -1000,9 +916,7 @@ CGO_ENABLED=0 go build -o /tmp/client
 	if err != nil {
 		t.Fatalf("failed to read config.sh: %v", err)
 	}
-	if strings.Contains(string(dat), "except it doesn't run the save process in the background") {
-		t.Fatalf("config.sh is the testing version when it shouldn't be, config.sh=%#v", dat)
-	}
+	require.NotContains(t, string(dat), "except it doesn't run the save process in the background", "config.sh is the testing version when it shouldn't be")
 
 	// Test the status subcommand
 	out = tester.RunInteractiveShell(t, `hishtory status`)
@@ -1024,20 +938,14 @@ echo foo`)
 	out = hishtoryQuery(t, tester, "")
 	expected := []string{"echo foo", "ls /a"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item, "output is missing expected item")
 	}
 
 	// Test querying for a specific command
 	waitForBackgroundSavesToComplete(t)
 	out = hishtoryQuery(t, tester, "foo")
-	if !strings.Contains(out, "echo foo") {
-		t.Fatalf("output doesn't contain the expected item, out=%#v", out)
-	}
-	if strings.Contains(out, "ls /a") {
-		t.Fatalf("output contains unexpected item, out=%#v", out)
-	}
+	require.Contains(t, out, "echo foo")
+	require.NotContains(t, out, "ls /a")
 }
 
 func testDisplayTable(t *testing.T, tester shellTester) {
@@ -1132,12 +1040,8 @@ echo other`)
 	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
-	if !strings.Contains(out, "echo hello") {
-		t.Fatalf("hishtory query doesn't contain expected command, out=%#v", out)
-	}
-	if !strings.Contains(out, "echo other") {
-		t.Fatalf("hishtory query doesn't contain expected command, out=%#v", out)
-	}
+	require.Contains(t, out, "echo hello")
+	require.Contains(t, out, "echo other")
 
 	// Back up this copy
 	restoreFirstInstallation := testutils.BackupAndRestoreWithId(t, "-install1")
@@ -1201,9 +1105,7 @@ echo other`)
 	}
 	expected := []string{"echo hello", "echo other"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item)
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
@@ -1239,9 +1141,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 
 	// Install via the python script
 	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`)
-	if !strings.Contains(out, "Succesfully installed hishtory") {
-		t.Fatalf("unexpected output when installing hishtory, out=%#v", out)
-	}
+	require.Contains(t, out, "Succesfully installed hishtory")
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
 	if len(matches) != 2 {
@@ -1254,9 +1154,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	require.NoError(t, err)
 	out = tester.RunInteractiveShell(t, `hishtory status`)
 	expectedOut := fmt.Sprintf("hiSHtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)
-	if !strings.Contains(out, expectedOut) {
-		t.Fatalf("status command has unexpected output: actual=%#v, expected=%#v", out, expectedOut)
-	}
+	require.Contains(t, out, expectedOut)
 
 	// And test that it recorded that command
 	time.Sleep(time.Second)
@@ -1294,9 +1192,7 @@ sleep 1`)
 	out = hishtoryQuery(t, tester, "")
 	expected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "echo foo", "ls /foo", "ls /bar", "ls /a", "echo bar &", "sleep 1"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item)
 	}
 
 	// Test querying for a specific command
@@ -1304,17 +1200,13 @@ sleep 1`)
 	expected = []string{"echo foo", "ls /foo"}
 	unexpected := []string{"echo thisisrecorded", "hishtory enable", "echo bar", "ls /bar", "ls /a"}
 	for _, item := range expected {
-		if !strings.Contains(out, item) {
-			t.Fatalf("output is missing expected item %#v: %#v", item, out)
-		}
+		require.Contains(t, out, item)
 		if strings.Count(out, item) != 1 {
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
 	}
 	for _, item := range unexpected {
-		if strings.Contains(out, item) {
-			t.Fatalf("output is containing unexpected item %#v: %#v", item, out)
-		}
+		require.NotContains(t, out, item)
 	}
 
 	// Test using export with a query
@@ -1857,9 +1749,7 @@ func TestTui(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 		"Escape",
 	})
-	if strings.Contains(out, "Search Query:") {
-		t.Fatalf("unexpected out=\n%s", out)
-	}
+	require.NotContains(t, out, "Search Query:")
 	if !testutils.IsGithubAction() {
 		testutils.CompareGoldens(t, out, "TestTui-Exit")
 	}
@@ -2037,9 +1927,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 	// And check that the control-r binding brings up the search
 	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
-	if !strings.Contains(out, "\n\n\n") {
-		t.Fatalf("failed to find separator in %#v", out)
-	}
+	require.Contains(t, out, "\n\n\n", "failed to find separator")
 	out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	testutils.CompareGoldens(t, out, "testControlR-Initial")
 
@@ -2051,9 +1939,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 	// And that the above works, but also with an ENTER to actually execute the selected command
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Down", "Enter", "Enter"})
-	if !strings.Contains(out, "echo 'aaaaaa bbbb'\naaaaaa bbbb\n") {
-		t.Fatalf("hishtory tquery executed the wrong result, out=%#v", out)
-	}
+	require.Contains(t, out, "echo 'aaaaaa bbbb'\naaaaaa bbbb\n", "hishtory tquery executed the wrong result")
 
 	// Search for something more specific and select it
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "foo", "Enter"})
@@ -2193,9 +2079,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	if !strings.Contains(out, "-Slah") {
-		t.Fatalf("out has unexpected output missing the selected row: \n%s", out)
-	}
+	require.Contains(t, out, "-Slah", "out has unexpected output missing the selected row")
 	if !testutils.IsGithubAction() {
 		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
 	}
@@ -2351,9 +2235,7 @@ func TestZDotDir(t *testing.T) {
 	// Check that hishtory respected ZDOTDIR
 	zshrc, err := os.ReadFile(path.Join(zdotdir, ".zshrc"))
 	testutils.Check(t, err)
-	if !strings.Contains(string(zshrc), "# Hishtory Config:") {
-		t.Fatalf("zshrc had unexpected contents=%#v", string(zshrc))
-	}
+	require.Contains(t, string(zshrc), "# Hishtory Config:", "zshrc had unexpected contents")
 }
 
 func TestRemoveDuplicateRows(t *testing.T) {
