@@ -1687,7 +1687,7 @@ func TestTui(t *testing.T) {
 	// Check the output when there is a search
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"ls",
+		"ls", "",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-Search")
