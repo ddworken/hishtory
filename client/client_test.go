@@ -1909,6 +1909,9 @@ func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overri
 
 func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
 	sleepAmount := "0.5"
+	if testutils.IsGithubAction() {
+		sleepAmount = "0.8"
+	}
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
 	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
