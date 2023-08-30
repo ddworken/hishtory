@@ -54,7 +54,7 @@ func ResetLocalState(t *testing.T) {
 	_ = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
 }
 
-func BackupAndRestore(t *testing.T) func() {
+func BackupAndRestore(t testing.TB) func() {
 	return BackupAndRestoreWithId(t, "")
 }
 
@@ -65,7 +65,7 @@ func getBackPath(file, id string) string {
 	return file + ".bak" + id
 }
 
-func BackupAndRestoreWithId(t *testing.T, id string) func() {
+func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	ResetFakeHistoryTimestamp()
 	homedir, err := os.UserHomeDir()
 	Check(t, err)
@@ -266,7 +266,7 @@ func RunTestServer() func() {
 	}
 }
 
-func Check(t *testing.T, err error) {
+func Check(t testing.TB, err error) {
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
 		t.Fatalf("Unexpected error at %s:%d: %v", filename, line, err)
@@ -309,7 +309,7 @@ func IsGithubAction() bool {
 	return os.Getenv("GITHUB_ACTION") != ""
 }
 
-func TestLog(t *testing.T, line string) {
+func TestLog(t testing.TB, line string) {
 	f, err := os.OpenFile("/tmp/test.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		Check(t, err)
@@ -338,7 +338,7 @@ func persistLog() {
 	checkError(err)
 }
 
-func CompareGoldens(t *testing.T, out, goldenName string) {
+func CompareGoldens(t testing.TB, out, goldenName string) {
 	out = normalizeHostnames(out)
 	goldenPath := path.Join(initialWd, "client/lib/goldens/", goldenName)
 	expected, err := os.ReadFile(goldenPath)

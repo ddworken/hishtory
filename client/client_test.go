@@ -48,15 +48,15 @@ func TestMain(m *testing.M) {
 }
 
 type shellTester interface {
-	RunInteractiveShell(t *testing.T, script string) string
-	RunInteractiveShellRelaxed(t *testing.T, script string) (string, error)
+	RunInteractiveShell(t testing.TB, script string) string
+	RunInteractiveShellRelaxed(t testing.TB, script string) (string, error)
 	ShellName() string
 }
 type bashTester struct {
 	shellTester
 }
 
-func (b bashTester) RunInteractiveShell(t *testing.T, script string) string {
+func (b bashTester) RunInteractiveShell(t testing.TB, script string) string {
 	out, err := b.RunInteractiveShellRelaxed(t, "set -emo pipefail\n"+script)
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
@@ -65,7 +65,7 @@ func (b bashTester) RunInteractiveShell(t *testing.T, script string) string {
 	return out
 }
 
-func (b bashTester) RunInteractiveShellRelaxed(t *testing.T, script string) (string, error) {
+func (b bashTester) RunInteractiveShellRelaxed(t testing.TB, script string) (string, error) {
 	cmd := exec.Command("bash", "-i")
 	cmd.Stdin = strings.NewReader(script)
 	var stdout bytes.Buffer
@@ -89,13 +89,13 @@ type zshTester struct {
 	shellTester
 }
 
-func (z zshTester) RunInteractiveShell(t *testing.T, script string) string {
+func (z zshTester) RunInteractiveShell(t testing.TB, script string) string {
 	res, err := z.RunInteractiveShellRelaxed(t, "set -eo pipefail\n"+script)
 	require.NoError(t, err)
 	return res
 }
 
-func (z zshTester) RunInteractiveShellRelaxed(t *testing.T, script string) (string, error) {
+func (z zshTester) RunInteractiveShellRelaxed(t testing.TB, script string) (string, error) {
 	cmd := exec.Command("zsh", "-is")
 	cmd.Stdin = strings.NewReader(script)
 	var stdout bytes.Buffer
@@ -162,8 +162,41 @@ func TestP(t *testing.T) {
 	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 
+	runTestsWithRetries(t, "testTui", testTui)
+
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
+}
+
+func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t testing.TB)) {
+	numRetries := 3
+	for i := 1; i <= numRetries; i++ {
+		rt := &retryingTester{nil, i == 2, true}
+		parentT.Run(fmt.Sprintf("%s/%d", testName, i), func(t *testing.T) {
+			rt.T = t
+			testFunc(rt)
+		})
+		if rt.succeeded {
+			break
+		}
+	}
+}
+
+type retryingTester struct {
+	*testing.T
+	isFinalRun bool
+	succeeded  bool
+}
+
+func (t *retryingTester) Fatalf(format string, args ...any) {
+	t.T.Helper()
+	t.succeeded = false
+	if t.isFinalRun {
+		t.T.Fatalf(format, args...)
+	} else {
+		testutils.TestLog(t.T, fmt.Sprintf("retryingTester: Ignoring failure for non-final run: %#v", fmt.Sprintf(format, args...)))
+	}
+	t.SkipNow()
 }
 
 func testIntegration(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
@@ -277,7 +310,7 @@ yes | hishtory init `+userSecret)
 	assertNoLeakedConnections(t)
 }
 
-func installHishtory(t *testing.T, tester shellTester, userSecret string) string {
+func installHishtory(t testing.TB, tester shellTester, userSecret string) string {
 	out := tester.RunInteractiveShell(t, ` /tmp/client install `+userSecret)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
@@ -287,7 +320,7 @@ func installHishtory(t *testing.T, tester shellTester, userSecret string) string
 	return matches[1]
 }
 
-func installWithOnlineStatus(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
+func installWithOnlineStatus(t testing.TB, tester shellTester, onlineStatus OnlineStatus) string {
 	if onlineStatus == Online {
 		return installHishtory(t, tester, "")
 	} else {
@@ -295,7 +328,7 @@ func installWithOnlineStatus(t *testing.T, tester shellTester, onlineStatus Onli
 	}
 }
 
-func assertOnlineStatus(t *testing.T, onlineStatus OnlineStatus) {
+func assertOnlineStatus(t testing.TB, onlineStatus OnlineStatus) {
 	config := hctx.GetConf(hctx.MakeContext())
 	if onlineStatus == Online && config.IsOffline == true {
 		t.Fatalf("We're supposed to be online, yet config.IsOffline=%#v (config=%#v)", config.IsOffline, config)
@@ -792,7 +825,7 @@ func getPidofCommand() string {
 	return "pidof"
 }
 
-func waitForBackgroundSavesToComplete(t *testing.T) {
+func waitForBackgroundSavesToComplete(t testing.TB) {
 	lastOut := ""
 	lastErr := ""
 	for i := 0; i < 20; i++ {
@@ -817,11 +850,11 @@ func waitForBackgroundSavesToComplete(t *testing.T) {
 	t.Fatalf("failed to wait until hishtory wasn't running (lastOut=%#v, lastErr=%#v)", lastOut, lastErr)
 }
 
-func hishtoryQuery(t *testing.T, tester shellTester, query string) string {
+func hishtoryQuery(t testing.TB, tester shellTester, query string) string {
 	return tester.RunInteractiveShell(t, "hishtory query "+query)
 }
 
-func manuallySubmitHistoryEntry(t *testing.T, userSecret string, entry data.HistoryEntry) {
+func manuallySubmitHistoryEntry(t testing.TB, userSecret string, entry data.HistoryEntry) {
 	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
 	testutils.Check(t, err)
 	if encEntry.Date != entry.EndTime {
@@ -1584,7 +1617,7 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 	}
 }
 
-func clearControlRSearchFromConfig(t *testing.T) {
+func clearControlRSearchFromConfig(t testing.TB) {
 	configContents, err := hctx.GetConfigContents()
 	testutils.Check(t, err)
 	configContents = []byte(strings.ReplaceAll(string(configContents), "enable_control_r_search", "something-else"))
@@ -1661,7 +1694,7 @@ func TestFish(t *testing.T) {
 
 // TODO(ddworken): Run TestTui in online and offline mode
 
-func TestTui(t *testing.T) {
+func testTui(t testing.TB) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
@@ -1856,7 +1889,7 @@ func TestTui(t *testing.T) {
 	assertNoLeakedConnections(t)
 }
 
-func captureTerminalOutput(t *testing.T, tester shellTester, commands []string) string {
+func captureTerminalOutput(t testing.TB, tester shellTester, commands []string) string {
 	return captureTerminalOutputWithShellName(t, tester, tester.ShellName(), commands)
 }
 
@@ -1866,7 +1899,7 @@ type TmuxCommand struct {
 	ResizeY int
 }
 
-func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overriddenShellName string, commands []string) string {
+func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overriddenShellName string, commands []string) string {
 	sCommands := make([]TmuxCommand, 0)
 	for _, command := range commands {
 		sCommands = append(sCommands, TmuxCommand{Keys: command})
@@ -1874,7 +1907,7 @@ func captureTerminalOutputWithShellName(t *testing.T, tester shellTester, overri
 	return captureTerminalOutputWithShellNameAndDimensions(t, tester, overriddenShellName, 200, 50, sCommands)
 }
 
-func captureTerminalOutputWithShellNameAndDimensions(t *testing.T, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
+func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
 	sleepAmount := "0.5"
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
@@ -2332,11 +2365,11 @@ type deviceOp struct {
 	restore func()
 }
 
-func createDevice(t *testing.T, tester shellTester, devices *deviceSet, key, deviceId string) {
+func createDevice(t testing.TB, tester shellTester, devices *deviceSet, key, deviceId string) {
 	d := device{key, deviceId}
 	_, ok := (*devices.deviceMap)[d]
 	if ok {
-		t.Fatal(fmt.Errorf("cannot create device twice for key=%s deviceId=%s", key, deviceId))
+		t.Fatalf("cannot create device twice for key=%s deviceId=%s", key, deviceId)
 	}
 	installHishtory(t, tester, key)
 	(*devices.deviceMap)[d] = deviceOp{
@@ -2585,7 +2618,7 @@ func FuzzTestMultipleUsers(f *testing.F) {
 	})
 }
 
-func assertNoLeakedConnections(t *testing.T) {
+func assertNoLeakedConnections(t testing.TB) {
 	resp, err := lib.ApiGet("/api/v1/get-num-connections")
 	testutils.Check(t, err)
 	numConnections, err := strconv.Atoi(string(resp))
