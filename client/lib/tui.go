@@ -628,5 +628,3 @@ func TuiQuery(ctx *context.Context, initialQuery string) error {
 
 // TODO: support custom key bindings
 // TODO: make the help page wrap
-// TODO: FR: when updating the search query, try to maintain position in the table
-// TODO: FR: when deleting an entry, try to maintain position in the table
