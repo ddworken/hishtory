@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"path"
 	"regexp"
 	"runtime"
@@ -1851,9 +1850,7 @@ func TestTui(t *testing.T) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	require.Contains(t, out, "   User")
-	u, err := user.Current()
-	require.NoError(t, err)
-	require.Contains(t, out, " "+u.Username+" ")
+	require.Contains(t, out, " david │")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
