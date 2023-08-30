@@ -184,6 +184,7 @@ type asyncQueryFinishedMsg struct {
 	entries          []*data.HistoryEntry
 	searchErr        error
 	forceUpdateTable bool
+	maintainCursor   bool
 }
 
 func initialModel(ctx *context.Context, t table.Model, tableEntries []*data.HistoryEntry, initialQuery string) model {
@@ -205,7 +206,7 @@ func (m model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-func updateTable(m model, forceUpdateTable bool, rows []table.Row, entries []*data.HistoryEntry, searchErr error) model {
+func updateTable(m model, rows []table.Row, entries []*data.HistoryEntry, searchErr error, forceUpdateTable, maintainCursor bool) model {
 	if m.runQuery == nil {
 		m.runQuery = &m.lastQuery
 	}
@@ -214,6 +215,7 @@ func updateTable(m model, forceUpdateTable bool, rows []table.Row, entries []*da
 		return m
 	}
 	m.tableEntries = entries
+	initialCursor := m.table.Cursor()
 	if forceUpdateTable {
 		t, err := makeTable(m.ctx, rows)
 		if err != nil {
@@ -223,7 +225,11 @@ func updateTable(m model, forceUpdateTable bool, rows []table.Row, entries []*da
 		m.table = t
 	}
 	m.table.SetRows(rows)
-	m.table.SetCursor(0)
+	if maintainCursor {
+		m.table.SetCursor(initialCursor)
+	} else {
+		m.table.SetCursor(0)
+	}
 	m.lastQuery = *m.runQuery
 	m.runQuery = nil
 	if m.table.Cursor() >= len(m.tableEntries) {
@@ -240,7 +246,7 @@ func preventTableOverscrolling(m model) {
 	}
 }
 
-func runQueryAndUpdateTable(m model, forceUpdateTable bool) tea.Cmd {
+func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.Cmd {
 	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || forceUpdateTable || m.searchErr != nil {
 		query := m.lastQuery
 		if m.runQuery != nil {
@@ -248,7 +254,7 @@ func runQueryAndUpdateTable(m model, forceUpdateTable bool) tea.Cmd {
 		}
 		return func() tea.Msg {
 			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
-			return asyncQueryFinishedMsg{rows, entries, searchErr, forceUpdateTable}
+			return asyncQueryFinishedMsg{rows, entries, searchErr, forceUpdateTable, maintainCursor}
 		}
 	}
 	return nil
@@ -277,7 +283,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.fatalErr = err
 				return m, nil
 			}
-			cmd := runQueryAndUpdateTable(m, true)
+			cmd := runQueryAndUpdateTable(m, true, true)
 			preventTableOverscrolling(m)
 			return m, cmd
 		case key.Matches(msg, keys.Help):
@@ -293,13 +299,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.queryInput = i
 			searchQuery := m.queryInput.Value()
 			m.runQuery = &searchQuery
-			cmd3 := runQueryAndUpdateTable(m, false)
+			cmd3 := runQueryAndUpdateTable(m, false, false)
 			preventTableOverscrolling(m)
 			return m, tea.Batch(cmd1, cmd2, cmd3)
 		}
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
-		cmd := runQueryAndUpdateTable(m, true)
+		cmd := runQueryAndUpdateTable(m, true, true)
 		return m, cmd
 	case offlineMsg:
 		m.isOffline = true
@@ -311,7 +317,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.isLoading = false
 		return m, nil
 	case asyncQueryFinishedMsg:
-		m = updateTable(m, msg.forceUpdateTable, msg.rows, msg.entries, msg.searchErr)
+		m = updateTable(m, msg.rows, msg.entries, msg.searchErr, msg.forceUpdateTable, msg.maintainCursor)
 		return m, nil
 	default:
 		var cmd tea.Cmd

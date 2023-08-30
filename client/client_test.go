@@ -1763,6 +1763,15 @@ func TestTui(t *testing.T) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-Resize")
 
+	// Check that the cursor position is maintained after it is resized
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "Down"},
+		{ResizeX: 300, ResizeY: 100},
+		{Keys: "Enter"},
+	})
+	require.Contains(t, out, "\necho 'aaaaaa bbbb'\n")
+
 	// Check that we can delete an entry
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
