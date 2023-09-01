@@ -162,6 +162,7 @@ func TestParam(t *testing.T) {
 	}
 	runTestsWithRetries(t, "testControlR/offline/bash", func(t testing.TB) { testControlR(t, bashTester{}, "bash", Offline) })
 	runTestsWithRetries(t, "testControlR/fish", func(t testing.TB) { testControlR(t, bashTester{}, "fish", Online) })
+	runTestsWithRetries(t, "testTui/search", testTui_search)
 	runTestsWithRetries(t, "testTui/general", testTui_general)
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
@@ -1823,21 +1824,13 @@ func testTui_delete(t testing.TB) {
 	assertNoLeakedConnections(t)
 }
 
-func testTui_general(t testing.TB) {
+func testTui_search(t testing.TB) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t)
 
-	// Check the initial output when there is no search
-	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
-	if len(strings.Split(out, "hishtory tquery")) != 2 {
-		t.Fatalf("failed to split out=%#v", out)
-	}
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-Initial")
-
 	// Check the output when there is a search
-	out = captureTerminalOutput(t, tester, []string{
+	out := captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 		"ls",
 	})
@@ -1878,6 +1871,21 @@ func testTui_general(t testing.TB) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
+
+}
+
+func testTui_general(t testing.TB) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t)
+
+	// Check the initial output when there is no search
+	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
+	if len(strings.Split(out, "hishtory tquery")) != 2 {
+		t.Fatalf("failed to split out=%#v", out)
+	}
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-Initial")
 
 	// Check that we can exit the TUI via pressing esc
 	out = captureTerminalOutput(t, tester, []string{
