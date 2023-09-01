@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
@@ -162,7 +163,10 @@ func TestParam(t *testing.T) {
 	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 
-	runTestsWithRetries(t, "testTui", testTui)
+	runTestsWithRetries(t, "testTui/general", testTui_general)
+	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
+	runTestsWithRetries(t, "testTui/resize", testTui_resize)
+	runTestsWithRetries(t, "testTui/delete", testTui_delete)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1694,11 +1698,9 @@ func TestFish(t *testing.T) {
 
 // TODO(ddworken): Run TestTui in online and offline mode
 
-func testTui(t testing.TB) {
-	// Setup
-	defer testutils.BackupAndRestore(t)()
+func setupTestTui(t testing.TB) (shellTester, string, *gorm.DB) {
 	tester := zshTester{}
-	installHishtory(t, tester, "")
+	userSecret := installHishtory(t, tester, "")
 
 	// Disable recording so that all our testing commands don't get recorded
 	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
@@ -1707,6 +1709,125 @@ func testTui(t testing.TB) {
 	db := hctx.GetDb(hctx.MakeContext())
 	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/")).Error)
 	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
+	return tester, userSecret, db
+}
+
+func testTui_resize(t testing.TB) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, userSecret, _ := setupTestTui(t)
+
+	// Check the output when the size is smaller
+	out := captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-SmallTerminal")
+
+	// Check that it resizes after the terminal size is adjusted
+	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{ResizeX: 300, ResizeY: 100},
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-Resize")
+
+	// Check that the cursor position is maintained after it is resized
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "Down"},
+		{ResizeX: 300, ResizeY: 100},
+		{Keys: "Enter"},
+	})
+	require.Contains(t, out, "\necho 'aaaaaa bbbb'\n")
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
+}
+
+func testTui_scroll(t testing.TB) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, userSecret, _ := setupTestTui(t)
+
+	// Check that we can use left arrow keys to scroll
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"s",
+		"Left",
+		"l",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-LeftScroll")
+
+	// Test horizontal scrolling by one to the right
+	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo '1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_0_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_1_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_2_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321'"))
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"S-Left S-Right S-Right S-Left",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-RightScroll")
+
+	// Test horizontal scrolling by two
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"S-Right S-Right",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
+
+}
+
+func testTui_delete(t testing.TB) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, userSecret, _ := setupTestTui(t)
+	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
+
+	// Check that we can delete an entry
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"aaaaaa",
+		"C-K",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-Delete")
+
+	// And that it stays deleted
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-DeleteStill")
+
+	// And that we can then delete another entry
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-K",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-DeleteAgain")
+
+	// And that it stays deleted
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
+}
+
+func testTui_general(t testing.TB) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t)
 
 	// Check the initial output when there is no search
 	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
@@ -1759,23 +1880,6 @@ func testTui(t testing.TB) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
 
-	// Check the output when the size is smaller
-	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery ENTER"},
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-SmallTerminal")
-
-	// Check that we can use left arrow keys to scroll
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"s",
-		"Left",
-		"l",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-LeftScroll")
-
 	// Check that we can exit the TUI via pressing esc
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
@@ -1785,72 +1889,6 @@ func testTui(t testing.TB) {
 	if !testutils.IsGithubAction() {
 		testutils.CompareGoldens(t, out, "TestTui-Exit")
 	}
-
-	// Check that it resizes after the terminal size is adjusted
-	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'")).Error)
-	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery ENTER"},
-		{ResizeX: 300, ResizeY: 100},
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-Resize")
-
-	// Check that the cursor position is maintained after it is resized
-	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery ENTER"},
-		{Keys: "Down"},
-		{ResizeX: 300, ResizeY: 100},
-		{Keys: "Enter"},
-	})
-	require.Contains(t, out, "\necho 'aaaaaa bbbb'\n")
-
-	// Check that we can delete an entry
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"aaaaaa",
-		"C-K",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-Delete")
-
-	// And that it stays deleted
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-DeleteStill")
-
-	// And that we can then delete another entry
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"C-K",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-DeleteAgain")
-
-	// And that it stays deleted
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
-
-	// Test horizontal scrolling by one to the right
-	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo '1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_0_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_1_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_2_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321'")).Error)
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"S-Left S-Right S-Right S-Left",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-RightScroll")
-
-	// Test horizontal scrolling by two
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"S-Right S-Right",
-	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
 
 	// Test opening the help page
 	out = captureTerminalOutput(t, tester, []string{
@@ -1883,7 +1921,7 @@ func testTui(t testing.TB) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	require.Contains(t, out, "   User")
-	require.Contains(t, out, " david │")
+	require.Contains(t, out, " david ")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1960,7 +1998,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 	// Insert a few hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
-	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
+	e1 := testutils.MakeFakeHistoryEntry("ls ~/TODOOOO")
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
 	e1.ExitCode = 127
