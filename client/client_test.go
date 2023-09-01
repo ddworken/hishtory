@@ -124,7 +124,7 @@ const (
 	Offline
 )
 
-func TestP(t *testing.T) {
+func TestParam(t *testing.T) {
 	if skipSlowTests() {
 		shellTesters = shellTesters[:1]
 	}
@@ -171,7 +171,7 @@ func TestP(t *testing.T) {
 func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t testing.TB)) {
 	numRetries := 3
 	for i := 1; i <= numRetries; i++ {
-		rt := &retryingTester{nil, i == 2, true}
+		rt := &retryingTester{nil, i == numRetries, true}
 		parentT.Run(fmt.Sprintf("%s/%d", testName, i), func(t *testing.T) {
 			rt.T = t
 			testFunc(rt)
@@ -1719,7 +1719,7 @@ func testTui(t testing.TB) {
 	// Check the output when there is a search
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"ls", "",
+		"ls",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-Search")
@@ -1908,9 +1908,16 @@ func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overri
 }
 
 func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
-	sleepAmount := "0.5"
-	if testutils.IsGithubAction() {
-		sleepAmount = "0.8"
+	sleepAmount := "0.1"
+	if runtime.GOOS == "linux" {
+		sleepAmount = "0.2"
+	}
+	if overriddenShellName == "fish" {
+		// Fish is considerably slower so this is sadly necessary
+		sleepAmount = "0.5"
+	}
+	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
+		sleepAmount = "0.5"
 	}
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
@@ -1931,7 +1938,10 @@ func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellT
 		}
 		fullCommand += " sleep " + sleepAmount + "\n"
 	}
-	fullCommand += " sleep 0.5\n"
+	fullCommand += " sleep 2.5\n"
+	if testutils.IsGithubAction() {
+		fullCommand += " sleep 2.5\n"
+	}
 	fullCommand += " tmux capture-pane -t foo -p\n"
 	fullCommand += " tmux kill-session -t foo\n"
 	testutils.TestLog(t, "Running tmux command: "+fullCommand)
