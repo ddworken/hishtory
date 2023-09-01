@@ -1997,7 +1997,7 @@ func testControlR(t testing.TB, tester shellTester, shellName string, onlineStat
 
 	// Insert a few hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
-	e1 := testutils.MakeFakeHistoryEntry("ls ~/TODOOOO")
+	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
 	e1.ExitCode = 127
