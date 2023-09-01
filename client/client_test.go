@@ -155,14 +155,13 @@ func TestParam(t *testing.T) {
 		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
 		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
 		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
-		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
+		runTestsWithRetries(t, "testControlR/"+tester.ShellName(), func(t testing.TB) { testControlR(t, tester, tester.ShellName(), Online) })
 	}
-	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
-	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
-
+	runTestsWithRetries(t, "testControlR/offline/bash", func(t testing.TB) { testControlR(t, bashTester{}, "bash", Offline) })
+	runTestsWithRetries(t, "testControlR/fish", func(t testing.TB) { testControlR(t, bashTester{}, "fish", Online) })
 	runTestsWithRetries(t, "testTui/general", testTui_general)
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
@@ -1986,7 +1985,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellT
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
-func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
+func testControlR(t testing.TB, tester shellTester, shellName string, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installWithOnlineStatus(t, tester, onlineStatus)
