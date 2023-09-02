@@ -1843,7 +1843,7 @@ func testTui_search(t testing.TB) {
 	// Check the output when there is a selected result
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"ls", "ENTER",
+		"ls", "", "ENTER",
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
 	expected := `ls ~/`
