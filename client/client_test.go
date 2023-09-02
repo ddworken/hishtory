@@ -1862,7 +1862,7 @@ func testTui_search(t testing.TB) {
 	// Check the output when the search is invalid
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"ls:",
+		"ls", ":",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
