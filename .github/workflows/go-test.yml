@@ -41,9 +41,9 @@ jobs:
 
           # Set up a tmpfs for ~/.hishtory/ to help tests run faster
           mkdir ~/.hishtory/
-          mount -F tmpfs -o size=500M swap ~/.hishtory/ || true
-          diskutil apfs create $(hdiutil attach -nomount ram://1024000) RAMDisk || true
-          mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/  
+          sudo mount -F tmpfs -o size=500M swap ~/.hishtory/ || true
+          sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) RAMDisk || true
+          sudo mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/  || true
 
           # Run the tests
           make test
