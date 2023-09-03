@@ -78,13 +78,19 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 		path.Join(homedir, data.GetHishtoryPath(), DB_WAL_PATH),
 		path.Join(homedir, data.GetHishtoryPath(), DB_SHM_PATH),
 		path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH),
-		path.Join(homedir, data.GetHishtoryPath(), "hishtory"),
 		path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
 		path.Join(homedir, data.GetHishtoryPath(), "config.zsh"),
 		path.Join(homedir, data.GetHishtoryPath(), "config.fish"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
 		path.Join(homedir, ".local/share/fish/fish_history"),
+	}
+	hishtoryBinaryPath := path.Join(homedir, data.GetHishtoryPath(), "hishtory")
+	if IsGithubAction() {
+		// On github actions, avoid constantly copying the binary back and forth since we aren't worried about an existing hishtory installation
+		_ = os.Remove(hishtoryBinaryPath)
+	} else {
+		renameFiles = append(renameFiles, hishtoryBinaryPath)
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
