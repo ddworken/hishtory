@@ -54,11 +54,6 @@ jobs:
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
-
-          # Force the time zone so that test output is consistent
-          export TZ='America/Los_Angeles' 
-
-          # Run the tests
           make test
     # - name: Setup tmate session
     #   if: ${{ failure() }}
