@@ -43,15 +43,15 @@ jobs:
       run: |
 
           # Install our dependencies
-          brew install fish tmux bash || true
+          brew install fish tmux bash 
 
           # Set a consistent hostname so we can run tests that depend on it
-          sudo scutil --set HostName ghaction-runner-hostname || true
+          sudo scutil --set HostName ghaction-runner-hostname 
 
           # Set up a tmpfs for ~/.hishtory/ to help tests run faster
           mkdir ~/.hishtory/
-          sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) RAMDisk || true
-          sudo mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/  || true
+          sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) RAMDisk 
+          sudo mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/ 
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
