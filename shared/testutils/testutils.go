@@ -88,7 +88,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
-		Check(t, os.Rename(file, getBackPath(file, id)))
+		Check(t, rename(file, getBackPath(file, id)))
 	}
 	copyFiles := []string{
 		path.Join(homedir, ".zshrc"),
@@ -113,7 +113,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 		Check(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
 		Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
 		for _, file := range renameFiles {
-			checkError(os.Rename(getBackPath(file, id), file))
+			checkError(rename(getBackPath(file, id), file))
 		}
 		for _, file := range copyFiles {
 			checkError(copy(getBackPath(file, id), file))
@@ -154,7 +154,17 @@ setopt SHARE_HISTORY
 	checkError(err)
 }
 
+// Similar to os.Rename, except it supports renaming cross-mount
+func rename(src, dst string) error {
+	err := copy(src, dst)
+	if err != nil {
+		return err
+	}
+	return os.Remove(src)
+}
+
 func copy(src, dst string) error {
+	// Copy the contents of the file
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -171,7 +181,17 @@ func copy(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return out.Close()
+	err = out.Close()
+	if err != nil {
+		return err
+	}
+
+	// And copy the permissions
+	srcStat, err := in.Stat()
+	if err != nil {
+		return err
+	}
+	return os.Chmod(dst, srcStat.Mode())
 }
 
 func BackupAndRestoreEnv(k string) func() {
