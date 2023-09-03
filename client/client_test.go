@@ -201,9 +201,40 @@ func (t *retryingTester) Fatalf(format string, args ...any) {
 	if t.isFinalRun {
 		t.T.Fatalf(format, args...)
 	} else {
-		testutils.TestLog(t.T, fmt.Sprintf("retryingTester: Ignoring failure for non-final run: %#v", fmt.Sprintf(format, args...)))
+		testutils.TestLog(t.T, fmt.Sprintf("retryingTester: Ignoring fatalf for non-final run: %#v", fmt.Sprintf(format, args...)))
 	}
 	t.SkipNow()
+}
+
+func (t *retryingTester) Errorf(format string, args ...any) {
+	t.T.Helper()
+	t.succeeded = false
+	if t.isFinalRun {
+		t.T.Errorf(format, args...)
+	} else {
+		testutils.TestLog(t.T, fmt.Sprintf("retryingTester: Ignoring errorf for non-final run: %#v", fmt.Sprintf(format, args...)))
+	}
+	t.SkipNow()
+}
+
+func (t *retryingTester) FailNow() {
+	t.succeeded = false
+	if t.isFinalRun {
+		t.T.FailNow()
+	} else {
+		testutils.TestLog(t.T, "retryingTester: Ignoring FailNow for non-final run")
+		// Still terminate execution via SkipNow() since FailNow() means we should stop the current test
+		t.T.SkipNow()
+	}
+}
+
+func (t *retryingTester) Fail() {
+	t.succeeded = false
+	if t.isFinalRun {
+		t.T.Fail()
+	} else {
+		testutils.TestLog(t.T, "retryingTester: Ignoring Fail for non-final run")
+	}
 }
 
 func testIntegration(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
