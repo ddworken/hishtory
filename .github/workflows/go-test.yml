@@ -49,9 +49,8 @@ jobs:
           sudo scutil --set HostName ghaction-runner-hostname 
 
           # Set up a tmpfs for ~/.hishtory/ to help tests run faster
-          mkdir ~/.hishtory/
-          sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) RAMDisk 
-          sudo mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/ 
+          sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) tmpfs 
+          ln -s /Volumes/tmpfs ~/.hishtory
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
@@ -61,8 +60,8 @@ jobs:
 
           # Run the tests
           make test
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
