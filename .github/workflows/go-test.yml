@@ -37,7 +37,7 @@ jobs:
 
           # Set up a tmpfs for ~/.hishtory/ to help tests run faster
           mkdir ~/.hishtory/
-          sudo mount -F tmpfs -o size=500M swap ~/.hishtory/ 
+          sudo mount -t tmpfs -o size=500M hishtory-tmpfs ~/.hishtory/
     - name: MacOS Setup
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'macos-latest'}}
       run: |
@@ -61,8 +61,8 @@ jobs:
 
           # Run the tests
           make test
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
