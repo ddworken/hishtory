@@ -21,16 +21,14 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    - name: Go test
+    - name: Test setup
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
+
           # Install our dependencies
           sudo apt-get update || true 
           sudo apt-get install -y zsh tmux fish || true
           brew install fish tmux bash || true
-
-          # Force the time zone so that test output is consistent
-          export TZ='America/Los_Angeles' 
 
           # Work around a weird bug where zsh on ubuntu actions gives that directory 0777 which makes zsh refuse to start
           sudo chmod 0755 -R /usr/share/zsh/ || true
@@ -44,6 +42,12 @@ jobs:
           sudo mount -F tmpfs -o size=500M swap ~/.hishtory/ || true
           sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) RAMDisk || true
           sudo mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/  || true
+    - name: Go test
+      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
+      run: |
+
+          # Force the time zone so that test output is consistent
+          export TZ='America/Los_Angeles' 
 
           # Run the tests
           make test
