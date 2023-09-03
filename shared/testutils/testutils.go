@@ -47,11 +47,8 @@ func getInitialWd() string {
 }
 
 func ResetLocalState(t *testing.T) {
-	homedir, err := os.UserHomeDir()
-	Check(t, err)
 	persistLog()
 	_ = BackupAndRestoreWithId(t, "-reset-local-state")
-	_ = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
 }
 
 func BackupAndRestore(t testing.TB) func() {
@@ -81,16 +78,10 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 		path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
 		path.Join(homedir, data.GetHishtoryPath(), "config.zsh"),
 		path.Join(homedir, data.GetHishtoryPath(), "config.fish"),
+		path.Join(homedir, data.GetHishtoryPath(), "hishtory"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
 		path.Join(homedir, ".local/share/fish/fish_history"),
-	}
-	hishtoryBinaryPath := path.Join(homedir, data.GetHishtoryPath(), "hishtory")
-	if IsGithubAction() {
-		// On github actions, avoid constantly copying the binary back and forth since we aren't worried about an existing hishtory installation
-		_ = os.Remove(hishtoryBinaryPath)
-	} else {
-		renameFiles = append(renameFiles, hishtoryBinaryPath)
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
@@ -116,7 +107,11 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 		}
 		persistLog()
-		Check(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
+		for _, file := range renameFiles {
+			if strings.Contains(file, data.GetHishtoryPath()) {
+				_ = os.Remove(file)
+			}
+		}
 		Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
 		for _, file := range renameFiles {
 			checkError(rename(getBackPath(file, id), file))
