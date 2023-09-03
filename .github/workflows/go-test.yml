@@ -21,25 +21,35 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    - name: Test setup
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
+    - name: Linux Setup
+      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == "ubuntu-latest"}}
       run: |
 
           # Install our dependencies
-          sudo apt-get update || true 
-          sudo apt-get install -y zsh tmux fish || true
-          brew install fish tmux bash || true
+          sudo apt-get update 
+          sudo apt-get install -y zsh tmux fish 
 
           # Work around a weird bug where zsh on ubuntu actions gives that directory 0777 which makes zsh refuse to start
-          sudo chmod 0755 -R /usr/share/zsh/ || true
+          sudo chmod 0755 -R /usr/share/zsh/ 
 
           # Set a consistent hostname so we can run tests that depend on it
-          sudo hostname ghaction-runner-hostname || true 
+          sudo hostname ghaction-runner-hostname  
+
+          # Set up a tmpfs for ~/.hishtory/ to help tests run faster
+          mkdir ~/.hishtory/
+          sudo mount -F tmpfs -o size=500M swap ~/.hishtory/ 
+    - name: MacOS Setup
+      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == "macos-latest"}}
+      run: |
+
+          # Install our dependencies
+          brew install fish tmux bash || true
+
+          # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname || true
 
           # Set up a tmpfs for ~/.hishtory/ to help tests run faster
           mkdir ~/.hishtory/
-          sudo mount -F tmpfs -o size=500M swap ~/.hishtory/ || true
           sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) RAMDisk || true
           sudo mount -o noatime -t apfs /Volumes/RAMDisk ~/.hishtory/  || true
     - name: Go test
