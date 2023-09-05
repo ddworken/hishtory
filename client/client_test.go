@@ -162,7 +162,7 @@ func TestParam(t *testing.T) {
 	}
 	runTestsWithRetries(t, "testControlR/offline/bash", func(t testing.TB) { testControlR(t, bashTester{}, "bash", Offline) })
 	runTestsWithRetries(t, "testControlR/fish", func(t testing.TB) { testControlR(t, bashTester{}, "fish", Online) })
-	runTestsWithRetries(t, "testTui/search", testTui_search)
+	runTestsWithExtraRetries(t, "testTui/search", testTui_search, 7)
 	runTestsWithRetries(t, "testTui/general", testTui_general)
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
