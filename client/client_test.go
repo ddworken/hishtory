@@ -1741,8 +1741,12 @@ func setupTestTui(t testing.TB) (shellTester, string, *gorm.DB) {
 
 	// Insert a couple hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
-	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/")).Error)
-	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
+	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
+	testutils.Check(t, db.Create(e1).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e1)
+	e2 := testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")
+	testutils.Check(t, db.Create(e2).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e2)
 	return tester, userSecret, db
 }
 
