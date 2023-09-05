@@ -47,8 +47,11 @@ func getInitialWd() string {
 }
 
 func ResetLocalState(t *testing.T) {
+	homedir, err := os.UserHomeDir()
+	Check(t, err)
 	persistLog()
 	_ = BackupAndRestoreWithId(t, "-reset-local-state")
+	_ = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
 }
 
 func BackupAndRestore(t testing.TB) func() {
@@ -85,7 +88,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
-		Check(t, rename(file, getBackPath(file, id)))
+		Check(t, os.Rename(file, getBackPath(file, id)))
 	}
 	copyFiles := []string{
 		path.Join(homedir, ".zshrc"),
@@ -107,14 +110,10 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 		}
 		persistLog()
-		for _, file := range renameFiles {
-			if strings.Contains(file, data.GetHishtoryPath()) {
-				_ = os.Remove(file)
-			}
-		}
+		Check(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
 		Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
 		for _, file := range renameFiles {
-			checkError(rename(getBackPath(file, id), file))
+			checkError(os.Rename(getBackPath(file, id), file))
 		}
 		for _, file := range copyFiles {
 			checkError(copy(getBackPath(file, id), file))
@@ -153,15 +152,6 @@ setopt SHARE_HISTORY
 	defer f.Close()
 	_, err = f.WriteString(zshrcHistConfig)
 	checkError(err)
-}
-
-// Similar to os.Rename, except it supports renaming cross-mount
-func rename(src, dst string) error {
-	err := copy(src, dst)
-	if err != nil {
-		return err
-	}
-	return os.Remove(src)
 }
 
 func copy(src, dst string) error {

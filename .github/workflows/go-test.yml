@@ -34,23 +34,15 @@ jobs:
 
           # Set a consistent hostname so we can run tests that depend on it
           sudo hostname ghaction-runner-hostname  
-
-          # Set up a tmpfs for ~/.hishtory/ to help tests run faster
-          mkdir ~/.hishtory/
-          sudo mount -t tmpfs -o size=500M hishtory-tmpfs ~/.hishtory/
     - name: MacOS Setup
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'macos-latest'}}
       run: |
 
           # Install our dependencies
-          brew install fish tmux bash 
+          brew install fish tmux bash
 
           # Set a consistent hostname so we can run tests that depend on it
-          sudo scutil --set HostName ghaction-runner-hostname 
-
-          # Set up a tmpfs for ~/.hishtory/ to help tests run faster
-          sudo diskutil apfs create $(sudo hdiutil attach -nomount ram://1024000) tmpfs 
-          ln -s /Volumes/tmpfs ~/.hishtory
+          sudo scutil --set HostName ghaction-runner-hostname
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
