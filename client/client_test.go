@@ -1995,7 +1995,7 @@ func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellT
 		// Fish is considerably slower so this is sadly necessary
 		sleepAmount = "0.5"
 	}
-	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
+	if testutils.IsGithubAction() {
 		sleepAmount = "0.5"
 	}
 	fullCommand := ""
