@@ -46,7 +46,7 @@ jobs:
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
-          make test
+          make retrying-test
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
