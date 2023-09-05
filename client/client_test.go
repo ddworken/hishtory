@@ -174,6 +174,9 @@ func TestParam(t *testing.T) {
 
 func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t testing.TB)) {
 	numRetries := 3
+	if testutils.IsGithubAction() {
+		numRetries = 5
+	}
 	runTestsWithExtraRetries(parentT, testName, testFunc, numRetries)
 }
 
@@ -1867,6 +1870,8 @@ func testTui_search(t testing.TB) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t)
+
+	// TODO: Consider adding a hishtory export test here to confirm that the relevant entries truly are getting stored properly, since this flakes even with 7 retries
 
 	// Check the output when there is a search
 	out := captureTerminalOutput(t, tester, []string{
