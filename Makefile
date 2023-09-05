@@ -10,7 +10,7 @@ ftest:
 	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -v -p 1 -run "$(FILTER)" ./...
 
 retrying-test:
-	for i in `seq 1 3`; do echo "Test attempt number $$i"; make test && break; done
+	for i in `seq 1 3`; do echo "Test attempt number $$i"; rm -rf ~/.hishtory/; make test && break; done
 
 acttest:
 	act push -j test -e .github/push_event.json --reuse --container-architecture linux/amd64
