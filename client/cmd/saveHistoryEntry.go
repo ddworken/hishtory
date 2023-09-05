@@ -44,7 +44,7 @@ var presaveHistoryEntryCmd = &cobra.Command{
 	},
 }
 
-func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
+func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	if !config.HaveMissedUploads {
 		return nil
@@ -81,7 +81,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	return nil
 }
 
-func presaveHistoryEntry(ctx *context.Context) {
+func presaveHistoryEntry(ctx context.Context) {
 	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
 		return
@@ -122,7 +122,7 @@ func presaveHistoryEntry(ctx *context.Context) {
 	// TODO: Consider improving this
 }
 
-func saveHistoryEntry(ctx *context.Context) {
+func saveHistoryEntry(ctx context.Context) {
 	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
 		hctx.GetLogger().Infof("Skipping saving a history entry because hishtory is disabled\n")
@@ -218,7 +218,7 @@ func init() {
 	rootCmd.AddCommand(presaveHistoryEntryCmd)
 }
 
-func buildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) {
+func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 	var entry data.HistoryEntry
 
 	// user
@@ -257,7 +257,7 @@ func buildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) 
 	return &entry, nil
 }
 
-func buildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry, error) {
+func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
 		hctx.GetLogger().Warnf("buildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
 		return nil, nil
@@ -327,7 +327,7 @@ func trimTrailingWhitespace(s string) string {
 	return strings.TrimSuffix(strings.TrimSuffix(s, "\n"), " ")
 }
 
-func buildCustomColumns(ctx *context.Context) (data.CustomColumns, error) {
+func buildCustomColumns(ctx context.Context) (data.CustomColumns, error) {
 	ccs := data.CustomColumns{}
 	config := hctx.GetConf(ctx)
 	for _, cc := range config.CustomColumns {
@@ -465,7 +465,7 @@ func getLastCommand(history string) (string, error) {
 	return split[1], nil
 }
 
-func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, error) {
+func shouldSkipHiddenCommand(ctx context.Context, historyLine string) (bool, error) {
 	config := hctx.GetConf(ctx)
 	if config.LastSavedHistoryLine == historyLine {
 		return true, nil
@@ -478,7 +478,7 @@ func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, er
 	return false, nil
 }
 
-func getCwd(ctx *context.Context) (string, string, error) {
+func getCwd(ctx context.Context) (string, string, error) {
 	cwd, err := getCwdWithoutSubstitution()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)

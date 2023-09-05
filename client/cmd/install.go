@@ -475,7 +475,7 @@ func copyFile(src, dst string) error {
 	return destination.Close()
 }
 
-func uninstall(ctx *context.Context) error {
+func uninstall(ctx context.Context) error {
 	homedir := hctx.GetHome(ctx)
 	err := stripLines(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
 	if err != nil {

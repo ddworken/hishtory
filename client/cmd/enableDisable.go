@@ -28,13 +28,13 @@ var disableCmd = &cobra.Command{
 	},
 }
 
-func Enable(ctx *context.Context) error {
+func Enable(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	config.IsEnabled = true
 	return hctx.SetConfig(config)
 }
 
-func Disable(ctx *context.Context) error {
+func Disable(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	config.IsEnabled = false
 	return hctx.SetConfig(config)

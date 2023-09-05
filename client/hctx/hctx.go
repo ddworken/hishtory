@@ -108,7 +108,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 
 type hishtoryContextKey string
 
-func MakeContext() *context.Context {
+func MakeContext() context.Context {
 	ctx := context.Background()
 	config, err := GetConfig()
 	if err != nil {
@@ -125,27 +125,27 @@ func MakeContext() *context.Context {
 		panic(fmt.Errorf("failed to get homedir: %v", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("homedir"), homedir)
-	return &ctx
+	return ctx
 }
 
-func GetConf(ctx *context.Context) ClientConfig {
-	v := (*ctx).Value(hishtoryContextKey("config"))
+func GetConf(ctx context.Context) ClientConfig {
+	v := ctx.Value(hishtoryContextKey("config"))
 	if v != nil {
 		return v.(ClientConfig)
 	}
 	panic(fmt.Errorf("failed to find config in ctx"))
 }
 
-func GetDb(ctx *context.Context) *gorm.DB {
-	v := (*ctx).Value(hishtoryContextKey("db"))
+func GetDb(ctx context.Context) *gorm.DB {
+	v := ctx.Value(hishtoryContextKey("db"))
 	if v != nil {
 		return v.(*gorm.DB)
 	}
 	panic(fmt.Errorf("failed to find db in ctx"))
 }
 
-func GetHome(ctx *context.Context) string {
-	v := (*ctx).Value(hishtoryContextKey("homedir"))
+func GetHome(ctx context.Context) string {
+	v := ctx.Value(hishtoryContextKey("homedir"))
 	if v != nil {
 		return v.(string)
 	}

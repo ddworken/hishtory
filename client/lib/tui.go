@@ -136,7 +136,7 @@ const (
 
 type model struct {
 	// context
-	ctx *context.Context
+	ctx context.Context
 
 	// Model for the loading spinner.
 	spinner spinner.Model
@@ -187,7 +187,7 @@ type asyncQueryFinishedMsg struct {
 	maintainCursor   bool
 }
 
-func initialModel(ctx *context.Context, t table.Model, tableEntries []*data.HistoryEntry, initialQuery string) model {
+func initialModel(ctx context.Context, t table.Model, tableEntries []*data.HistoryEntry, initialQuery string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -362,7 +362,7 @@ func (m model) View() string {
 	return fmt.Sprintf("\n%s%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View())) + helpView
 }
 
-func getRows(ctx *context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
+func getRows(ctx context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	searchResults, err := Search(ctx, db, query, numEntries)
@@ -409,7 +409,7 @@ func getTerminalSize() (int, int, error) {
 
 var bigQueryResults []table.Row
 
-func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
+func makeTableColumns(ctx context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
 	// Handle an initial query with no results
 	if len(rows) == 0 || len(rows[0]) == 0 {
 		allRows, _, err := getRows(ctx, columnNames, "", 25)
@@ -499,7 +499,7 @@ func min(a, b int) int {
 	return b
 }
 
-func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
+func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 	config := hctx.GetConf(ctx)
 	columns, err := makeTableColumns(ctx, config.DisplayedColumns, rows)
 	if err != nil {
@@ -549,7 +549,7 @@ func makeTable(ctx *context.Context, rows []table.Row) (table.Model, error) {
 	return t, nil
 }
 
-func deleteHistoryEntry(ctx *context.Context, entry data.HistoryEntry) error {
+func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	db := hctx.GetDb(ctx)
 	// Delete locally
 	r := db.Model(&data.HistoryEntry{}).Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.EndTime).Delete(&data.HistoryEntry{})
@@ -570,7 +570,7 @@ func deleteHistoryEntry(ctx *context.Context, entry data.HistoryEntry) error {
 	return SendDeletionRequest(dr)
 }
 
-func TuiQuery(ctx *context.Context, initialQuery string) error {
+func TuiQuery(ctx context.Context, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
 	rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 	if err != nil {
