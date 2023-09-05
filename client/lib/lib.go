@@ -29,6 +29,7 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/mattn/go-sqlite3"
 	"github.com/rodaine/table"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -708,24 +709,23 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 		if err == nil {
 			return nil
 		}
-		if err != nil {
-			errMsg := err.Error()
-			if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
-				time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
-				continue
+
+		//errMsg := err.Error()
+		if errors.Is(err, sqlite3.ErrBusy) || errors.Is(err, sqlite3.ErrLocked) {
+			// accounts for wrapped errors like:
+			// * "database is locked (5) (SQLITE_BUSY)"
+			// * "database is locked (261)" -- 261 is SQLITE_BUSY_RECOVERY (5 || 1<<8)
+			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
+			continue
+		} else if errors.Is(err, sqlite3.ErrConstraintUnique) {
+			//if strings.Contains(errMsg, "UNIQUE constraint failed") {
+			if i == 0 {
+				return err
+			} else {
+				return nil
 			}
-			if strings.Contains(errMsg, "UNIQUE constraint failed") {
-				if i == 0 {
-					return err
-				} else {
-					return nil
-				}
-			}
-			return fmt.Errorf("unrecoverable sqlite error: %w", err)
 		}
-		if err != nil && err.Error() != "database is locked (5) (SQLITE_BUSY)" {
-			return fmt.Errorf("unrecoverable sqlite error: %w", err)
-		}
+		return fmt.Errorf("unrecoverable sqlite error: %w", err)
 	}
 	return fmt.Errorf("failed to create DB entry even with %d retries: %w", i, err)
 }
