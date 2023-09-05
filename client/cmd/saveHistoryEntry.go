@@ -58,7 +58,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	query := fmt.Sprintf("after:%s", time.Unix(config.MissedUploadTimestamp, 0).Format("2006-01-02"))
 	entries, err := lib.Search(ctx, db, query, 0)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %v", err)
+		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %w", err)
 	}
 	hctx.GetLogger().Infof("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
 	jsonValue, err := lib.EncryptAndMarshal(config, entries)
@@ -76,7 +76,7 @@ func maybeUploadSkippedHistoryEntries(ctx *context.Context) error {
 	config.MissedUploadTimestamp = 0
 	err = hctx.SetConfig(config)
 	if err != nil {
-		return fmt.Errorf("failed to mark a history entry as uploaded: %v", err)
+		return fmt.Errorf("failed to mark a history entry as uploaded: %w", err)
 	}
 	return nil
 }
@@ -140,11 +140,11 @@ func saveHistoryEntry(ctx *context.Context) {
 	if config.BetaMode {
 		tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10))
 		if err != nil {
-			lib.CheckFatalError(fmt.Errorf("failed to query for pre-saved history entries: %s", err))
+			lib.CheckFatalError(fmt.Errorf("failed to query for pre-saved history entries: %w", err))
 		}
 		res := tx.Delete(&data.HistoryEntry{})
 		if res.Error != nil {
-			lib.CheckFatalError(fmt.Errorf("failed to delete pre-saved history entries: %s", res.Error))
+			lib.CheckFatalError(fmt.Errorf("failed to delete pre-saved history entries: %w", res.Error))
 		}
 		if res.RowsAffected > 1 {
 			lib.CheckFatalError(fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected))
@@ -224,14 +224,14 @@ func buildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) 
 	// user
 	user, err := user.Current()
 	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
+		return nil, fmt.Errorf("failed to build history entry: %w", err)
 	}
 	entry.LocalUsername = user.Username
 
 	// cwd and homedir
 	cwd, homedir, err := getCwd(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
+		return nil, fmt.Errorf("failed to build history entry: %w", err)
 	}
 	entry.CurrentWorkingDirectory = cwd
 	entry.HomeDirectory = homedir
@@ -239,7 +239,7 @@ func buildPreArgsHistoryEntry(ctx *context.Context) (*data.HistoryEntry, error) 
 	// hostname
 	hostname, err := os.Hostname()
 	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
+		return nil, fmt.Errorf("failed to build history entry: %w", err)
 	}
 	entry.Hostname = hostname
 
@@ -272,14 +272,14 @@ func buildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	// exitCode
 	exitCode, err := strconv.Atoi(args[3])
 	if err != nil {
-		return nil, fmt.Errorf("failed to build history entry: %v", err)
+		return nil, fmt.Errorf("failed to build history entry: %w", err)
 	}
 	entry.ExitCode = exitCode
 
 	// start time
 	seconds, err := parseCrossPlatformInt(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse start time %s as int: %v", args[5], err)
+		return nil, fmt.Errorf("failed to parse start time %s as int: %w", args[5], err)
 	}
 	entry.StartTime = time.Unix(seconds, 0)
 
@@ -290,11 +290,11 @@ func buildHistoryEntry(ctx *context.Context, args []string) (*data.HistoryEntry,
 	if shell == "bash" {
 		cmd, err := getLastCommand(args[4])
 		if err != nil {
-			return nil, fmt.Errorf("failed to build history entry: %v", err)
+			return nil, fmt.Errorf("failed to build history entry: %w", err)
 		}
 		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
 		if err != nil {
-			return nil, fmt.Errorf("failed to check if command was hidden: %v", err)
+			return nil, fmt.Errorf("failed to check if command was hidden: %w", err)
 		}
 		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
 			// Don't save commands that start with a space
@@ -443,7 +443,7 @@ func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
 	}
 	re, err := regexp.Compile("^" + buildRegexFromTimeFormat(format))
 	if err != nil {
-		return "", fmt.Errorf("failed to parse regex for HISTTIMEFORMAT variable: %v", err)
+		return "", fmt.Errorf("failed to parse regex for HISTTIMEFORMAT variable: %w", err)
 	}
 	return re.ReplaceAllLiteralString(cmdLine, ""), nil
 }
@@ -481,7 +481,7 @@ func shouldSkipHiddenCommand(ctx *context.Context, historyLine string) (bool, er
 func getCwd(ctx *context.Context) (string, string, error) {
 	cwd, err := getCwdWithoutSubstitution()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get cwd for last command: %v", err)
+		return "", "", fmt.Errorf("failed to get cwd for last command: %w", err)
 	}
 	homedir := hctx.GetHome(ctx)
 	if cwd == homedir {
