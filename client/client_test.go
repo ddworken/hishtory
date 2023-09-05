@@ -174,9 +174,10 @@ func TestParam(t *testing.T) {
 
 func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t testing.TB)) {
 	numRetries := 3
-	if testutils.IsGithubAction() {
-		numRetries = 5
-	}
+	runTestsWithExtraRetries(parentT, testName, testFunc, numRetries)
+}
+
+func runTestsWithExtraRetries(parentT *testing.T, testName string, testFunc func(t testing.TB), numRetries int) {
 	for i := 1; i <= numRetries; i++ {
 		rt := &retryingTester{nil, i == numRetries, true}
 		parentT.Run(fmt.Sprintf("%s/%d", testName, i), func(t *testing.T) {
