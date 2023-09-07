@@ -133,3 +133,47 @@ func (db *DB) UsageDataStats(ctx context.Context) ([]*UsageDataStats, error) {
 
 	return resp, nil
 }
+
+func (db *DB) UsageDataTotal(ctx context.Context) (int64, error) {
+	type numEntriesProcessed struct {
+		Total int
+	}
+	nep := numEntriesProcessed{}
+
+	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Select("SUM(num_entries_handled) as total").Find(&nep)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return int64(nep.Total), nil
+}
+
+func (db *DB) WeeklyActiveInstalls(ctx context.Context, since time.Duration) (int64, error) {
+	var weeklyActiveInstalls int64
+	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_used > ?", time.Now().Add(-since)).Count(&weeklyActiveInstalls)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return weeklyActiveInstalls, nil
+}
+
+func (db *DB) WeeklyQueryUsers(ctx context.Context, since time.Duration) (int64, error) {
+	var weeklyQueryUsers int64
+	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_queried > ?", time.Now().Add(-since)).Count(&weeklyQueryUsers)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return weeklyQueryUsers, nil
+}
+
+func (db *DB) LastRegistration(ctx context.Context) (string, error) {
+	var lastRegistration string
+	row := db.WithContext(ctx).Raw("SELECT to_char(max(registration_date), 'DD Month YYYY HH24:MI') FROM devices").Row()
+	if err := row.Scan(&lastRegistration); err != nil {
+		return "", fmt.Errorf("row.Scan: %w", err)
+	}
+
+	return lastRegistration, nil
+}

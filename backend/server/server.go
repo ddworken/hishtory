@@ -125,29 +125,27 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
-	var numDevices int64 = 0
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Model(&shared.Device{}).Count(&numDevices))
-	type numEntriesProcessed struct {
-		Total int
-	}
-	nep := numEntriesProcessed{}
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Model(&shared.UsageData{}).Select("SUM(num_entries_handled) as total").Find(&nep))
-	var numDbEntries int64 = 0
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Model(&shared.EncHistoryEntry{}).Count(&numDbEntries))
+	numDevices, err := GLOBAL_DB.DevicesCount(r.Context())
+	checkGormError(err, 0)
 
-	lastWeek := time.Now().AddDate(0, 0, -7)
-	var weeklyActiveInstalls int64 = 0
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Model(&shared.UsageData{}).Where("last_used > ?", lastWeek).Count(&weeklyActiveInstalls))
-	var weeklyQueryUsers int64 = 0
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Model(&shared.UsageData{}).Where("last_queried > ?", lastWeek).Count(&weeklyQueryUsers))
-	var lastRegistration string = ""
-	row := GLOBAL_DB.WithContext(r.Context()).Raw("select to_char(max(registration_date), 'DD Month YYYY HH24:MI') from devices").Row()
-	err := row.Scan(&lastRegistration)
-	if err != nil {
-		panic(err)
-	}
+	numEntriesProcessed, err := GLOBAL_DB.UsageDataTotal(r.Context())
+	checkGormError(err, 0)
+
+	numDbEntries, err := GLOBAL_DB.EncHistoryEntryCount(r.Context())
+	checkGormError(err, 0)
+
+	oneWeek := time.Hour * 24 * 7
+	weeklyActiveInstalls, err := GLOBAL_DB.WeeklyActiveInstalls(r.Context(), oneWeek)
+	checkGormError(err, 0)
+
+	weeklyQueryUsers, err := GLOBAL_DB.WeeklyQueryUsers(r.Context(), oneWeek)
+	checkGormError(err, 0)
+
+	lastRegistration, err := GLOBAL_DB.LastRegistration(r.Context())
+	checkGormError(err, 0)
+
 	_, _ = fmt.Fprintf(w, "Num devices: %d\n", numDevices)
-	_, _ = fmt.Fprintf(w, "Num history entries processed: %d\n", nep.Total)
+	_, _ = fmt.Fprintf(w, "Num history entries processed: %d\n", numEntriesProcessed)
 	_, _ = fmt.Fprintf(w, "Num DB entries: %d\n", numDbEntries)
 	_, _ = fmt.Fprintf(w, "Weekly active installs: %d\n", weeklyActiveInstalls)
 	_, _ = fmt.Fprintf(w, "Weekly active queries: %d\n", weeklyQueryUsers)
@@ -275,11 +273,9 @@ func getRemoteAddr(r *http.Request) string {
 
 func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if getMaximumNumberOfAllowedUsers() < math.MaxInt {
-		row := GLOBAL_DB.WithContext(r.Context()).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices").Row()
-		var numDistinctUsers int64 = 0
-		err := row.Scan(&numDistinctUsers)
+		numDistinctUsers, err := GLOBAL_DB.DistinctUsers(r.Context())
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("db.DistinctUsers: %w", err))
 		}
 		if numDistinctUsers >= int64(getMaximumNumberOfAllowedUsers()) {
 			panic(fmt.Sprintf("Refusing to allow registration of new device since there are currently %d users and this server allows a max of %d users", numDistinctUsers, getMaximumNumberOfAllowedUsers()))
@@ -287,14 +283,21 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	var existingDevicesCount int64 = -1
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Model(&shared.Device{}).Where("user_id = ?", userId).Count(&existingDevicesCount))
+
+	existingDevicesCount, err := GLOBAL_DB.DevicesCountForUser(r.Context(), userId)
+	checkGormError(err, 0)
 	fmt.Printf("apiRegisterHandler: existingDevicesCount=%d\n", existingDevicesCount)
-	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Create(&shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}))
-	if existingDevicesCount > 0 {
-		checkGormResult(GLOBAL_DB.WithContext(r.Context()).Create(&shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()}))
+	if err := GLOBAL_DB.DeviceCreate(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}); err != nil {
+		checkGormError(err, 0)
 	}
-	updateUsageData(r, userId, deviceId, 0, false)
+
+	if existingDevicesCount > 0 {
+		err := GLOBAL_DB.DumpRequestCreate(r.Context(), &shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
+		checkGormError(err, 0)
+	}
+	if err := updateUsageData(r, userId, deviceId, 0, false); err != nil {
+		fmt.Printf("updateUsageData: %v\n", err)
+	}
 
 	if GLOBAL_STATSD != nil {
 		GLOBAL_STATSD.Incr("hishtory.register", []string{}, 1.0)
@@ -959,10 +962,16 @@ func main() {
 }
 
 func checkGormResult(result *gorm.DB) {
-	if result.Error != nil {
-		_, filename, line, _ := runtime.Caller(1)
-		panic(fmt.Sprintf("DB error at %s:%d: %v", filename, line, result.Error))
+	checkGormError(result.Error, 1)
+}
+
+func checkGormError(err error, skip int) {
+	if err == nil {
+		return
 	}
+
+	_, filename, line, _ := runtime.Caller(skip + 1)
+	panic(fmt.Sprintf("DB error at %s:%d: %v", filename, line, err))
 }
 
 func getMaximumNumberOfAllowedUsers() int {

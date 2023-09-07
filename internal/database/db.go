@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/ddworken/hishtory/shared"
@@ -92,4 +93,63 @@ func (db *DB) Stats() (sql.DBStats, error) {
 	}
 
 	return rawDB.Stats(), nil
+}
+
+func (db *DB) DistinctUsers(ctx context.Context) (int64, error) {
+	row := db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices").Row()
+	var numDistinctUsers int64
+	err := row.Scan(&numDistinctUsers)
+	if err != nil {
+		return 0, fmt.Errorf("row.Scan: %w", err)
+	}
+
+	return numDistinctUsers, nil
+}
+
+func (db *DB) DevicesCountForUser(ctx context.Context, userID string) (int64, error) {
+	var existingDevicesCount int64
+	tx := db.WithContext(ctx).Model(&shared.Device{}).Where("user_id = ?", userID).Count(&existingDevicesCount)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return existingDevicesCount, nil
+}
+
+func (db *DB) DevicesCount(ctx context.Context) (int64, error) {
+	var numDevices int64 = 0
+	tx := db.WithContext(ctx).Model(&shared.Device{}).Count(&numDevices)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return numDevices, nil
+}
+
+func (db *DB) DeviceCreate(ctx context.Context, device *shared.Device) error {
+	tx := db.WithContext(ctx).Create(device)
+	if tx.Error != nil {
+		return fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return nil
+}
+
+func (db *DB) DumpRequestCreate(ctx context.Context, req *shared.DumpRequest) error {
+	tx := db.WithContext(ctx).Create(req)
+	if tx.Error != nil {
+		return fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return nil
+}
+
+func (db *DB) EncHistoryEntryCount(ctx context.Context) (int64, error) {
+	var numDbEntries int64
+	tx := db.WithContext(ctx).Model(&shared.EncHistoryEntry{}).Count(&numDbEntries)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return numDbEntries, nil
 }
