@@ -96,16 +96,16 @@ func makeAead(userSecret string) (cipher.AEAD, error) {
 func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, error) {
 	aead, err := makeAead(userSecret)
 	if err != nil {
-		return []byte{}, []byte{}, fmt.Errorf("failed to make AEAD: %v", err)
+		return []byte{}, []byte{}, fmt.Errorf("failed to make AEAD: %w", err)
 	}
 	nonce := make([]byte, 12)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return []byte{}, []byte{}, fmt.Errorf("failed to read a nonce: %v", err)
+		return []byte{}, []byte{}, fmt.Errorf("failed to read a nonce: %w", err)
 	}
 	ciphertext := aead.Seal(nil, nonce, data, additionalData)
 	_, err = aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
-		return []byte{}, []byte{}, fmt.Errorf("failed to open AEAD: %v", err)
+		return []byte{}, []byte{}, fmt.Errorf("failed to open AEAD: %w", err)
 	}
 	return ciphertext, nonce, nil
 }
@@ -113,11 +113,11 @@ func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, er
 func Decrypt(userSecret string, data, additionalData, nonce []byte) ([]byte, error) {
 	aead, err := makeAead(userSecret)
 	if err != nil {
-		return []byte{}, fmt.Errorf("failed to make AEAD: %v", err)
+		return []byte{}, fmt.Errorf("failed to make AEAD: %w", err)
 	}
 	plaintext, err := aead.Open(nil, nonce, data, additionalData)
 	if err != nil {
-		return []byte{}, fmt.Errorf("failed to decrypt: %v", err)
+		return []byte{}, fmt.Errorf("failed to decrypt: %w", err)
 	}
 	return plaintext, nil
 }

@@ -50,7 +50,7 @@ func redact(ctx *context.Context, query string, force bool) error {
 		reader := bufio.NewReader(os.Stdin)
 		resp, err := reader.ReadString('\n')
 		if err != nil {
-			return fmt.Errorf("failed to read response: %v", err)
+			return fmt.Errorf("failed to read response: %w", err)
 		}
 		if strings.TrimSpace(resp) != "y" {
 			fmt.Printf("Aborting delete per user response of %#v\n", strings.TrimSpace(resp))

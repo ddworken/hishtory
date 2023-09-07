@@ -75,7 +75,7 @@ func (b bashTester) RunInteractiveShellRelaxed(t testing.TB, script string) (str
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %v", stdout.String(), stderr.String(), err)
+		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %w", stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error", "Ran command, but hishtory had a fatal error!")
@@ -105,7 +105,7 @@ func (z zshTester) RunInteractiveShellRelaxed(t testing.TB, script string) (stri
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %v", script, stdout.String(), stderr.String(), err)
+		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %w", script, stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error")

@@ -29,6 +29,7 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/mattn/go-sqlite3"
 	"github.com/rodaine/table"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -66,7 +67,7 @@ func Setup(userSecret string, isOffline bool) error {
 	config.IsOffline = isOffline
 	err := hctx.SetConfig(config)
 	if err != nil {
-		return fmt.Errorf("failed to persist config to disk: %v", err)
+		return fmt.Errorf("failed to persist config to disk: %w", err)
 	}
 
 	// Drop all existing data
@@ -82,22 +83,22 @@ func Setup(userSecret string, isOffline bool) error {
 	}
 	_, err = ApiGet("/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
-		return fmt.Errorf("failed to register device with backend: %v", err)
+		return fmt.Errorf("failed to register device with backend: %w", err)
 	}
 
 	respBody, err := ApiGet("/api/v1/bootstrap?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
 	if err != nil {
-		return fmt.Errorf("failed to bootstrap device from the backend: %v", err)
+		return fmt.Errorf("failed to bootstrap device from the backend: %w", err)
 	}
 	var retrievedEntries []*shared.EncHistoryEntry
 	err = json.Unmarshal(respBody, &retrievedEntries)
 	if err != nil {
-		return fmt.Errorf("failed to load JSON response: %v", err)
+		return fmt.Errorf("failed to load JSON response: %w", err)
 	}
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
 		if err != nil {
-			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
+			return fmt.Errorf("failed to decrypt history entry from server: %w", err)
 		}
 		AddToDbIfNew(db, decEntry)
 	}
@@ -252,30 +253,30 @@ func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, erro
 	bashHistPath := filepath.Join(homedir, ".bash_history")
 	historyEntries, err := readFileToArray(bashHistPath)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse bash history: %v", err)
+		return 0, fmt.Errorf("failed to parse bash history: %w", err)
 	}
 	zshHistPath := filepath.Join(homedir, ".zsh_history")
 	extraEntries, err := readFileToArray(zshHistPath)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse zsh history: %v", err)
+		return 0, fmt.Errorf("failed to parse zsh history: %w", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
 	extraEntries, err = parseFishHistory(homedir)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse fish history: %v", err)
+		return 0, fmt.Errorf("failed to parse fish history: %w", err)
 	}
 	historyEntries = append(historyEntries, extraEntries...)
 	if histfile := os.Getenv("HISTFILE"); histfile != "" && histfile != zshHistPath && histfile != bashHistPath {
 		extraEntries, err := readFileToArray(histfile)
 		if err != nil {
-			return 0, fmt.Errorf("failed to parse histfile: %v", err)
+			return 0, fmt.Errorf("failed to parse histfile: %w", err)
 		}
 		historyEntries = append(historyEntries, extraEntries...)
 	}
 	if shouldReadStdin {
 		extraEntries, err = readStdin()
 		if err != nil {
-			return 0, fmt.Errorf("failed to read stdin: %v", err)
+			return 0, fmt.Errorf("failed to read stdin: %w", err)
 		}
 		historyEntries = append(historyEntries, extraEntries...)
 	}
@@ -307,17 +308,17 @@ func ImportHistory(ctx *context.Context, shouldReadStdin, force bool) (int, erro
 		}
 		err = ReliableDbCreate(db, entry)
 		if err != nil {
-			return 0, fmt.Errorf("failed to insert imported history entry: %v", err)
+			return 0, fmt.Errorf("failed to insert imported history entry: %w", err)
 		}
 	}
 	err = Reupload(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to upload hishtory import: %v", err)
+		return 0, fmt.Errorf("failed to upload hishtory import: %w", err)
 	}
 	config.HaveCompletedInitialImport = true
 	err = hctx.SetConfig(config)
 	if err != nil {
-		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %v", err)
+		return 0, fmt.Errorf("failed to mark initial import as completed, this may lead to duplicate history entries: %w", err)
 	}
 	// Trigger a checkpoint so that these bulk entries are added from the WAL to the main DB
 	db.Exec("PRAGMA wal_checkpoint")
@@ -386,12 +387,12 @@ func readFileToArray(path string) ([]string, error) {
 func GetDownloadData() (shared.UpdateInfo, error) {
 	respBody, err := ApiGet("/api/v1/download")
 	if err != nil {
-		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %v", err)
+		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %w", err)
 	}
 	var downloadData shared.UpdateInfo
 	err = json.Unmarshal(respBody, &downloadData)
 	if err != nil {
-		return shared.UpdateInfo{}, fmt.Errorf("failed to parse update info: %v", err)
+		return shared.UpdateInfo{}, fmt.Errorf("failed to parse update info: %w", err)
 	}
 	return downloadData, nil
 }
@@ -438,7 +439,7 @@ func Update(ctx *context.Context) error {
 		homedir := hctx.GetHome(ctx)
 		err = syscall.Unlink(path.Join(homedir, data.GetHishtoryPath(), "hishtory"))
 		if err != nil {
-			return fmt.Errorf("failed to unlink %s for update: %v", path.Join(homedir, data.GetHishtoryPath(), "hishtory"), err)
+			return fmt.Errorf("failed to unlink %s for update: %w", path.Join(homedir, data.GetHishtoryPath(), "hishtory"), err)
 		}
 	}
 
@@ -450,7 +451,7 @@ func Update(ctx *context.Context) error {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to chmod +x the update (stdout=%#v, stderr=%#v): %v", stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to chmod +x the update (stdout=%#v, stderr=%#v): %w", stdout.String(), stderr.String(), err)
 	}
 	cmd = exec.Command(getTmpClientPath(), "install")
 	cmd.Stdout = os.Stdout
@@ -458,7 +459,7 @@ func Update(ctx *context.Context) error {
 	cmd.Stdin = os.Stdin
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to install update (stderr=%#v), is %s in a noexec directory? (if so, set the TMPDIR environment variable): %v", stderr.String(), getTmpClientPath(), err)
+		return fmt.Errorf("failed to install update (stderr=%#v), is %s in a noexec directory? (if so, set the TMPDIR environment variable): %w", stderr.String(), getTmpClientPath(), err)
 	}
 	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", Version, downloadData.Version)
 	return nil
@@ -550,7 +551,7 @@ func stripCodeSignature(inPath, outPath string) error {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to use codesign_allocate to strip signatures on binary=%v (stdout=%#v, stderr%#v): %v", inPath, stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to use codesign_allocate to strip signatures on binary=%v (stdout=%#v, stderr%#v): %w", inPath, stdout.String(), stderr.String(), err)
 	}
 	return nil
 }
@@ -591,7 +592,7 @@ func downloadFile(filename, url string) error {
 	// Download the data
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to download file at %s to %s: %v", url, filename, err)
+		return fmt.Errorf("failed to download file at %s to %s: %w", url, filename, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -609,7 +610,7 @@ func downloadFile(filename, url string) error {
 	// Create the file
 	out, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("failed to save file to %s: %v", filename, err)
+		return fmt.Errorf("failed to save file to %s: %w", filename, err)
 	}
 	defer out.Close()
 
@@ -636,12 +637,12 @@ func ApiGet(path string) ([]byte, error) {
 	start := time.Now()
 	req, err := http.NewRequest("GET", getServerHostname()+path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create GET: %v", err)
+		return nil, fmt.Errorf("failed to create GET: %w", err)
 	}
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	resp, err := httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to GET %s%s: %v", getServerHostname(), path, err)
+		return nil, fmt.Errorf("failed to GET %s%s: %w", getServerHostname(), path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -649,7 +650,7 @@ func ApiGet(path string) ([]byte, error) {
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from GET %s%s: %v", getServerHostname(), path, err)
+		return nil, fmt.Errorf("failed to read response body from GET %s%s: %w", getServerHostname(), path, err)
 	}
 	duration := time.Since(start)
 	hctx.GetLogger().Infof("ApiGet(%#v): %s\n", path, duration.String())
@@ -663,13 +664,13 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	start := time.Now()
 	req, err := http.NewRequest("POST", getServerHostname()+path, bytes.NewBuffer(data))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create POST: %v", err)
+		return nil, fmt.Errorf("failed to create POST: %w", err)
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	resp, err := httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to POST %s: %v", path, err)
+		return nil, fmt.Errorf("failed to POST %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -677,7 +678,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from POST %s: %v", path, err)
+		return nil, fmt.Errorf("failed to read response body from POST %s: %w", path, err)
 	}
 	duration := time.Since(start)
 	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", path, duration.String())
@@ -708,26 +709,25 @@ func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
 		if err == nil {
 			return nil
 		}
-		if err != nil {
-			errMsg := err.Error()
-			if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
-				time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
-				continue
+
+		//errMsg := err.Error()
+		if errors.Is(err, sqlite3.ErrBusy) || errors.Is(err, sqlite3.ErrLocked) {
+			// accounts for wrapped errors like:
+			// * "database is locked (5) (SQLITE_BUSY)"
+			// * "database is locked (261)" -- 261 is SQLITE_BUSY_RECOVERY (5 || 1<<8)
+			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
+			continue
+		} else if errors.Is(err, sqlite3.ErrConstraintUnique) {
+			//if strings.Contains(errMsg, "UNIQUE constraint failed") {
+			if i == 0 {
+				return err
+			} else {
+				return nil
 			}
-			if strings.Contains(errMsg, "UNIQUE constraint failed") {
-				if i == 0 {
-					return err
-				} else {
-					return nil
-				}
-			}
-			return fmt.Errorf("unrecoverable sqlite error: %v", err)
 		}
-		if err != nil && err.Error() != "database is locked (5) (SQLITE_BUSY)" {
-			return fmt.Errorf("unrecoverable sqlite error: %v", err)
-		}
+		return fmt.Errorf("unrecoverable sqlite error: %w", err)
 	}
-	return fmt.Errorf("failed to create DB entry even with %d retries: %v", i, err)
+	return fmt.Errorf("failed to create DB entry even with %d retries: %w", i, err)
 }
 
 func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
@@ -742,7 +742,7 @@ func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) (
 	}
 	jsonValue, err := json.Marshal(encEntries)
 	if err != nil {
-		return jsonValue, fmt.Errorf("failed to marshal encrypted history entry: %v", err)
+		return jsonValue, fmt.Errorf("failed to marshal encrypted history entry: %w", err)
 	}
 	return jsonValue, nil
 }
@@ -754,16 +754,16 @@ func Reupload(ctx *context.Context) error {
 	}
 	entries, err := Search(ctx, hctx.GetDb(ctx), "", 0)
 	if err != nil {
-		return fmt.Errorf("failed to reupload due to failed search: %v", err)
+		return fmt.Errorf("failed to reupload due to failed search: %w", err)
 	}
 	for _, chunk := range shared.Chunks(entries, 100) {
 		jsonValue, err := EncryptAndMarshal(config, chunk)
 		if err != nil {
-			return fmt.Errorf("failed to reupload due to failed encryption: %v", err)
+			return fmt.Errorf("failed to reupload due to failed encryption: %w", err)
 		}
 		_, err = ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 		if err != nil {
-			return fmt.Errorf("failed to reupload due to failed POST: %v", err)
+			return fmt.Errorf("failed to reupload due to failed POST: %w", err)
 		}
 	}
 	return nil
@@ -785,12 +785,12 @@ func RetrieveAdditionalEntriesFromRemote(ctx *context.Context) error {
 	var retrievedEntries []*shared.EncHistoryEntry
 	err = json.Unmarshal(respBody, &retrievedEntries)
 	if err != nil {
-		return fmt.Errorf("failed to load JSON response: %v", err)
+		return fmt.Errorf("failed to load JSON response: %w", err)
 	}
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
 		if err != nil {
-			return fmt.Errorf("failed to decrypt history entry from server: %v", err)
+			return fmt.Errorf("failed to decrypt history entry from server: %w", err)
 		}
 		AddToDbIfNew(db, decEntry)
 	}
@@ -819,7 +819,7 @@ func ProcessDeletionRequests(ctx *context.Context) error {
 		for _, entry := range request.Messages.Ids {
 			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
 			if res.Error != nil {
-				return fmt.Errorf("DB error: %v", res.Error)
+				return fmt.Errorf("DB error: %w", res.Error)
 			}
 		}
 	}
@@ -843,7 +843,7 @@ func parseTimeGenerously(input string) (time.Time, error) {
 func MakeWhereQueryFromSearch(ctx *context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
 	tokens, err := tokenize(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to tokenize query: %v", err)
+		return nil, fmt.Errorf("failed to tokenize query: %w", err)
 	}
 	tx := db.Model(&data.HistoryEntry{}).Where("true")
 	for _, token := range tokens {
@@ -903,7 +903,7 @@ func Search(ctx *context.Context, db *gorm.DB, query string, limit int) ([]*data
 	var historyEntries []*data.HistoryEntry
 	result := tx.Find(&historyEntries)
 	if result.Error != nil {
-		return nil, fmt.Errorf("DB query error: %v", result.Error)
+		return nil, fmt.Errorf("DB query error: %w", result.Error)
 	}
 	return historyEntries, nil
 }
@@ -931,13 +931,13 @@ func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}
 	case "before":
 		t, err := parseTimeGenerously(val)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to parse before:%s as a timestamp: %v", val, err)
+			return "", nil, nil, fmt.Errorf("failed to parse before:%s as a timestamp: %w", val, err)
 		}
 		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) < ?)", t.Unix(), nil, nil
 	case "after":
 		t, err := parseTimeGenerously(val)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %w", val, err)
 		}
 		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) > ?)", t.Unix(), nil, nil
 	case "start_time":
@@ -945,7 +945,7 @@ func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}
 		// internally for pre-saving history entries.
 		t, err := parseTimeGenerously(val)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %v", val, err)
+			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %w", val, err)
 		}
 		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) = ?)", t.Unix(), nil, nil
 	case "command":
@@ -960,7 +960,7 @@ func parseAtomizedToken(ctx *context.Context, token string) (string, interface{}
 		// Also get all ones that are in the DB
 		names, err := getAllCustomColumnNames(ctx)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to get custom column names from the DB: %v", err)
+			return "", nil, nil, fmt.Errorf("failed to get custom column names from the DB: %w", err)
 		}
 		knownCustomColumns = append(knownCustomColumns, names...)
 		// Check if the atom is for a custom column that exists and if it isn't, return an error
@@ -1079,7 +1079,7 @@ func SendDeletionRequest(deletionRequest shared.DeletionRequest) error {
 	}
 	_, err = ApiPost("/api/v1/add-deletion-request", "application/json", data)
 	if err != nil {
-		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %v", err)
+		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %w", err)
 	}
 	return nil
 }

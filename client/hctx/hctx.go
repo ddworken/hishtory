@@ -30,7 +30,7 @@ func GetLogger() *logrus.Logger {
 	getLoggerOnce.Do(func() {
 		homedir, err := os.UserHomeDir()
 		if err != nil {
-			panic(fmt.Errorf("failed to get user's home directory: %v", err))
+			panic(fmt.Errorf("failed to get user's home directory: %w", err))
 		}
 		err = MakeHishtoryDir()
 		if err != nil {
@@ -59,11 +59,11 @@ func GetLogger() *logrus.Logger {
 func MakeHishtoryDir() error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
+		return fmt.Errorf("failed to get user's home directory: %w", err)
 	}
 	err = os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), 0o744)
 	if err != nil {
-		return fmt.Errorf("failed to create ~/%s dir: %v", data.GetHishtoryPath(), err)
+		return fmt.Errorf("failed to create ~/%s dir: %w", data.GetHishtoryPath(), err)
 	}
 	return nil
 }
@@ -71,7 +71,7 @@ func MakeHishtoryDir() error {
 func OpenLocalSqliteDb() (*gorm.DB, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user's home directory: %v", err)
+		return nil, fmt.Errorf("failed to get user's home directory: %w", err)
 	}
 	err = MakeHishtoryDir()
 	if err != nil {
@@ -90,7 +90,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	dsn := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL", dbFilePath)
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+		return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 	}
 	tx, err := db.DB()
 	if err != nil {
@@ -112,17 +112,17 @@ func MakeContext() *context.Context {
 	ctx := context.Background()
 	config, err := GetConfig()
 	if err != nil {
-		panic(fmt.Errorf("failed to retrieve config: %v", err))
+		panic(fmt.Errorf("failed to retrieve config: %w", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("config"), config)
 	db, err := OpenLocalSqliteDb()
 	if err != nil {
-		panic(fmt.Errorf("failed to open local DB: %v", err))
+		panic(fmt.Errorf("failed to open local DB: %w", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("db"), db)
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		panic(fmt.Errorf("failed to get homedir: %v", err))
+		panic(fmt.Errorf("failed to get homedir: %w", err))
 	}
 	ctx = context.WithValue(ctx, hishtoryContextKey("homedir"), homedir)
 	return &ctx
@@ -191,20 +191,20 @@ type CustomColumnDefinition struct {
 func GetConfigContents() ([]byte, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve homedir: %v", err)
+		return nil, fmt.Errorf("failed to retrieve homedir: %w", err)
 	}
 	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
 	if err != nil {
 		files, err := os.ReadDir(path.Join(homedir, data.GetHishtoryPath()))
 		if err != nil {
-			return nil, fmt.Errorf("failed to read config file (and failed to list too): %v", err)
+			return nil, fmt.Errorf("failed to read config file (and failed to list too): %w", err)
 		}
 		filenames := ""
 		for _, file := range files {
 			filenames += file.Name()
 			filenames += ", "
 		}
-		return nil, fmt.Errorf("failed to read config file (files in HISHTORY_PATH: %s): %v", filenames, err)
+		return nil, fmt.Errorf("failed to read config file (files in HISHTORY_PATH: %s): %w", filenames, err)
 	}
 	return dat, nil
 }
@@ -217,7 +217,7 @@ func GetConfig() (ClientConfig, error) {
 	var config ClientConfig
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return ClientConfig{}, fmt.Errorf("failed to parse config file: %v", err)
+		return ClientConfig{}, fmt.Errorf("failed to parse config file: %w", err)
 	}
 	if config.DisplayedColumns == nil || len(config.DisplayedColumns) == 0 {
 		config.DisplayedColumns = []string{"Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command"}
@@ -231,11 +231,11 @@ func GetConfig() (ClientConfig, error) {
 func SetConfig(config ClientConfig) error {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to serialize config: %v", err)
+		return fmt.Errorf("failed to serialize config: %w", err)
 	}
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve homedir: %v", err)
+		return fmt.Errorf("failed to retrieve homedir: %w", err)
 	}
 	err = MakeHishtoryDir()
 	if err != nil {
@@ -245,11 +245,11 @@ func SetConfig(config ClientConfig) error {
 	stagedConfigPath := configPath + ".tmp-" + uuid.Must(uuid.NewRandom()).String()
 	err = os.WriteFile(stagedConfigPath, serializedConfig, 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to write config: %v", err)
+		return fmt.Errorf("failed to write config: %w", err)
 	}
 	err = os.Rename(stagedConfigPath, configPath)
 	if err != nil {
-		return fmt.Errorf("failed to replace config file with the updated version: %v", err)
+		return fmt.Errorf("failed to replace config file with the updated version: %w", err)
 	}
 	return nil
 }

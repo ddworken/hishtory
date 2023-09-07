@@ -381,7 +381,7 @@ func getRows(ctx *context.Context, columnNames []string, query string, numEntrie
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", "\\n")
 			row, err := buildTableRow(ctx, columnNames, *entry)
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %v", entry, err)
+				return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %w", entry, err)
 			}
 			rows = append(rows, row)
 			filteredData = append(filteredData, entry)
@@ -449,7 +449,7 @@ func makeTableColumns(ctx *context.Context, columnNames []string, rows []table.R
 	// Get the actual terminal width. If we're below this, opportunistically add some padding aiming for the maximum column widths
 	terminalWidth, _, err := getTerminalSize()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get terminal size: %v", err)
+		return nil, fmt.Errorf("failed to get terminal size: %w", err)
 	}
 	for totalWidth < (terminalWidth - len(columnNames)) {
 		prevTotalWidth := totalWidth
