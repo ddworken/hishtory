@@ -15,7 +15,7 @@ import (
 	"github.com/slsa-framework/slsa-verifier/verifiers"
 )
 
-func verify(ctx *context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
+func verify(ctx context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
 	provenanceOpts := &options.ProvenanceOpts{
 		ExpectedSourceURI:    source,
 		ExpectedBranch:       &branch,
@@ -23,7 +23,7 @@ func verify(ctx *context.Context, provenance []byte, artifactHash, source, branc
 		ExpectedVersionedTag: &versionTag,
 	}
 	builderOpts := &options.BuilderOpts{}
-	_, _, err := verifiers.Verify(*ctx, provenance, artifactHash, provenanceOpts, builderOpts)
+	_, _, err := verifiers.Verify(ctx, provenance, artifactHash, provenanceOpts, builderOpts)
 	return err
 }
 
@@ -42,7 +42,7 @@ func checkForDowngrade(currentVersionS, newVersionS string) error {
 	return nil
 }
 
-func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag string) error {
+func verifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag string) error {
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}

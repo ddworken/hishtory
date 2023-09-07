@@ -108,44 +108,50 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 
 type hishtoryContextKey string
 
-func MakeContext() *context.Context {
+const (
+	configCtxKey  hishtoryContextKey = "config"
+	dbCtxKey      hishtoryContextKey = "db"
+	homedirCtxKey hishtoryContextKey = "homedir"
+)
+
+func MakeContext() context.Context {
 	ctx := context.Background()
 	config, err := GetConfig()
 	if err != nil {
 		panic(fmt.Errorf("failed to retrieve config: %w", err))
 	}
-	ctx = context.WithValue(ctx, hishtoryContextKey("config"), config)
+	ctx = context.WithValue(ctx, configCtxKey, config)
 	db, err := OpenLocalSqliteDb()
 	if err != nil {
 		panic(fmt.Errorf("failed to open local DB: %w", err))
 	}
-	ctx = context.WithValue(ctx, hishtoryContextKey("db"), db)
+	ctx = context.WithValue(ctx, dbCtxKey, db)
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		panic(fmt.Errorf("failed to get homedir: %w", err))
 	}
-	ctx = context.WithValue(ctx, hishtoryContextKey("homedir"), homedir)
-	return &ctx
+	ctx = context.WithValue(ctx, homedirCtxKey, homedir)
+	return ctx
 }
 
-func GetConf(ctx *context.Context) ClientConfig {
-	v := (*ctx).Value(hishtoryContextKey("config"))
+func GetConf(ctx context.Context) ClientConfig {
+	v := ctx.Value(configCtxKey)
 	if v != nil {
 		return v.(ClientConfig)
 	}
 	panic(fmt.Errorf("failed to find config in ctx"))
 }
 
-func GetDb(ctx *context.Context) *gorm.DB {
-	v := (*ctx).Value(hishtoryContextKey("db"))
+func GetDb(ctx context.Context) *gorm.DB {
+	v := ctx.Value(dbCtxKey)
 	if v != nil {
 		return v.(*gorm.DB)
 	}
 	panic(fmt.Errorf("failed to find db in ctx"))
 }
 
-func GetHome(ctx *context.Context) string {
-	v := (*ctx).Value(hishtoryContextKey("homedir"))
+func GetHome(ctx context.Context) string {
+	v := ctx.Value(homedirCtxKey)
 	if v != nil {
 		return v.(string)
 	}
