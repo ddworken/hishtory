@@ -1196,7 +1196,14 @@ echo other`)
 func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_PATH")()
-	os.Setenv("HISHTORY_PATH", ".other-path")
+	altHishtoryPath := ".other-path"
+	os.Setenv("HISHTORY_PATH", altHishtoryPath)
+
+	// Make sure ~/$HISHTORY_PATH/ is also cleared out and empty
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+	require.NoError(t, os.RemoveAll(path.Join(homedir, altHishtoryPath)))
+
 	testInstallViaPythonScriptChild(t, bashTester{})
 }
 
