@@ -153,12 +153,12 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(w, "Num devices: %d\n", numDevices)
-	fmt.Fprintf(w, "Num history entries processed: %d\n", nep.Total)
-	fmt.Fprintf(w, "Num DB entries: %d\n", numDbEntries)
-	fmt.Fprintf(w, "Weekly active installs: %d\n", weeklyActiveInstalls)
-	fmt.Fprintf(w, "Weekly active queries: %d\n", weeklyQueryUsers)
-	fmt.Fprintf(w, "Last registration: %s\n", lastRegistration)
+	_, _ = fmt.Fprintf(w, "Num devices: %d\n", numDevices)
+	_, _ = fmt.Fprintf(w, "Num history entries processed: %d\n", nep.Total)
+	_, _ = fmt.Fprintf(w, "Num DB entries: %d\n", numDbEntries)
+	_, _ = fmt.Fprintf(w, "Weekly active installs: %d\n", weeklyActiveInstalls)
+	_, _ = fmt.Fprintf(w, "Weekly active queries: %d\n", weeklyQueryUsers)
+	_, _ = fmt.Fprintf(w, "Last registration: %s\n", lastRegistration)
 }
 
 func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
@@ -491,7 +491,7 @@ func getNumConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(w, "%#v", sqlDb.Stats().OpenConnections)
+	_, _ = fmt.Fprintf(w, "%#v", sqlDb.Stats().OpenConnections)
 }
 
 func isTestEnvironment() bool {
