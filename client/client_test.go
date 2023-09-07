@@ -75,7 +75,7 @@ func (b bashTester) RunInteractiveShellRelaxed(t testing.TB, script string) (str
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %v", stdout.String(), stderr.String(), err)
+		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %w", stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error", "Ran command, but hishtory had a fatal error!")
@@ -105,7 +105,7 @@ func (z zshTester) RunInteractiveShellRelaxed(t testing.TB, script string) (stri
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %v", script, stdout.String(), stderr.String(), err)
+		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %w", script, stdout.String(), stderr.String(), err)
 	}
 	outStr := stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error")
@@ -1196,7 +1196,14 @@ echo other`)
 func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_PATH")()
-	os.Setenv("HISHTORY_PATH", ".other-path")
+	altHishtoryPath := ".other-path"
+	os.Setenv("HISHTORY_PATH", altHishtoryPath)
+
+	// Make sure ~/$HISHTORY_PATH/ is also cleared out and empty
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+	require.NoError(t, os.RemoveAll(path.Join(homedir, altHishtoryPath)))
+
 	testInstallViaPythonScriptChild(t, bashTester{})
 }
 

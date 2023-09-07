@@ -198,7 +198,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %v", err))
+		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %w", err))
 	}
 	if GLOBAL_STATSD != nil {
 		GLOBAL_STATSD.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
@@ -323,7 +323,7 @@ func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Where("user_id = ? AND requesting_device_id != ?", userId, deviceId).Find(&dumpRequests))
 	respBody, err := json.Marshal(dumpRequests)
 	if err != nil {
-		panic(fmt.Errorf("failed to JSON marshall the dump requests: %v", err))
+		panic(fmt.Errorf("failed to JSON marshall the dump requests: %w", err))
 	}
 	w.Write(respBody)
 }
@@ -354,7 +354,7 @@ func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		panic(fmt.Errorf("failed to execute transaction to add dumped DB: %v", err))
+		panic(fmt.Errorf("failed to execute transaction to add dumped DB: %w", err))
 	}
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Delete(&shared.DumpRequest{}, "user_id = ? AND requesting_device_id = ?", userId, requestingDeviceId))
 	updateUsageData(ctx, r, userId, srcDeviceId, len(entries), false)
@@ -388,7 +388,7 @@ func getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Where("user_id = ? AND destination_device_id = ?", userId, deviceId).Find(&deletionRequests))
 	respBody, err := json.Marshal(deletionRequests)
 	if err != nil {
-		panic(fmt.Errorf("failed to JSON marshall the dump requests: %v", err))
+		panic(fmt.Errorf("failed to JSON marshall the dump requests: %w", err))
 	}
 	w.Write(respBody)
 }
@@ -514,11 +514,11 @@ func OpenDB() (*gorm.DB, error) {
 	if isTestEnvironment() {
 		db, err := gorm.Open(sqlite.Open("file::memory:?_journal_mode=WAL&cache=shared"), &gorm.Config{})
 		if err != nil {
-			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 		underlyingDb, err := db.DB()
 		if err != nil {
-			return nil, fmt.Errorf("failed to access underlying DB: %v", err)
+			return nil, fmt.Errorf("failed to access underlying DB: %w", err)
 		}
 		underlyingDb.SetMaxOpenConns(1)
 		db.Exec("PRAGMA journal_mode = WAL")
@@ -544,7 +544,7 @@ func OpenDB() (*gorm.DB, error) {
 		var err error
 		db, err = gorm.Open(sqlite.Open(sqliteDb), &gorm.Config{Logger: customLogger})
 		if err != nil {
-			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 	} else {
 		postgresDb := fmt.Sprintf(PostgresDb, os.Getenv("POSTGRESQL_PASSWORD"))
@@ -558,7 +558,7 @@ func OpenDB() (*gorm.DB, error) {
 		}
 		db, err = gormtrace.Open(postgres.New(postgres.Config{Conn: sqlDb}), &gorm.Config{Logger: customLogger})
 		if err != nil {
-			return nil, fmt.Errorf("failed to connect to the DB: %v", err)
+			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 	}
 	AddDatabaseTables(db)
@@ -628,12 +628,12 @@ type releaseInfo struct {
 func updateReleaseVersion() error {
 	resp, err := http.Get("https://api.github.com/repos/ddworken/hishtory/releases/latest")
 	if err != nil {
-		return fmt.Errorf("failed to get latest release version: %v", err)
+		return fmt.Errorf("failed to get latest release version: %w", err)
 	}
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read github API response body: %v", err)
+		return fmt.Errorf("failed to read github API response body: %w", err)
 	}
 	if resp.StatusCode == 403 && strings.Contains(string(respBody), "API rate limit exceeded for ") {
 		return nil
@@ -644,7 +644,7 @@ func updateReleaseVersion() error {
 	var info releaseInfo
 	err = json.Unmarshal(respBody, &info)
 	if err != nil {
-		return fmt.Errorf("failed to parse github API response: %v", err)
+		return fmt.Errorf("failed to parse github API response: %w", err)
 	}
 	latestVersionTag := info.Name
 	ReleaseVersion = decrementVersionIfInvalid(latestVersionTag)
@@ -680,7 +680,7 @@ func assertValidUpdate(updateInfo shared.UpdateInfo) error {
 	for _, url := range urls {
 		resp, err := http.Get(url)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve URL %#v: %v", url, err)
+			return fmt.Errorf("failed to retrieve URL %#v: %w", url, err)
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -907,7 +907,7 @@ func deepCleanDatabase(ctx context.Context) {
 		return nil
 	})
 	if err != nil {
-		panic(fmt.Errorf("failed to deep clean DB: %v", err))
+		panic(fmt.Errorf("failed to deep clean DB: %w", err))
 	}
 }
 

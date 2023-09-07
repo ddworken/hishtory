@@ -129,7 +129,7 @@ func warnIfUnsupportedBashVersion() error {
 	cmd := exec.Command("bash", "--version")
 	bashVersion, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to check bash version: %v", err)
+		return fmt.Errorf("failed to check bash version: %w", err)
 	}
 	if strings.Contains(string(bashVersion), "version 3.") {
 		fmt.Printf("Warning: Your current bash version does not support overriding control-r. Please upgrade to at least bash 5 to enable the control-r integration.\n")
@@ -140,7 +140,7 @@ func warnIfUnsupportedBashVersion() error {
 func install(secretKey string, offline bool) error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
+		return fmt.Errorf("failed to get user's home directory: %w", err)
 	}
 	err = hctx.MakeHishtoryDir()
 	if err != nil {
@@ -201,16 +201,16 @@ func installBinary(homedir string) (string, error) {
 	if _, err := os.Stat(clientPath); err == nil {
 		err = syscall.Unlink(clientPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to unlink %s for install: %v", clientPath, err)
+			return "", fmt.Errorf("failed to unlink %s for install: %w", clientPath, err)
 		}
 	}
 	err = copyFile(os.Args[0], clientPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to copy hishtory binary to $PATH: %v", err)
+		return "", fmt.Errorf("failed to copy hishtory binary to $PATH: %w", err)
 	}
 	err = os.Chmod(clientPath, 0o700)
 	if err != nil {
-		return "", fmt.Errorf("failed to set permissions on hishtory binary: %v", err)
+		return "", fmt.Errorf("failed to set permissions on hishtory binary: %w", err)
 	}
 	return clientPath, nil
 }
@@ -236,12 +236,12 @@ func configureFish(homedir, binaryPath string) error {
 	}
 	err = os.WriteFile(getFishConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to write config.zsh file: %v", err)
+		return fmt.Errorf("failed to write config.zsh file: %w", err)
 	}
 	// Check if we need to configure the fishrc
 	fishIsConfigured, err := isFishConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to check ~/.config/fish/config.fish: %v", err)
+		return fmt.Errorf("failed to check ~/.config/fish/config.fish: %w", err)
 	}
 	if fishIsConfigured {
 		return nil
@@ -249,7 +249,7 @@ func configureFish(homedir, binaryPath string) error {
 	// Add to fishrc
 	err = os.MkdirAll(path.Join(homedir, ".config/fish"), 0o744)
 	if err != nil {
-		return fmt.Errorf("failed to create fish config directory: %v", err)
+		return fmt.Errorf("failed to create fish config directory: %w", err)
 	}
 	return addToShellConfig(path.Join(homedir, ".config/fish/config.fish"), getFishConfigFragment(homedir))
 }
@@ -265,7 +265,7 @@ func isFishConfigured(homedir string) (bool, error) {
 	}
 	fishConfig, err := os.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
 	if err != nil {
-		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %v", err)
+		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %w", err)
 	}
 	return strings.Contains(string(fishConfig), getFishConfigFragment(homedir)), nil
 }
@@ -286,12 +286,12 @@ func configureZshrc(homedir, binaryPath string) error {
 	}
 	err := os.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to write config.zsh file: %v", err)
+		return fmt.Errorf("failed to write config.zsh file: %w", err)
 	}
 	// Check if we need to configure the zshrc
 	zshIsConfigured, err := isZshConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to check .zshrc: %v", err)
+		return fmt.Errorf("failed to check .zshrc: %w", err)
 	}
 	if zshIsConfigured {
 		return nil
@@ -318,7 +318,7 @@ func isZshConfigured(homedir string) (bool, error) {
 	}
 	bashrc, err := os.ReadFile(getZshRcPath(homedir))
 	if err != nil {
-		return false, fmt.Errorf("failed to read zshrc: %v", err)
+		return false, fmt.Errorf("failed to read zshrc: %w", err)
 	}
 	return strings.Contains(string(bashrc), getZshConfigFragment(homedir)), nil
 }
@@ -339,12 +339,12 @@ func configureBashrc(homedir, binaryPath string) error {
 	}
 	err := os.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to write config.sh file: %v", err)
+		return fmt.Errorf("failed to write config.sh file: %w", err)
 	}
 	// Check if we need to configure the bashrc and configure it if so
 	bashRcIsConfigured, err := isBashRcConfigured(homedir)
 	if err != nil {
-		return fmt.Errorf("failed to check ~/.bashrc: %v", err)
+		return fmt.Errorf("failed to check ~/.bashrc: %w", err)
 	}
 	if !bashRcIsConfigured {
 		err = addToShellConfig(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
@@ -356,7 +356,7 @@ func configureBashrc(homedir, binaryPath string) error {
 	if doesBashProfileNeedConfig(homedir) {
 		bashProfileIsConfigured, err := isBashProfileConfigured(homedir)
 		if err != nil {
-			return fmt.Errorf("failed to check ~/.bash_profile: %v", err)
+			return fmt.Errorf("failed to check ~/.bash_profile: %w", err)
 		}
 		if !bashProfileIsConfigured {
 			err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir))
@@ -371,12 +371,12 @@ func configureBashrc(homedir, binaryPath string) error {
 func addToShellConfig(shellConfigPath, configFragment string) error {
 	f, err := os.OpenFile(shellConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to append to %s: %v", shellConfigPath, err)
+		return fmt.Errorf("failed to append to %s: %w", shellConfigPath, err)
 	}
 	defer f.Close()
 	_, err = f.WriteString(configFragment)
 	if err != nil {
-		return fmt.Errorf("failed to append to %s: %v", shellConfigPath, err)
+		return fmt.Errorf("failed to append to %s: %w", shellConfigPath, err)
 	}
 	return nil
 }
@@ -392,7 +392,7 @@ func isBashRcConfigured(homedir string) (bool, error) {
 	}
 	bashrc, err := os.ReadFile(path.Join(homedir, ".bashrc"))
 	if err != nil {
-		return false, fmt.Errorf("failed to read bashrc: %v", err)
+		return false, fmt.Errorf("failed to read bashrc: %w", err)
 	}
 	return strings.Contains(string(bashrc), getBashConfigFragment(homedir)), nil
 }
@@ -418,7 +418,7 @@ func isBashProfileConfigured(homedir string) (bool, error) {
 	}
 	bashrc, err := os.ReadFile(path.Join(homedir, ".bash_profile"))
 	if err != nil {
-		return false, fmt.Errorf("failed to read bash_profile: %v", err)
+		return false, fmt.Errorf("failed to read bash_profile: %w", err)
 	}
 	return strings.Contains(string(bashrc), getBashConfigFragment(homedir)), nil
 }
@@ -475,7 +475,7 @@ func copyFile(src, dst string) error {
 	return destination.Close()
 }
 
-func uninstall(ctx *context.Context) error {
+func uninstall(ctx context.Context) error {
 	homedir := hctx.GetHome(ctx)
 	err := stripLines(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
 	if err != nil {

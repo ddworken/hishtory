@@ -15,7 +15,7 @@ import (
 	"github.com/slsa-framework/slsa-verifier/verifiers"
 )
 
-func verify(ctx *context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
+func verify(ctx context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
 	provenanceOpts := &options.ProvenanceOpts{
 		ExpectedSourceURI:    source,
 		ExpectedBranch:       &branch,
@@ -23,7 +23,7 @@ func verify(ctx *context.Context, provenance []byte, artifactHash, source, branc
 		ExpectedVersionedTag: &versionTag,
 	}
 	builderOpts := &options.BuilderOpts{}
-	_, _, err := verifiers.Verify(*ctx, provenance, artifactHash, provenanceOpts, builderOpts)
+	_, _, err := verifiers.Verify(ctx, provenance, artifactHash, provenanceOpts, builderOpts)
 	return err
 }
 
@@ -42,7 +42,7 @@ func checkForDowngrade(currentVersionS, newVersionS string) error {
 	return nil
 }
 
-func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag string) error {
+func verifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag string) error {
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
@@ -61,7 +61,7 @@ func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag 
 
 	attestation, err := os.ReadFile(attestationPath)
 	if err != nil {
-		return fmt.Errorf("failed to read attestation file: %v", err)
+		return fmt.Errorf("failed to read attestation file: %w", err)
 	}
 
 	hash, err := getFileHash(binaryPath)
@@ -75,13 +75,13 @@ func verifyBinary(ctx *context.Context, binaryPath, attestationPath, versionTag 
 func getFileHash(binaryPath string) (string, error) {
 	binaryFile, err := os.Open(binaryPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read binary for verification purposes: %v", err)
+		return "", fmt.Errorf("failed to read binary for verification purposes: %w", err)
 	}
 	defer binaryFile.Close()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, binaryFile); err != nil {
-		return "", fmt.Errorf("failed to hash binary: %v", err)
+		return "", fmt.Errorf("failed to hash binary: %w", err)
 	}
 	hash := hex.EncodeToString(hasher.Sum(nil))
 	return hash, nil
@@ -95,5 +95,5 @@ func handleSlsaFailure(srcErr error) error {
 		fmt.Println("Proceeding with update...")
 		return nil
 	}
-	return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update (to bypass, set `export HISHTORY_DISABLE_SLSA_ATTESTATION=true`): %v", srcErr)
+	return fmt.Errorf("failed to verify SLSA provenance of the updated binary, aborting update (to bypass, set `export HISHTORY_DISABLE_SLSA_ATTESTATION=true`): %w", srcErr)
 }

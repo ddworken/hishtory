@@ -33,7 +33,7 @@ var redactCmd = &cobra.Command{
 	},
 }
 
-func redact(ctx *context.Context, query string, force bool) error {
+func redact(ctx context.Context, query string, force bool) error {
 	tx, err := lib.MakeWhereQueryFromSearch(ctx, hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func redact(ctx *context.Context, query string, force bool) error {
 		reader := bufio.NewReader(os.Stdin)
 		resp, err := reader.ReadString('\n')
 		if err != nil {
-			return fmt.Errorf("failed to read response: %v", err)
+			return fmt.Errorf("failed to read response: %w", err)
 		}
 		if strings.TrimSpace(resp) != "y" {
 			fmt.Printf("Aborting delete per user response of %#v\n", strings.TrimSpace(resp))
@@ -75,7 +75,7 @@ func redact(ctx *context.Context, query string, force bool) error {
 	return nil
 }
 
-func deleteOnRemoteInstances(ctx *context.Context, historyEntries []*data.HistoryEntry) error {
+func deleteOnRemoteInstances(ctx context.Context, historyEntries []*data.HistoryEntry) error {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil

@@ -60,7 +60,7 @@ var exportCmd = &cobra.Command{
 	},
 }
 
-func export(ctx *context.Context, query string) {
+func export(ctx context.Context, query string) {
 	db := hctx.GetDb(ctx)
 	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
@@ -77,7 +77,7 @@ func export(ctx *context.Context, query string) {
 	}
 }
 
-func query(ctx *context.Context, query string) {
+func query(ctx context.Context, query string) {
 	db := hctx.GetDb(ctx)
 	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
@@ -94,7 +94,7 @@ func query(ctx *context.Context, query string) {
 	lib.CheckFatalError(lib.DisplayResults(ctx, data, numResults))
 }
 
-func displayBannerIfSet(ctx *context.Context) error {
+func displayBannerIfSet(ctx context.Context) error {
 	respBody, err := lib.GetBanner(ctx)
 	if lib.IsOfflineError(err) {
 		return nil
