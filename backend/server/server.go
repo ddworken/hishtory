@@ -204,7 +204,8 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		GLOBAL_STATSD.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +311,8 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		GLOBAL_STATSD.Incr("hishtory.register", []string{}, 1.0)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 func apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
@@ -357,7 +359,8 @@ func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	checkGormResult(GLOBAL_DB.WithContext(ctx).Delete(&shared.DumpRequest{}, "user_id = ? AND requesting_device_id = ?", userId, requestingDeviceId))
 	updateUsageData(ctx, r, userId, srcDeviceId, len(entries), false)
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 func apiBannerHandler(w http.ResponseWriter, r *http.Request) {
@@ -424,7 +427,8 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -486,7 +490,8 @@ func wipeDbEntriesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	checkGormResult(GLOBAL_DB.WithContext(r.Context()).Exec("DELETE FROM enc_history_entries"))
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 func getNumConnectionsHandler(w http.ResponseWriter, r *http.Request) {
@@ -612,7 +617,8 @@ func triggerCronHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 type releaseInfo struct {
@@ -784,7 +790,8 @@ func feedbackHandler(w http.ResponseWriter, r *http.Request) {
 		GLOBAL_STATSD.Incr("hishtory.uninstall", []string{}, 1.0)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 type loggedResponseData struct {
