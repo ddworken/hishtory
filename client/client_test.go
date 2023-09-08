@@ -1905,10 +1905,15 @@ func testTui_search(t testing.TB) {
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t)
 
-	// TODO: Consider adding a hishtory export test here to confirm that the relevant entries truly are getting stored properly, since this flakes even with 7 retries
+	// Check hishtory export to confirm the right commands are in the initial set of history entries
+	out := tester.RunInteractiveShell(t, `hishtory export`)
+	expected := "ls ~/\necho 'aaaaaa bbbb'\n"
+	if diff := cmp.Diff(expected, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+	}
 
 	// Check the output when there is a search
-	out := captureTerminalOutput(t, tester, []string{
+	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 		"ls",
 	})
@@ -1921,9 +1926,9 @@ func testTui_search(t testing.TB) {
 		"ls", "", "ENTER",
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
-	expected := `ls ~/`
+	expected = `ls ~/`
 	if diff := cmp.Diff(expected, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
+		t.Fatalf("hishtory tquery selection mismatch (-expected +got):\n%s", diff)
 	}
 
 	// Check the output when the initial search is invalid
