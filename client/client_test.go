@@ -1932,9 +1932,9 @@ func testTui_search(t testing.TB) {
 	}
 
 	// Check the output when the initial search is invalid
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery SPACE foo: ENTER",
-		"ls",
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.0},
+		{Keys: "ls", ExtraDelay: 1.0},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
