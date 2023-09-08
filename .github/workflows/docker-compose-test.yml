@@ -1,4 +1,4 @@
-name: Docker Compose Tests
+name: Self-Hosting Docker Compose Tests
 
 on:
   workflow_dispatch:
@@ -19,6 +19,7 @@ jobs:
     - name: Docker Compose test 
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
+          set -euo pipefail
           sudo apt-get update  
           sudo apt-get install -y zsh fish 
           curl -fsSL https://get.docker.com | sudo sh
@@ -30,5 +31,11 @@ jobs:
           go build
           ./hishtory install
           source ~/.bashrc
-          ls 
-          ./hishtory query 
+          # Record a command that we'll check was persisted
+          ls -Slah /
+          # Assert that the entry is syncing properly
+          hishtory status -v | grep 'Sync Status: Synced'
+          # Check that hishtory query runs without errors
+          hishtory query 
+          # Check that hishtory export recorded the above ls command
+          hishtory export | grep "ls -Slah /"
