@@ -21,9 +21,10 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    - uses: datadog/agent-github-action@v1.3
-        with:
-            api_key: ${{ secrets.DD_API_KEY }}
+    - name: Set up Datadog
+      uses: datadog/agent-github-action@v1.3
+      with:
+          api_key: ${{ secrets.DD_API_KEY }}
     - name: Linux Setup
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'ubuntu-latest'}}
       run: |
