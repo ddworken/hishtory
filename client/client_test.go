@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DataDog/datadog-go/statsd"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -28,16 +29,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var GLOBAL_STATSD *statsd.Client
+
 func skipSlowTests() bool {
 	return os.Getenv("FAST") != ""
 }
 
 func TestMain(m *testing.M) {
+	// Configure key environment variables
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 	os.Setenv("HISHTORY_TEST", "1")
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")()
 	os.Setenv("HISHTORY_SKIP_INIT_IMPORT", "1")
+
+	// Start the test server
 	defer testutils.RunTestServer()()
+
+	// Build the client so it is available in /tmp/client
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "CGO_ENABLED=0")
@@ -45,6 +53,17 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to build client: %v", err))
 	}
+
+	// Configure the integration to export test failures to datadog for better monitoring
+	if testutils.IsGithubAction() {
+		ddStats, err := statsd.New("localhost:8125")
+		if err != nil {
+			panic(fmt.Errorf("Failed to start DataDog statsd: %w\n", err))
+		}
+		GLOBAL_STATSD = ddStats
+	}
+
+	// Start the tests
 	m.Run()
 }
 
@@ -188,7 +207,15 @@ func runTestsWithExtraRetries(parentT *testing.T, testName string, testFunc func
 			testFunc(rt)
 		})
 		if rt.succeeded {
+			if GLOBAL_STATSD != nil {
+				GLOBAL_STATSD.Incr("test_status", []string{"passed", testName}, 1.0)
+				GLOBAL_STATSD.Distribution("test_retry_count", float64(i), []string{testName}, 1.0)
+			}
 			break
+		} else {
+			if GLOBAL_STATSD != nil {
+				GLOBAL_STATSD.Incr("test_status", []string{"failed", testName}, 1.0)
+			}
 		}
 	}
 }
