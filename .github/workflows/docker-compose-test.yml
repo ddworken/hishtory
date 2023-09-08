@@ -30,6 +30,7 @@ jobs:
           go build
           ./hishtory install
     - name: Docker Compose test 
+      shell: bash -ileo pipefail {0} 
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           set -euo pipefail
