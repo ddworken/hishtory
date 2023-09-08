@@ -208,13 +208,13 @@ func runTestsWithExtraRetries(parentT *testing.T, testName string, testFunc func
 		})
 		if rt.succeeded {
 			if GLOBAL_STATSD != nil {
-				GLOBAL_STATSD.Incr("test_status", []string{"result:passed", "test:" + testName}, 1.0)
-				GLOBAL_STATSD.Distribution("test_retry_count", float64(i), []string{"test:" + testName}, 1.0)
+				GLOBAL_STATSD.Incr("test_status", []string{"result:passed", "test:" + testName, "os:" + runtime.GOOS}, 1.0)
+				GLOBAL_STATSD.Distribution("test_retry_count", float64(i), []string{"test:" + testName, "os:" + runtime.GOOS}, 1.0)
 			}
 			break
 		} else {
 			if GLOBAL_STATSD != nil {
-				GLOBAL_STATSD.Incr("test_status", []string{"result:failed", "test:" + testName}, 1.0)
+				GLOBAL_STATSD.Incr("test_status", []string{"result:failed", "test:" + testName, "os:" + runtime.GOOS}, 1.0)
 			}
 		}
 	}
