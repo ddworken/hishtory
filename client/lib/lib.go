@@ -892,6 +892,7 @@ func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.
 	if err != nil {
 		return nil, err
 	}
+	// TODO: This ordering isn't sufficient if some computers are in different timezones. Add better sorting here.
 	if hctx.GetConf(ctx).BetaMode {
 		tx = tx.Order("start_time DESC")
 	} else {
