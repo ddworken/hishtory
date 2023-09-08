@@ -1940,9 +1940,9 @@ func testTui_search(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
 
 	// Check the output when the search is invalid
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"ls", ":",
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "ls", ExtraDelay: 1.0}, {Keys: ":"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
@@ -2021,10 +2021,15 @@ func captureTerminalOutput(t testing.TB, tester shellTester, commands []string) 
 	return captureTerminalOutputWithShellName(t, tester, tester.ShellName(), commands)
 }
 
+func captureTerminalOutputWithComplexCommands(t testing.TB, tester shellTester, commands []TmuxCommand) string {
+	return captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 200, 50, commands)
+}
+
 type TmuxCommand struct {
-	Keys    string
-	ResizeX int
-	ResizeY int
+	Keys       string
+	ResizeX    int
+	ResizeY    int
+	ExtraDelay float64
 }
 
 func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overriddenShellName string, commands []string) string {
@@ -2063,6 +2068,9 @@ func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellT
 		}
 		if cmd.ResizeX != 0 && cmd.ResizeY != 0 {
 			fullCommand += fmt.Sprintf(" tmux resize-window -t foo -x %d -y %d\n", cmd.ResizeX, cmd.ResizeY)
+		}
+		if cmd.ExtraDelay != 0 {
+			fullCommand += fmt.Sprintf(" sleep %f\n", cmd.ExtraDelay)
 		}
 		fullCommand += " sleep " + sleepAmount + "\n"
 	}
