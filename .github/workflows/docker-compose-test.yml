@@ -34,8 +34,8 @@ jobs:
           # Record a command that we'll check was persisted
           ls -Slah /
           # Assert that the entry is syncing properly
-          hishtory status -v | grep 'Sync Status: Synced'
+          ./hishtory status -v | grep 'Sync Status: Synced'
           # Check that hishtory query runs without errors
-          hishtory query 
+          ./hishtory query 
           # Check that hishtory export recorded the above ls command
-          hishtory export | grep "ls -Slah /"
+          ./hishtory export | grep "ls -Slah /"
