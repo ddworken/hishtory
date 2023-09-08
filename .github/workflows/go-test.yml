@@ -21,10 +21,6 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    - name: Set up Datadog
-      uses: datadog/agent-github-action@v1.3
-      with:
-          api_key: ${{ secrets.DD_API_KEY }}
     - name: Linux Setup
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'ubuntu-latest'}}
       run: |
@@ -47,6 +43,14 @@ jobs:
 
           # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname
+
+          # Install docker so it can be used for datadog
+          brew install docker
+          colima start
+    - name: Set up Datadog
+      uses: datadog/agent-github-action@v1.3
+      with:
+          api_key: ${{ secrets.DD_API_KEY }}
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
