@@ -30,10 +30,10 @@ jobs:
           go build
           ./hishtory install
     - name: Docker Compose test 
-      shell: bash -ileo pipefail {0} 
+      shell: bash -il {0} 
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
-          set -euo pipefail
+          set -eo pipefail
           export HISHTORY_SERVER=http://localhost
           source ~/.bashrc
           # Record a command that we'll check was persisted
