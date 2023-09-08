@@ -15,7 +15,6 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-    # - uses: mxschmitt/action-tmate@v3
     - name: Docker Compose setup 
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
@@ -44,3 +43,8 @@ jobs:
           ./hishtory query 
           # Check that hishtory export recorded the above ls command
           ./hishtory export | grep "ls -Slah /"
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
