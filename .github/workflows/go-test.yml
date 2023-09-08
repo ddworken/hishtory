@@ -49,11 +49,14 @@ jobs:
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
+      if: github.ref == 'refs/heads/master'
       uses: datadog/agent-github-action@v1.3
       with:
           api_key: ${{ secrets.DD_API_KEY }}
     - name: Go test
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
       run: |
           make retrying-test
     # - name: Setup tmate session
