@@ -86,6 +86,17 @@ func (db *DB) Ping() error {
 	return nil
 }
 
+func (db *DB) SetMaxIdleConns(n int) error {
+	rawDB, err := db.DB.DB()
+	if err != nil {
+		return err
+	}
+
+	rawDB.SetMaxIdleConns(n)
+
+	return nil
+}
+
 func (db *DB) Stats() (sql.DBStats, error) {
 	rawDB, err := db.DB.DB()
 	if err != nil {
@@ -106,35 +117,6 @@ func (db *DB) DistinctUsers(ctx context.Context) (int64, error) {
 	return numDistinctUsers, nil
 }
 
-func (db *DB) DevicesCountForUser(ctx context.Context, userID string) (int64, error) {
-	var existingDevicesCount int64
-	tx := db.WithContext(ctx).Model(&shared.Device{}).Where("user_id = ?", userID).Count(&existingDevicesCount)
-	if tx.Error != nil {
-		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
-	}
-
-	return existingDevicesCount, nil
-}
-
-func (db *DB) DevicesCount(ctx context.Context) (int64, error) {
-	var numDevices int64 = 0
-	tx := db.WithContext(ctx).Model(&shared.Device{}).Count(&numDevices)
-	if tx.Error != nil {
-		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
-	}
-
-	return numDevices, nil
-}
-
-func (db *DB) DeviceCreate(ctx context.Context, device *shared.Device) error {
-	tx := db.WithContext(ctx).Create(device)
-	if tx.Error != nil {
-		return fmt.Errorf("tx.Error: %w", tx.Error)
-	}
-
-	return nil
-}
-
 func (db *DB) DumpRequestCreate(ctx context.Context, req *shared.DumpRequest) error {
 	tx := db.WithContext(ctx).Create(req)
 	if tx.Error != nil {
@@ -144,12 +126,144 @@ func (db *DB) DumpRequestCreate(ctx context.Context, req *shared.DumpRequest) er
 	return nil
 }
 
-func (db *DB) EncHistoryEntryCount(ctx context.Context) (int64, error) {
-	var numDbEntries int64
-	tx := db.WithContext(ctx).Model(&shared.EncHistoryEntry{}).Count(&numDbEntries)
+func (db *DB) DumpRequestForUserAndDevice(ctx context.Context, userID, deviceID string) ([]*shared.DumpRequest, error) {
+	var dumpRequests []*shared.DumpRequest
+	// Filter out ones requested by the hishtory instance that sent this request
+	tx := db.WithContext(ctx).Where("user_id = ? AND requesting_device_id != ?", userID, deviceID).Find(&dumpRequests)
+	if tx.Error != nil {
+		return nil, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return dumpRequests, nil
+}
+
+func (db *DB) DumpRequestDeleteForUserAndDevice(ctx context.Context, userID, deviceID string) error {
+	tx := db.WithContext(ctx).Delete(&shared.DumpRequest{}, "user_id = ? AND requesting_device_id = ?", userID, deviceID)
+	if tx.Error != nil {
+		return fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return nil
+}
+
+func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, request *shared.DeletionRequest) (int64, error) {
+	tx := db.WithContext(ctx).Where("false")
+	for _, message := range request.Messages.Ids {
+		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date))
+	}
+	result := tx.Delete(&shared.EncHistoryEntry{})
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
+	return result.RowsAffected, nil
+}
 
-	return numDbEntries, nil
+func (db *DB) DeletionRequestInc(ctx context.Context, userID, deviceID string) error {
+	tx := db.WithContext(ctx).Exec("UPDATE deletion_requests SET read_count = read_count + 1 WHERE user_id = ? AND destination_device_id = ?", userID, deviceID)
+	if tx.Error != nil {
+		return fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return nil
+}
+
+func (db *DB) DeletionRequestsForUserAndDevice(ctx context.Context, userID, deviceID string) ([]*shared.DeletionRequest, error) {
+	var deletionRequests []*shared.DeletionRequest
+	tx := db.WithContext(ctx).Where("user_id = ? AND destination_device_id = ?", userID, deviceID).Find(&deletionRequests)
+	if tx.Error != nil {
+		return nil, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return deletionRequests, nil
+}
+
+func (db *DB) DeletionRequestCreate(ctx context.Context, request *shared.DeletionRequest) error {
+	userID := request.UserId
+
+	devices, err := db.DevicesForUser(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("db.DevicesForUser: %w", err)
+	}
+
+	if len(devices) == 0 {
+		return fmt.Errorf("found no devices associated with user_id=%s, can't save history entry", userID)
+	}
+
+	fmt.Printf("db.DeletionRequestCreate: Found %d devices\n", len(devices))
+
+	// TODO: maybe this should be a transaction?
+	for _, device := range devices {
+		request.DestinationDeviceId = device.DeviceId
+		tx := db.WithContext(ctx).Create(&request)
+		if tx.Error != nil {
+			return fmt.Errorf("tx.Error: %w", tx.Error)
+		}
+	}
+
+	numDeleted, err := db.ApplyDeletionRequestsToBackend(ctx, request)
+	if err != nil {
+		return fmt.Errorf("db.ApplyDeletionRequestsToBackend: %w", err)
+	}
+	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
+
+	return nil
+}
+
+func (db *DB) FeedbackCreate(ctx context.Context, feedback *shared.Feedback) error {
+	tx := db.WithContext(ctx).Create(feedback)
+	if tx.Error != nil {
+		return fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	return nil
+}
+
+func (db *DB) Clean(ctx context.Context) error {
+	r := db.WithContext(ctx).Exec("DELETE FROM enc_history_entries WHERE read_count > 10")
+	if r.Error != nil {
+		return r.Error
+	}
+	r = db.WithContext(ctx).Exec("DELETE FROM deletion_requests WHERE read_count > 100")
+	if r.Error != nil {
+		return r.Error
+	}
+
+	return nil
+}
+
+func (db *DB) DeepClean(ctx context.Context) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		r := tx.Exec(`
+		CREATE TEMP TABLE temp_users_with_one_device AS (
+			SELECT user_id
+			FROM devices
+			GROUP BY user_id
+			HAVING COUNT(DISTINCT device_id) > 1
+		)	
+		`)
+		if r.Error != nil {
+			return r.Error
+		}
+		r = tx.Exec(`
+		CREATE TEMP TABLE temp_inactive_users AS (
+			SELECT user_id
+			FROM usage_data
+			WHERE last_used <= (now() - INTERVAL '90 days')
+		)	
+		`)
+		if r.Error != nil {
+			return r.Error
+		}
+		r = tx.Exec(`
+		SELECT COUNT(*) FROM enc_history_entries WHERE
+			date <= (now() - INTERVAL '90 days')
+			AND user_id IN (SELECT * FROM temp_users_with_one_device)
+			AND user_id IN (SELECT * FROM temp_inactive_users)
+		`)
+		if r.Error != nil {
+			return r.Error
+		}
+		fmt.Printf("Ran deep clean and deleted %d rows\n", r.RowsAffected)
+		return nil
+	})
 }

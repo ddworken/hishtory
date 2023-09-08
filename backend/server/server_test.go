@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/ddworken/hishtory/internal/database"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,6 @@ import (
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/go-test/deep"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func TestESubmitThenQuery(t *testing.T) {
@@ -564,15 +564,15 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	apiSubmitHandler(httptest.NewRecorder(), submitReq)
 
 	// Call cleanDatabase and just check that there are no panics
-	testutils.Check(t, cleanDatabase(context.TODO()))
+	testutils.Check(t, GLOBAL_DB.Clean(context.TODO()))
 }
 
-func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
-	sqlDB, err := db.DB()
+func assertNoLeakedConnections(t *testing.T, db *database.DB) {
+	stats, err := db.Stats()
 	if err != nil {
 		t.Fatal(err)
 	}
-	numConns := sqlDB.Stats().OpenConnections
+	numConns := stats.OpenConnections
 	if numConns > 1 {
 		t.Fatalf("expected DB to have not leak connections, actually have %d", numConns)
 	}
