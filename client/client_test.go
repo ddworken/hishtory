@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Configure the integration to export test failures to datadog for better monitoring
-	if testutils.IsGithubAction() {
+	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); testutils.IsGithubAction() && has_dd_api_key {
 		ddStats, err := statsd.New("localhost:8125")
 		if err != nil {
 			panic(fmt.Errorf("Failed to start DataDog statsd: %w\n", err))
