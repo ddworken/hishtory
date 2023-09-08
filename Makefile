@@ -25,11 +25,11 @@ release:
 	git push && git push --tags
 
 build-static:
-	ssh server "cd ~/code/hishtory/; git pull; docker build -t gcr.io/dworken-k8s/hishtory-static -f backend/web/caddy/Dockerfile ."
+	ssh server "cd ~/code/hishtory/; git pull; docker build --build-arg GOARCH=amd64 --tag gcr.io/dworken-k8s/hishtory-static --file backend/web/caddy/Dockerfile ."
 
 build-api:
 	rm hishtory server || true
-	docker build -t gcr.io/dworken-k8s/hishtory-api -f backend/server/Dockerfile . 
+	docker build --build-arg GOARCH=amd64 --tag gcr.io/dworken-k8s/hishtory-api --file backend/server/Dockerfile .
 
 deploy-static: build-static
 	ssh server "docker push gcr.io/dworken-k8s/hishtory-static"
