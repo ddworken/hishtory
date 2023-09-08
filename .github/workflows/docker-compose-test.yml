@@ -16,20 +16,25 @@ jobs:
       with:
         go-version: 1.18
     # - uses: mxschmitt/action-tmate@v3
-    - name: Docker Compose test 
+    - name: Docker Compose setup 
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           set -euo pipefail
           sudo apt-get update  
           sudo apt-get install -y zsh fish 
           curl -fsSL https://get.docker.com | sudo sh
-          sudo chmod 0755 -R /usr/share/zsh/ || true  # Work around a weird bug where zsh on ubuntu actions gives that diretory 0777 which makes zsh refuse to start
+          sudo chmod 0755 -R /usr/share/zsh/  # Work around a weird bug where zsh on ubuntu actions gives that diretory 0777 which makes zsh refuse to start
           sudo hostname ghaction-runner-hostname  # Set a consistent hostname so we can run tests that depend on it
           docker compose -f backend/server/docker-compose.yml build
           docker compose -f backend/server/docker-compose.yml up -d 
           export HISHTORY_SERVER=http://localhost
           go build
           ./hishtory install
+    - name: Docker Compose test 
+      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
+      run: |
+          set -euo pipefail
+          export HISHTORY_SERVER=http://localhost
           source ~/.bashrc
           # Record a command that we'll check was persisted
           ls -Slah /
