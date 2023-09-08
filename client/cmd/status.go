@@ -23,9 +23,23 @@ var statusCmd = &cobra.Command{
 			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))
 			fmt.Printf("Device ID: %s\n", config.DeviceId)
 			printDumpStatus(config)
+			printOnlineStatus(config)
 		}
 		fmt.Printf("Commit Hash: %s\n", lib.GitCommit)
 	},
+}
+
+func printOnlineStatus(config hctx.ClientConfig) {
+	if config.IsOffline {
+		fmt.Println("Sync Mode: Disabled")
+	} else {
+		fmt.Println("Sync Mode: Enabled")
+		if config.HaveMissedUploads {
+			fmt.Println("Sync Status: Unsynced (device is offline?)")
+		} else {
+			fmt.Println("Sync Status: Synced")
+		}
+	}
 }
 
 func printDumpStatus(config hctx.ClientConfig) {
