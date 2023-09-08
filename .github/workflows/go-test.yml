@@ -47,6 +47,7 @@ jobs:
           # Install docker so it can be used for datadog
           brew install docker
           colima start
+          sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
       uses: datadog/agent-github-action@v1.3
       with:
