@@ -206,7 +206,7 @@ func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t te
 
 func runTestsWithExtraRetries(parentT *testing.T, testName string, testFunc func(t testing.TB), numRetries int) {
 	for i := 1; i <= numRetries; i++ {
-		rt := &retryingTester{nil, i == numRetries, true}
+		rt := &retryingTester{nil, i == numRetries, true, testName}
 		parentT.Run(fmt.Sprintf("%s/%d", testName, i), func(t *testing.T) {
 			rt.T = t
 			testFunc(rt)
@@ -229,12 +229,16 @@ type retryingTester struct {
 	*testing.T
 	isFinalRun bool
 	succeeded  bool
+	testName   string
 }
 
 func (t *retryingTester) Fatalf(format string, args ...any) {
 	t.T.Helper()
 	t.succeeded = false
 	if t.isFinalRun {
+		if GLOBAL_STATSD != nil {
+			GLOBAL_STATSD.Incr("test_failure", []string{"test:" + t.testName, "os:" + runtime.GOOS}, 1.0)
+		}
 		t.T.Fatalf(format, args...)
 	} else {
 		testutils.TestLog(t.T, fmt.Sprintf("retryingTester: Ignoring fatalf for non-final run: %#v", fmt.Sprintf(format, args...)))
