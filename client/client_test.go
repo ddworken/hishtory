@@ -2400,11 +2400,7 @@ func TestTimestampFormat(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	goldenName := "TestTimestampFormat-tquery"
-	if testutils.IsGithubAction() {
-		goldenName += "-isAction"
-	}
-	testutils.CompareGoldens(t, out, goldenName)
+	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
 
 func TestZDotDir(t *testing.T) {
