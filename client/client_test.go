@@ -2387,6 +2387,9 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
+	// Add an entry just to ensure we get consistent table sizing
+	tester.RunInteractiveShell(t, "echo tablesizing")
+
 	// Add some entries with timestamps in different timezones
 	db := hctx.GetDb(hctx.MakeContext())
 	timestamp := int64(1650096186)
@@ -2408,9 +2411,9 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	testutils.Check(t, lib.ReliableDbCreate(db, entry3))
 
 	// And check that they're displayed in the correct order
-	out := hishtoryQuery(t, tester, "-pipefail")
+	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-tquery")
 }
