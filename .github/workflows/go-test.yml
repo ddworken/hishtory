@@ -46,6 +46,7 @@ jobs:
     - name: MacOS Docker Setup
       if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'macos-latest'}}
       continue-on-error: true
+      run: |
           # Install docker so it can be used for datadog
           brew install docker
           colima start
