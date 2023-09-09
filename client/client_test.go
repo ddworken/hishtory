@@ -1822,7 +1822,7 @@ func testTui_resize(t testing.TB) {
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		{Keys: "Down"},
-		{ResizeX: 300, ResizeY: 100},
+		{ResizeX: 300, ResizeY: 100, ExtraDelay: 1.0},
 		{Keys: "Enter"},
 	})
 	require.Contains(t, out, "\necho 'aaaaaa bbbb'\n")
@@ -1931,9 +1931,11 @@ func testTui_search(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-Search")
 
 	// Check the output when there is a selected result
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"ls", "", "ENTER",
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		// Extra delay to ensure that the search for 'ls' finishes before we select an entry
+		{Keys: "ls", ExtraDelay: 1.0},
+		{Keys: "ENTER"},
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
 	expected = `ls ~/`
@@ -1943,6 +1945,7 @@ func testTui_search(t testing.TB) {
 
 	// Check the output when the initial search is invalid
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		// ExtraDelay to ensure that after searching for 'foo:' it gets the real results for an empty query
 		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.0},
 		{Keys: "ls", ExtraDelay: 1.0},
 	})
@@ -1952,7 +1955,9 @@ func testTui_search(t testing.TB) {
 	// Check the output when the search is invalid
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
-		{Keys: "ls", ExtraDelay: 1.0}, {Keys: ":"},
+		// ExtraDelay to ensure that the search for 'ls' finishes before we make it invalid by adding ':'
+		{Keys: "ls", ExtraDelay: 1.0},
+		{Keys: ":"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
