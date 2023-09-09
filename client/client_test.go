@@ -58,7 +58,12 @@ func TestMain(m *testing.M) {
 	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); testutils.IsGithubAction() && has_dd_api_key {
 		ddStats, err := statsd.New("localhost:8125")
 		if err != nil {
-			panic(fmt.Errorf("Failed to start DataDog statsd: %w\n", err))
+			err := fmt.Errorf("Failed to start DataDog statsd: %w\n", err)
+			if runtime.GOOS == "darwin" {
+				fmt.Printf("%v", err)
+			} else {
+				panic(err)
+			}
 		}
 		GLOBAL_STATSD = ddStats
 	}
