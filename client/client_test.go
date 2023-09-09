@@ -70,6 +70,15 @@ func TestMain(m *testing.M) {
 
 	// Start the tests
 	m.Run()
+
+	// Log metrics
+	logTestMetrics(m)
+}
+
+func logTestMetrics(m *testing.M) {
+	if GLOBAL_STATSD != nil {
+
+	}
 }
 
 type shellTester interface {

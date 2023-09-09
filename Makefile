@@ -9,8 +9,8 @@ ftest:
 	go clean -testcache
 	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -v -p 1 -run "$(FILTER)" ./...
 
-retrying-test:
-	for i in `seq 1 3`; do echo "Test attempt number $$i"; rm -rf ~/.hishtory/; make test && break; done
+ci-test:
+	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go run gotest.tools/gotestsum@latest --rerun-fails=5  --packages="./..." --format dots-v2 --jsonfile test-output.log -- -timeout 45m
 
 acttest:
 	act push -j test -e .github/push_event.json --reuse --container-architecture linux/amd64
