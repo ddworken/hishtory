@@ -1875,10 +1875,11 @@ func testTui_delete(t testing.TB) {
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
 
 	// Check that we can delete an entry
-	out := captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"aaaaaa",
-		"C-K",
+	out := captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		// ExtraDelay so that the search query finishes before we hit delete
+		{Keys: "aaaaaa", ExtraDelay: 1.0},
+		{Keys: "C-K"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-Delete")
