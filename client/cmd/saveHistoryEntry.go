@@ -105,8 +105,8 @@ func presaveHistoryEntry(ctx context.Context) {
 	}
 	startTime, err := parseCrossPlatformInt(os.Args[4])
 	lib.CheckFatalError(err)
-	entry.StartTime = time.Unix(startTime, 0)
-	entry.EndTime = time.Unix(0, 0)
+	entry.StartTime = time.Unix(startTime, 0).UTC()
+	entry.EndTime = time.Unix(0, 0).UTC()
 
 	// And persist it locally.
 	db := hctx.GetDb(ctx)
@@ -281,10 +281,10 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse start time %s as int: %w", args[5], err)
 	}
-	entry.StartTime = time.Unix(seconds, 0)
+	entry.StartTime = time.Unix(seconds, 0).UTC()
 
 	// end time
-	entry.EndTime = time.Now()
+	entry.EndTime = time.Now().UTC()
 
 	// command
 	if shell == "bash" {

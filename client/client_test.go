@@ -429,13 +429,9 @@ func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStat
 
 	// Assert that hishtory is correctly using the dev config.sh
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to get homedir: %v", err)
-	}
+	require.NoError(t, err)
 	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
-	if err != nil {
-		t.Fatalf("failed to read config.sh: %v", err)
-	}
+	require.NoError(t, err, "failed to read config.sh")
 	require.NotContains(t, string(dat), "# Background Run", "config.sh is the prod version when it shouldn't be")
 
 	// Test the banner
@@ -740,9 +736,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 	// Update
 	out = tester.RunInteractiveShell(t, `hishtory update`)
 	isExpected, err := regexp.MatchString(`Successfully updated hishtory from v0[.]Unknown to v0.\d+`, out)
-	if err != nil {
-		t.Fatalf("regex failure: %v", err)
-	}
+	require.NoError(t, err, "regex failure")
 	if !isExpected {
 		t.Fatalf("hishtory update returned unexpected out=%#v", out)
 	}
@@ -1019,13 +1013,9 @@ CGO_ENABLED=0 go build -o /tmp/client
 
 	// Assert that config.sh isn't the dev version
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to get homedir: %v", err)
-	}
+	require.NoError(t, err)
 	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
-	if err != nil {
-		t.Fatalf("failed to read config.sh: %v", err)
-	}
+	require.NoError(t, err, "failed to read config.sh")
 	require.NotContains(t, string(dat), "except it doesn't run the save process in the background", "config.sh is the testing version when it shouldn't be")
 
 	// Test the status subcommand
@@ -1065,9 +1055,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// Submit two fake entries
 	tmz, err := time.LoadLocation("America/Los_Angeles")
-	if err != nil {
-		t.Fatalf("failed to load timezone: %v", err)
-	}
+	require.NoError(t, err)
 	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1")
 	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
 	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
@@ -1131,9 +1119,7 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	config := hctx.GetConf(hctx.MakeContext())
 	deviceId1 := config.DeviceId
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
-	if err != nil {
-		t.Fatalf("failed to get pending dump requests: %v", err)
-	}
+	require.NoError(t, err, "failed to get pending dump requests")
 	if string(resp) != "[]" {
 		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
@@ -1158,18 +1144,14 @@ echo other`)
 
 	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
 	_, err = lib.ApiGet("/api/v1/wipe-db-entries")
-	if err != nil {
-		t.Fatalf("failed to wipe the DB: %v", err)
-	}
+	require.NoError(t, err, "failed to wipe the remote DB")
 
 	// Install a new one (with the same secret key but a diff device id)
 	installHishtory(t, tester, secretKey)
 
 	// Confirm there is now a pending dump requests that the first device should respond to
 	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
-	if err != nil {
-		t.Fatalf("failed to get pending dump requests: %v", err)
-	}
+	require.NoError(t, err, "failed to get pending dump requests")
 	if string(resp) == "[]" {
 		t.Fatalf("There are no pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
@@ -1200,9 +1182,7 @@ echo other`)
 
 	// Confirm there are no pending dump requests for the first device
 	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
-	if err != nil {
-		t.Fatalf("failed to get pending dump requests: %v", err)
-	}
+	require.NoError(t, err, "failed to get pending dump requests")
 	if string(resp) != "[]" {
 		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
@@ -2378,9 +2358,7 @@ func TestTimestampFormat(t *testing.T) {
 
 	// Add some entries with fixed timestamps
 	tmz, err := time.LoadLocation("America/Los_Angeles")
-	if err != nil {
-		t.Fatalf("failed to load timezone: %v", err)
-	}
+	require.NoError(t, err)
 	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
 	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
@@ -2401,6 +2379,40 @@ func TestTimestampFormat(t *testing.T) {
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
+}
+
+func TestSortByConsistentTimezone(t *testing.T) {
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Add some entries with timestamps in different timezones
+	db := hctx.GetDb(hctx.MakeContext())
+	timestamp := int64(1650096186)
+	la_time, err := time.LoadLocation("America/Los_Angeles")
+	require.NoError(t, err)
+	ny_time, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+	entry1 := testutils.MakeFakeHistoryEntry("first_entry")
+	entry1.StartTime = time.Unix(timestamp, 0).In(ny_time)
+	entry1.EndTime = time.Unix(timestamp+1, 0).In(ny_time)
+	testutils.Check(t, lib.ReliableDbCreate(db, entry1))
+	entry2 := testutils.MakeFakeHistoryEntry("second_entry")
+	entry2.StartTime = time.Unix(timestamp+1000, 0).In(la_time)
+	entry2.EndTime = time.Unix(timestamp+1001, 0).In(la_time)
+	testutils.Check(t, lib.ReliableDbCreate(db, entry2))
+	entry3 := testutils.MakeFakeHistoryEntry("third_entry")
+	entry3.StartTime = time.Unix(timestamp+2000, 0).In(ny_time)
+	entry3.EndTime = time.Unix(timestamp+2001, 0).In(ny_time)
+	testutils.Check(t, lib.ReliableDbCreate(db, entry3))
+
+	// And check that they're displayed in the correct order
+	out := hishtoryQuery(t, tester, "-pipefail")
+	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-tquery")
 }
 
 func TestZDotDir(t *testing.T) {
@@ -2493,14 +2505,10 @@ func TestSetConfigNoCorruption(t *testing.T) {
 			c.HaveMissedUploads = (i % 2) == 0
 			// Write it
 			err := hctx.SetConfig(c)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			// Check that we can read
 			c2, err := hctx.GetConfig()
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			if c2.UserSecret != c.UserSecret {
 				panic("user secret mismatch")
 			}
