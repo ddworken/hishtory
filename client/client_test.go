@@ -1118,11 +1118,10 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	// Confirm there are no pending dump requests
 	config := hctx.GetConf(hctx.MakeContext())
 	deviceId1 := config.DeviceId
-	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	respBytes, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	resp := strings.TrimSpace(string(respBytes))
 	require.NoError(t, err, "failed to get pending dump requests")
-	if string(resp) != "[]" {
-		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
-	}
+	require.Equalf(t, "[]", resp, "there are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), resp)
 
 	// Record two commands and then query for them
 	out := tester.RunInteractiveShell(t, `echo hello
@@ -1150,11 +1149,10 @@ echo other`)
 	installHishtory(t, tester, secretKey)
 
 	// Confirm there is now a pending dump requests that the first device should respond to
-	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	respBytes, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	resp = strings.TrimSpace(string(respBytes))
 	require.NoError(t, err, "failed to get pending dump requests")
-	if string(resp) == "[]" {
-		t.Fatalf("There are no pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
-	}
+	require.NotEqualf(t, "[]", resp, "There are no pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 
 	// Check that the new one doesn't have the commands yet
 	out = hishtoryQuery(t, tester, "echo")
@@ -1181,11 +1179,10 @@ echo other`)
 	}
 
 	// Confirm there are no pending dump requests for the first device
-	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	respBytes, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	resp = strings.TrimSpace(string(respBytes))
 	require.NoError(t, err, "failed to get pending dump requests")
-	if string(resp) != "[]" {
-		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
-	}
+	require.Equalf(t, "[]", resp, "There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 
 	// Restore the second copy and confirm it has the commands
 	restoreSecondInstallation()
