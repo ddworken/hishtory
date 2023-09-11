@@ -418,7 +418,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		err := GLOBAL_DB.Ping()
 		if err != nil {
-			panic(fmt.Sprintf("failed to ping DB: %w", err))
+			panic(fmt.Errorf("failed to ping DB: %w", err))
 		}
 	}
 	w.Write([]byte("OK"))
