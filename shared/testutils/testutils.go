@@ -311,8 +311,8 @@ func MakeFakeHistoryEntry(command string) data.HistoryEntry {
 		CurrentWorkingDirectory: "/tmp/",
 		HomeDirectory:           "/home/david/",
 		ExitCode:                2,
-		StartTime:               time.Unix(fakeHistoryTimestamp, 0),
-		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0),
+		StartTime:               time.Unix(fakeHistoryTimestamp, 0).UTC(),
+		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0).UTC(),
 	}
 }
 

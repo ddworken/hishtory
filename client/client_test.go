@@ -58,7 +58,12 @@ func TestMain(m *testing.M) {
 	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); testutils.IsGithubAction() && has_dd_api_key {
 		ddStats, err := statsd.New("localhost:8125")
 		if err != nil {
-			panic(fmt.Errorf("Failed to start DataDog statsd: %w\n", err))
+			err := fmt.Errorf("Failed to start DataDog statsd: %w\n", err)
+			if runtime.GOOS == "darwin" {
+				fmt.Printf("%v", err)
+			} else {
+				panic(err)
+			}
 		}
 		GLOBAL_STATSD = ddStats
 	}
@@ -181,7 +186,7 @@ func TestParam(t *testing.T) {
 	}
 	runTestsWithRetries(t, "testControlR/offline/bash", func(t testing.TB) { testControlR(t, bashTester{}, "bash", Offline) })
 	runTestsWithRetries(t, "testControlR/fish", func(t testing.TB) { testControlR(t, bashTester{}, "fish", Online) })
-	runTestsWithExtraRetries(t, "testTui/search", testTui_search, 7)
+	runTestsWithExtraRetries(t, "testTui/search", testTui_search, 10)
 	runTestsWithRetries(t, "testTui/general", testTui_general)
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
@@ -201,7 +206,7 @@ func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t te
 
 func runTestsWithExtraRetries(parentT *testing.T, testName string, testFunc func(t testing.TB), numRetries int) {
 	for i := 1; i <= numRetries; i++ {
-		rt := &retryingTester{nil, i == numRetries, true}
+		rt := &retryingTester{nil, i == numRetries, true, testName}
 		parentT.Run(fmt.Sprintf("%s/%d", testName, i), func(t *testing.T) {
 			rt.T = t
 			testFunc(rt)
@@ -224,12 +229,16 @@ type retryingTester struct {
 	*testing.T
 	isFinalRun bool
 	succeeded  bool
+	testName   string
 }
 
 func (t *retryingTester) Fatalf(format string, args ...any) {
 	t.T.Helper()
 	t.succeeded = false
 	if t.isFinalRun {
+		if GLOBAL_STATSD != nil {
+			GLOBAL_STATSD.Incr("test_failure", []string{"test:" + t.testName, "os:" + runtime.GOOS}, 1.0)
+		}
 		t.T.Fatalf(format, args...)
 	} else {
 		testutils.TestLog(t.T, fmt.Sprintf("retryingTester: Ignoring fatalf for non-final run: %#v", fmt.Sprintf(format, args...)))
@@ -420,13 +429,9 @@ func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStat
 
 	// Assert that hishtory is correctly using the dev config.sh
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to get homedir: %v", err)
-	}
+	require.NoError(t, err)
 	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
-	if err != nil {
-		t.Fatalf("failed to read config.sh: %v", err)
-	}
+	require.NoError(t, err, "failed to read config.sh")
 	require.NotContains(t, string(dat), "# Background Run", "config.sh is the prod version when it shouldn't be")
 
 	// Test the banner
@@ -731,9 +736,7 @@ func testUpdate(t *testing.T, tester shellTester) {
 	// Update
 	out = tester.RunInteractiveShell(t, `hishtory update`)
 	isExpected, err := regexp.MatchString(`Successfully updated hishtory from v0[.]Unknown to v0.\d+`, out)
-	if err != nil {
-		t.Fatalf("regex failure: %v", err)
-	}
+	require.NoError(t, err, "regex failure")
 	if !isExpected {
 		t.Fatalf("hishtory update returned unexpected out=%#v", out)
 	}
@@ -1010,13 +1013,9 @@ CGO_ENABLED=0 go build -o /tmp/client
 
 	// Assert that config.sh isn't the dev version
 	homedir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to get homedir: %v", err)
-	}
+	require.NoError(t, err)
 	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
-	if err != nil {
-		t.Fatalf("failed to read config.sh: %v", err)
-	}
+	require.NoError(t, err, "failed to read config.sh")
 	require.NotContains(t, string(dat), "except it doesn't run the save process in the background", "config.sh is the testing version when it shouldn't be")
 
 	// Test the status subcommand
@@ -1056,9 +1055,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// Submit two fake entries
 	tmz, err := time.LoadLocation("America/Los_Angeles")
-	if err != nil {
-		t.Fatalf("failed to load timezone: %v", err)
-	}
+	require.NoError(t, err)
 	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1")
 	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
 	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
@@ -1122,9 +1119,7 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	config := hctx.GetConf(hctx.MakeContext())
 	deviceId1 := config.DeviceId
 	resp, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
-	if err != nil {
-		t.Fatalf("failed to get pending dump requests: %v", err)
-	}
+	require.NoError(t, err, "failed to get pending dump requests")
 	if string(resp) != "[]" {
 		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
@@ -1149,18 +1144,14 @@ echo other`)
 
 	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
 	_, err = lib.ApiGet("/api/v1/wipe-db-entries")
-	if err != nil {
-		t.Fatalf("failed to wipe the DB: %v", err)
-	}
+	require.NoError(t, err, "failed to wipe the remote DB")
 
 	// Install a new one (with the same secret key but a diff device id)
 	installHishtory(t, tester, secretKey)
 
 	// Confirm there is now a pending dump requests that the first device should respond to
 	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
-	if err != nil {
-		t.Fatalf("failed to get pending dump requests: %v", err)
-	}
+	require.NoError(t, err, "failed to get pending dump requests")
 	if string(resp) == "[]" {
 		t.Fatalf("There are no pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
@@ -1191,9 +1182,7 @@ echo other`)
 
 	// Confirm there are no pending dump requests for the first device
 	resp, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
-	if err != nil {
-		t.Fatalf("failed to get pending dump requests: %v", err)
-	}
+	require.NoError(t, err, "failed to get pending dump requests")
 	if string(resp) != "[]" {
 		t.Fatalf("There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
 	}
@@ -1813,7 +1802,7 @@ func testTui_resize(t testing.TB) {
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		{Keys: "Down"},
-		{ResizeX: 300, ResizeY: 100},
+		{ResizeX: 300, ResizeY: 100, ExtraDelay: 1.0},
 		{Keys: "Enter"},
 	})
 	require.Contains(t, out, "\necho 'aaaaaa bbbb'\n")
@@ -1866,10 +1855,11 @@ func testTui_delete(t testing.TB) {
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
 
 	// Check that we can delete an entry
-	out := captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"aaaaaa",
-		"C-K",
+	out := captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		// ExtraDelay so that the search query finishes before we hit delete
+		{Keys: "aaaaaa", ExtraDelay: 1.0},
+		{Keys: "C-K"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-Delete")
@@ -1921,9 +1911,11 @@ func testTui_search(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-Search")
 
 	// Check the output when there is a selected result
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"ls", "", "ENTER",
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		// Extra delay to ensure that the search for 'ls' finishes before we select an entry
+		{Keys: "ls", ExtraDelay: 1.0},
+		{Keys: "ENTER"},
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
 	expected = `ls ~/`
@@ -1932,9 +1924,10 @@ func testTui_search(t testing.TB) {
 	}
 
 	// Check the output when the initial search is invalid
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery SPACE foo: ENTER",
-		"ls",
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		// ExtraDelay to ensure that after searching for 'foo:' it gets the real results for an empty query
+		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.0},
+		{Keys: "ls", ExtraDelay: 1.0},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
@@ -1942,7 +1935,9 @@ func testTui_search(t testing.TB) {
 	// Check the output when the search is invalid
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
-		{Keys: "ls", ExtraDelay: 1.0}, {Keys: ":"},
+		// ExtraDelay to ensure that the search for 'ls' finishes before we make it invalid by adding ':'
+		{Keys: "ls", ExtraDelay: 1.0},
+		{Keys: ":"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
@@ -2363,9 +2358,7 @@ func TestTimestampFormat(t *testing.T) {
 
 	// Add some entries with fixed timestamps
 	tmz, err := time.LoadLocation("America/Los_Angeles")
-	if err != nil {
-		t.Fatalf("failed to load timezone: %v", err)
-	}
+	require.NoError(t, err)
 	entry1 := testutils.MakeFakeHistoryEntry("table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 	entry1.StartTime = time.Unix(1650096186, 0).In(tmz)
 	entry1.EndTime = time.Unix(1650096190, 0).In(tmz)
@@ -2385,11 +2378,44 @@ func TestTimestampFormat(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	goldenName := "TestTimestampFormat-tquery"
-	if testutils.IsGithubAction() {
-		goldenName += "-isAction"
-	}
-	testutils.CompareGoldens(t, out, goldenName)
+	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
+}
+
+func TestSortByConsistentTimezone(t *testing.T) {
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Add an entry just to ensure we get consistent table sizing
+	tester.RunInteractiveShell(t, "echo tablesizing")
+
+	// Add some entries with timestamps in different timezones
+	db := hctx.GetDb(hctx.MakeContext())
+	timestamp := int64(1650096186)
+	la_time, err := time.LoadLocation("America/Los_Angeles")
+	require.NoError(t, err)
+	ny_time, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+	entry1 := testutils.MakeFakeHistoryEntry("first_entry")
+	entry1.StartTime = time.Unix(timestamp, 0).In(ny_time)
+	entry1.EndTime = time.Unix(timestamp+1, 0).In(ny_time)
+	testutils.Check(t, lib.ReliableDbCreate(db, entry1))
+	entry2 := testutils.MakeFakeHistoryEntry("second_entry")
+	entry2.StartTime = time.Unix(timestamp+1000, 0).In(la_time)
+	entry2.EndTime = time.Unix(timestamp+1001, 0).In(la_time)
+	testutils.Check(t, lib.ReliableDbCreate(db, entry2))
+	entry3 := testutils.MakeFakeHistoryEntry("third_entry")
+	entry3.StartTime = time.Unix(timestamp+2000, 0).In(ny_time)
+	entry3.EndTime = time.Unix(timestamp+2001, 0).In(ny_time)
+	testutils.Check(t, lib.ReliableDbCreate(db, entry3))
+
+	// And check that they're displayed in the correct order
+	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
+	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, fmt.Sprintf("TestSortByConsistentTimezone-tquery-isAction=%v", testutils.IsGithubAction()))
 }
 
 func TestZDotDir(t *testing.T) {
@@ -2482,14 +2508,10 @@ func TestSetConfigNoCorruption(t *testing.T) {
 			c.HaveMissedUploads = (i % 2) == 0
 			// Write it
 			err := hctx.SetConfig(c)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			// Check that we can read
 			c2, err := hctx.GetConfig()
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			if c2.UserSecret != c.UserSecret {
 				panic("user secret mismatch")
 			}

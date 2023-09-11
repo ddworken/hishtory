@@ -117,7 +117,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	var results []data.HistoryEntry
 	tx.Limit(1).Find(&results)
 	if len(results) == 0 {
-		db.Create(entry)
+		db.Create(normalizeEntryTimezone(entry))
 		// TODO: check the error here and bubble it up
 	}
 }
@@ -146,13 +146,13 @@ func buildTableRow(ctx context.Context, columnNames []string, entry data.History
 		case "CWD":
 			row = append(row, entry.CurrentWorkingDirectory)
 		case "Timestamp":
-			row = append(row, entry.StartTime.Format(hctx.GetConf(ctx).TimestampFormat))
+			row = append(row, entry.StartTime.Local().Format(hctx.GetConf(ctx).TimestampFormat))
 		case "Runtime":
 			if entry.EndTime == time.Unix(0, 0) {
 				// An EndTime of zero means this is a pre-saved entry that never finished
 				row = append(row, "N/A")
 			} else {
-				row = append(row, entry.EndTime.Sub(entry.StartTime).Round(time.Millisecond).String())
+				row = append(row, entry.EndTime.Local().Sub(entry.StartTime.Local()).Round(time.Millisecond).String())
 			}
 		case "Exit Code":
 			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
@@ -301,8 +301,8 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			CurrentWorkingDirectory: "Unknown",
 			HomeDirectory:           homedir,
 			ExitCode:                0,
-			StartTime:               time.Now(),
-			EndTime:                 time.Now(),
+			StartTime:               time.Now().UTC(),
+			EndTime:                 time.Now().UTC(),
 			DeviceId:                config.DeviceId,
 		}
 		err = ReliableDbCreate(db, entry)
@@ -699,7 +699,14 @@ func IsOfflineError(err error) bool {
 		strings.Contains(err.Error(), "net/http: TLS handshake timeout")
 }
 
-func ReliableDbCreate(db *gorm.DB, entry interface{}) error {
+func normalizeEntryTimezone(entry data.HistoryEntry) data.HistoryEntry {
+	entry.StartTime = entry.StartTime.UTC()
+	entry.EndTime = entry.EndTime.UTC()
+	return entry
+}
+
+func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
+	entry = normalizeEntryTimezone(entry)
 	var err error = nil
 	i := 0
 	for i = 0; i < 10; i++ {
@@ -892,7 +899,6 @@ func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.
 	if err != nil {
 		return nil, err
 	}
-	// TODO: This ordering isn't sufficient if some computers are in different timezones. Add better sorting here.
 	if hctx.GetConf(ctx).BetaMode {
 		tx = tx.Order("start_time DESC")
 	} else {
