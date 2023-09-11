@@ -2415,7 +2415,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-tquery")
+	testutils.CompareGoldens(t, out, fmt.Sprintf("TestSortByConsistentTimezone-tquery-isAction=%v", testutils.IsGithubAction()))
 }
 
 func TestZDotDir(t *testing.T) {
