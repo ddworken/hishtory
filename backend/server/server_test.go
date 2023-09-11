@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/ddworken/hishtory/internal/database"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -187,9 +188,8 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp := strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(resp))
 
 	// And none for a missing user ID
 	w = httptest.NewRecorder()
@@ -198,9 +198,8 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp = strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(resp))
 
 	// Now submit a dump for userId
 	entry1Dec := testutils.MakeFakeHistoryEntry("ls ~/")
@@ -221,19 +220,19 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp = strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(respBody))
+
 	w = httptest.NewRecorder()
+
 	// The other user
 	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId2, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp = strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(respBody))
 
 	// But it is there for the other user
 	w = httptest.NewRecorder()
