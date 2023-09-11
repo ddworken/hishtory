@@ -109,13 +109,13 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 	tbl.WithWriter(w)
 	for _, data := range usageData {
 		versions := strings.ReplaceAll(strings.ReplaceAll(data.Versions, "Unknown", ""), ", ", "")
-		lastQueryStr := strings.ReplaceAll(data.LastQueried.Format(time.DateOnly), "1970-01-01", "")
+		lastQueryStr := strings.ReplaceAll(data.LastQueried.Format(shared.DateOnly), "1970-01-01", "")
 		tbl.AddRow(
-			data.RegistrationDate.Format(time.DateOnly),
+			data.RegistrationDate.Format(shared.DateOnly),
 			data.NumDevices,
 			data.NumEntries,
 			data.NumQueries,
-			data.LastUsedDate.Format(time.DateOnly),
+			data.LastUsedDate.Format(shared.DateOnly),
 			lastQueryStr,
 			versions,
 			data.IpAddresses,
