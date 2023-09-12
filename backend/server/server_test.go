@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/ddworken/hishtory/internal/database"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +19,6 @@ import (
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/go-test/deep"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func TestESubmitThenQuery(t *testing.T) {
@@ -187,9 +188,8 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp := strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(resp))
 
 	// And none for a missing user ID
 	w = httptest.NewRecorder()
@@ -198,9 +198,8 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp = strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(resp))
 
 	// Now submit a dump for userId
 	entry1Dec := testutils.MakeFakeHistoryEntry("ls ~/")
@@ -221,19 +220,19 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp = strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(respBody))
+
 	w = httptest.NewRecorder()
+
 	// The other user
 	apiGetPendingDumpRequestsHandler(w, httptest.NewRequest(http.MethodGet, "/?user_id="+userId+"&device_id="+devId2, nil))
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
 	testutils.Check(t, err)
-	if string(respBody) != "[]" {
-		t.Fatalf("got unexpected respBody: %#v", string(respBody))
-	}
+	resp = strings.TrimSpace(string(respBody))
+	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(respBody))
 
 	// But it is there for the other user
 	w = httptest.NewRecorder()
@@ -564,15 +563,15 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	apiSubmitHandler(httptest.NewRecorder(), submitReq)
 
 	// Call cleanDatabase and just check that there are no panics
-	testutils.Check(t, cleanDatabase(context.TODO()))
+	testutils.Check(t, GLOBAL_DB.Clean(context.TODO()))
 }
 
-func assertNoLeakedConnections(t *testing.T, db *gorm.DB) {
-	sqlDB, err := db.DB()
+func assertNoLeakedConnections(t *testing.T, db *database.DB) {
+	stats, err := db.Stats()
 	if err != nil {
 		t.Fatal(err)
 	}
-	numConns := sqlDB.Stats().OpenConnections
+	numConns := stats.OpenConnections
 	if numConns > 1 {
 		t.Fatalf("expected DB to have not leak connections, actually have %d", numConns)
 	}
