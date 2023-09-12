@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ddworken/hishtory/internal/server"
 	"io"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"runtime"
@@ -32,26 +32,6 @@ var (
 	GLOBAL_STATSD  *statsd.Client
 	ReleaseVersion string = "UNKNOWN"
 )
-
-func getRequiredQueryParam(r *http.Request, queryParam string) string {
-	val := r.URL.Query().Get(queryParam)
-	if val == "" {
-		panic(fmt.Sprintf("request to %s is missing required query param=%#v", r.URL, queryParam))
-	}
-	return val
-}
-
-func getHishtoryVersion(r *http.Request) string {
-	return r.Header.Get("X-Hishtory-Version")
-}
-
-func getRemoteAddr(r *http.Request) string {
-	addr, ok := r.Header["X-Real-Ip"]
-	if !ok || len(addr) == 0 {
-		return "UnknownIp"
-	}
-	return addr[0]
-}
 
 func isTestEnvironment() bool {
 	return os.Getenv("HISHTORY_TEST") != ""
@@ -129,19 +109,17 @@ func init() {
 	go runBackgroundJobs(context.Background())
 }
 
-func cron(ctx context.Context) error {
-	err := updateReleaseVersion()
-	if err != nil {
-		panic(err)
+func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
+	if err := updateReleaseVersion(); err != nil {
+		return fmt.Errorf("updateReleaseVersion: %w", err)
 	}
-	err = GLOBAL_DB.Clean(ctx)
-	if err != nil {
-		panic(err)
+
+	if err := db.Clean(ctx); err != nil {
+		return fmt.Errorf("db.Clean: %w", err)
 	}
-	if GLOBAL_STATSD != nil {
-		err = GLOBAL_STATSD.Flush()
-		if err != nil {
-			panic(err)
+	if stats != nil {
+		if err := stats.Flush(); err != nil {
+			return fmt.Errorf("stats.Flush: %w", err)
 		}
 	}
 	return nil
@@ -150,9 +128,12 @@ func cron(ctx context.Context) error {
 func runBackgroundJobs(ctx context.Context) {
 	time.Sleep(5 * time.Second)
 	for {
-		err := cron(ctx)
+		err := cron(ctx, GLOBAL_DB, GLOBAL_STATSD)
 		if err != nil {
 			fmt.Printf("Cron failure: %v", err)
+
+			// cron no longer panics, panicking here.
+			panic(err)
 		}
 		time.Sleep(10 * time.Minute)
 	}
@@ -291,7 +272,15 @@ func main() {
 	// TODO: remove this global once we have a better way to pass it around
 	GLOBAL_STATSD = s
 
-	srv := NewServer(GLOBAL_DB, WithStatsd(s))
+	srv := server.NewServer(
+		GLOBAL_DB,
+		server.WithStatsd(s),
+		server.WithReleaseVersion(ReleaseVersion),
+		server.IsTestEnvironment(isTestEnvironment()),
+		server.IsProductionEnvironment(isProductionEnvironment()),
+		server.WithCron(cron),
+		server.WithUpdateInfo(buildUpdateInfo(ReleaseVersion)),
+	)
 
 	if err := srv.Run(context.Background(), ":8080"); err != nil {
 		panic(err)
@@ -309,18 +298,6 @@ func checkGormError(err error, skip int) {
 
 	_, filename, line, _ := runtime.Caller(skip + 1)
 	panic(fmt.Sprintf("DB error at %s:%d: %v", filename, line, err))
-}
-
-func getMaximumNumberOfAllowedUsers() int {
-	maxNumUsersStr := os.Getenv("HISHTORY_MAX_NUM_USERS")
-	if maxNumUsersStr == "" {
-		return math.MaxInt
-	}
-	maxNumUsers, err := strconv.Atoi(maxNumUsersStr)
-	if err != nil {
-		return math.MaxInt
-	}
-	return maxNumUsers
 }
 
 // TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?

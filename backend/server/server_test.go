@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/ddworken/hishtory/internal/database"
+	"github.com/ddworken/hishtory/internal/server"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
@@ -24,7 +25,7 @@ import (
 func TestESubmitThenQuery(t *testing.T) {
 	// Set up
 	InitDB()
-	s := NewServer(GLOBAL_DB)
+	s := server.NewServer(GLOBAL_DB)
 
 	// Register a few devices
 	userId := data.UserId("key")
@@ -125,7 +126,7 @@ func TestESubmitThenQuery(t *testing.T) {
 func TestDumpRequestAndResponse(t *testing.T) {
 	// Set up
 	InitDB()
-	s := NewServer(GLOBAL_DB)
+	s := server.NewServer(GLOBAL_DB)
 
 	// Register a first device for two different users
 	userId := data.UserId("dkey")
@@ -325,7 +326,7 @@ func TestUpdateReleaseVersion(t *testing.T) {
 func TestDeletionRequests(t *testing.T) {
 	// Set up
 	InitDB()
-	s := NewServer(GLOBAL_DB)
+	s := server.NewServer(GLOBAL_DB)
 
 	// Register two devices for two different users
 	userId := data.UserId("dkey")
@@ -507,7 +508,7 @@ func TestDeletionRequests(t *testing.T) {
 }
 
 func TestHealthcheck(t *testing.T) {
-	s := NewServer(GLOBAL_DB)
+	s := server.NewServer(GLOBAL_DB)
 	w := httptest.NewRecorder()
 	s.healthCheckHandler(w, httptest.NewRequest(http.MethodGet, "/", nil))
 	if w.Code != 200 {
@@ -528,7 +529,7 @@ func TestHealthcheck(t *testing.T) {
 func TestLimitRegistrations(t *testing.T) {
 	// Set up
 	InitDB()
-	s := NewServer(GLOBAL_DB)
+	s := server.NewServer(GLOBAL_DB)
 	checkGormResult(GLOBAL_DB.Exec("DELETE FROM enc_history_entries"))
 	checkGormResult(GLOBAL_DB.Exec("DELETE FROM devices"))
 	defer testutils.BackupAndRestoreEnv("HISHTORY_MAX_NUM_USERS")()
@@ -552,7 +553,7 @@ func TestLimitRegistrations(t *testing.T) {
 func TestCleanDatabaseNoErrors(t *testing.T) {
 	// Init
 	InitDB()
-	s := NewServer(GLOBAL_DB)
+	s := server.NewServer(GLOBAL_DB)
 
 	// Create a user and an entry
 	userId := data.UserId("dkey")
