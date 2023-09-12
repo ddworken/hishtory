@@ -132,7 +132,7 @@ By default, hiSHtory relies on a backend for syncing. All data is end-to-end enc
 
 But if you'd like to self-host the hishtory backend, you can! The backend is a simple go binary in `backend/server/server.go` (with [prebuilt binaries here](https://github.com/ddworken/hishtory/tags)). It can either use SQLite or Postgres for persistence.
 
-To make `hishtory` use your self-hosted server, set environment variable `HISHTORY_SERVER` to your domain. For example if you use Bash, put `export HISHTORY_SERVER=https://api.example.com` at the end of your `.bashrc`.
+To make `hishtory` use your self-hosted server, set the `HISHTORY_SERVER` environment variable to the origin of your self-hosted server. For example, put `export HISHTORY_SERVER=http://my-hishtory-server.example.com` at the end of your `.bashrc`.
 
 Check out the [`docker-compose.yml`](https://github.com/ddworken/hishtory/blob/master/backend/server/docker-compose.yml) file for an example config to start a hiSHtory server using postgres.
 
