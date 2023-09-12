@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ddworken/hishtory/internal/release"
-	"github.com/ddworken/hishtory/internal/server"
 	"log"
 	"os"
 	"runtime"
@@ -12,6 +10,8 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/ddworken/hishtory/internal/database"
+	"github.com/ddworken/hishtory/internal/release"
+	"github.com/ddworken/hishtory/internal/server"
 	_ "github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -23,8 +23,9 @@ const (
 )
 
 var (
-	GLOBAL_DB     *database.DB
-	GLOBAL_STATSD *statsd.Client
+	GLOBAL_DB      *database.DB
+	GLOBAL_STATSD  *statsd.Client
+	ReleaseVersion string
 )
 
 func isTestEnvironment() bool {
@@ -96,6 +97,7 @@ func OpenDB() (*database.DB, error) {
 }
 
 func init() {
+	release.Version = ReleaseVersion
 	if release.Version == "UNKNOWN" && !isTestEnvironment() {
 		panic("server.go was built without a ReleaseVersion!")
 	}
