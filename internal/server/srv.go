@@ -125,6 +125,11 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	return nil
 }
 
+func (s *Server) UpdateReleaseVersion(v string, updateInfo shared.UpdateInfo) {
+	s.releaseVersion = v
+	s.updateInfo = updateInfo
+}
+
 func (s *Server) getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")

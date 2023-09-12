@@ -1,12 +1,13 @@
-package main
+package server
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/ddworken/hishtory/internal/database"
-	"github.com/ddworken/hishtory/internal/server"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,10 +23,32 @@ import (
 	"github.com/google/uuid"
 )
 
+var DB *database.DB
+
+const testDBDSN = "file::memory:?_journal_mode=WAL&cache=shared"
+
+func TestMain(m *testing.M) {
+	// setup test database
+	db, err := database.OpenSQLite(testDBDSN, &gorm.Config{})
+	if err != nil {
+		panic(fmt.Errorf("failed to connect to the DB: %w", err))
+	}
+	underlyingDb, err := db.DB.DB()
+	if err != nil {
+		panic(fmt.Errorf("failed to access underlying DB: %w", err))
+	}
+	underlyingDb.SetMaxOpenConns(1)
+	db.Exec("PRAGMA journal_mode = WAL")
+	db.AddDatabaseTables()
+
+	DB = db
+
+	os.Exit(m.Run())
+}
+
 func TestESubmitThenQuery(t *testing.T) {
 	// Set up
-	InitDB()
-	s := server.NewServer(GLOBAL_DB)
+	s := NewServer(DB)
 
 	// Register a few devices
 	userId := data.UserId("key")
@@ -120,13 +143,12 @@ func TestESubmitThenQuery(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, DB)
 }
 
 func TestDumpRequestAndResponse(t *testing.T) {
 	// Set up
-	InitDB()
-	s := server.NewServer(GLOBAL_DB)
+	s := NewServer(DB)
 
 	// Register a first device for two different users
 	userId := data.UserId("dkey")
@@ -288,45 +310,12 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
-}
-
-func TestUpdateReleaseVersion(t *testing.T) {
-	if !testutils.IsOnline() {
-		t.Skip("skipping because we're currently offline")
-	}
-
-	// Set up
-	InitDB()
-
-	// Check that ReleaseVersion hasn't been set yet
-	if ReleaseVersion != "UNKNOWN" {
-		t.Fatalf("initial ReleaseVersion isn't as expected: %#v", ReleaseVersion)
-	}
-
-	// Update it
-	err := updateReleaseVersion()
-	if err != nil {
-		t.Fatalf("updateReleaseVersion failed: %v", err)
-	}
-
-	// If ReleaseVersion is still unknown, skip because we're getting rate limited
-	if ReleaseVersion == "UNKNOWN" {
-		t.Skip()
-	}
-	// Otherwise, check that the new value looks reasonable
-	if !strings.HasPrefix(ReleaseVersion, "v0.") {
-		t.Fatalf("ReleaseVersion wasn't updated to contain a version: %#v", ReleaseVersion)
-	}
-
-	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, DB)
 }
 
 func TestDeletionRequests(t *testing.T) {
 	// Set up
-	InitDB()
-	s := server.NewServer(GLOBAL_DB)
+	s := NewServer(DB)
 
 	// Register two devices for two different users
 	userId := data.UserId("dkey")
@@ -504,11 +493,11 @@ func TestDeletionRequests(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, DB)
 }
 
 func TestHealthcheck(t *testing.T) {
-	s := server.NewServer(GLOBAL_DB)
+	s := NewServer(DB)
 	w := httptest.NewRecorder()
 	s.healthCheckHandler(w, httptest.NewRequest(http.MethodGet, "/", nil))
 	if w.Code != 200 {
@@ -523,15 +512,20 @@ func TestHealthcheck(t *testing.T) {
 	}
 
 	// Assert that we aren't leaking connections
-	assertNoLeakedConnections(t, GLOBAL_DB)
+	assertNoLeakedConnections(t, DB)
 }
 
 func TestLimitRegistrations(t *testing.T) {
 	// Set up
-	InitDB()
-	s := server.NewServer(GLOBAL_DB)
-	checkGormResult(GLOBAL_DB.Exec("DELETE FROM enc_history_entries"))
-	checkGormResult(GLOBAL_DB.Exec("DELETE FROM devices"))
+	s := NewServer(DB)
+
+	if resp := DB.Exec("DELETE FROM enc_history_entries"); resp.Error != nil {
+		t.Fatalf("failed to delete enc_history_entries: %v", resp.Error)
+	}
+
+	if resp := DB.Exec("DELETE FROM devices"); resp.Error != nil {
+		t.Fatalf("failed to delete devices: %v", resp.Error)
+	}
 	defer testutils.BackupAndRestoreEnv("HISHTORY_MAX_NUM_USERS")()
 	os.Setenv("HISHTORY_MAX_NUM_USERS", "2")
 
@@ -552,8 +546,7 @@ func TestLimitRegistrations(t *testing.T) {
 
 func TestCleanDatabaseNoErrors(t *testing.T) {
 	// Init
-	InitDB()
-	s := server.NewServer(GLOBAL_DB)
+	s := NewServer(DB)
 
 	// Create a user and an entry
 	userId := data.UserId("dkey")
@@ -570,7 +563,7 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	s.apiSubmitHandler(httptest.NewRecorder(), submitReq)
 
 	// Call cleanDatabase and just check that there are no panics
-	testutils.Check(t, GLOBAL_DB.Clean(context.TODO()))
+	testutils.Check(t, DB.Clean(context.TODO()))
 }
 
 func assertNoLeakedConnections(t *testing.T, db *database.DB) {

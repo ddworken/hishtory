@@ -228,7 +228,7 @@ func buildServer() string {
 	f, err := os.CreateTemp("", "server")
 	checkError(err)
 	fn := f.Name()
-	cmd := exec.Command("go", "build", "-o", fn, "-ldflags", fmt.Sprintf("-X main.ReleaseVersion=v0.%s", version), "backend/server/server.go")
+	cmd := exec.Command("go", "build", "-o", fn, "-ldflags", fmt.Sprintf("-X release.Version=v0.%s", version), "backend/server/server.go")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
