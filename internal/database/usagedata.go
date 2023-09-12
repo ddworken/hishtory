@@ -3,8 +3,9 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/ddworken/hishtory/shared"
 	"time"
+
+	"github.com/ddworken/hishtory/shared"
 )
 
 func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId string) ([]shared.UsageData, error) {
@@ -22,7 +23,7 @@ func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId
 	return usageData, nil
 }
 
-func (db *DB) UsageDataCreate(ctx context.Context, usageData *shared.UsageData) error {
+func (db *DB) CreateUsageData(ctx context.Context, usageData *shared.UsageData) error {
 	tx := db.DB.WithContext(ctx).Create(usageData)
 	if tx.Error != nil {
 		return fmt.Errorf("db.WithContext.Create: %w", tx.Error)
@@ -31,8 +32,8 @@ func (db *DB) UsageDataCreate(ctx context.Context, usageData *shared.UsageData) 
 	return nil
 }
 
-// UsageDataUpdate updates the entry for a given userID/deviceID pair with the lastUsed and lastIP values
-func (db *DB) UsageDataUpdate(ctx context.Context, userId, deviceId string, lastUsed time.Time, lastIP string) error {
+// UpdateUsageData updates the entry for a given userID/deviceID pair with the lastUsed and lastIP values
+func (db *DB) UpdateUsageData(ctx context.Context, userId, deviceId string, lastUsed time.Time, lastIP string) error {
 	tx := db.DB.WithContext(ctx).Model(&shared.UsageData{}).
 		Where("user_id = ? AND device_id = ?", userId, deviceId).
 		Update("last_used", lastUsed).
@@ -45,7 +46,7 @@ func (db *DB) UsageDataUpdate(ctx context.Context, userId, deviceId string, last
 	return nil
 }
 
-func (db *DB) UsageDataUpdateNumEntriesHandled(ctx context.Context, userId, deviceId string, numEntriesHandled int) error {
+func (db *DB) UpdateUsageDataForNumEntriesHandled(ctx context.Context, userId, deviceId string, numEntriesHandled int) error {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET num_entries_handled = COALESCE(num_entries_handled, 0) + ? WHERE user_id = ? AND device_id = ?", numEntriesHandled, userId, deviceId)
 
 	if tx.Error != nil {
@@ -55,7 +56,7 @@ func (db *DB) UsageDataUpdateNumEntriesHandled(ctx context.Context, userId, devi
 	return nil
 }
 
-func (db *DB) UsageDataUpdateVersion(ctx context.Context, userID, deviceID string, version string) error {
+func (db *DB) UpdateUsageDataClientVersion(ctx context.Context, userID, deviceID string, version string) error {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET version = ? WHERE user_id = ? AND device_id = ?", version, userID, deviceID)
 
 	if tx.Error != nil {
@@ -65,7 +66,7 @@ func (db *DB) UsageDataUpdateVersion(ctx context.Context, userID, deviceID strin
 	return nil
 }
 
-func (db *DB) UsageDataUpdateNumQueries(ctx context.Context, userID, deviceID string) error {
+func (db *DB) UpdateUsageDataNumberQueries(ctx context.Context, userID, deviceID string) error {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET num_queries = COALESCE(num_queries, 0) + 1, last_queried = ? WHERE user_id = ? AND device_id = ?", time.Now(), userID, deviceID)
 
 	if tx.Error != nil {
@@ -148,27 +149,27 @@ func (db *DB) UsageDataTotal(ctx context.Context) (int64, error) {
 	return int64(nep.Total), nil
 }
 
-func (db *DB) WeeklyActiveInstalls(ctx context.Context, since time.Duration) (int64, error) {
-	var weeklyActiveInstalls int64
-	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_used > ?", time.Now().Add(-since)).Count(&weeklyActiveInstalls)
+func (db *DB) CountActiveInstalls(ctx context.Context, since time.Duration) (int64, error) {
+	var activeInstalls int64
+	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_used > ?", time.Now().Add(-since)).Count(&activeInstalls)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
 
-	return weeklyActiveInstalls, nil
+	return activeInstalls, nil
 }
 
-func (db *DB) WeeklyQueryUsers(ctx context.Context, since time.Duration) (int64, error) {
-	var weeklyQueryUsers int64
-	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_queried > ?", time.Now().Add(-since)).Count(&weeklyQueryUsers)
+func (db *DB) CountQueryUsers(ctx context.Context, since time.Duration) (int64, error) {
+	var activeQueryUsers int64
+	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_queried > ?", time.Now().Add(-since)).Count(&activeQueryUsers)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
 
-	return weeklyQueryUsers, nil
+	return activeQueryUsers, nil
 }
 
-func (db *DB) LastRegistration(ctx context.Context) (string, error) {
+func (db *DB) DateOfLastRegistration(ctx context.Context) (string, error) {
 	var lastRegistration string
 	row := db.WithContext(ctx).Raw("SELECT to_char(max(registration_date), 'DD Month YYYY HH24:MI') FROM devices").Row()
 	if err := row.Scan(&lastRegistration); err != nil {

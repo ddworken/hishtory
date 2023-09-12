@@ -60,7 +60,7 @@ func updateUsageData(r *http.Request, userId, deviceId string, numEntriesHandled
 		return fmt.Errorf("db.UsageDataFindByUserAndDevice: %w", err)
 	}
 	if len(usageData) == 0 {
-		err := GLOBAL_DB.UsageDataCreate(
+		err := GLOBAL_DB.CreateUsageData(
 			r.Context(),
 			&shared.UsageData{
 				UserId:            userId,
@@ -71,28 +71,28 @@ func updateUsageData(r *http.Request, userId, deviceId string, numEntriesHandled
 			},
 		)
 		if err != nil {
-			return fmt.Errorf("db.UsageDataCreate: %w", err)
+			return fmt.Errorf("db.CreateUsageData: %w", err)
 		}
 	} else {
 		usage := usageData[0]
 
-		if err := GLOBAL_DB.UsageDataUpdate(r.Context(), userId, deviceId, time.Now(), getRemoteAddr(r)); err != nil {
-			return fmt.Errorf("db.UsageDataUpdate: %w", err)
+		if err := GLOBAL_DB.UpdateUsageData(r.Context(), userId, deviceId, time.Now(), getRemoteAddr(r)); err != nil {
+			return fmt.Errorf("db.UpdateUsageData: %w", err)
 		}
 		if numEntriesHandled > 0 {
-			if err := GLOBAL_DB.UsageDataUpdateNumEntriesHandled(r.Context(), userId, deviceId, numEntriesHandled); err != nil {
-				return fmt.Errorf("db.UsageDataUpdateNumEntriesHandled: %w", err)
+			if err := GLOBAL_DB.UpdateUsageDataForNumEntriesHandled(r.Context(), userId, deviceId, numEntriesHandled); err != nil {
+				return fmt.Errorf("db.UpdateUsageDataForNumEntriesHandled: %w", err)
 			}
 		}
 		if usage.Version != getHishtoryVersion(r) {
-			if err := GLOBAL_DB.UsageDataUpdateVersion(r.Context(), userId, deviceId, getHishtoryVersion(r)); err != nil {
-				return fmt.Errorf("db.UsageDataUpdateVersion: %w", err)
+			if err := GLOBAL_DB.UpdateUsageDataClientVersion(r.Context(), userId, deviceId, getHishtoryVersion(r)); err != nil {
+				return fmt.Errorf("db.UpdateUsageDataClientVersion: %w", err)
 			}
 		}
 	}
 	if isQuery {
-		if err := GLOBAL_DB.UsageDataUpdateNumQueries(r.Context(), userId, deviceId); err != nil {
-			return fmt.Errorf("db.UsageDataUpdateNumQueries: %w", err)
+		if err := GLOBAL_DB.UpdateUsageDataNumberQueries(r.Context(), userId, deviceId); err != nil {
+			return fmt.Errorf("db.UpdateUsageDataNumberQueries: %w", err)
 		}
 	}
 
@@ -125,23 +125,23 @@ func usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
-	numDevices, err := GLOBAL_DB.DevicesCount(r.Context())
+	numDevices, err := GLOBAL_DB.CountAllDevices(r.Context())
 	checkGormError(err, 0)
 
 	numEntriesProcessed, err := GLOBAL_DB.UsageDataTotal(r.Context())
 	checkGormError(err, 0)
 
-	numDbEntries, err := GLOBAL_DB.EncHistoryEntryCount(r.Context())
+	numDbEntries, err := GLOBAL_DB.CountHistoryEntries(r.Context())
 	checkGormError(err, 0)
 
 	oneWeek := time.Hour * 24 * 7
-	weeklyActiveInstalls, err := GLOBAL_DB.WeeklyActiveInstalls(r.Context(), oneWeek)
+	weeklyActiveInstalls, err := GLOBAL_DB.CountActiveInstalls(r.Context(), oneWeek)
 	checkGormError(err, 0)
 
-	weeklyQueryUsers, err := GLOBAL_DB.WeeklyQueryUsers(r.Context(), oneWeek)
+	weeklyQueryUsers, err := GLOBAL_DB.CountQueryUsers(r.Context(), oneWeek)
 	checkGormError(err, 0)
 
-	lastRegistration, err := GLOBAL_DB.LastRegistration(r.Context())
+	lastRegistration, err := GLOBAL_DB.DateOfLastRegistration(r.Context())
 	checkGormError(err, 0)
 
 	_, _ = fmt.Fprintf(w, "Num devices: %d\n", numDevices)
@@ -166,9 +166,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if len(entries) == 0 {
 		return
 	}
-	if err := updateUsageData(r, entries[0].UserId, entries[0].DeviceId, len(entries), false); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	_ = updateUsageData(r, entries[0].UserId, entries[0].DeviceId /* numEntriesHandled = */, len(entries) /* isQuery = */, false)
 
 	devices, err := GLOBAL_DB.DevicesForUser(r.Context(), entries[0].UserId)
 	checkGormError(err, 0)
@@ -178,7 +176,7 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
 
-	err = GLOBAL_DB.DeviceEntriesCreateChunk(r.Context(), devices, entries, 1000)
+	err = GLOBAL_DB.AddHistoryEntriesForAllDevices(r.Context(), devices, entries)
 	if err != nil {
 		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %w", err))
 	}
@@ -193,8 +191,8 @@ func apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 func apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	updateUsageData(r, userId, deviceId, 0, false)
-	historyEntries, err := GLOBAL_DB.EncHistoryEntriesForUser(r.Context(), userId)
+	_ = updateUsageData(r, userId, deviceId /* numEntriesHandled = */, 0 /* isQuery = */, false)
+	historyEntries, err := GLOBAL_DB.AllHistoryEntriesForUser(r.Context(), userId)
 	checkGormError(err, 1)
 	fmt.Printf("apiBootstrapHandler: Found %d entries\n", len(historyEntries))
 	if err := json.NewEncoder(w).Encode(historyEntries); err != nil {
@@ -206,7 +204,7 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	updateUsageData(r, userId, deviceId, 0, true)
+	_ = updateUsageData(r, userId, deviceId /* numEntriesHandled = */, 0 /* isQuery = */, true)
 
 	// Delete any entries that match a pending deletion request
 	deletionRequests, err := GLOBAL_DB.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
@@ -217,7 +215,7 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Then retrieve
-	historyEntries, err := GLOBAL_DB.EncHistoryEntriesForDevice(r.Context(), deviceId, 5)
+	historyEntries, err := GLOBAL_DB.HistoryEntriesForDevice(r.Context(), deviceId, 5)
 	checkGormError(err, 0)
 	fmt.Printf("apiQueryHandler: Found %d entries for %s\n", len(historyEntries), r.URL)
 	if err := json.NewEncoder(w).Encode(historyEntries); err != nil {
@@ -229,11 +227,11 @@ func apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	if isProductionEnvironment() {
 		go func() {
 			span, ctx := tracer.StartSpanFromContext(ctx, "apiQueryHandler.incrementReadCount")
-			err := GLOBAL_DB.DeviceIncrementReadCounts(ctx, deviceId)
+			err := GLOBAL_DB.IncrementEntryReadCountsForDevice(ctx, deviceId)
 			span.Finish(tracer.WithError(err))
 		}()
 	} else {
-		err := GLOBAL_DB.DeviceIncrementReadCounts(ctx, deviceId)
+		err := GLOBAL_DB.IncrementEntryReadCountsForDevice(ctx, deviceId)
 		if err != nil {
 			panic("failed to increment read counts")
 		}
@@ -265,10 +263,10 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 
-	existingDevicesCount, err := GLOBAL_DB.DevicesCountForUser(r.Context(), userId)
+	existingDevicesCount, err := GLOBAL_DB.CountDevicesForUser(r.Context(), userId)
 	checkGormError(err, 0)
 	fmt.Printf("apiRegisterHandler: existingDevicesCount=%d\n", existingDevicesCount)
-	if err := GLOBAL_DB.DeviceCreate(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}); err != nil {
+	if err := GLOBAL_DB.CreateDevice(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}); err != nil {
 		checkGormError(err, 0)
 	}
 
@@ -276,9 +274,7 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		err := GLOBAL_DB.DumpRequestCreate(r.Context(), &shared.DumpRequest{UserId: userId, RequestingDeviceId: deviceId, RequestTime: time.Now()})
 		checkGormError(err, 0)
 	}
-	if err := updateUsageData(r, userId, deviceId, 0, false); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	_ = updateUsageData(r, userId, deviceId /* numEntriesHandled = */, 0 /* isQuery = */, false)
 
 	if GLOBAL_STATSD != nil {
 		GLOBAL_STATSD.Incr("hishtory.register", []string{}, 1.0)
@@ -324,11 +320,11 @@ func apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = GLOBAL_DB.EncHistoryCreateMulti(r.Context(), entries...)
+	err = GLOBAL_DB.AddHistoryEntries(r.Context(), entries...)
 	checkGormError(err, 0)
 	err = GLOBAL_DB.DumpRequestDeleteForUserAndDevice(r.Context(), userId, requestingDeviceId)
 	checkGormError(err, 0)
-	updateUsageData(r, userId, srcDeviceId, len(entries), false)
+	_ = updateUsageData(r, userId, srcDeviceId /* numEntriesHandled = */, len(entries) /* isQuery = */, false)
 
 	w.Header().Set("Content-Length", "0")
 	w.WriteHeader(http.StatusOK)
@@ -384,28 +380,19 @@ func addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if isProductionEnvironment() {
-		// Check that we have a reasonable looking set of devices/entries in the DB
-		//rows, err := GLOBAL_DB.Raw("SELECT true FROM enc_history_entries LIMIT 1 OFFSET 1000").Rows()
-		//if err != nil {
-		//	panic(fmt.Sprintf("failed to count entries in DB: %v", err))
-		//}
-		//defer rows.Close()
-		//if !rows.Next() {
-		//	panic("Suspiciously few enc history entries!")
-		//}
-		encHistoryEntryCount, err := GLOBAL_DB.EncHistoryEntryCount(r.Context())
+		encHistoryEntryCount, err := GLOBAL_DB.CountHistoryEntries(r.Context())
 		checkGormError(err, 0)
 		if encHistoryEntryCount < 1000 {
 			panic("Suspiciously few enc history entries!")
 		}
 
-		deviceCount, err := GLOBAL_DB.DevicesCount(r.Context())
+		deviceCount, err := GLOBAL_DB.CountAllDevices(r.Context())
 		checkGormError(err, 0)
 		if deviceCount < 100 {
 			panic("Suspiciously few devices!")
 		}
 		// Check that we can write to the DB. This entry will get written and then eventually cleaned by the cron.
-		err = GLOBAL_DB.EncHistoryCreate(r.Context(), &shared.EncHistoryEntry{
+		err = GLOBAL_DB.AddHistoryEntries(r.Context(), &shared.EncHistoryEntry{
 			EncryptedData: []byte("data"),
 			Nonce:         []byte("nonce"),
 			DeviceId:      "healthcheck_device_id",
@@ -432,7 +419,7 @@ func wipeDbEntriesHandler(w http.ResponseWriter, r *http.Request) {
 		panic("refusing to wipe the DB non-test environment")
 	}
 
-	err := GLOBAL_DB.EncHistoryClear(r.Context())
+	err := GLOBAL_DB.Unsafe_DeleteAllHistoryEntries(r.Context())
 	checkGormError(err, 0)
 
 	w.Header().Set("Content-Length", "0")
@@ -468,7 +455,10 @@ func OpenDB() (*database.DB, error) {
 		}
 		underlyingDb.SetMaxOpenConns(1)
 		db.Exec("PRAGMA journal_mode = WAL")
-		db.AddDatabaseTables()
+		err = db.AddDatabaseTables()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
+		}
 		return db, nil
 	}
 
@@ -506,7 +496,10 @@ func OpenDB() (*database.DB, error) {
 			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 	}
-	db.AddDatabaseTables()
+	err := db.AddDatabaseTables()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
+	}
 	return db, nil
 }
 
@@ -901,3 +894,4 @@ func getMaximumNumberOfAllowedUsers() int {
 }
 
 // TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?
+// TODO: Add error checking for the calls to updateUsageData(...) that logs it/triggers an alert in prod, but is an error in test
