@@ -3,13 +3,14 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ddworken/hishtory/shared"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"html"
 	"io"
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/ddworken/hishtory/shared"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +44,7 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
 
-	err = s.db.DeviceEntriesCreateChunk(r.Context(), devices, entries, 1000)
+	err = s.db.AddHistoryEntriesForAllDevices(r.Context(), devices, entries)
 	if err != nil {
 		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %w", err))
 	}
@@ -66,7 +67,7 @@ func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	if err := s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false); err != nil {
 		fmt.Printf("updateUsageData: %v\n", err)
 	}
-	historyEntries, err := s.db.EncHistoryEntriesForUser(r.Context(), userId)
+	historyEntries, err := s.db.AllHistoryEntriesForUser(r.Context(), userId)
 	checkGormError(err)
 	fmt.Printf("apiBootstrapHandler: Found %d entries\n", len(historyEntries))
 	if err := json.NewEncoder(w).Encode(historyEntries); err != nil {
@@ -96,7 +97,7 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Then retrieve
-	historyEntries, err := s.db.EncHistoryEntriesForDevice(r.Context(), deviceId, 5)
+	historyEntries, err := s.db.HistoryEntriesForDevice(r.Context(), deviceId, 5)
 	checkGormError(err)
 	fmt.Printf("apiQueryHandler: Found %d entries for %s\n", len(historyEntries), r.URL)
 	if err := json.NewEncoder(w).Encode(historyEntries); err != nil {
@@ -108,11 +109,11 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	if s.isProductionEnvironment {
 		go func() {
 			span, ctx := tracer.StartSpanFromContext(ctx, "apiQueryHandler.incrementReadCount")
-			err := s.db.DeviceIncrementReadCounts(ctx, deviceId)
+			err := s.db.IncrementEntryReadCountsForDevice(ctx, deviceId)
 			span.Finish(tracer.WithError(err))
 		}()
 	} else {
-		err := s.db.DeviceIncrementReadCounts(ctx, deviceId)
+		err := s.db.IncrementEntryReadCountsForDevice(ctx, deviceId)
 		if err != nil {
 			panic("failed to increment read counts")
 		}
@@ -146,7 +147,7 @@ func (s *Server) apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = s.db.EncHistoryCreateMulti(r.Context(), entries...)
+	err = s.db.AddHistoryEntries(r.Context(), entries...)
 	checkGormError(err)
 	err = s.db.DumpRequestDeleteForUserAndDevice(r.Context(), userId, requestingDeviceId)
 	checkGormError(err)
@@ -209,10 +210,10 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 
-	existingDevicesCount, err := s.db.DevicesCountForUser(r.Context(), userId)
+	existingDevicesCount, err := s.db.CountDevicesForUser(r.Context(), userId)
 	checkGormError(err)
 	fmt.Printf("apiRegisterHandler: existingDevicesCount=%d\n", existingDevicesCount)
-	if err := s.db.DeviceCreate(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}); err != nil {
+	if err := s.db.CreateDevice(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}); err != nil {
 		checkGormError(err)
 	}
 

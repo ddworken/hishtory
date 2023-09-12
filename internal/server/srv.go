@@ -219,28 +219,19 @@ func (s *Server) feedbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if s.isProductionEnvironment {
-		// Check that we have a reasonable looking set of devices/entries in the DB
-		//rows, err := s.db.Raw("SELECT true FROM enc_history_entries LIMIT 1 OFFSET 1000").Rows()
-		//if err != nil {
-		//	panic(fmt.Sprintf("failed to count entries in DB: %v", err))
-		//}
-		//defer rows.Close()
-		//if !rows.Next() {
-		//	panic("Suspiciously few enc history entries!")
-		//}
-		encHistoryEntryCount, err := s.db.EncHistoryEntryCount(r.Context())
+		encHistoryEntryCount, err := s.db.CountHistoryEntries(r.Context())
 		checkGormError(err)
 		if encHistoryEntryCount < 1000 {
 			panic("Suspiciously few enc history entries!")
 		}
 
-		deviceCount, err := s.db.DevicesCount(r.Context())
+		deviceCount, err := s.db.CountAllDevices(r.Context())
 		checkGormError(err)
 		if deviceCount < 100 {
 			panic("Suspiciously few devices!")
 		}
 		// Check that we can write to the DB. This entry will get written and then eventually cleaned by the cron.
-		err = s.db.EncHistoryCreate(r.Context(), &shared.EncHistoryEntry{
+		err = s.db.AddHistoryEntries(r.Context(), &shared.EncHistoryEntry{
 			EncryptedData: []byte("data"),
 			Nonce:         []byte("nonce"),
 			DeviceId:      "healthcheck_device_id",
@@ -285,23 +276,23 @@ func (s *Server) usageStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) statsHandler(w http.ResponseWriter, r *http.Request) {
-	numDevices, err := s.db.DevicesCount(r.Context())
+	numDevices, err := s.db.CountAllDevices(r.Context())
 	checkGormError(err)
 
 	numEntriesProcessed, err := s.db.UsageDataTotal(r.Context())
 	checkGormError(err)
 
-	numDbEntries, err := s.db.EncHistoryEntryCount(r.Context())
+	numDbEntries, err := s.db.CountHistoryEntries(r.Context())
 	checkGormError(err)
 
 	oneWeek := time.Hour * 24 * 7
-	weeklyActiveInstalls, err := s.db.WeeklyActiveInstalls(r.Context(), oneWeek)
+	weeklyActiveInstalls, err := s.db.CountActiveInstalls(r.Context(), oneWeek)
 	checkGormError(err)
 
-	weeklyQueryUsers, err := s.db.WeeklyQueryUsers(r.Context(), oneWeek)
+	weeklyQueryUsers, err := s.db.CountQueryUsers(r.Context(), oneWeek)
 	checkGormError(err)
 
-	lastRegistration, err := s.db.LastRegistration(r.Context())
+	lastRegistration, err := s.db.DateOfLastRegistration(r.Context())
 	checkGormError(err)
 
 	_, _ = fmt.Fprintf(w, "Num devices: %d\n", numDevices)
@@ -320,7 +311,7 @@ func (s *Server) wipeDbEntriesHandler(w http.ResponseWriter, r *http.Request) {
 		panic("refusing to wipe the DB non-test environment")
 	}
 
-	err := s.db.EncHistoryClear(r.Context())
+	err := s.db.Unsafe_DeleteAllHistoryEntries(r.Context())
 	checkGormError(err)
 
 	w.Header().Set("Content-Length", "0")
@@ -343,7 +334,7 @@ func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr
 		return fmt.Errorf("db.UsageDataFindByUserAndDevice: %w", err)
 	}
 	if len(usageData) == 0 {
-		err := s.db.UsageDataCreate(
+		err := s.db.CreateUsageData(
 			ctx,
 			&shared.UsageData{
 				UserId:            userId,
@@ -359,22 +350,22 @@ func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr
 	} else {
 		usage := usageData[0]
 
-		if err := s.db.UsageDataUpdate(ctx, userId, deviceId, time.Now(), remoteAddr); err != nil {
+		if err := s.db.UpdateUsageData(ctx, userId, deviceId, time.Now(), remoteAddr); err != nil {
 			return fmt.Errorf("db.UsageDataUpdate: %w", err)
 		}
 		if numEntriesHandled > 0 {
-			if err := s.db.UsageDataUpdateNumEntriesHandled(ctx, userId, deviceId, numEntriesHandled); err != nil {
+			if err := s.db.UpdateUsageDataForNumEntriesHandled(ctx, userId, deviceId, numEntriesHandled); err != nil {
 				return fmt.Errorf("db.UsageDataUpdateNumEntriesHandled: %w", err)
 			}
 		}
 		if usage.Version != version {
-			if err := s.db.UsageDataUpdateVersion(ctx, userId, deviceId, version); err != nil {
+			if err := s.db.UpdateUsageDataClientVersion(ctx, userId, deviceId, version); err != nil {
 				return fmt.Errorf("db.UsageDataUpdateVersion: %w", err)
 			}
 		}
 	}
 	if isQuery {
-		if err := s.db.UsageDataUpdateNumQueries(ctx, userId, deviceId); err != nil {
+		if err := s.db.UpdateUsageDataNumberQueries(ctx, userId, deviceId); err != nil {
 			return fmt.Errorf("db.UsageDataUpdateNumQueries: %w", err)
 		}
 	}
