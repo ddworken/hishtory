@@ -140,11 +140,11 @@ func saveHistoryEntry(ctx context.Context) {
 	if config.BetaMode {
 		tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10))
 		if err != nil {
-			lib.CheckFatalError(fmt.Errorf("failed to query for pre-saved history entries: %w", err))
+			lib.CheckFatalError(fmt.Errorf("failed to query for pre-saved history entry: %w", err))
 		}
 		res := tx.Delete(&data.HistoryEntry{})
 		if res.Error != nil {
-			lib.CheckFatalError(fmt.Errorf("failed to delete pre-saved history entries: %w", res.Error))
+			lib.CheckFatalError(fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error))
 		}
 		if res.RowsAffected > 1 {
 			lib.CheckFatalError(fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected))
