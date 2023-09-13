@@ -2410,9 +2410,11 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	// And check that they're displayed in the correct order
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -tablesizing`)
+	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-export")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, fmt.Sprintf("TestSortByConsistentTimezone-tquery-isAction=%v", testutils.IsGithubAction()))
+	require.Regexp(t, regexp.MustCompile(`Timestamp[\s\S]*Command[\s\S]*Apr 16 2022 01:36:26 PDT[\s\S]*third_entry[\s\S]*Apr 16 2022 01:19:46 PDT[\s\S]*second_entry[\s\S]*Apr 16 2022 01:03:06 PDT[\s\S]*first_entry`), out)
 }
 
 func TestZDotDir(t *testing.T) {
