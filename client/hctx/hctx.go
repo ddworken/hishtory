@@ -235,6 +235,7 @@ func GetConfig() (ClientConfig, error) {
 }
 
 func SetConfig(config ClientConfig) error {
+	// TODO: Currently there is a consistency bug here where we update fields in the ClientConfig, and we write that to disk, but we never re-store it in hctx
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
