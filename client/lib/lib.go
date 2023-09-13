@@ -705,36 +705,36 @@ func normalizeEntryTimezone(entry data.HistoryEntry) data.HistoryEntry {
 	return entry
 }
 
-func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
-	entry = normalizeEntryTimezone(entry)
+func RetryingDbFunction(dbFunc func() error) error {
 	var err error = nil
 	i := 0
 	for i = 0; i < 10; i++ {
-		result := db.Create(entry)
-		err = result.Error
+		err = dbFunc()
 		if err == nil {
 			return nil
 		}
-		if err != nil {
-			errMsg := err.Error()
-			if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
-				time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
-				continue
-			}
-			if strings.Contains(errMsg, "UNIQUE constraint failed") {
-				if i == 0 {
-					return err
-				} else {
-					return nil
-				}
-			}
-			return fmt.Errorf("unrecoverable sqlite error: %w", err)
+		errMsg := err.Error()
+		if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
+			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
+			continue
 		}
-		if err != nil && err.Error() != "database is locked (5) (SQLITE_BUSY)" {
-			return fmt.Errorf("unrecoverable sqlite error: %w", err)
+		if strings.Contains(errMsg, "UNIQUE constraint failed") {
+			if i == 0 {
+				return err
+			} else {
+				return nil
+			}
 		}
+		return fmt.Errorf("unrecoverable sqlite error: %w", err)
 	}
-	return fmt.Errorf("failed to create DB entry even with %d retries: %w", i, err)
+	return fmt.Errorf("failed to execute DB transaction even with %d retries: %w", i, err)
+}
+
+func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
+	entry = normalizeEntryTimezone(entry)
+	return RetryingDbFunction(func() error {
+		return db.Create(entry).Error
+	})
 }
 
 func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
@@ -952,9 +952,17 @@ func parseAtomizedToken(ctx context.Context, token string) (string, interface{},
 		// internally for pre-saving history entries.
 		t, err := parseTimeGenerously(val)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to parse after:%s as a timestamp: %w", val, err)
+			return "", nil, nil, fmt.Errorf("failed to parse start_time:%s as a timestamp: %w", val, err)
 		}
 		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) = ?)", t.Unix(), nil, nil
+	case "end_time":
+		// Note that this atom probably isn't useful for interactive usage since it does exact matching, but we use it
+		// internally for pre-saving history entries.
+		t, err := parseTimeGenerously(val)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to parse end_time:%s as a timestamp: %w", val, err)
+		}
+		return "(CAST(strftime(\"%s\",end_time) AS INTEGER) = ?)", t.Unix(), nil, nil
 	case "command":
 		return "(instr(command, ?) > 0)", val, nil, nil
 	default:

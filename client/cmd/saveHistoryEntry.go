@@ -138,17 +138,21 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
-		tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10))
-		if err != nil {
-			lib.CheckFatalError(fmt.Errorf("failed to query for pre-saved history entry: %w", err))
+		deletePresavedEntryFunc := func() error {
+			tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10)+" end_time:1970/01/01_00:00:00_+0000")
+			if err != nil {
+				return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
+			}
+			res := tx.Delete(&data.HistoryEntry{})
+			if res.Error != nil {
+				return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
+			}
+			if res.RowsAffected > 1 {
+				return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
+			}
+			return nil
 		}
-		res := tx.Delete(&data.HistoryEntry{})
-		if res.Error != nil {
-			lib.CheckFatalError(fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error))
-		}
-		if res.RowsAffected > 1 {
-			lib.CheckFatalError(fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected))
-		}
+		lib.CheckFatalError(lib.RetryingDbFunction(deletePresavedEntryFunc))
 	}
 
 	// Persist it locally
