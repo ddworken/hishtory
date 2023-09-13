@@ -52,7 +52,7 @@ jobs:
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
-      if: github.ref == 'refs/heads/master'
+      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && github.ref == 'refs/heads/master' }}
       uses: datadog/agent-github-action@v1.3
       with:
           api_key: ${{ secrets.DD_API_KEY }}
