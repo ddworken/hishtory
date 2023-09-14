@@ -73,6 +73,9 @@ func NewServer(db *database.DB, options ...Option) *Server {
 	for _, option := range options {
 		option(&srv)
 	}
+	if srv.isProductionEnvironment && srv.isTestEnvironment {
+		panic(fmt.Errorf("cannot create a server that is both a prod environment and a test environment: %#v", srv))
+	}
 	return &srv
 }
 
