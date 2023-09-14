@@ -1,4 +1,4 @@
-package lib
+package tui
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/table"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/muesli/termenv"
@@ -365,7 +366,7 @@ func (m model) View() string {
 func getRows(ctx context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
-	searchResults, err := Search(ctx, db, query, numEntries)
+	searchResults, err := lib.Search(ctx, db, query, numEntries)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -379,7 +380,7 @@ func getRows(ctx context.Context, columnNames []string, query string, numEntries
 				continue
 			}
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", "\\n")
-			row, err := buildTableRow(ctx, columnNames, *entry)
+			row, err := lib.BuildTableRow(ctx, columnNames, *entry)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %w", entry, err)
 			}
@@ -567,7 +568,7 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 		SendTime: time.Now(),
 	}
 	dr.Messages.Ids = append(dr.Messages.Ids, shared.MessageIdentifier{Date: entry.EndTime, DeviceId: entry.DeviceId})
-	return SendDeletionRequest(dr)
+	return lib.SendDeletionRequest(dr)
 }
 
 func TuiQuery(ctx context.Context, initialQuery string) error {
@@ -588,7 +589,7 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	p := tea.NewProgram(initialModel(ctx, t, entries, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Retrieve additional entries from the backend
 	go func() {
-		err := RetrieveAdditionalEntriesFromRemote(ctx)
+		err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 		if err != nil {
 			p.Send(err)
 		}
@@ -596,16 +597,16 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	}()
 	// Async: Process deletion requests
 	go func() {
-		err := ProcessDeletionRequests(ctx)
+		err := lib.ProcessDeletionRequests(ctx)
 		if err != nil {
 			p.Send(err)
 		}
 	}()
 	// Async: Check for any banner from the server
 	go func() {
-		banner, err := GetBanner(ctx)
+		banner, err := lib.GetBanner(ctx)
 		if err != nil {
-			if IsOfflineError(err) {
+			if lib.IsOfflineError(err) {
 				p.Send(offlineMsg{})
 			} else {
 				p.Send(err)

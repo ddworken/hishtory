@@ -7,6 +7,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/client/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +44,7 @@ var tqueryCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(lib.TuiQuery(ctx, strings.Join(args, " ")))
+		lib.CheckFatalError(tui.TuiQuery(ctx, strings.Join(args, " ")))
 	},
 }
 

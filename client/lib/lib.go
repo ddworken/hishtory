@@ -134,7 +134,7 @@ func getCustomColumnValue(ctx context.Context, header string, entry data.History
 	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
 }
 
-func buildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry) ([]string, error) {
+func BuildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry) ([]string, error) {
 	row := make([]string, 0)
 	for _, header := range columnNames {
 		switch header {
@@ -193,7 +193,7 @@ func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResult
 		if entry != nil && strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
 			continue
 		}
-		row, err := buildTableRow(ctx, config.DisplayedColumns, *entry)
+		row, err := BuildTableRow(ctx, config.DisplayedColumns, *entry)
 		if err != nil {
 			return err
 		}
