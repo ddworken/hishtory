@@ -148,7 +148,7 @@ func buildTableRow(ctx context.Context, columnNames []string, entry data.History
 		case "Timestamp":
 			row = append(row, entry.StartTime.Local().Format(hctx.GetConf(ctx).TimestampFormat))
 		case "Runtime":
-			if entry.EndTime == time.Unix(0, 0) {
+			if entry.EndTime.UnixMilli() == 0 {
 				// An EndTime of zero means this is a pre-saved entry that never finished
 				row = append(row, "N/A")
 			} else {
@@ -718,12 +718,8 @@ func RetryingDbFunction(dbFunc func() error) error {
 			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
 			continue
 		}
-		if strings.Contains(errMsg, "UNIQUE constraint failed") {
-			if i == 0 {
-				return err
-			} else {
-				return nil
-			}
+		if strings.Contains(errMsg, "UNIQUE constraint failed: history_entries.") {
+			return nil
 		}
 		return fmt.Errorf("unrecoverable sqlite error: %w", err)
 	}
