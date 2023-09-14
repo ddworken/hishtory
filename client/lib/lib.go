@@ -490,7 +490,7 @@ func RetryingDbFunction(dbFunc func() error) error {
 			return nil
 		}
 		errMsg := err.Error()
-		if errMsg == "database is locked (5) (SQLITE_BUSY)" || errMsg == "database is locked (261)" {
+		if strings.Contains(errMsg, "database is locked (5) (SQLITE_BUSY)") || strings.Contains(errMsg, "database is locked (261)") {
 			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
 			continue
 		}
