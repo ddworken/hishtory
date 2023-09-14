@@ -3,13 +3,15 @@ package release
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ddworken/hishtory/shared"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/ddworken/hishtory/shared"
 )
 
+// TODO: Can we get rid of this bit of mutable state by changing UpdateReleaseVersion to return the latest version?
 var Version = "UNKNOWN"
 
 type releaseInfo struct {

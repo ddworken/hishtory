@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
@@ -23,8 +22,7 @@ const (
 )
 
 var (
-	GLOBAL_DB      *database.DB
-	GLOBAL_STATSD  *statsd.Client
+	// Filled in via ldflags with the latest released version as of the server getting built
 	ReleaseVersion string
 )
 
@@ -96,14 +94,6 @@ func OpenDB() (*database.DB, error) {
 	return db, nil
 }
 
-func init() {
-	release.Version = ReleaseVersion
-	if release.Version == "UNKNOWN" && !isTestEnvironment() {
-		panic("server.go was built without a ReleaseVersion!")
-	}
-	InitDB()
-}
-
 func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
 	if err := release.UpdateReleaseVersion(); err != nil {
 		return fmt.Errorf("updateReleaseVersion: %w", err)
@@ -120,10 +110,10 @@ func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
 	return nil
 }
 
-func runBackgroundJobs(ctx context.Context, srv *server.Server) {
+func runBackgroundJobs(ctx context.Context, srv *server.Server, db *database.DB, stats *statsd.Client) {
 	time.Sleep(5 * time.Second)
 	for {
-		err := cron(ctx, GLOBAL_DB, GLOBAL_STATSD)
+		err := cron(ctx, db, stats)
 		if err != nil {
 			fmt.Printf("Cron failure: %v", err)
 
@@ -136,41 +126,45 @@ func runBackgroundJobs(ctx context.Context, srv *server.Server) {
 }
 
 func InitDB() *database.DB {
-	var err error
-	GLOBAL_DB, err = OpenDB()
+	db, err := OpenDB()
 	if err != nil {
 		panic(fmt.Errorf("OpenDB: %w", err))
 	}
 
-	if err := GLOBAL_DB.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		panic(fmt.Errorf("ping: %w", err))
 	}
 	if isProductionEnvironment() {
-		if err := GLOBAL_DB.SetMaxIdleConns(10); err != nil {
+		if err := db.SetMaxIdleConns(10); err != nil {
 			panic(fmt.Errorf("failed to set max idle conns: %w", err))
 		}
 	}
 	if isTestEnvironment() {
-		if err := GLOBAL_DB.SetMaxIdleConns(1); err != nil {
+		if err := db.SetMaxIdleConns(1); err != nil {
 			panic(fmt.Errorf("failed to set max idle conns: %w", err))
 		}
 	}
 
-	return GLOBAL_DB
+	return db
 }
 
 func main() {
-	s, err := statsd.New(StatsdSocket)
+	// Startup check:
+	release.Version = ReleaseVersion
+	if release.Version == "UNKNOWN" && !isTestEnvironment() {
+		panic("server.go was built without a ReleaseVersion!")
+	}
+
+	// Create DB and stats
+	db := InitDB()
+	stats, err := statsd.New(StatsdSocket)
 	if err != nil {
 		fmt.Printf("Failed to start DataDog statsd: %v\n", err)
 	}
 
-	// TODO: remove this global once we have a better way to pass it around
-	GLOBAL_STATSD = s
-
 	srv := server.NewServer(
-		GLOBAL_DB,
-		server.WithStatsd(s),
+		db,
+		server.WithStatsd(stats),
 		server.WithReleaseVersion(release.Version),
 		server.IsTestEnvironment(isTestEnvironment()),
 		server.IsProductionEnvironment(isProductionEnvironment()),
@@ -178,24 +172,11 @@ func main() {
 		server.WithUpdateInfo(release.BuildUpdateInfo(release.Version)),
 	)
 
-	go runBackgroundJobs(context.Background(), srv)
+	go runBackgroundJobs(context.Background(), srv, db, stats)
 
 	if err := srv.Run(context.Background(), ":8080"); err != nil {
 		panic(err)
 	}
-}
-
-func checkGormResult(result *gorm.DB) {
-	checkGormError(result.Error, 1)
-}
-
-func checkGormError(err error, skip int) {
-	if err == nil {
-		return
-	}
-
-	_, filename, line, _ := runtime.Caller(skip + 1)
-	panic(fmt.Sprintf("DB error at %s:%d: %v", filename, line, err))
 }
 
 // TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?

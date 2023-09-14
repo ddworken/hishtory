@@ -5,9 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ddworken/hishtory/internal/database"
-	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +12,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ddworken/hishtory/internal/database"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
@@ -39,7 +40,10 @@ func TestMain(m *testing.M) {
 	}
 	underlyingDb.SetMaxOpenConns(1)
 	db.Exec("PRAGMA journal_mode = WAL")
-	db.AddDatabaseTables()
+	err = db.AddDatabaseTables()
+	if err != nil {
+		panic(fmt.Errorf("failed to add database tables: %w", err))
+	}
 
 	DB = db
 
