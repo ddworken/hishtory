@@ -669,18 +669,18 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	resp, err := httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to POST %s: %w", path, err)
+		return nil, fmt.Errorf("failed to POST %s: %w", getServerHostname()+path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to POST %s: status_code=%d", path, resp.StatusCode)
+		return nil, fmt.Errorf("failed to POST %s: status_code=%d", getServerHostname()+path, resp.StatusCode)
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from POST %s: %w", path, err)
+		return nil, fmt.Errorf("failed to read response body from POST %s: %w", getServerHostname()+path, err)
 	}
 	duration := time.Since(start)
-	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", path, duration.String())
+	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", getServerHostname()+path, duration.String())
 	return respBody, nil
 }
 
