@@ -245,7 +245,12 @@ func buildServer() string {
 	return fn
 }
 
+func killExistingTestServers() {
+	_ = exec.Command("bash", "-c", "lsof -i tcp:8080 | grep LISTEN | awk '{print $2}' | xargs kill -9").Run()
+}
+
 func RunTestServer() func() {
+	killExistingTestServers()
 	os.Setenv("HISHTORY_SERVER", "http://localhost:8080")
 	fn := buildServer()
 	cmd := exec.Command(fn)
@@ -273,7 +278,14 @@ func RunTestServer() func() {
 		if strings.Contains(allOutput, "ERROR:") || strings.Contains(allOutput, "http: panic serving") {
 			panic(fmt.Sprintf("server experienced an error: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
-		// fmt.Printf("stderr=%#v, stdout=%#v\n", stderr.String(), stdout.String())
+		// Persist test server logs for debugging
+		f, err := os.OpenFile("/tmp/hishtory-server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		checkError(err)
+		defer f.Close()
+		_, err = f.Write([]byte(stdout.String() + "\n"))
+		checkError(err)
+		_, err = f.Write([]byte(stderr.String() + "\n"))
+		checkError(err)
 	}
 }
 
