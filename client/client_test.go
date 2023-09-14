@@ -182,6 +182,7 @@ func TestParam(t *testing.T) {
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
+		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester) })
 		runTestsWithRetries(t, "testControlR/"+tester.ShellName(), func(t testing.TB) { testControlR(t, tester, tester.ShellName(), Online) })
 	}
 	runTestsWithRetries(t, "testControlR/offline/bash", func(t testing.TB) { testControlR(t, bashTester{}, "bash", Offline) })
@@ -2308,6 +2309,46 @@ echo bar`)
 		testName += "-" + runtime.GOOS
 	}
 	testutils.CompareGoldens(t, out, testName)
+}
+
+func testPresaving(t *testing.T, tester shellTester) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	userSecret := installHishtory(t, tester, "")
+	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("table_sizing aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+
+	// Enable beta-mode since presaving is behind that feature flag
+	out := strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`))
+	require.Equal(t, out, "false")
+	tester.RunInteractiveShell(t, `hishtory config-set beta-mode true`)
+	out = strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`))
+	require.Equal(t, out, "true")
+
+	// Start a command that will take a long time to execute in the background, so
+	// we can check that it was recorded even though it never finished.
+	require.NoError(t, os.Chdir("/"))
+	go tester.RunInteractiveShell(t, `sleep 13371337`)
+	time.Sleep(time.Millisecond * 500)
+
+	// Test that it shows up in hishtory export
+	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	expectedOutput := "sleep 13371337\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
+	// Test that it shows up in hishtory query and that the runtime is displayed correctly
+	tester.RunInteractiveShell(t, ` hishtory config-set displayed-columns CWD Runtime Command`)
+	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
+	testutils.CompareGoldens(t, out, "testPresaving-query")
+
+	// And the same for tquery
+	out = captureTerminalOutputWithComplexCommands(t, tester,
+		[]TmuxCommand{
+			{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 2.0},
+			{Keys: "sleep SPACE 13371337 SPACE -export SPACE -tquery"}})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "testPresaving-tquery")
 }
 
 func testUninstall(t *testing.T, tester shellTester) {
