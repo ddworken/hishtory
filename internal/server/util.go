@@ -2,15 +2,16 @@ package server
 
 import (
 	"fmt"
-	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	"math"
 	"net/http"
 	pprofhttp "net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
+
+	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
 
 func getMaximumNumberOfAllowedUsers() int {
@@ -46,8 +47,6 @@ func configureObservability(mux *httptrace.ServeMux, releaseVersion string) func
 		tracer.WithService("hishtory-api"),
 		tracer.WithUDS("/var/run/datadog/apm.socket"),
 	)
-	// TODO: should this be here?
-	defer tracer.Stop()
 
 	// Pprof
 	mux.HandleFunc("/debug/pprof/", pprofhttp.Index)
