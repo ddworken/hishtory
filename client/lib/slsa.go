@@ -42,7 +42,7 @@ func checkForDowngrade(currentVersionS, newVersionS string) error {
 	return nil
 }
 
-func verifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag string) error {
+func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag string) error {
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
@@ -87,7 +87,7 @@ func getFileHash(binaryPath string) (string, error) {
 	return hash, nil
 }
 
-func handleSlsaFailure(srcErr error) error {
+func HandleSlsaFailure(srcErr error) error {
 	fmt.Printf("\nFailed to verify SLSA provenance! This is likely due to a SLSA bug (SLSA is a brand new standard, and like all new things, has bugs). Ignoring this failure means falling back to the way most software does updates. Do you want to ignore this failure and update anyways? [y/N]")
 	reader := bufio.NewReader(os.Stdin)
 	resp, err := reader.ReadString('\n')
