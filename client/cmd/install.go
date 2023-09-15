@@ -236,7 +236,7 @@ func configureFish(homedir, binaryPath string) error {
 	}
 	err = os.WriteFile(getFishConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to write config.zsh file: %w", err)
+		return fmt.Errorf("failed to write config.fish file: %w", err)
 	}
 	// Check if we need to configure the fishrc
 	fishIsConfigured, err := isFishConfigured(homedir)
