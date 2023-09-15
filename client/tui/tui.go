@@ -196,6 +196,7 @@ func initialModel(ctx context.Context, t table.Model, tableEntries []*data.Histo
 	queryInput.Placeholder = "ls"
 	queryInput.Focus()
 	queryInput.CharLimit = 156
+	// TODO: Make the width of the query input match the width of the terminal
 	queryInput.Width = 50
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
