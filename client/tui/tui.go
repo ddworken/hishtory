@@ -195,9 +195,14 @@ func initialModel(ctx context.Context, t table.Model, tableEntries []*data.Histo
 	queryInput := textinput.New()
 	queryInput.Placeholder = "ls"
 	queryInput.Focus()
-	queryInput.CharLimit = 156
-	// TODO: Make the width of the query input match the width of the terminal
-	queryInput.Width = 50
+	queryInput.CharLimit = 200
+	width, _, err := getTerminalSize()
+	if err == nil {
+		queryInput.Width = width
+	} else {
+		hctx.GetLogger().Infof("getTerminalSize() return err=%#v, defaulting queryInput to a width of 50", err)
+		queryInput.Width = 50
+	}
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
@@ -307,6 +312,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
+		m.queryInput.Width = msg.Width
 		cmd := runQueryAndUpdateTable(m, true, true)
 		return m, cmd
 	case offlineMsg:

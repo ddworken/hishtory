@@ -1805,6 +1805,14 @@ func testTui_resize(t testing.TB) {
 	})
 	require.Contains(t, out, "\necho 'aaaaaa bbbb'\n")
 
+	// Check that it supports a very long search query
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip"},
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
+
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
 }
