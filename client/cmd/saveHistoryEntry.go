@@ -99,7 +99,7 @@ func presaveHistoryEntry(ctx context.Context) {
 
 	// Augment it with os.Args
 	entry.Command = trimTrailingWhitespace(os.Args[3])
-	if strings.HasPrefix(" ", entry.Command) {
+	if strings.HasPrefix(" ", entry.Command) || entry.Command == "" {
 		// Don't save commands that start with a space
 		return
 	}
@@ -139,7 +139,7 @@ func saveHistoryEntry(ctx context.Context) {
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
 		deletePresavedEntryFunc := func() error {
-			tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10)+" end_time:1970/01/01_00:00:00_+0000")
+			tx, err := lib.MakeWhereQueryFromSearch(ctx, db, "cwd:"+entry.CurrentWorkingDirectory+" start_time:"+strconv.FormatInt(entry.StartTime.Unix(), 10)+" end_time:1970/01/01_00:00:00_+00:00")
 			if err != nil {
 				return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
 			}
