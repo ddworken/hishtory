@@ -68,6 +68,7 @@ func OpenDB() (*database.DB, error) {
 
 	config := gorm.Config{Logger: customLogger}
 
+	fmt.Println("Connecting to DB")
 	var db *database.DB
 	if sqliteDb != "" {
 		var err error
@@ -87,6 +88,7 @@ func OpenDB() (*database.DB, error) {
 			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 	}
+	fmt.Println("AutoMigrating DB tables")
 	err := db.AddDatabaseTables()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
@@ -126,11 +128,13 @@ func runBackgroundJobs(ctx context.Context, srv *server.Server, db *database.DB,
 }
 
 func InitDB() *database.DB {
+	fmt.Println("Opening DB")
 	db, err := OpenDB()
 	if err != nil {
 		panic(fmt.Errorf("OpenDB: %w", err))
 	}
 
+	fmt.Println("Pinging DB to confirm liveness")
 	if err := db.Ping(); err != nil {
 		panic(fmt.Errorf("ping: %w", err))
 	}
@@ -144,7 +148,7 @@ func InitDB() *database.DB {
 			panic(fmt.Errorf("failed to set max idle conns: %w", err))
 		}
 	}
-
+	fmt.Println("Done initializing DB")
 	return db
 }
 
