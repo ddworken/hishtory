@@ -8,11 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func (db *DB) CountHistoryEntries(ctx context.Context) (int64, error) {
+func (db *DB) CountApproximateHistoryEntries(ctx context.Context) (int64, error) {
 	var numDbEntries int64
-	tx := db.WithContext(ctx).Model(&shared.EncHistoryEntry{}).Count(&numDbEntries)
-	if tx.Error != nil {
-		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	err := db.WithContext(ctx).Raw("SELECT reltuples::bigint FROM pg_class WHERE relname = 'enc_history_entries'").Row().Scan(&numDbEntries)
+	if err != nil {
+		return 0, fmt.Errorf("DB Error: %w", err)
 	}
 
 	return numDbEntries, nil

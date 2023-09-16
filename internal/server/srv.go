@@ -222,7 +222,7 @@ func (s *Server) feedbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if s.isProductionEnvironment {
-		encHistoryEntryCount, err := s.db.CountHistoryEntries(r.Context())
+		encHistoryEntryCount, err := s.db.CountApproximateHistoryEntries(r.Context())
 		checkGormError(err)
 		if encHistoryEntryCount < 1000 {
 			panic("Suspiciously few enc history entries!")
@@ -285,7 +285,7 @@ func (s *Server) statsHandler(w http.ResponseWriter, r *http.Request) {
 	numEntriesProcessed, err := s.db.UsageDataTotal(r.Context())
 	checkGormError(err)
 
-	numDbEntries, err := s.db.CountHistoryEntries(r.Context())
+	numDbEntries, err := s.db.CountApproximateHistoryEntries(r.Context())
 	checkGormError(err)
 
 	oneWeek := time.Hour * 24 * 7
