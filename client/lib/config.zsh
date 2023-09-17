@@ -10,7 +10,8 @@ function _hishtory_add() {
     _hishtory_command=$1
     _hishtory_start_time=`date +%s`
     if ! [ -z "$_hishtory_command " ]; then
-        hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time
+        (hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time &)  # Background Run
+        # hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time  # Foreground Run
     fi
 }
 
