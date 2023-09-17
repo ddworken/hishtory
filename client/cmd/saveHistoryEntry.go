@@ -147,9 +147,6 @@ func saveHistoryEntry(ctx context.Context) {
 			if res.Error != nil {
 				return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
 			}
-			if res.RowsAffected > 1 {
-				return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
-			}
 			return nil
 		}
 		lib.CheckFatalError(lib.RetryingDbFunction(deletePresavedEntryFunc))
