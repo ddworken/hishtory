@@ -330,6 +330,14 @@ func (s *Server) getNumConnectionsHandler(w http.ResponseWriter, r *http.Request
 	_, _ = fmt.Fprintf(w, "%#v", stats.OpenConnections)
 }
 
+func (s *Server) handleNonCriticalError(err error) {
+	if s.isProductionEnvironment {
+		fmt.Printf("Unexpected non-critical error: %v", err)
+	} else {
+		panic(fmt.Errorf("unexpected non-critical error: %w", err))
+	}
+}
+
 func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr string, userId, deviceId string, numEntriesHandled int, isQuery bool) error {
 	var usageData []shared.UsageData
 	usageData, err := s.db.UsageDataFindByUserAndDevice(ctx, userId, deviceId)

@@ -186,4 +186,3 @@ func main() {
 }
 
 // TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?
-// TODO: Add error checking for the calls to updateUsageData(...) that logs it/triggers an alert in prod, but is an error in test

@@ -32,9 +32,7 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
-	if err := s.updateUsageData(r.Context(), version, remoteIPAddr, entries[0].UserId, entries[0].DeviceId, len(entries), false); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, entries[0].UserId, entries[0].DeviceId, len(entries), false))
 
 	devices, err := s.db.DevicesForUser(r.Context(), entries[0].UserId)
 	checkGormError(err)
@@ -64,9 +62,7 @@ func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
-	if err := s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false))
 	historyEntries, err := s.db.AllHistoryEntriesForUser(r.Context(), userId)
 	checkGormError(err)
 	fmt.Printf("apiBootstrapHandler: Found %d entries\n", len(historyEntries))
@@ -84,9 +80,7 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
-	if err := s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, true); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, true))
 
 	// Delete any entries that match a pending deletion request
 	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
@@ -156,9 +150,7 @@ func (s *Server) apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
-	if err := s.updateUsageData(r.Context(), version, remoteIPAddr, userId, srcDeviceId, len(entries), false); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, srcDeviceId, len(entries), false))
 
 	w.Header().Set("Content-Length", "0")
 	w.WriteHeader(http.StatusOK)
@@ -226,9 +218,7 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
-	if err := s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false); err != nil {
-		fmt.Printf("updateUsageData: %v\n", err)
-	}
+	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false))
 
 	if s.statsd != nil {
 		s.statsd.Incr("hishtory.register", []string{}, 1.0)
