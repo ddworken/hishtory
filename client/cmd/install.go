@@ -424,23 +424,23 @@ func isBashProfileConfigured(homedir string) (bool, error) {
 }
 
 func tweakConfigForTests(configContents string) (string, error) {
-	madeSubstitution := false
-	skipLineIndex := -1
+	substitutionCount := 0
+	removedCount := 0
 	ret := ""
 	split := strings.Split(configContents, "\n")
 	for i, line := range split {
 		if strings.Contains(line, "# Background Run") {
 			ret += strings.ReplaceAll(split[i+1], "# hishtory", "hishtory")
-			madeSubstitution = true
-			skipLineIndex = i + 1
-		} else if i == skipLineIndex {
+			substitutionCount += 1
+		} else if strings.Contains(line, "# Foreground Run") {
+			removedCount += 1
 			continue
 		} else {
 			ret += line
 		}
 		ret += "\n"
 	}
-	if !madeSubstitution {
+	if !(substitutionCount == 2 && removedCount == 2) {
 		return "", fmt.Errorf("failed to find substitution line in configConents=%#v", configContents)
 	}
 	return ret, nil
