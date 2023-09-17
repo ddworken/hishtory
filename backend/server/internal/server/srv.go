@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/ddworken/hishtory/internal/database"
+	"github.com/ddworken/hishtory/backend/server/internal/database"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/rodaine/table"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"

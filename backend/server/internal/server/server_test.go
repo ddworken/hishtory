@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ddworken/hishtory/internal/database"
+	"github.com/ddworken/hishtory/backend/server/internal/database"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 

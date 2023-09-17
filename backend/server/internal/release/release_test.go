@@ -1,9 +1,10 @@
 package release
 
 import (
-	"github.com/ddworken/hishtory/shared/testutils"
 	"strings"
 	"testing"
+
+	"github.com/ddworken/hishtory/shared/testutils"
 )
 
 func TestUpdateReleaseVersion(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/ddworken/hishtory/internal/database"
-	"github.com/ddworken/hishtory/internal/release"
-	"github.com/ddworken/hishtory/internal/server"
+	"github.com/ddworken/hishtory/backend/server/internal/database"
+	"github.com/ddworken/hishtory/backend/server/internal/release"
+	"github.com/ddworken/hishtory/backend/server/internal/server"
 	_ "github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
