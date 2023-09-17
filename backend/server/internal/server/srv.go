@@ -338,10 +338,12 @@ func (s *Server) getNumConnectionsHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handleNonCriticalError(err error) {
-	if s.isProductionEnvironment {
-		fmt.Printf("Unexpected non-critical error: %v", err)
-	} else {
-		panic(fmt.Errorf("unexpected non-critical error: %w", err))
+	if err != nil {
+		if s.isProductionEnvironment {
+			fmt.Printf("Unexpected non-critical error: %v", err)
+		} else {
+			panic(fmt.Errorf("unexpected non-critical error: %w", err))
+		}
 	}
 }
 
