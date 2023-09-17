@@ -24,6 +24,7 @@ type Server struct {
 
 	isProductionEnvironment bool
 	isTestEnvironment       bool
+	trackUsageData          bool
 	releaseVersion          string
 	cronFn                  CronFn
 	updateInfo              shared.UpdateInfo
@@ -65,6 +66,12 @@ func IsProductionEnvironment(v bool) Option {
 func IsTestEnvironment(v bool) Option {
 	return func(s *Server) {
 		s.isTestEnvironment = v
+	}
+}
+
+func TrackUsageData(v bool) Option {
+	return func(s *Server) {
+		s.trackUsageData = v
 	}
 }
 
@@ -339,6 +346,9 @@ func (s *Server) handleNonCriticalError(err error) {
 }
 
 func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr string, userId, deviceId string, numEntriesHandled int, isQuery bool) error {
+	if !s.trackUsageData {
+		return nil
+	}
 	var usageData []shared.UsageData
 	usageData, err := s.db.UsageDataFindByUserAndDevice(ctx, userId, deviceId)
 	if err != nil {
