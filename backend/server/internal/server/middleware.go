@@ -74,8 +74,8 @@ func withLogging(s *statsd.Client) Middleware {
 			duration := time.Since(start)
 			fmt.Printf("%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
 			if s != nil {
-				s.Distribution("hishtory.request_duration", float64(duration.Microseconds())/1_000, []string{"HANDLER=" + getFunctionName(h)}, 1.0)
-				s.Incr("hishtory.request", []string{}, 1.0)
+				s.Distribution("hishtory.request_duration", float64(duration.Microseconds())/1_000, []string{"handler:" + getFunctionName(h)}, 1.0)
+				s.Incr("hishtory.request", []string{"handler:" + getFunctionName(h)}, 1.0)
 			}
 		})
 	}
