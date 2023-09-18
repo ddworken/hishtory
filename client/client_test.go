@@ -207,7 +207,7 @@ func runTestsWithRetries(parentT *testing.T, testName string, testFunc func(t te
 
 func runTestsWithExtraRetries(parentT *testing.T, testName string, testFunc func(t testing.TB), numRetries int) {
 	for i := 1; i <= numRetries; i++ {
-		rt := &retryingTester{nil, i == numRetries, true, testName}
+		rt := &retryingTester{nil, i == numRetries, true, testName, numRetries}
 		parentT.Run(fmt.Sprintf("%s/%d", testName, i), func(t *testing.T) {
 			rt.T = t
 			testFunc(rt)
@@ -231,6 +231,7 @@ type retryingTester struct {
 	isFinalRun bool
 	succeeded  bool
 	testName   string
+	numRetries int
 }
 
 func (t *retryingTester) Fatalf(format string, args ...any) {
@@ -239,6 +240,7 @@ func (t *retryingTester) Fatalf(format string, args ...any) {
 	if t.isFinalRun {
 		if GLOBAL_STATSD != nil {
 			GLOBAL_STATSD.Incr("test_failure", []string{"test:" + t.testName, "os:" + runtime.GOOS}, 1.0)
+			GLOBAL_STATSD.Distribution("test_retry_count", float64(t.numRetries), []string{"test:" + t.testName, "os:" + runtime.GOOS}, 1.0)
 		}
 		t.T.Fatalf(format, args...)
 	} else {
