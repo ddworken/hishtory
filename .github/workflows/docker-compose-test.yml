@@ -38,8 +38,12 @@ jobs:
           source ~/.bashrc
           # Check that hishtory query runs without errors
           ./hishtory query 
-          # And check that entries get recorded properly
-          echo -e 'ls -Slah /\nhishtory export\n' | zsh -is | grep "ls -Slah /"
+          # Run a command such that hishtory will record it
+          echo -e 'ls -Slah /\n' | zsh -is
+          # Sleep to ensure there is time for it to be recorded, since recordings are async
+          sleep 1
+          # And check that it was recorded
+          ./hishtory export | grep "ls -Slah /"
           # Assert that the entry is syncing properly
           ./hishtory status -v | grep 'Sync Status: Synced'
     - name: Setup tmate session
