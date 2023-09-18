@@ -620,6 +620,20 @@ func parseTimeGenerously(input string) (time.Time, error) {
 	return dateparse.ParseLocal(input)
 }
 
+// A wrapper around tx.Where(...) that filters out nil-values
+func where(tx *gorm.DB, s string, v1 any, v2 any) *gorm.DB {
+	if v1 == nil && v2 == nil {
+		return tx.Where(s)
+	}
+	if v1 != nil && v2 == nil {
+		return tx.Where(s, v1)
+	}
+	if v1 != nil && v2 != nil {
+		return tx.Where(s, v1, v2)
+	}
+	panic(fmt.Sprintf("Impossible state: v1=%#v, v2=%#v", v1, v2))
+}
+
 func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
 	tokens, err := tokenize(query)
 	if err != nil {
@@ -638,7 +652,7 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 				if err != nil {
 					return nil, err
 				}
-				tx = tx.Where("NOT "+query, v1, v2)
+				tx = where(tx, "NOT "+query, v1, v2)
 			} else {
 				query, v1, v2, v3, err := parseNonAtomizedToken(token[1:])
 				if err != nil {
@@ -651,7 +665,7 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 			if err != nil {
 				return nil, err
 			}
-			tx = tx.Where(query, v1, v2)
+			tx = where(tx, query, v1, v2)
 		} else {
 			query, v1, v2, v3, err := parseNonAtomizedToken(token)
 			if err != nil {
@@ -727,11 +741,7 @@ func parseAtomizedToken(ctx context.Context, token string) (string, interface{},
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to parse start_time:%s as a timestamp: %w", val, err)
 		}
-		// Note: We are bypassing Gorm's templating here and directly string substituting in the timestamp. This is because
-		// Gorm treats zero and NULL as identical, so if the timestamp we're search for is 0 (aka the beginning of time) then
-		// Gorm will make a query that actually looks for `start_time = NULL`, which will of course never return true. So we
-		// directly template in our string. This is safe from SQL injection since it is just a number.
-		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) = " + strconv.FormatInt(t.Unix(), 10) + ")", nil, nil, nil
+		return "(CAST(strftime(\"%s\",start_time) AS INTEGER) = ?)", strconv.FormatInt(t.Unix(), 10), nil, nil
 	case "end_time":
 		// Note that this atom probably isn't useful for interactive usage since it does exact matching, but we use it
 		// internally for pre-saving history entries.
@@ -739,8 +749,7 @@ func parseAtomizedToken(ctx context.Context, token string) (string, interface{},
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to parse end_time:%s as a timestamp: %w", val, err)
 		}
-		// See note above about why we're directly templating in here rather than using parameterized queries
-		return "(CAST(strftime(\"%s\",end_time) AS INTEGER) = " + strconv.FormatInt(t.Unix(), 10) + ")", nil, nil, nil
+		return "(CAST(strftime(\"%s\",end_time) AS INTEGER) = ?)", strconv.FormatInt(t.Unix(), 10), nil, nil
 	case "command":
 		return "(instr(command, ?) > 0)", val, nil, nil
 	default:
