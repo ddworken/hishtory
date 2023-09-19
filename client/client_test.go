@@ -2522,7 +2522,7 @@ echo foo`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-tquery")
 
 	// And change the config to filter out duplicate rows
