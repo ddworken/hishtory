@@ -108,6 +108,11 @@ func presaveHistoryEntry(ctx context.Context) {
 	entry.StartTime = time.Unix(startTime, 0).UTC()
 	entry.EndTime = time.Unix(0, 0).UTC()
 
+	// Skip saving references to presaving
+	if strings.Contains(entry.Command, "presaveHistoryEntry") {
+		return
+	}
+
 	// And persist it locally.
 	db := hctx.GetDb(ctx)
 	err = lib.ReliableDbCreate(db, *entry)
