@@ -482,6 +482,8 @@ func normalizeEntryTimezone(entry data.HistoryEntry) data.HistoryEntry {
 	return entry
 }
 
+const SQLITE_LOCKED_ERR_MSG = "database is locked ("
+
 func RetryingDbFunction(dbFunc func() error) error {
 	var err error = nil
 	i := 0
@@ -491,7 +493,7 @@ func RetryingDbFunction(dbFunc func() error) error {
 			return nil
 		}
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "database is locked (5) (SQLITE_BUSY)") || strings.Contains(errMsg, "database is locked (261)") {
+		if strings.Contains(errMsg, SQLITE_LOCKED_ERR_MSG) {
 			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
 			continue
 		}
@@ -678,6 +680,12 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 }
 
 func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
+	return retryingSearch(ctx, db, query, limit, 0)
+}
+
+const SEARCH_RETRY_COUNT = 3
+
+func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit int, currentRetryNum int) ([]*data.HistoryEntry, error) {
 	if ctx == nil && query != "" {
 		return nil, fmt.Errorf("lib.Search called with a nil context and a non-empty query (this should never happen)")
 	}
@@ -697,6 +705,11 @@ func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.
 	var historyEntries []*data.HistoryEntry
 	result := tx.Find(&historyEntries)
 	if result.Error != nil {
+		if strings.Contains(result.Error.Error(), SQLITE_LOCKED_ERR_MSG) && currentRetryNum < SEARCH_RETRY_COUNT {
+			hctx.GetLogger().Infof("Ignoring err=%v and retrying search query, cnt=%d", result.Error, currentRetryNum)
+			time.Sleep(time.Duration(currentRetryNum*rand.Intn(50)) * time.Millisecond)
+			return retryingSearch(ctx, db, query, limit, currentRetryNum+1)
+		}
 		return nil, fmt.Errorf("DB query error: %w", result.Error)
 	}
 	return historyEntries, nil
