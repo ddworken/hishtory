@@ -150,8 +150,8 @@ type model struct {
 	// Whether the TUI is quitting.
 	quitting bool
 
-	// The table used for displaying search results.
-	table table.Model
+	// The table used for displaying search results. Nil if the initial search query hasn't returned yet.
+	table *table.Model
 	// The entries in the table
 	tableEntries []*data.HistoryEntry
 	// Whether the user has hit enter to select an entry and the TUI is thus about to quit.
@@ -188,7 +188,7 @@ type asyncQueryFinishedMsg struct {
 	maintainCursor   bool
 }
 
-func initialModel(ctx context.Context, t table.Model, tableEntries []*data.HistoryEntry, initialQuery string) model {
+func initialModel(ctx context.Context, initialQuery string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -206,7 +206,7 @@ func initialModel(ctx context.Context, t table.Model, tableEntries []*data.Histo
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
-	return model{ctx: ctx, spinner: s, isLoading: true, table: t, tableEntries: tableEntries, runQuery: &initialQuery, queryInput: queryInput, help: help.New()}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New()}
 }
 
 func (m model) Init() tea.Cmd {
@@ -222,14 +222,17 @@ func updateTable(m model, rows []table.Row, entries []*data.HistoryEntry, search
 		return m
 	}
 	m.tableEntries = entries
-	initialCursor := m.table.Cursor()
+	initialCursor := 0
+	if m.table != nil {
+		initialCursor = m.table.Cursor()
+	}
 	if forceUpdateTable {
 		t, err := makeTable(m.ctx, rows)
 		if err != nil {
 			m.fatalErr = err
 			return m
 		}
-		m.table = t
+		m.table = &t
 	}
 	m.table.SetRows(rows)
 	if maintainCursor {
@@ -247,9 +250,11 @@ func updateTable(m model, rows []table.Row, entries []*data.HistoryEntry, search
 }
 
 func preventTableOverscrolling(m model) {
-	if m.table.Cursor() >= len(m.tableEntries) {
-		// Ensure that we can't scroll past the end of the table
-		m.table.SetCursor(len(m.tableEntries) - 1)
+	if m.table != nil {
+		if m.table.Cursor() >= len(m.tableEntries) {
+			// Ensure that we can't scroll past the end of the table
+			m.table.SetCursor(len(m.tableEntries) - 1)
+		}
 	}
 }
 
@@ -275,16 +280,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, keys.SelectEntry):
-			if len(m.tableEntries) != 0 {
+			if len(m.tableEntries) != 0 && m.table != nil {
 				m.selected = Selected
 			}
 			return m, tea.Quit
 		case key.Matches(msg, keys.SelectEntryAndChangeDir):
-			if len(m.tableEntries) != 0 {
+			if len(m.tableEntries) != 0 && m.table != nil {
 				m.selected = SelectedWithChangeDir
 			}
 			return m, tea.Quit
 		case key.Matches(msg, keys.DeleteEntry):
+			if m.table == nil {
+				return m, nil
+			}
 			err := deleteHistoryEntry(m.ctx, *m.tableEntries[m.table.Cursor()])
 			if err != nil {
 				m.fatalErr = err
@@ -297,10 +305,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
 		default:
-			t, cmd1 := m.table.Update(msg)
-			m.table = t
-			if strings.HasPrefix(msg.String(), "alt+") {
-				return m, tea.Batch(cmd1)
+			pendingCommands := tea.Batch()
+			if m.table != nil {
+				t, cmd1 := m.table.Update(msg)
+				m.table = &t
+				if strings.HasPrefix(msg.String(), "alt+") {
+					return m, tea.Batch(cmd1)
+				}
+				pendingCommands = tea.Batch(pendingCommands, cmd1)
 			}
 			i, cmd2 := m.queryInput.Update(msg)
 			m.queryInput = i
@@ -308,7 +320,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.runQuery = &searchQuery
 			cmd3 := runQueryAndUpdateTable(m, false, false)
 			preventTableOverscrolling(m)
-			return m, tea.Batch(cmd1, cmd2, cmd3)
+			return m, tea.Batch(pendingCommands, cmd2, cmd3)
 		}
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
@@ -333,8 +345,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
 		} else {
-			m.table, cmd = m.table.Update(msg)
-			return m, cmd
+			if m.table != nil {
+				t, cmd := m.table.Update(msg)
+				m.table = &t
+				return m, cmd
+			}
+			return m, nil
 		}
 	}
 }
@@ -367,7 +383,14 @@ func (m model) View() string {
 	}
 	warning += "\n"
 	helpView := m.help.View(keys)
-	return fmt.Sprintf("\n%s%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), baseStyle.Render(m.table.View())) + helpView
+	return fmt.Sprintf("\n%s%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), renderNullableTable(m)) + helpView
+}
+
+func renderNullableTable(m model) string {
+	if m.table == nil {
+		return strings.Repeat("\n", TABLE_HEIGHT+3)
+	}
+	return baseStyle.Render(m.table.View())
 }
 
 func getRows(ctx context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
@@ -580,20 +603,12 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 
 func TuiQuery(ctx context.Context, initialQuery string) error {
 	lipgloss.SetColorProfile(termenv.ANSI)
-	rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
-	if err != nil {
-		if initialQuery != "" {
-			// initialQuery is likely invalid in some way, let's just drop it
-			return TuiQuery(ctx, "")
-		}
-		// Something else has gone wrong, crash
-		return err
-	}
-	t, err := makeTable(ctx, rows)
-	if err != nil {
-		return err
-	}
-	p := tea.NewProgram(initialModel(ctx, t, entries, initialQuery), tea.WithOutput(os.Stderr))
+	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
+	// Async: Get the initial set of rows
+	go func() {
+		rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
+		p.Send(asyncQueryFinishedMsg{rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false})
+	}()
 	// Async: Retrieve additional entries from the backend
 	go func() {
 		err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
@@ -622,7 +637,7 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 		p.Send(bannerMsg{banner: string(banner)})
 	}()
 	// Blocking: Start the TUI
-	_, err = p.Run()
+	_, err := p.Run()
 	if err != nil {
 		return err
 	}
