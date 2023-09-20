@@ -46,8 +46,9 @@ var ConfigFishContents string
 var Version string = "Unknown"
 var GitCommit string = "Unknown"
 
-// 256KB ought to be enough for any reasonable cmd
-var maxSupportedLineLengthForImport = 256_000
+// 512KB ought to be enough for any reasonable cmd
+// Funnily enough, 256KB actually wasn't enough. See https://github.com/ddworken/hishtory/issues/93
+var maxSupportedLineLengthForImport = 512_000
 
 func Setup(userSecret string, isOffline bool) error {
 	if userSecret == "" {
