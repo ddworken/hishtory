@@ -276,7 +276,7 @@ func RunTestServer() func() {
 			panic(fmt.Sprintf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
 		}
 		if strings.Contains(allOutput, "ERROR:") || strings.Contains(allOutput, "http: panic serving") {
-			panic(fmt.Sprintf("server experienced an error: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
+			panic(fmt.Sprintf("server experienced an error\n\n\nstderr=\n%s\n\n\nstdout=%s", stderr.String(), stdout.String()))
 		}
 		// Persist test server logs for debugging
 		f, err := os.OpenFile("/tmp/hishtory-server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -325,6 +325,7 @@ func MakeFakeHistoryEntry(command string) data.HistoryEntry {
 		ExitCode:                2,
 		StartTime:               time.Unix(fakeHistoryTimestamp, 0).UTC(),
 		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0).UTC(),
+		DeviceId:                "fake_device_id",
 	}
 }
 

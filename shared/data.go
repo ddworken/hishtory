@@ -114,6 +114,13 @@ type Feedback struct {
 	Feedback string    `json:"feedback"`
 }
 
+// Response from submitting new history entries. Contains metadata that is used to avoid making additional round-trip
+// requests to the hishtory backend.
+type SubmitResponse struct {
+	HaveDumpRequests     bool `json:"have_dump_requests"`
+	HaveDeletionRequests bool `json:"have_deletion_requests"`
+}
+
 func Chunks[k any](slice []k, chunkSize int) [][]k {
 	var chunks [][]k
 	for i := 0; i < len(slice); i += chunkSize {

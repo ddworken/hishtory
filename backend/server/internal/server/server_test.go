@@ -29,6 +29,10 @@ var DB *database.DB
 const testDBDSN = "file::memory:?_journal_mode=WAL&cache=shared"
 
 func TestMain(m *testing.M) {
+	// Set env variable
+	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
+	os.Setenv("HISHTORY_TEST", "1")
+
 	// setup test database
 	db, err := database.OpenSQLite(testDBDSN, &gorm.Config{})
 	if err != nil {
@@ -73,37 +77,31 @@ func TestESubmitThenQuery(t *testing.T) {
 	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
-	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	s.apiSubmitHandler(httptest.NewRecorder(), submitReq)
+	submitReq := httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+	s.apiSubmitHandler(w, submitReq)
+	require.Equal(t, 200, w.Result().StatusCode)
+	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
 
 	// Query for device id 1
-	w := httptest.NewRecorder()
+	w = httptest.NewRecorder()
 	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	s.apiQueryHandler(w, searchReq)
+	require.Equal(t, w.Result().StatusCode, 200)
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
 	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
 	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
-	if len(retrievedEntries) != 1 {
-		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
-	}
+	require.Equal(t, 1, len(retrievedEntries))
 	dbEntry := retrievedEntries[0]
-	if dbEntry.DeviceId != devId1 {
-		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
-	}
-	if dbEntry.UserId != data.UserId("key") {
-		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
-	}
-	if dbEntry.ReadCount != 0 {
-		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
-	}
+	require.Equal(t, devId1, dbEntry.DeviceId)
+	require.Equal(t, data.UserId("key"), dbEntry.UserId)
+	require.Equal(t, 0, dbEntry.ReadCount)
 	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
 	testutils.Check(t, err)
-	if !data.EntryEquals(decEntry, entry) {
-		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, entry)
-	}
+	require.True(t, data.EntryEquals(decEntry, entry))
 
 	// Same for device id 2
 	w = httptest.NewRecorder()
@@ -344,8 +342,11 @@ func TestDeletionRequests(t *testing.T) {
 	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
-	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	s.apiSubmitHandler(httptest.NewRecorder(), submitReq)
+	submitReq := httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+	s.apiSubmitHandler(w, submitReq)
+	require.Equal(t, 200, w.Result().StatusCode)
+	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
 
 	// And another entry for user1
 	entry2 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -354,8 +355,11 @@ func TestDeletionRequests(t *testing.T) {
 	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
-	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	s.apiSubmitHandler(httptest.NewRecorder(), submitReq)
+	submitReq = httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId2, bytes.NewReader(reqBody))
+	w = httptest.NewRecorder()
+	s.apiSubmitHandler(w, submitReq)
+	require.Equal(t, 200, w.Result().StatusCode)
+	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
 
 	// And an entry for user2 that has the same timestamp as the previous entry
 	entry3 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -365,11 +369,14 @@ func TestDeletionRequests(t *testing.T) {
 	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
-	submitReq = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	s.apiSubmitHandler(httptest.NewRecorder(), submitReq)
+	submitReq = httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
+	w = httptest.NewRecorder()
+	s.apiSubmitHandler(w, submitReq)
+	require.Equal(t, 200, w.Result().StatusCode)
+	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
 
 	// Query for device id 1
-	w := httptest.NewRecorder()
+	w = httptest.NewRecorder()
 	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	s.apiQueryHandler(w, searchReq)
 	res := w.Result()
@@ -469,6 +476,17 @@ func TestDeletionRequests(t *testing.T) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry3)
 	}
 
+	// Check that apiSubmit tells the client that there is a pending deletion request
+	encEntry, err = data.EncryptHistoryEntry("dkey", entry2)
+	testutils.Check(t, err)
+	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
+	testutils.Check(t, err)
+	submitReq = httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId2, bytes.NewReader(reqBody))
+	w = httptest.NewRecorder()
+	s.apiSubmitHandler(w, submitReq)
+	require.Equal(t, 200, w.Result().StatusCode)
+	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: true}, deserializeSubmitResponse(t, w))
+
 	// Query for deletion requests
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
@@ -563,8 +581,11 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
-	submitReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
-	s.apiSubmitHandler(httptest.NewRecorder(), submitReq)
+	submitReq := httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+	s.apiSubmitHandler(w, submitReq)
+	require.Equal(t, 200, w.Result().StatusCode)
+	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
 
 	// Call cleanDatabase and just check that there are no panics
 	testutils.Check(t, DB.Clean(context.TODO()))
@@ -579,4 +600,10 @@ func assertNoLeakedConnections(t *testing.T, db *database.DB) {
 	if numConns > 1 {
 		t.Fatalf("expected DB to have not leak connections, actually have %d", numConns)
 	}
+}
+
+func deserializeSubmitResponse(t *testing.T, w *httptest.ResponseRecorder) shared.SubmitResponse {
+	submitResponse := shared.SubmitResponse{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &submitResponse))
+	return submitResponse
 }

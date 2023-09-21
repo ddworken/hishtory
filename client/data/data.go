@@ -158,6 +158,7 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 }
 
 func EntryEquals(entry1, entry2 HistoryEntry) bool {
+	// TODO: Can we remove this function? Or at least move it to a test-only file?
 	return entry1.LocalUsername == entry2.LocalUsername &&
 		entry1.Hostname == entry2.Hostname &&
 		entry1.Command == entry2.Command &&

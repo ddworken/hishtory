@@ -184,5 +184,3 @@ func main() {
 		panic(err)
 	}
 }
-
-// TODO(optimization): Maybe optimize the endpoints a bit to reduce the number of round trips required?

@@ -157,6 +157,7 @@ func (s *Server) getDeletionRequestsHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Change code like this to use json.NewDecoder for simplicity
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(err)

@@ -169,11 +169,21 @@ func saveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 
 	// Persist it remotely
+	shouldCheckForDeletionRequests := true
+	shouldCheckForDumpRequests := true
 	if !config.IsOffline {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
-		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		if err != nil {
+		w, err := lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		if err == nil {
+			submitResponse := shared.SubmitResponse{}
+			err := json.Unmarshal(w, &submitResponse)
+			if err != nil {
+				lib.CheckFatalError(fmt.Errorf("failed to deserialize response from /api/v1/submit: %w", err))
+			}
+			shouldCheckForDeletionRequests = submitResponse.HaveDeletionRequests
+			shouldCheckForDumpRequests = submitResponse.HaveDumpRequests
+		} else {
 			if lib.IsOfflineError(err) {
 				hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
 				if !config.HaveMissedUploads {
@@ -188,38 +198,42 @@ func saveHistoryEntry(ctx context.Context) {
 	}
 
 	// Check if there is a pending dump request and reply to it if so
-	dumpRequests, err := lib.GetDumpRequests(config)
-	if err != nil {
-		if lib.IsOfflineError(err) {
-			// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
-			dumpRequests = []*shared.DumpRequest{}
-			hctx.GetLogger().Infof("Failed to check for dump requests because we failed to connect to the remote server!")
-		} else {
-			lib.CheckFatalError(err)
-		}
-	}
-	if len(dumpRequests) > 0 {
-		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
-		entries, err := lib.Search(ctx, db, "", 0)
-		lib.CheckFatalError(err)
-		var encEntries []*shared.EncHistoryEntry
-		for _, entry := range entries {
-			enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-			lib.CheckFatalError(err)
-			encEntries = append(encEntries, &enc)
-		}
-		reqBody, err := json.Marshal(encEntries)
-		lib.CheckFatalError(err)
-		for _, dumpRequest := range dumpRequests {
-			if !config.IsOffline {
-				_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+	if shouldCheckForDumpRequests {
+		dumpRequests, err := lib.GetDumpRequests(config)
+		if err != nil {
+			if lib.IsOfflineError(err) {
+				// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
+				dumpRequests = []*shared.DumpRequest{}
+				hctx.GetLogger().Infof("Failed to check for dump requests because we failed to connect to the remote server!")
+			} else {
 				lib.CheckFatalError(err)
+			}
+		}
+		if len(dumpRequests) > 0 {
+			lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
+			entries, err := lib.Search(ctx, db, "", 0)
+			lib.CheckFatalError(err)
+			var encEntries []*shared.EncHistoryEntry
+			for _, entry := range entries {
+				enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+				lib.CheckFatalError(err)
+				encEntries = append(encEntries, &enc)
+			}
+			reqBody, err := json.Marshal(encEntries)
+			lib.CheckFatalError(err)
+			for _, dumpRequest := range dumpRequests {
+				if !config.IsOffline {
+					_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+					lib.CheckFatalError(err)
+				}
 			}
 		}
 	}
 
 	// Handle deletion requests
-	lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+	if shouldCheckForDeletionRequests {
+		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+	}
 
 	if config.BetaMode {
 		db.Commit()

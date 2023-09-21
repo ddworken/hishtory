@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -937,10 +938,21 @@ func manuallySubmitHistoryEntry(t testing.TB, userSecret string, entry data.Hist
 	}
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
 	testutils.Check(t, err)
-	resp, err := http.Post("http://localhost:8080/api/v1/submit", "application/json", bytes.NewBuffer(jsonValue))
+	require.NotEqual(t, "", entry.DeviceId)
+	resp, err := http.Post("http://localhost:8080/api/v1/submit?source_device_id="+entry.DeviceId, "application/json", bytes.NewBuffer(jsonValue))
 	testutils.Check(t, err)
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read resp.Body: %v", err)
+	}
+	submitResp := shared.SubmitResponse{}
+	err = json.Unmarshal(respBody, &submitResp)
+	if err != nil {
+		t.Fatalf("failed to deserialize SubmitResponse: %v", err)
 	}
 }
 

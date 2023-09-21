@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -27,6 +28,7 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	if len(entries) == 0 {
 		return
 	}
+	userId := entries[0].UserId
 
 	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
@@ -50,8 +52,32 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		s.statsd.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
 	}
 
-	w.Header().Set("Content-Length", "0")
-	w.WriteHeader(http.StatusOK)
+	deviceId := getOptionalQueryParam(r, "source_device_id", s.isTestEnvironment)
+	resp := shared.SubmitResponse{
+		HaveDumpRequests:     s.haveDumpRequests(r.Context(), userId, deviceId),
+		HaveDeletionRequests: s.haveDeletionRequests(r.Context(), userId, deviceId),
+	}
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		panic(err)
+	}
+}
+
+func (s *Server) haveDumpRequests(ctx context.Context, userId, deviceId string) bool {
+	if userId == "" || deviceId == "" {
+		return true
+	}
+	dumpRequests, err := s.db.DumpRequestForUserAndDevice(ctx, userId, deviceId)
+	checkGormError(err)
+	return len(dumpRequests) > 0
+}
+
+func (s *Server) haveDeletionRequests(ctx context.Context, userId, deviceId string) bool {
+	if userId == "" || deviceId == "" {
+		return true
+	}
+	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(ctx, userId, deviceId)
+	checkGormError(err)
+	return len(deletionRequests) > 0
 }
 
 func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
@@ -171,8 +197,6 @@ func (s *Server) apiBannerHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-	var dumpRequests []*shared.DumpRequest
-	// Filter out ones requested by the hishtory instance that sent this request
 	dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, deviceId)
 	checkGormError(err)
 
