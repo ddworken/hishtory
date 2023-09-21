@@ -411,7 +411,7 @@ func TestDeletionRequests(t *testing.T) {
 		UserId:   data.UserId("dkey"),
 		SendTime: delReqTime,
 		Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{
-			{DeviceId: devId1, Date: entry1.EndTime},
+			{DeviceId: devId1, EndTime: entry1.EndTime},
 		}},
 	}
 	reqBody, err = json.Marshal(delReq)
@@ -507,7 +507,7 @@ func TestDeletionRequests(t *testing.T) {
 		SendTime:            delReqTime,
 		ReadCount:           1,
 		Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{
-			{DeviceId: devId1, Date: entry1.EndTime},
+			{DeviceId: devId1, EndTime: entry1.EndTime},
 		}},
 	}
 	if diff := deep.Equal(*deletionRequest, expected); diff != nil {

@@ -55,6 +55,7 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 
 	// Upload the missing entries
 	db := hctx.GetDb(ctx)
+	// TODO: There is a bug here because MissedUploadTimestamp is going to be a second or two after the history entry that needs to be uploaded
 	query := fmt.Sprintf("after:%s", time.Unix(config.MissedUploadTimestamp, 0).Format("2006-01-02"))
 	entries, err := lib.Search(ctx, db, query, 0)
 	if err != nil {
@@ -79,6 +80,21 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 		return fmt.Errorf("failed to mark a history entry as uploaded: %w", err)
 	}
 	return nil
+}
+
+func handlePotentialUploadFailure(err error, config *hctx.ClientConfig) {
+	if err != nil {
+		if lib.IsOfflineError(err) {
+			hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
+			if !config.HaveMissedUploads {
+				config.HaveMissedUploads = true
+				config.MissedUploadTimestamp = time.Now().Unix()
+				lib.CheckFatalError(hctx.SetConfig(*config))
+			}
+		} else {
+			lib.CheckFatalError(err)
+		}
+	}
 }
 
 func presaveHistoryEntry(ctx context.Context) {
@@ -119,12 +135,13 @@ func presaveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 	db.Commit()
 
-	// Note that we aren't persisting these half-entries remotely,
-	// since they should be updated with the rest of the information very soon. If they
-	// are never updated (e.g. due to a long-running command that never finishes), then
-	// they will only be available on this device. That isn't perfect since it means
-	// history entries can get out of sync, but it is probably good enough.
-	// TODO: Consider improving this
+	// And persist it remotely
+	if !config.IsOffline {
+		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
+		lib.CheckFatalError(err)
+		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		handlePotentialUploadFailure(err, &config)
+	}
 }
 
 func saveHistoryEntry(ctx context.Context) {
@@ -175,6 +192,7 @@ func saveHistoryEntry(ctx context.Context) {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		w, err := lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		handlePotentialUploadFailure(err, &config)
 		if err == nil {
 			submitResponse := shared.SubmitResponse{}
 			err := json.Unmarshal(w, &submitResponse)
@@ -183,17 +201,6 @@ func saveHistoryEntry(ctx context.Context) {
 			}
 			shouldCheckForDeletionRequests = submitResponse.HaveDeletionRequests
 			shouldCheckForDumpRequests = submitResponse.HaveDumpRequests
-		} else {
-			if lib.IsOfflineError(err) {
-				hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
-				if !config.HaveMissedUploads {
-					config.HaveMissedUploads = true
-					config.MissedUploadTimestamp = time.Now().Unix()
-					lib.CheckFatalError(hctx.SetConfig(config))
-				}
-			} else {
-				lib.CheckFatalError(err)
-			}
 		}
 	}
 
