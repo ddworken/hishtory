@@ -174,6 +174,9 @@ func install(secretKey string, offline bool) error {
 	return nil
 }
 
+// Handles people running `hishtory update` from an old version of hishtory that
+// doesn't support the control-r integration, so that they'll get control-r enabled
+// but someone who has it explicitly disabled will keep it that way.
 func handleUpgradedFeatures() error {
 	configContents, err := hctx.GetConfigContents()
 	if err != nil {
