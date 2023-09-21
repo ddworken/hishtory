@@ -9,14 +9,13 @@ import (
 
 // Represents an encrypted history entry
 type EncHistoryEntry struct {
-	EncryptedData []byte `json:"enc_data"`
-	Nonce         []byte `json:"nonce"`
-	DeviceId      string `json:"device_id"`
-	UserId        string `json:"user_id"`
-	// Note that EncHistoryEntry.Date == HistoryEntry.EndTime
-	Date        time.Time `json:"time"`
-	EncryptedId string    `json:"id"`
-	ReadCount   int       `json:"read_count"`
+	EncryptedData []byte    `json:"enc_data"`
+	Nonce         []byte    `json:"nonce"`
+	DeviceId      string    `json:"device_id"`
+	UserId        string    `json:"user_id"`
+	Date          time.Time `json:"time"`
+	EncryptedId   string    `json:"id"`
+	ReadCount     int       `json:"read_count"`
 }
 
 /*
@@ -88,11 +87,8 @@ type MessageIdentifiers struct {
 type MessageIdentifier struct {
 	// The device that the entry was recorded on (NOT the device where it is stored/requesting deletion)
 	DeviceId string `json:"device_id"`
-	// The timestamp when the command finished running. Serialized as "date" for legacy compatibility.
-	EndTime time.Time `json:"date"`
-	// The timestamp when the command started running.
-	// Note this field was added as part of supporting pre-saving commands, so older clients do not set this field
-	StartTime time.Time `json:"start_time"`
+	// The timestamp when the message finished running
+	Date time.Time `json:"date"`
 }
 
 func (m *MessageIdentifiers) Scan(value interface{}) error {

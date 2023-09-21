@@ -600,10 +600,7 @@ func ProcessDeletionRequests(ctx context.Context) error {
 	db := hctx.GetDb(ctx)
 	for _, request := range deletionRequests {
 		for _, entry := range request.Messages.Ids {
-			// Note that entry.StartTime is not always present (for legacy reasons) and entry.EndTime is also
-			// not always present (for pre-saved entries). So we just check that one of them matches.
-			tx := db.Where("device_id = ? AND (start_time = ? OR end_time = ?)", entry.DeviceId, entry.StartTime, entry.EndTime)
-			res := tx.Delete(&data.HistoryEntry{})
+			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
 			if res.Error != nil {
 				return fmt.Errorf("DB error: %w", res.Error)
 			}

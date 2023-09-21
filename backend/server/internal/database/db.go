@@ -152,14 +152,7 @@ func (db *DB) DumpRequestDeleteForUserAndDevice(ctx context.Context, userID, dev
 func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, request *shared.DeletionRequest) (int64, error) {
 	tx := db.WithContext(ctx).Where("false")
 	for _, message := range request.Messages.Ids {
-		// Note that this won't do server-side deletion of pre-saved history entries. This is an inherent
-		// limitation of our current DB schema. This is sub-par, since it means that even after deletion, clients
-		// may still receive deleted history entries. But, a well-behaved client will immediately delete
-		// these (never writing them to disk) and mark them as received, so this won't happen again.
-		//
-		// TODO: This could be improved upon if we added a HistoryEntry.EntryId field, backfilled it, added
-		// it to EncHistoryEntry, and then used that as a key for deletion.
-		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.EndTime))
+		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date))
 	}
 	result := tx.Delete(&shared.EncHistoryEntry{})
 	if tx.Error != nil {
@@ -233,7 +226,7 @@ func (db *DB) Clean(ctx context.Context) error {
 	if r.Error != nil {
 		return r.Error
 	}
-	r = db.WithContext(ctx).Exec("DELETE FROM deletion_requests WHERE read_count > 1000")
+	r = db.WithContext(ctx).Exec("DELETE FROM deletion_requests WHERE read_count > 100")
 	if r.Error != nil {
 		return r.Error
 	}
