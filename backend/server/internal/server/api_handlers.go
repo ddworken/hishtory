@@ -7,6 +7,8 @@ import (
 	"html"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
@@ -237,6 +239,74 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	if s.statsd != nil {
 		s.statsd.Incr("hishtory.register", []string{}, 1.0)
+	}
+
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) getDeletionRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	userId := getRequiredQueryParam(r, "user_id")
+	deviceId := getRequiredQueryParam(r, "device_id")
+
+	// Increment the ReadCount
+	err := s.db.DeletionRequestInc(r.Context(), userId, deviceId)
+	checkGormError(err)
+
+	// Return all the deletion requests
+	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
+	checkGormError(err)
+	if err := json.NewEncoder(w).Encode(deletionRequests); err != nil {
+		panic(fmt.Errorf("failed to JSON marshall the dump requests: %w", err))
+	}
+}
+
+func (s *Server) addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
+	var request shared.DeletionRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		panic(fmt.Errorf("failed to decode: %w", err))
+	}
+	request.ReadCount = 0
+	fmt.Printf("addDeletionRequestHandler: received request containg %d messages to be deleted\n", len(request.Messages.Ids))
+
+	err := s.db.DeletionRequestCreate(r.Context(), &request)
+	checkGormError(err)
+
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
+	// returns "OK" unless there is a current SLSA bug
+	v := getHishtoryVersion(r)
+	if !strings.Contains(v, "v0.") {
+		w.Write([]byte("OK"))
+		return
+	}
+	vNum, err := strconv.Atoi(strings.Split(v, ".")[1])
+	if err != nil {
+		w.Write([]byte("OK"))
+		return
+	}
+	if vNum < 159 {
+		w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
+		return
+	}
+	w.Write([]byte("OK"))
+}
+
+func (s *Server) feedbackHandler(w http.ResponseWriter, r *http.Request) {
+	var feedback shared.Feedback
+	err := json.NewDecoder(r.Body).Decode(&feedback)
+	if err != nil {
+		panic(fmt.Errorf("failed to decode: %w", err))
+	}
+	fmt.Printf("feedbackHandler: received request containg feedback %#v\n", feedback)
+	err = s.db.FeedbackCreate(r.Context(), &feedback)
+	checkGormError(err)
+
+	if s.statsd != nil {
+		s.statsd.Incr("hishtory.uninstall", []string{}, 1.0)
 	}
 
 	w.Header().Set("Content-Length", "0")
