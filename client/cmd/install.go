@@ -175,12 +175,12 @@ func install(secretKey string, offline bool) error {
 }
 
 func handleUpgradedFeatures() error {
-	configConents, err := hctx.GetConfigContents()
+	configContents, err := hctx.GetConfigContents()
 	if err != nil {
 		// No config, so this is a new install and thus there is nothing to do
 		return nil
 	}
-	if strings.Contains(string(configConents), "enable_control_r_search") {
+	if strings.Contains(string(configContents), "enable_control_r_search") {
 		// control-r search is already configured, so there is nothing to do
 		return nil
 	}
