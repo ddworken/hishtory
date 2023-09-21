@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -157,20 +156,14 @@ func (s *Server) getDeletionRequestsHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) addDeletionRequestHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Change code like this to use json.NewDecoder for simplicity
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
 	var request shared.DeletionRequest
-
-	if err := json.Unmarshal(data, &request); err != nil {
-		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		panic(fmt.Errorf("failed to decode: %w", err))
 	}
 	request.ReadCount = 0
 	fmt.Printf("addDeletionRequestHandler: received request containg %d messages to be deleted\n", len(request.Messages.Ids))
 
-	err = s.db.DeletionRequestCreate(r.Context(), &request)
+	err := s.db.DeletionRequestCreate(r.Context(), &request)
 	checkGormError(err)
 
 	w.Header().Set("Content-Length", "0")
@@ -207,14 +200,10 @@ func (s *Server) slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) feedbackHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
 	var feedback shared.Feedback
-	err = json.Unmarshal(data, &feedback)
+	err := json.NewDecoder(r.Body).Decode(&feedback)
 	if err != nil {
-		panic(fmt.Sprintf("feedbackHandler: body=%#v, err=%v", data, err))
+		panic(fmt.Errorf("failed to decode: %w", err))
 	}
 	fmt.Printf("feedbackHandler: received request containg feedback %#v\n", feedback)
 	err = s.db.FeedbackCreate(r.Context(), &feedback)

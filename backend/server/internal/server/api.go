@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"io"
 	"math"
 	"net/http"
 	"time"
@@ -15,14 +14,10 @@ import (
 )
 
 func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
 	var entries []*shared.EncHistoryEntry
-	err = json.Unmarshal(data, &entries)
+	err := json.NewDecoder(r.Body).Decode(&entries)
 	if err != nil {
-		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
+		panic(fmt.Errorf("failed to decode: %w", err))
 	}
 	fmt.Printf("apiSubmitHandler: received request containg %d EncHistoryEntry\n", len(entries))
 	if len(entries) == 0 {
@@ -148,14 +143,10 @@ func (s *Server) apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	srcDeviceId := getRequiredQueryParam(r, "source_device_id")
 	requestingDeviceId := getRequiredQueryParam(r, "requesting_device_id")
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
 	var entries []*shared.EncHistoryEntry
-	err = json.Unmarshal(data, &entries)
+	err := json.NewDecoder(r.Body).Decode(&entries)
 	if err != nil {
-		panic(fmt.Sprintf("body=%#v, err=%v", data, err))
+		panic(fmt.Errorf("failed to decode: %w", err))
 	}
 	fmt.Printf("apiSubmitDumpHandler: received request containg %d EncHistoryEntry\n", len(entries))
 
