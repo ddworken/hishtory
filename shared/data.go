@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Represents an encrypted history entry
 type EncHistoryEntry struct {
 	EncryptedData []byte    `json:"enc_data"`
 	Nonce         []byte    `json:"nonce"`
@@ -35,12 +36,15 @@ type Device struct {
 	RegistrationDate time.Time `json:"registration_date"`
 }
 
+// Represents a request to get all history entries from a given device. Used as part of bootstrapping
+// a new device.
 type DumpRequest struct {
 	UserId             string    `json:"user_id"`
 	RequestingDeviceId string    `json:"requesting_device_id"`
 	RequestTime        time.Time `json:"request_time"`
 }
 
+// Identifies where updates can be downloaded from
 type UpdateInfo struct {
 	LinuxAmd64Url             string `json:"linux_amd_64_url"`
 	LinuxAmd64AttestationUrl  string `json:"linux_amd_64_attestation_url"`
@@ -57,21 +61,34 @@ type UpdateInfo struct {
 	Version                   string `json:"version"`
 }
 
+// Represents a request to delete history entries
 type DeletionRequest struct {
-	UserId              string             `json:"user_id"`
-	DestinationDeviceId string             `json:"destination_device_id"`
-	SendTime            time.Time          `json:"send_time"`
-	Messages            MessageIdentifiers `json:"messages"`
-	ReadCount           int                `json:"read_count"`
+	// The UserID that we're deleting entries for
+	UserId string `json:"user_id"`
+	// The DeviceID that is handling this deletion request. This struct is duplicated and put into the queue
+	// for each of a user's devices.
+	DestinationDeviceId string `json:"destination_device_id"`
+	// When this deletion request was sent
+	SendTime time.Time `json:"send_time"`
+	// The history entries to delete
+	Messages MessageIdentifiers `json:"messages"`
+	// How many times this request has been processed
+	ReadCount int `json:"read_count"`
 }
 
+// Identifies a list of history entries that should be deleted
 type MessageIdentifiers struct {
 	Ids []MessageIdentifier `json:"message_ids"`
 }
 
+// Identifies a single history entry based on the device that recorded the entry, and the end time. Note that
+// this does not include the command itself since that would risk including the sensitive data that is meant
+// to be deleted
 type MessageIdentifier struct {
-	DeviceId string    `json:"device_id"`
-	Date     time.Time `json:"date"`
+	// The device that the entry was recorded on (NOT the device where it is stored/requesting deletion)
+	DeviceId string `json:"device_id"`
+	// The timestamp when the message finished running
+	Date time.Time `json:"date"`
 }
 
 func (m *MessageIdentifiers) Scan(value interface{}) error {
@@ -90,6 +107,7 @@ func (m MessageIdentifiers) Value() (driver.Value, error) {
 	return json.Marshal(m)
 }
 
+// Represents a piece of user feedback, submitted upon uninstall
 type Feedback struct {
 	UserId   string    `json:"user_id" gorm:"not null"`
 	Date     time.Time `json:"date" gorm:"not null"`
