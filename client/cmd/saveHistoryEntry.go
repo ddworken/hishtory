@@ -187,8 +187,6 @@ func saveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 
 	// Persist it remotely
-	shouldCheckForDeletionRequests := true
-	shouldCheckForDumpRequests := true
 	if !config.IsOffline {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
@@ -200,47 +198,9 @@ func saveHistoryEntry(ctx context.Context) {
 			if err != nil {
 				lib.CheckFatalError(fmt.Errorf("failed to deserialize response from /api/v1/submit: %w", err))
 			}
-			shouldCheckForDeletionRequests = submitResponse.HaveDeletionRequests
-			shouldCheckForDumpRequests = submitResponse.HaveDumpRequests
+			lib.CheckFatalError(handleDumpRequests(ctx, submitResponse.DumpRequests))
+			lib.CheckFatalError(lib.HandleDeletionRequests(ctx, submitResponse.DeletionRequests))
 		}
-	}
-
-	// Check if there is a pending dump request and reply to it if so
-	if shouldCheckForDumpRequests {
-		dumpRequests, err := lib.GetDumpRequests(config)
-		if err != nil {
-			if lib.IsOfflineError(err) {
-				// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
-				dumpRequests = []*shared.DumpRequest{}
-				hctx.GetLogger().Infof("Failed to check for dump requests because we failed to connect to the remote server!")
-			} else {
-				lib.CheckFatalError(err)
-			}
-		}
-		if len(dumpRequests) > 0 {
-			lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
-			entries, err := lib.Search(ctx, db, "", 0)
-			lib.CheckFatalError(err)
-			var encEntries []*shared.EncHistoryEntry
-			for _, entry := range entries {
-				enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-				lib.CheckFatalError(err)
-				encEntries = append(encEntries, &enc)
-			}
-			reqBody, err := json.Marshal(encEntries)
-			lib.CheckFatalError(err)
-			for _, dumpRequest := range dumpRequests {
-				if !config.IsOffline {
-					_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
-					lib.CheckFatalError(err)
-				}
-			}
-		}
-	}
-
-	// Handle deletion requests
-	if shouldCheckForDeletionRequests {
-		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 	}
 
 	if config.BetaMode {
@@ -251,6 +211,31 @@ func saveHistoryEntry(ctx context.Context) {
 func init() {
 	rootCmd.AddCommand(saveHistoryEntryCmd)
 	rootCmd.AddCommand(presaveHistoryEntryCmd)
+}
+
+func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) error {
+	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
+	if len(dumpRequests) > 0 {
+		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
+		entries, err := lib.Search(ctx, db, "", 0)
+		lib.CheckFatalError(err)
+		var encEntries []*shared.EncHistoryEntry
+		for _, entry := range entries {
+			enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+			lib.CheckFatalError(err)
+			encEntries = append(encEntries, &enc)
+		}
+		reqBody, err := json.Marshal(encEntries)
+		lib.CheckFatalError(err)
+		for _, dumpRequest := range dumpRequests {
+			if !config.IsOffline {
+				_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+				lib.CheckFatalError(err)
+			}
+		}
+	}
+	return nil
 }
 
 func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {

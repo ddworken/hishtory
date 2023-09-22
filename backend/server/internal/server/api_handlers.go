@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -49,32 +48,24 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		s.statsd.Count("hishtory.submit", int64(len(devices)), []string{}, 1.0)
 	}
 
+	resp := shared.SubmitResponse{}
+
 	deviceId := getOptionalQueryParam(r, "source_device_id", s.isTestEnvironment)
-	resp := shared.SubmitResponse{
-		HaveDumpRequests:     s.haveDumpRequests(r.Context(), userId, deviceId),
-		HaveDeletionRequests: s.haveDeletionRequests(r.Context(), userId, deviceId),
+	if deviceId != "" {
+		dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, deviceId)
+		checkGormError(err)
+		resp.DumpRequests = dumpRequests
+
+		deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
+		checkGormError(err)
+		resp.DeletionRequests = deletionRequests
+
+		// TODO: Update this code to call DeletionRequestInc() iff the version is new enough to be using these responses
 	}
+
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		panic(err)
 	}
-}
-
-func (s *Server) haveDumpRequests(ctx context.Context, userId, deviceId string) bool {
-	if userId == "" || deviceId == "" {
-		return true
-	}
-	dumpRequests, err := s.db.DumpRequestForUserAndDevice(ctx, userId, deviceId)
-	checkGormError(err)
-	return len(dumpRequests) > 0
-}
-
-func (s *Server) haveDeletionRequests(ctx context.Context, userId, deviceId string) bool {
-	if userId == "" || deviceId == "" {
-		return true
-	}
-	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(ctx, userId, deviceId)
-	checkGormError(err)
-	return len(deletionRequests) > 0
 }
 
 func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {

@@ -22,7 +22,6 @@ var statusCmd = &cobra.Command{
 		if *verbose {
 			fmt.Printf("User ID: %s\n", data.UserId(config.UserSecret))
 			fmt.Printf("Device ID: %s\n", config.DeviceId)
-			printDumpStatus(config)
 			printOnlineStatus(config)
 		}
 		fmt.Printf("Commit Hash: %s\n", lib.GitCommit)
@@ -40,16 +39,6 @@ func printOnlineStatus(config hctx.ClientConfig) {
 			fmt.Println("Sync Status: Synced")
 		}
 	}
-}
-
-func printDumpStatus(config hctx.ClientConfig) {
-	dumpRequests, err := lib.GetDumpRequests(config)
-	lib.CheckFatalError(err)
-	fmt.Printf("Dump Requests: ")
-	for _, d := range dumpRequests {
-		fmt.Printf("%#v, ", *d)
-	}
-	fmt.Print("\n")
 }
 
 func init() {

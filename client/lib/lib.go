@@ -598,6 +598,10 @@ func ProcessDeletionRequests(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return HandleDeletionRequests(ctx, deletionRequests)
+}
+
+func HandleDeletionRequests(ctx context.Context, deletionRequests []*shared.DeletionRequest) error {
 	db := hctx.GetDb(ctx)
 	for _, request := range deletionRequests {
 		for _, entry := range request.Messages.Ids {
@@ -874,22 +878,6 @@ func unescape(query string) string {
 		}
 	}
 	return string(newQuery)
-}
-
-func GetDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
-	if config.IsOffline {
-		return make([]*shared.DumpRequest, 0), nil
-	}
-	resp, err := ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
-	if IsOfflineError(err) {
-		return []*shared.DumpRequest{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var dumpRequests []*shared.DumpRequest
-	err = json.Unmarshal(resp, &dumpRequests)
-	return dumpRequests, err
 }
 
 func SendDeletionRequest(deletionRequest shared.DeletionRequest) error {
