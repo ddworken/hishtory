@@ -601,7 +601,9 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 		UserId:   data.UserId(hctx.GetConf(ctx).UserSecret),
 		SendTime: time.Now(),
 	}
-	dr.Messages.Ids = append(dr.Messages.Ids, shared.MessageIdentifier{Date: entry.EndTime, DeviceId: entry.DeviceId})
+	dr.Messages.Ids = append(dr.Messages.Ids,
+		shared.MessageIdentifier{StartTime: entry.StartTime, EndTime: entry.EndTime, DeviceId: entry.DeviceId},
+	)
 	return lib.SendDeletionRequest(dr)
 }
 
