@@ -17,6 +17,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 )
 
 const (
@@ -326,6 +327,7 @@ func MakeFakeHistoryEntry(command string) data.HistoryEntry {
 		StartTime:               time.Unix(fakeHistoryTimestamp, 0).UTC(),
 		EndTime:                 time.Unix(fakeHistoryTimestamp+3, 0).UTC(),
 		DeviceId:                "fake_device_id",
+		EntryId:                 uuid.Must(uuid.NewRandom()).String(),
 	}
 }
 

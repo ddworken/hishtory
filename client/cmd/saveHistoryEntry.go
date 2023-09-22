@@ -18,6 +18,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -280,6 +281,9 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 	// device ID
 	config := hctx.GetConf(ctx)
 	entry.DeviceId = config.DeviceId
+
+	// entry ID
+	entry.EntryId = uuid.Must(uuid.NewRandom()).String()
 
 	// custom columns
 	cc, err := buildCustomColumns(ctx)

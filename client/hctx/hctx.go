@@ -103,6 +103,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	db.AutoMigrate(&data.HistoryEntry{})
 	db.Exec("PRAGMA journal_mode = WAL")
 	db.Exec("CREATE INDEX IF NOT EXISTS end_time_index ON history_entries(end_time)")
+	db.Exec("CREATE INDEX IF NOT EXISTS entry_id_index ON history_entries(entry_id)")
 	return db, nil
 }
 

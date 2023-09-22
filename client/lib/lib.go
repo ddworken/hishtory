@@ -303,6 +303,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			StartTime:               time.Now().UTC(),
 			EndTime:                 time.Now().UTC(),
 			DeviceId:                config.DeviceId,
+			EntryId:                 uuid.Must(uuid.NewRandom()).String(),
 		}
 		err = ReliableDbCreate(db, entry)
 		if err != nil {
