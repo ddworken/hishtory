@@ -602,7 +602,7 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 		SendTime: time.Now(),
 	}
 	dr.Messages.Ids = append(dr.Messages.Ids,
-		shared.MessageIdentifier{StartTime: entry.StartTime, EndTime: entry.EndTime, DeviceId: entry.DeviceId},
+		shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 	)
 	return lib.SendDeletionRequest(dr)
 }

@@ -14,13 +14,15 @@ type EncHistoryEntry struct {
 	DeviceId      string `json:"device_id"`
 	UserId        string `json:"user_id"`
 	// Note that EncHistoryEntry.Date == HistoryEntry.EndTime
-	Date        time.Time `json:"time"`
-	EncryptedId string    `json:"id"`
-	ReadCount   int       `json:"read_count"`
+	Date time.Time `json:"time"`
+	// Note that EncHistoryEntry.EncryptedId == HistoryEntry.Id (for entries created after pre-saving support)
+	EncryptedId string `json:"encrypted_id"`
+	ReadCount   int    `json:"read_count"`
 }
 
 /*
 Manually created the indices:
+CREATE INDEX CONCURRENTLY entry_id_idx ON enc_history_entries USING btree(encrypted_id);
 CREATE INDEX CONCURRENTLY device_id_idx ON enc_history_entries USING btree(device_id);
 CREATE INDEX CONCURRENTLY read_count_idx ON enc_history_entries USING btree(read_count);
 CREATE INDEX CONCURRENTLY redact_idx ON enc_history_entries USING btree(user_id, device_id, date);
@@ -82,7 +84,7 @@ type MessageIdentifiers struct {
 	Ids []MessageIdentifier `json:"message_ids"`
 }
 
-// Identifies a single history entry based on the device that recorded the entry, and the end time. Note that
+// Identifies a single history entry based on the device that recorded the entry, and additional metadata. Note that
 // this does not include the command itself since that would risk including the sensitive data that is meant
 // to be deleted
 type MessageIdentifier struct {
@@ -90,9 +92,11 @@ type MessageIdentifier struct {
 	DeviceId string `json:"device_id"`
 	// The timestamp when the command finished running. Serialized as "date" for legacy compatibility.
 	EndTime time.Time `json:"date"`
-	// The timestamp when the command started running.
+	// The entry ID of the command.
 	// Note this field was added as part of supporting pre-saving commands, so older clients do not set this field
-	StartTime time.Time `json:"start_time"`
+	// And even for new clients, it may contain a per-device entry ID. For pre-saved entries, this is guaranteed to
+	// be present.
+	EntryId string `json:"entry_id"`
 }
 
 func (m *MessageIdentifiers) Scan(value interface{}) error {
