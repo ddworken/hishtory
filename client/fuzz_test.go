@@ -36,13 +36,13 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 		if len(split2) != 2 {
 			panic("malformed: split2")
 		}
-		thingToDo := split1[1]
+		unparsedOperation := split1[1]
 		cmd := ""
 		redactQuery := ""
-		if strings.HasPrefix(thingToDo, "!") {
-			redactQuery = thingToDo[1:]
+		if strings.HasPrefix(unparsedOperation, "!") {
+			redactQuery = unparsedOperation[1:]
 		} else {
-			cmd = "echo " + thingToDo
+			cmd = "echo " + unparsedOperation
 		}
 		re := regexp.MustCompile(`[a-zA-Z]+`)
 		if !re.MatchString(cmd) && cmd != "" {
