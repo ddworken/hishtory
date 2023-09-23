@@ -605,12 +605,14 @@ func HandleDeletionRequests(ctx context.Context, deletionRequests []*shared.Dele
 	db := hctx.GetDb(ctx)
 	for _, request := range deletionRequests {
 		for _, entry := range request.Messages.Ids {
-			// Note that entry.EndTime is not always present (for pre-saved entries). And likewise,
-			// entry.EntryId is not always present for older entries. So we just check that one of them matches.
-			tx := db.Where("device_id = ? AND (end_time = ? OR entry_id = ?)", entry.DeviceId, entry.EndTime, entry.EntryId)
-			res := tx.Delete(&data.HistoryEntry{})
-			if res.Error != nil {
-				return fmt.Errorf("DB error: %w", res.Error)
+			err := RetryingDbFunction(func() error {
+				// Note that entry.EndTime is not always present (for pre-saved entries). And likewise,
+				// entry.EntryId is not always present for older entries. So we just check that one of them matches.
+				tx := db.Where("device_id = ? AND (end_time = ? OR entry_id = ?)", entry.DeviceId, entry.EndTime, entry.EntryId)
+				return tx.Delete(&data.HistoryEntry{}).Error
+			})
+			if err != nil {
+				return fmt.Errorf("DB error when deleting entries: %w", err)
 			}
 		}
 	}
