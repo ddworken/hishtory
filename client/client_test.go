@@ -2035,10 +2035,10 @@ echo bar`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
 	if testutils.IsGithubAction() {
 		testName += "-isAction"
-		testName += "-" + runtime.GOOS
 	}
 	testutils.CompareGoldens(t, out, testName)
 }
