@@ -81,7 +81,8 @@ func TestESubmitThenQuery(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
-	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
+	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Query for device id 1
 	w = httptest.NewRecorder()
@@ -346,7 +347,8 @@ func TestDeletionRequests(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
-	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
+	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// And another entry for user1
 	entry2 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -359,7 +361,8 @@ func TestDeletionRequests(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
-	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
+	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// And an entry for user2 that has the same timestamp as the previous entry
 	entry3 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -373,7 +376,8 @@ func TestDeletionRequests(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
-	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
+	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Query for device id 1
 	w = httptest.NewRecorder()
@@ -411,7 +415,7 @@ func TestDeletionRequests(t *testing.T) {
 		UserId:   data.UserId("dkey"),
 		SendTime: delReqTime,
 		Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{
-			{DeviceId: devId1, Date: entry1.EndTime},
+			{DeviceId: devId1, EndTime: entry1.EndTime},
 		}},
 	}
 	reqBody, err = json.Marshal(delReq)
@@ -485,7 +489,8 @@ func TestDeletionRequests(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
-	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: true}, deserializeSubmitResponse(t, w))
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DeletionRequests)
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Query for deletion requests
 	w = httptest.NewRecorder()
@@ -507,7 +512,7 @@ func TestDeletionRequests(t *testing.T) {
 		SendTime:            delReqTime,
 		ReadCount:           1,
 		Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{
-			{DeviceId: devId1, Date: entry1.EndTime},
+			{DeviceId: devId1, EndTime: entry1.EndTime},
 		}},
 	}
 	if diff := deep.Equal(*deletionRequest, expected); diff != nil {
@@ -585,7 +590,8 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
-	require.Equal(t, shared.SubmitResponse{HaveDumpRequests: true, HaveDeletionRequests: false}, deserializeSubmitResponse(t, w))
+	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
+	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Call cleanDatabase and just check that there are no panics
 	testutils.Check(t, DB.Clean(context.TODO()))

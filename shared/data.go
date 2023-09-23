@@ -9,21 +9,16 @@ import (
 
 // Represents an encrypted history entry
 type EncHistoryEntry struct {
-	EncryptedData []byte    `json:"enc_data"`
-	Nonce         []byte    `json:"nonce"`
-	DeviceId      string    `json:"device_id"`
-	UserId        string    `json:"user_id"`
-	Date          time.Time `json:"time"`
-	EncryptedId   string    `json:"id"`
-	ReadCount     int       `json:"read_count"`
+	EncryptedData []byte `json:"enc_data"`
+	Nonce         []byte `json:"nonce"`
+	DeviceId      string `json:"device_id"`
+	UserId        string `json:"user_id"`
+	// Note that EncHistoryEntry.Date == HistoryEntry.EndTime
+	Date time.Time `json:"time"`
+	// Note that EncHistoryEntry.EncryptedId == HistoryEntry.Id (for entries created after pre-saving support)
+	EncryptedId string `json:"encrypted_id"`
+	ReadCount   int    `json:"read_count"`
 }
-
-/*
-Manually created the indices:
-CREATE INDEX CONCURRENTLY device_id_idx ON enc_history_entries USING btree(device_id);
-CREATE INDEX CONCURRENTLY read_count_idx ON enc_history_entries USING btree(read_count);
-CREATE INDEX CONCURRENTLY redact_idx ON enc_history_entries USING btree(user_id, device_id, date);
-*/
 
 type Device struct {
 	UserId   string `json:"user_id"`
@@ -81,14 +76,19 @@ type MessageIdentifiers struct {
 	Ids []MessageIdentifier `json:"message_ids"`
 }
 
-// Identifies a single history entry based on the device that recorded the entry, and the end time. Note that
+// Identifies a single history entry based on the device that recorded the entry, and additional metadata. Note that
 // this does not include the command itself since that would risk including the sensitive data that is meant
 // to be deleted
 type MessageIdentifier struct {
 	// The device that the entry was recorded on (NOT the device where it is stored/requesting deletion)
 	DeviceId string `json:"device_id"`
-	// The timestamp when the message finished running
-	Date time.Time `json:"date"`
+	// The timestamp when the command finished running. Serialized as "date" for legacy compatibility.
+	EndTime time.Time `json:"date"`
+	// The entry ID of the command.
+	// Note this field was added as part of supporting pre-saving commands, so older clients do not set this field
+	// And even for new clients, it may contain a per-device entry ID. For pre-saved entries, this is guaranteed to
+	// be present.
+	EntryId string `json:"entry_id"`
 }
 
 func (m *MessageIdentifiers) Scan(value interface{}) error {
@@ -114,11 +114,11 @@ type Feedback struct {
 	Feedback string    `json:"feedback"`
 }
 
-// Response from submitting new history entries. Contains metadata that is used to avoid making additional round-trip
-// requests to the hishtory backend.
+// Response from submitting new history entries. Contains deletion requests and dump requests to avoid
+// extra round-trip requests to the hishtory backend.
 type SubmitResponse struct {
-	HaveDumpRequests     bool `json:"have_dump_requests"`
-	HaveDeletionRequests bool `json:"have_deletion_requests"`
+	DumpRequests     []*DumpRequest     `json:"dump_requests"`
+	DeletionRequests []*DeletionRequest `json:"deletion_requests"`
 }
 
 func Chunks[k any](slice []k, chunkSize int) [][]k {

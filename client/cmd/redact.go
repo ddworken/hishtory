@@ -86,7 +86,9 @@ func deleteOnRemoteInstances(ctx context.Context, historyEntries []*data.History
 	deletionRequest.UserId = data.UserId(config.UserSecret)
 
 	for _, entry := range historyEntries {
-		deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids, shared.MessageIdentifier{Date: entry.EndTime, DeviceId: entry.DeviceId})
+		deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
+			shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
+		)
 	}
 	return lib.SendDeletionRequest(deletionRequest)
 }

@@ -171,7 +171,17 @@ func install(secretKey string, offline bool) error {
 		// No config, so set up a new installation
 		return lib.Setup(secretKey, offline)
 	}
+	err = handleDbUpgrades(hctx.MakeContext())
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+// Handles people running `hishtory update` when the DB needs updating.
+func handleDbUpgrades(ctx context.Context) error {
+	db := hctx.GetDb(ctx)
+	return db.Exec(`UPDATE history_entries SET entry_id = lower(hex(randomblob(12))) WHERE entry_id IS NULL`).Error
 }
 
 // Handles people running `hishtory update` from an old version of hishtory that

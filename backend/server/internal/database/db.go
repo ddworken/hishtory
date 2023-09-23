@@ -63,6 +63,26 @@ func (db *DB) AddDatabaseTables() error {
 	return nil
 }
 
+func (db *DB) CreateIndices() error {
+	// Note: If adding a new index here, consider manually running it on the prod DB using CONCURRENTLY to
+	// make server startup non-blocking. The benefit of this function is primarily for other people so they
+	// don't have to manually create these indexes.
+	var indices = []string{
+		`CREATE INDEX IF NOT EXISTS entry_id_idx ON enc_history_entries USING btree(encrypted_id);`,
+		`CREATE INDEX IF NOT EXISTS device_id_idx ON enc_history_entries USING btree(device_id);`,
+		`CREATE INDEX IF NOT EXISTS read_count_idx ON enc_history_entries USING btree(read_count);`,
+		`CREATE INDEX IF NOT EXISTS redact_idx ON enc_history_entries USING btree(user_id, device_id, date);`,
+		`CREATE INDEX IF NOT EXISTS del_user_idx ON deletion_requests USING btree(user_id);`,
+	}
+	for _, index := range indices {
+		r := db.Exec(index)
+		if r.Error != nil {
+			return fmt.Errorf("failed to execute index creation sql=%#v: %w", index, r.Error)
+		}
+	}
+	return nil
+}
+
 func (db *DB) Close() error {
 	rawDB, err := db.DB.DB()
 	if err != nil {
@@ -152,7 +172,8 @@ func (db *DB) DumpRequestDeleteForUserAndDevice(ctx context.Context, userID, dev
 func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, request *shared.DeletionRequest) (int64, error) {
 	tx := db.WithContext(ctx).Where("false")
 	for _, message := range request.Messages.Ids {
-		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND date = ?", request.UserId, message.DeviceId, message.Date))
+		// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
+		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", request.UserId, message.DeviceId, message.EndTime, message.EntryId))
 	}
 	result := tx.Delete(&shared.EncHistoryEntry{})
 	if tx.Error != nil {

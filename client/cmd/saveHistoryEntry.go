@@ -18,7 +18,9 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
 var saveHistoryEntryCmd = &cobra.Command{
@@ -81,6 +83,23 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 	return nil
 }
 
+func handlePotentialUploadFailure(err error, config *hctx.ClientConfig, entryTimestamp time.Time) {
+	if err != nil {
+		if lib.IsOfflineError(err) {
+			hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
+			if !config.HaveMissedUploads {
+				config.HaveMissedUploads = true
+				// Set MissedUploadTimestamp to `entry timestamp - 1` so that the current entry will get
+				// uploaded once network access is regained.
+				config.MissedUploadTimestamp = entryTimestamp.UTC().Unix() - 1
+				lib.CheckFatalError(hctx.SetConfig(*config))
+			}
+		} else {
+			lib.CheckFatalError(err)
+		}
+	}
+}
+
 func presaveHistoryEntry(ctx context.Context) {
 	config := hctx.GetConf(ctx)
 	if !config.IsEnabled {
@@ -119,12 +138,13 @@ func presaveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 	db.Commit()
 
-	// Note that we aren't persisting these half-entries remotely,
-	// since they should be updated with the rest of the information very soon. If they
-	// are never updated (e.g. due to a long-running command that never finishes), then
-	// they will only be available on this device. That isn't perfect since it means
-	// history entries can get out of sync, but it is probably good enough.
-	// TODO: Consider improving this
+	// And persist it remotely
+	if !config.IsOffline {
+		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
+		lib.CheckFatalError(err)
+		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		handlePotentialUploadFailure(err, &config, entry.StartTime)
+	}
 }
 
 func saveHistoryEntry(ctx context.Context) {
@@ -143,25 +163,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
-		deletePresavedEntryFunc := func() error {
-			query := "cwd:" + entry.CurrentWorkingDirectory
-			query += " start_time:" + strconv.FormatInt(entry.StartTime.Unix(), 10)
-			query += " end_time:1970/01/01_00:00:00_+00:00"
-			tx, err := lib.MakeWhereQueryFromSearch(ctx, db, query)
-			if err != nil {
-				return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
-			}
-			tx.Where("command = ?", entry.Command)
-			res := tx.Delete(&data.HistoryEntry{})
-			if res.Error != nil {
-				return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
-			}
-			if res.RowsAffected > 1 {
-				return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
-			}
-			return nil
-		}
-		lib.CheckFatalError(lib.RetryingDbFunction(deletePresavedEntryFunc))
+		lib.CheckFatalError(deletePresavedEntries(ctx, entry))
 	}
 
 	// Persist it locally
@@ -169,70 +171,20 @@ func saveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 
 	// Persist it remotely
-	shouldCheckForDeletionRequests := true
-	shouldCheckForDumpRequests := true
 	if !config.IsOffline {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		w, err := lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		handlePotentialUploadFailure(err, &config, entry.StartTime)
 		if err == nil {
 			submitResponse := shared.SubmitResponse{}
 			err := json.Unmarshal(w, &submitResponse)
 			if err != nil {
 				lib.CheckFatalError(fmt.Errorf("failed to deserialize response from /api/v1/submit: %w", err))
 			}
-			shouldCheckForDeletionRequests = submitResponse.HaveDeletionRequests
-			shouldCheckForDumpRequests = submitResponse.HaveDumpRequests
-		} else {
-			if lib.IsOfflineError(err) {
-				hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
-				if !config.HaveMissedUploads {
-					config.HaveMissedUploads = true
-					config.MissedUploadTimestamp = time.Now().Unix()
-					lib.CheckFatalError(hctx.SetConfig(config))
-				}
-			} else {
-				lib.CheckFatalError(err)
-			}
+			lib.CheckFatalError(lib.HandleDeletionRequests(ctx, submitResponse.DeletionRequests))
+			lib.CheckFatalError(handleDumpRequests(ctx, submitResponse.DumpRequests))
 		}
-	}
-
-	// Check if there is a pending dump request and reply to it if so
-	if shouldCheckForDumpRequests {
-		dumpRequests, err := lib.GetDumpRequests(config)
-		if err != nil {
-			if lib.IsOfflineError(err) {
-				// It is fine to just ignore this, the next command will retry the API and eventually we will respond to any pending dump requests
-				dumpRequests = []*shared.DumpRequest{}
-				hctx.GetLogger().Infof("Failed to check for dump requests because we failed to connect to the remote server!")
-			} else {
-				lib.CheckFatalError(err)
-			}
-		}
-		if len(dumpRequests) > 0 {
-			lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
-			entries, err := lib.Search(ctx, db, "", 0)
-			lib.CheckFatalError(err)
-			var encEntries []*shared.EncHistoryEntry
-			for _, entry := range entries {
-				enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-				lib.CheckFatalError(err)
-				encEntries = append(encEntries, &enc)
-			}
-			reqBody, err := json.Marshal(encEntries)
-			lib.CheckFatalError(err)
-			for _, dumpRequest := range dumpRequests {
-				if !config.IsOffline {
-					_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
-					lib.CheckFatalError(err)
-				}
-			}
-		}
-	}
-
-	// Handle deletion requests
-	if shouldCheckForDeletionRequests {
-		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 	}
 
 	if config.BetaMode {
@@ -240,9 +192,82 @@ func saveHistoryEntry(ctx context.Context) {
 	}
 }
 
+func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error {
+	db := hctx.GetDb(ctx)
+
+	// Create the query to find the presaved entries
+	query := "cwd:" + entry.CurrentWorkingDirectory
+	query += " start_time:" + strconv.FormatInt(entry.StartTime.Unix(), 10)
+	query += " end_time:1970/01/01_00:00:00_+00:00"
+	matchingEntryQuery, err := lib.MakeWhereQueryFromSearch(ctx, db, query)
+	if err != nil {
+		return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
+	}
+	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Session(&gorm.Session{})
+
+	// Get the presaved entry since we need it for doing remote deletes
+	var presavedEntry data.HistoryEntry
+	res := matchingEntryQuery.Find(&presavedEntry)
+	if res.Error != nil {
+		return fmt.Errorf("failed to search for presaved entry for cmd=%#v: %w", entry.Command, res.Error)
+	}
+
+	// Delete presaved entries locally
+	deletePresavedEntryFunc := func() error {
+		res := matchingEntryQuery.Delete(&data.HistoryEntry{})
+		if res.Error != nil {
+			return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
+		}
+		if res.RowsAffected > 1 {
+			return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
+		}
+		return nil
+	}
+	err = lib.RetryingDbFunction(deletePresavedEntryFunc)
+	if err != nil {
+		return err
+	}
+
+	// And delete it remotely
+	config := hctx.GetConf(ctx)
+	var deletionRequest shared.DeletionRequest
+	deletionRequest.SendTime = time.Now()
+	deletionRequest.UserId = data.UserId(config.UserSecret)
+	deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
+		// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
+		shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
+	)
+	return lib.SendDeletionRequest(deletionRequest)
+}
+
 func init() {
 	rootCmd.AddCommand(saveHistoryEntryCmd)
 	rootCmd.AddCommand(presaveHistoryEntryCmd)
+}
+
+func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) error {
+	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
+	if len(dumpRequests) > 0 {
+		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
+		entries, err := lib.Search(ctx, db, "", 0)
+		lib.CheckFatalError(err)
+		var encEntries []*shared.EncHistoryEntry
+		for _, entry := range entries {
+			enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+			lib.CheckFatalError(err)
+			encEntries = append(encEntries, &enc)
+		}
+		reqBody, err := json.Marshal(encEntries)
+		lib.CheckFatalError(err)
+		for _, dumpRequest := range dumpRequests {
+			if !config.IsOffline {
+				_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+				lib.CheckFatalError(err)
+			}
+		}
+	}
+	return nil
 }
 
 func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
@@ -273,6 +298,9 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 	// device ID
 	config := hctx.GetConf(ctx)
 	entry.DeviceId = config.DeviceId
+
+	// entry ID
+	entry.EntryId = uuid.Must(uuid.NewRandom()).String()
 
 	// custom columns
 	cc, err := buildCustomColumns(ctx)

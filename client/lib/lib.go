@@ -303,6 +303,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			StartTime:               time.Now().UTC(),
 			EndTime:                 time.Now().UTC(),
 			DeviceId:                config.DeviceId,
+			EntryId:                 uuid.Must(uuid.NewRandom()).String(),
 		}
 		err = ReliableDbCreate(db, entry)
 		if err != nil {
@@ -597,10 +598,17 @@ func ProcessDeletionRequests(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return HandleDeletionRequests(ctx, deletionRequests)
+}
+
+func HandleDeletionRequests(ctx context.Context, deletionRequests []*shared.DeletionRequest) error {
 	db := hctx.GetDb(ctx)
 	for _, request := range deletionRequests {
 		for _, entry := range request.Messages.Ids {
-			res := db.Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.Date).Delete(&data.HistoryEntry{})
+			// Note that entry.EndTime is not always present (for pre-saved entries). And likewise,
+			// entry.EntryId is not always present for older entries. So we just check that one of them matches.
+			tx := db.Where("device_id = ? AND (end_time = ? OR entry_id = ?)", entry.DeviceId, entry.EndTime, entry.EntryId)
+			res := tx.Delete(&data.HistoryEntry{})
 			if res.Error != nil {
 				return fmt.Errorf("DB error: %w", res.Error)
 			}
@@ -870,22 +878,6 @@ func unescape(query string) string {
 		}
 	}
 	return string(newQuery)
-}
-
-func GetDumpRequests(config hctx.ClientConfig) ([]*shared.DumpRequest, error) {
-	if config.IsOffline {
-		return make([]*shared.DumpRequest, 0), nil
-	}
-	resp, err := ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
-	if IsOfflineError(err) {
-		return []*shared.DumpRequest{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var dumpRequests []*shared.DumpRequest
-	err = json.Unmarshal(resp, &dumpRequests)
-	return dumpRequests, err
 }
 
 func SendDeletionRequest(deletionRequest shared.DeletionRequest) error {

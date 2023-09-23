@@ -2364,15 +2364,24 @@ func testPresaving(t *testing.T, tester shellTester) {
 	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
 	testutils.CompareGoldens(t, out, "testPresaving-query")
 
-	// And the same for tquery
-	// out = captureTerminalOutputWithComplexCommands(t, tester,
-	// 	[]TmuxCommand{
-	// 		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 2.0},
-	// 		{Keys: "sleep SPACE 13371337 SPACE -export SPACE -tquery"}})
-	// out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	// testutils.CompareGoldens(t, out, "testPresaving-tquery")
-	//
-	// TODO: Debug why ^ is failing with flaky differences on Github Actions, see https://pastebin.com/BUa1btnh
+	// Create a new device, and confirm it shows up there too
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "device1")
+	installHishtory(t, tester, userSecret)
+	tester.RunInteractiveShell(t, ` hishtory config-set displayed-columns CWD Runtime Command`)
+	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
+	testutils.CompareGoldens(t, out, "testPresaving-query")
+
+	// And then redact it from device2
+	tester.RunInteractiveShell(t, ` HISHTORY_REDACT_FORCE=true hishtory redact sleep 13371337`)
+
+	// And confirm it was redacted
+	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	require.Equal(t, "", out)
+
+	// Then go back to device1 and confirm it was redacted there too
+	restoreDevice1()
+	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	require.Equal(t, "", out)
 }
 
 func testUninstall(t *testing.T, tester shellTester) {

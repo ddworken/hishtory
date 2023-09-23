@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
-	"github.com/google/uuid"
 )
 
 const (
@@ -39,6 +38,7 @@ type HistoryEntry struct {
 	StartTime               time.Time     `json:"start_time" gorm:"uniqueIndex:compositeindex"`
 	EndTime                 time.Time     `json:"end_time" gorm:"uniqueIndex:compositeindex,index:end_time_index"`
 	DeviceId                string        `json:"device_id" gorm:"uniqueIndex:compositeindex"`
+	EntryId                 string        `json:"entry_id" gorm:"uniqueIndex:compositeindex,uniqueIndex:entry_id_index"`
 	CustomColumns           CustomColumns `json:"custom_columns"`
 }
 
@@ -136,7 +136,7 @@ func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (shared.EncHisto
 		Nonce:         nonce,
 		UserId:        UserId(userSecret),
 		Date:          entry.EndTime,
-		EncryptedId:   uuid.Must(uuid.NewRandom()).String(),
+		EncryptedId:   entry.EntryId,
 		ReadCount:     0,
 	}, nil
 }
