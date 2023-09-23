@@ -247,7 +247,7 @@ func (db *DB) Clean(ctx context.Context) error {
 	if r.Error != nil {
 		return r.Error
 	}
-	r = db.WithContext(ctx).Exec("DELETE FROM deletion_requests WHERE read_count > 1000")
+	r = db.WithContext(ctx).Exec("DELETE FROM deletion_requests WHERE read_count > 100")
 	if r.Error != nil {
 		return r.Error
 	}
