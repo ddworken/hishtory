@@ -1840,8 +1840,8 @@ func testControlR(t testing.TB, tester shellTester, shellName string, onlineStat
 
 	// And check that the control-r binding brings up the search
 	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
-	require.Contains(t, out, "\n\n", "failed to find separator")
-	out = strings.TrimSpace(strings.Split(out, "\n\n")[1])
+	require.Contains(t, out, "\n\n\n", "failed to find separator")
+	out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	testutils.CompareGoldens(t, out, "testControlR-Initial")
 
 	// And check that we can scroll down and select an option
