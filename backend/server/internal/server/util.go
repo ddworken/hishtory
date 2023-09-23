@@ -105,6 +105,13 @@ type parsedVersion struct {
 	minorVersion int
 }
 
+func (pv parsedVersion) greaterThan(other parsedVersion) bool {
+	if pv.majorVersion == other.majorVersion && pv.minorVersion == other.minorVersion {
+		return false
+	}
+	return !pv.lessThan(other)
+}
+
 func (pv parsedVersion) lessThan(other parsedVersion) bool {
 	if pv.majorVersion != other.majorVersion {
 		return pv.majorVersion < other.majorVersion

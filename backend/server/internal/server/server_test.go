@@ -642,3 +642,15 @@ func TestVersionLessThan(t *testing.T) {
 	require.True(t, parsedVersion{1, 200}.lessThan(parsedVersion{1, 205}))
 	require.True(t, parsedVersion{0, 200}.lessThan(parsedVersion{1, 1}))
 }
+
+func TestVersionGreaterThan(t *testing.T) {
+	require.False(t, parsedVersion{0, 200}.greaterThan(parsedVersion{0, 200}))
+	require.False(t, parsedVersion{1, 200}.greaterThan(parsedVersion{1, 200}))
+	require.True(t, parsedVersion{0, 201}.greaterThan(parsedVersion{0, 200}))
+	require.True(t, parsedVersion{1, 0}.greaterThan(parsedVersion{0, 200}))
+	require.True(t, parsedVersion{1, 1}.greaterThan(parsedVersion{1, 0}))
+	require.False(t, parsedVersion{0, 199}.greaterThan(parsedVersion{0, 200}))
+	require.False(t, parsedVersion{0, 200}.greaterThan(parsedVersion{0, 205}))
+	require.False(t, parsedVersion{1, 200}.greaterThan(parsedVersion{1, 205}))
+	require.False(t, parsedVersion{0, 200}.greaterThan(parsedVersion{1, 1}))
+}
