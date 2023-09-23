@@ -26,6 +26,7 @@ CREATE INDEX CONCURRENTLY entry_id_idx ON enc_history_entries USING btree(encryp
 CREATE INDEX CONCURRENTLY device_id_idx ON enc_history_entries USING btree(device_id);
 CREATE INDEX CONCURRENTLY read_count_idx ON enc_history_entries USING btree(read_count);
 CREATE INDEX CONCURRENTLY redact_idx ON enc_history_entries USING btree(user_id, device_id, date);
+CREATE INDEX CONCURRENTLY del_user_idx ON deletion_requests USING btree(user_id);
 */
 
 type Device struct {
