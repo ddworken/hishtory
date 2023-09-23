@@ -59,6 +59,8 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
 		checkGormError(err)
 		resp.DeletionRequests = deletionRequests
+
+		// TODO: Update this code to call DeletionRequestInc() iff the version is new enough to be using these responses
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
