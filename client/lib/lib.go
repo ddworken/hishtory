@@ -249,34 +249,17 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	}
 	homedir := hctx.GetHome(ctx)
 	bashHistPath := filepath.Join(homedir, ".bash_history")
-	historyEntries, err := readFileToArray(bashHistPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse bash history: %w", err)
-	}
 	zshHistPath := filepath.Join(homedir, ".zsh_history")
-	extraEntries, err := readFileToArray(zshHistPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse zsh history: %w", err)
-	}
-	historyEntries = append(historyEntries, extraEntries...)
-	extraEntries, err = parseFishHistory(homedir)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse fish history: %w", err)
-	}
-	historyEntries = append(historyEntries, extraEntries...)
+	entriesIter := concatIterators(readFileToIterator(bashHistPath), readFileToIterator(zshHistPath), parseFishHistory(homedir))
 	if histfile := os.Getenv("HISTFILE"); histfile != "" && histfile != zshHistPath && histfile != bashHistPath {
-		extraEntries, err := readFileToArray(histfile)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse histfile: %w", err)
-		}
-		historyEntries = append(historyEntries, extraEntries...)
+		entriesIter = concatIterators(entriesIter, readFileToIterator(histfile))
 	}
 	if shouldReadStdin {
-		extraEntries, err = readStdin()
+		extraEntries, err := readStdin()
 		if err != nil {
 			return 0, fmt.Errorf("failed to read stdin: %w", err)
 		}
-		historyEntries = append(historyEntries, extraEntries...)
+		entriesIter = concatIterators(entriesIter, Values(extraEntries))
 	}
 	db := hctx.GetDb(ctx)
 	currentUser, err := user.Current()
@@ -287,11 +270,16 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	if err != nil {
 		return 0, err
 	}
-	for _, cmd := range historyEntries {
-		cmd := stripZshWeirdness(cmd)
+	numEntriesImported := 0
+	var iteratorError error = nil
+	entriesIter(func(cmd string, err error) bool {
+		if err != nil {
+			iteratorError = err
+			return false
+		}
+		cmd = stripZshWeirdness(cmd)
 		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
-			// Skip it
-			continue
+			return true
 		}
 		entry := data.HistoryEntry{
 			LocalUsername:           currentUser.Name,
@@ -306,9 +294,15 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			EntryId:                 uuid.Must(uuid.NewRandom()).String(),
 		}
 		err = ReliableDbCreate(db, entry)
+		numEntriesImported += 1
 		if err != nil {
-			return 0, fmt.Errorf("failed to insert imported history entry: %w", err)
+			iteratorError = fmt.Errorf("failed to insert imported history entry: %w", err)
+			return false
 		}
+		return true
+	})
+	if iteratorError != nil {
+		return 0, iteratorError
 	}
 	err = Reupload(ctx)
 	if err != nil {
@@ -321,7 +315,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	}
 	// Trigger a checkpoint so that these bulk entries are added from the WAL to the main DB
 	db.Exec("PRAGMA wal_checkpoint")
-	return len(historyEntries), nil
+	return numEntriesImported, nil
 }
 
 func readStdin() ([]string, error) {
@@ -343,44 +337,80 @@ func readStdin() ([]string, error) {
 	return ret, nil
 }
 
-func parseFishHistory(homedir string) ([]string, error) {
-	lines, err := readFileToArray(filepath.Join(homedir, ".local/share/fish/fish_history"))
-	if err != nil {
-		return nil, err
+func parseFishHistory(homedir string) Seq2[string, error] {
+	lines := readFileToIterator(filepath.Join(homedir, ".local/share/fish/fish_history"))
+	return func(yield func(string, error) bool) bool {
+		return lines(func(line string, err error) bool {
+			if err != nil {
+				return yield(line, err)
+			}
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "- cmd: ") {
+				yield(strings.SplitN(line, ": ", 2)[1], nil)
+			}
+			return true
+		})
 	}
-	ret := make([]string, 0)
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "- cmd: ") {
-			ret = append(ret, strings.SplitN(line, ": ", 2)[1])
-		}
-	}
-	return ret, nil
 }
 
-func readFileToArray(path string) ([]string, error) {
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		return []string{}, nil
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+type (
+	// Represents an iterator of (K,V). Equivalent of the future Go stdlib type iter.Seq2.
+	Seq2[K, V any] func(yield func(K, V) bool) bool
+)
 
-	scanner := bufio.NewScanner(file)
-	buf := make([]byte, maxSupportedLineLengthForImport)
-	scanner.Buffer(buf, maxSupportedLineLengthForImport)
-	lines := make([]string, 0)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+// Concatenate two iterators. Equivalent of the future Go stdlib function iter.Concat2.
+// TODO: Swap this to the stdlib function
+func concatIterators(iters ...Seq2[string, error]) Seq2[string, error] {
+	return func(yield func(string, error) bool) bool {
+		for _, seq := range iters {
+			if !seq(yield) {
+				return false
+			}
+		}
+		return true
 	}
+}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+// Convert a slice into an iterator. Equivalent of the future Go stdlib function iter.Values
+// TODO: Swap this to the stdlib function
+func Values[Slice ~[]Elem, Elem any](s Slice) Seq2[Elem, error] {
+	return func(yield func(Elem, error) bool) bool {
+		for _, v := range s {
+			if !yield(v, nil) {
+				return false
+			}
+		}
+		return true
 	}
+}
 
-	return lines, nil
+func readFileToIterator(path string) Seq2[string, error] {
+	return func(yield func(string, error) bool) bool {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			return yield("", fmt.Errorf("file does not exist: %w", err))
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return yield("", fmt.Errorf("failed to open file: %w", err))
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		buf := make([]byte, maxSupportedLineLengthForImport)
+		scanner.Buffer(buf, maxSupportedLineLengthForImport)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !yield(line, nil) {
+				return false
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			return yield("", fmt.Errorf("scanner.Err()=%w", err))
+		}
+
+		return true
+	}
 }
 
 func getServerHostname() string {
