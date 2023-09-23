@@ -2158,7 +2158,7 @@ func TestTimestampFormat(t *testing.T) {
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail -tablesizing")[1])
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
 
