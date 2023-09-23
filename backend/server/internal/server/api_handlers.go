@@ -51,16 +51,19 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	resp := shared.SubmitResponse{}
 
 	deviceId := getOptionalQueryParam(r, "source_device_id", s.isTestEnvironment)
-	if deviceId != "" {
-		dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, deviceId)
-		checkGormError(err)
-		resp.DumpRequests = dumpRequests
+	if deviceId != "" && version != "" {
+		hv, err := parseVersionString(version)
+		if err != nil || hv.greaterThan(parsedVersion{0, 221}) {
+			dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, deviceId)
+			checkGormError(err)
+			resp.DumpRequests = dumpRequests
 
-		deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
-		checkGormError(err)
-		resp.DeletionRequests = deletionRequests
+			deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
+			checkGormError(err)
+			resp.DeletionRequests = deletionRequests
 
-		// TODO: Update this code to call DeletionRequestInc() iff the version is new enough to be using these responses
+			checkGormError(s.db.DeletionRequestInc(r.Context(), userId, deviceId))
+		}
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
