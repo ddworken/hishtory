@@ -507,6 +507,25 @@ func RetryingDbFunction(dbFunc func() error) error {
 	return fmt.Errorf("failed to execute DB transaction even with %d retries: %w", i, err)
 }
 
+func RetryingDbFunctionWithResult[T any](dbFunc func() (T, error)) (T, error) {
+	var t T
+	var err error = nil
+	i := 0
+	for i = 0; i < 10; i++ {
+		t, err = dbFunc()
+		if err == nil {
+			return t, nil
+		}
+		errMsg := err.Error()
+		if strings.Contains(errMsg, SQLITE_LOCKED_ERR_MSG) {
+			time.Sleep(time.Duration(i*rand.Intn(100)) * time.Millisecond)
+			continue
+		}
+		return t, fmt.Errorf("unrecoverable sqlite error: %w", err)
+	}
+	return t, fmt.Errorf("failed to execute DB transaction even with %d retries: %w", i, err)
+}
+
 func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
 	entry = normalizeEntryTimezone(entry)
 	return RetryingDbFunction(func() error {

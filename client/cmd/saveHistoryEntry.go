@@ -206,10 +206,16 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error 
 	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Session(&gorm.Session{})
 
 	// Get the presaved entry since we need it for doing remote deletes
-	var presavedEntry data.HistoryEntry
-	res := matchingEntryQuery.Find(&presavedEntry)
-	if res.Error != nil {
-		return fmt.Errorf("failed to search for presaved entry for cmd=%#v: %w", entry.Command, res.Error)
+	presavedEntry, err := lib.RetryingDbFunctionWithResult(func() (data.HistoryEntry, error) {
+		var presavedEntry data.HistoryEntry
+		res := matchingEntryQuery.Find(&presavedEntry)
+		if res.Error != nil {
+			return presavedEntry, fmt.Errorf("failed to search for presaved entry for cmd=%#v: %w", entry.Command, res.Error)
+		}
+		return presavedEntry, nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// Delete presaved entries locally
