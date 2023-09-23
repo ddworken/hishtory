@@ -11,6 +11,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+    - name: Install dependencies
+      run: |
+
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/kisielk/errcheck@latest
     - uses: pre-commit/action@v3.0.0
       with:
         extra_args: --all-files
