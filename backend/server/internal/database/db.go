@@ -153,7 +153,7 @@ func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, request *share
 	tx := db.WithContext(ctx).Where("false")
 	for _, message := range request.Messages.Ids {
 		// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
-		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR id = ?)", request.UserId, message.DeviceId, message.EndTime, message.EntryId))
+		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", request.UserId, message.DeviceId, message.EndTime, message.EntryId))
 	}
 	result := tx.Delete(&shared.EncHistoryEntry{})
 	if tx.Error != nil {
