@@ -308,3 +308,7 @@ func (s *Server) feedbackHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", "0")
 	w.WriteHeader(http.StatusOK)
 }
+
+func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("OK"))
+}

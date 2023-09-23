@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetup(t *testing.T) {
@@ -354,4 +356,17 @@ func TestSplitEscaped(t *testing.T) {
 			t.Fatalf("containsUnescaped failure for splitEscaped(%#v, %#v, %#v), actual=%#v", tc.input, string(tc.char), tc.limit, actual)
 		}
 	}
+}
+
+func TestAugmentedIsOfflineError(t *testing.T) {
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
+
+	// By default, when the hishtory server is up, then IsOfflineError checks the error msg
+	require.True(t, isHishtoryServerUp())
+	require.False(t, IsOfflineError(fmt.Errorf("unchecked error type")))
+
+	// When the hishtory server is down, then all error messages are treated as being due to offline errors
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
+	require.False(t, isHishtoryServerUp())
+	require.True(t, IsOfflineError(fmt.Errorf("unchecked error type")))
 }

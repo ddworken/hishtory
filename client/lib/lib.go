@@ -496,7 +496,7 @@ func IsOfflineError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
+	if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
 		strings.Contains(err.Error(), "connect: network is unreachable") ||
 		strings.Contains(err.Error(), "read: connection reset by peer") ||
 		strings.Contains(err.Error(), ": EOF") ||
@@ -505,7 +505,20 @@ func IsOfflineError(err error) bool {
 		strings.Contains(err.Error(), ": i/o timeout") ||
 		strings.Contains(err.Error(), "connect: operation timed out") ||
 		strings.Contains(err.Error(), "net/http: TLS handshake timeout") ||
-		strings.Contains(err.Error(), "connect: connection refused")
+		strings.Contains(err.Error(), "connect: connection refused") {
+		return true
+	}
+	if !isHishtoryServerUp() {
+		// If the backend server is down, then treat all errors as offline errors
+		return true
+	}
+	// A truly unexpected error, bubble this up
+	return false
+}
+
+func isHishtoryServerUp() bool {
+	_, err := ApiGet("/api/v1/ping")
+	return err == nil
 }
 
 func normalizeEntryTimezone(entry data.HistoryEntry) data.HistoryEntry {

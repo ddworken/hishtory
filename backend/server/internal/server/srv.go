@@ -107,6 +107,7 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	mux.Handle("/api/v1/add-deletion-request", loggerMiddleware(s.addDeletionRequestHandler))
 	mux.Handle("/api/v1/slsa-status", loggerMiddleware(s.slsaStatusHandler))
 	mux.Handle("/api/v1/feedback", loggerMiddleware(s.feedbackHandler))
+	mux.Handle("/api/v1/ping", loggerMiddleware(s.pingHandler))
 	mux.Handle("/healthcheck", loggerMiddleware(s.healthCheckHandler))
 	mux.Handle("/internal/api/v1/usage-stats", loggerMiddleware(s.usageStatsHandler))
 	mux.Handle("/internal/api/v1/stats", loggerMiddleware(s.statsHandler))
