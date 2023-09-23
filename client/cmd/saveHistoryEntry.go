@@ -20,6 +20,7 @@ import (
 	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
 var saveHistoryEntryCmd = &cobra.Command{
@@ -161,25 +162,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
-		deletePresavedEntryFunc := func() error {
-			query := "cwd:" + entry.CurrentWorkingDirectory
-			query += " start_time:" + strconv.FormatInt(entry.StartTime.Unix(), 10)
-			query += " end_time:1970/01/01_00:00:00_+00:00"
-			tx, err := lib.MakeWhereQueryFromSearch(ctx, db, query)
-			if err != nil {
-				return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
-			}
-			tx.Where("command = ?", entry.Command)
-			res := tx.Delete(&data.HistoryEntry{})
-			if res.Error != nil {
-				return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
-			}
-			if res.RowsAffected > 1 {
-				return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
-			}
-			return nil
-		}
-		lib.CheckFatalError(lib.RetryingDbFunction(deletePresavedEntryFunc))
+		lib.CheckFatalError(deletePresavedEntries(ctx, entry))
 	}
 
 	// Persist it locally
@@ -198,14 +181,62 @@ func saveHistoryEntry(ctx context.Context) {
 			if err != nil {
 				lib.CheckFatalError(fmt.Errorf("failed to deserialize response from /api/v1/submit: %w", err))
 			}
-			lib.CheckFatalError(handleDumpRequests(ctx, submitResponse.DumpRequests))
 			lib.CheckFatalError(lib.HandleDeletionRequests(ctx, submitResponse.DeletionRequests))
+			lib.CheckFatalError(handleDumpRequests(ctx, submitResponse.DumpRequests))
 		}
 	}
 
 	if config.BetaMode {
 		db.Commit()
 	}
+}
+
+func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error {
+	db := hctx.GetDb(ctx)
+
+	// Create the query to find the presaved entries
+	query := "cwd:" + entry.CurrentWorkingDirectory
+	query += " start_time:" + strconv.FormatInt(entry.StartTime.Unix(), 10)
+	query += " end_time:1970/01/01_00:00:00_+00:00"
+	matchingEntryQuery, err := lib.MakeWhereQueryFromSearch(ctx, db, query)
+	if err != nil {
+		return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
+	}
+	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Session(&gorm.Session{})
+
+	// Get the presaved entry since we need it for doing remote deletes
+	var presavedEntry data.HistoryEntry
+	res := matchingEntryQuery.Find(&presavedEntry)
+	if res.Error != nil {
+		return fmt.Errorf("failed to search for presaved entry for cmd=%#v: %w", entry.Command, res.Error)
+	}
+
+	// Delete presaved entries locally
+	deletePresavedEntryFunc := func() error {
+		res := matchingEntryQuery.Delete(&data.HistoryEntry{})
+		if res.Error != nil {
+			return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
+		}
+		if res.RowsAffected > 1 {
+			return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
+		}
+		return nil
+	}
+	err = lib.RetryingDbFunction(deletePresavedEntryFunc)
+	if err != nil {
+		return err
+	}
+
+	// And delete it remotely
+	config := hctx.GetConf(ctx)
+	var deletionRequest shared.DeletionRequest
+	deletionRequest.SendTime = time.Now()
+	deletionRequest.UserId = data.UserId(config.UserSecret)
+	deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
+		// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
+		shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
+	)
+	return lib.SendDeletionRequest(deletionRequest)
 }
 
 func init() {
