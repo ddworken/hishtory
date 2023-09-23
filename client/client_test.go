@@ -1677,8 +1677,8 @@ func testTui_delete(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-DeleteAgain")
 
 	// And that it stays deleted
-	out = captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
