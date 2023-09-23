@@ -2290,7 +2290,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 			c.DeviceId = strings.Repeat("B", i*2)
 			c.HaveMissedUploads = (i % 2) == 0
 			// Write it
-			err := hctx.SetConfig(c)
+			err := hctx.SetConfig(&c)
 			require.NoError(t, err)
 			// Check that we can read
 			c2, err := hctx.GetConfig()
@@ -2302,6 +2302,33 @@ func TestSetConfigNoCorruption(t *testing.T) {
 		}(i)
 	}
 	doneWg.Wait()
+}
+
+// Test that the config retrieved from the context is a reference and there are no consistency issues with it getting out of sync
+func TestCtxConfigIsReference(t *testing.T) {
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Get two copies of the conifg
+	ctx := hctx.MakeContext()
+	c1 := hctx.GetConf(ctx)
+	c2 := hctx.GetConf(ctx)
+	require.Equal(t, *c1, *c2)
+
+	// Change one and check that the other is changed
+	c1.LastSavedHistoryLine = "foobar"
+	require.Equal(t, c1.LastSavedHistoryLine, "foobar")
+	require.Equal(t, c2.LastSavedHistoryLine, "foobar")
+
+	// Persist that one, and then get the config again, and that one should also contain the change
+	require.NoError(t, hctx.SetConfig(c1))
+	c3 := hctx.GetConf(ctx)
+	require.Equal(t, *c1, *c3)
+	require.Equal(t, c1.LastSavedHistoryLine, "foobar")
+	require.Equal(t, c2.LastSavedHistoryLine, "foobar")
+	require.Equal(t, c3.LastSavedHistoryLine, "foobar")
 }
 
 func testMultipleUsers(t *testing.T, tester shellTester) {

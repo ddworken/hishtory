@@ -63,7 +63,7 @@ func Setup(userSecret string, isOffline bool) error {
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
 	config.ControlRSearchEnabled = true
 	config.IsOffline = isOffline
-	err := hctx.SetConfig(config)
+	err := hctx.SetConfig(&config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %w", err)
 	}
@@ -563,7 +563,7 @@ func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
 	})
 }
 
-func EncryptAndMarshal(config hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
+func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
 	var encEntries []shared.EncHistoryEntry
 	for _, entry := range entries {
 		encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)

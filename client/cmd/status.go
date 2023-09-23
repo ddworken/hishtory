@@ -28,7 +28,7 @@ var statusCmd = &cobra.Command{
 	},
 }
 
-func printOnlineStatus(config hctx.ClientConfig) {
+func printOnlineStatus(config *hctx.ClientConfig) {
 	if config.IsOffline {
 		fmt.Println("Sync Mode: Disabled")
 	} else {

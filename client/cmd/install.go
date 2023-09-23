@@ -203,7 +203,7 @@ func handleUpgradedFeatures() error {
 		return err
 	}
 	config.ControlRSearchEnabled = true
-	return hctx.SetConfig(config)
+	return hctx.SetConfig(&config)
 }
 
 func installBinary(homedir string) (string, error) {

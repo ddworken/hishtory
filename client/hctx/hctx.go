@@ -121,7 +121,7 @@ func MakeContext() context.Context {
 	if err != nil {
 		panic(fmt.Errorf("failed to retrieve config: %w", err))
 	}
-	ctx = context.WithValue(ctx, configCtxKey, config)
+	ctx = context.WithValue(ctx, configCtxKey, &config)
 	db, err := OpenLocalSqliteDb()
 	if err != nil {
 		panic(fmt.Errorf("failed to open local DB: %w", err))
@@ -135,10 +135,10 @@ func MakeContext() context.Context {
 	return ctx
 }
 
-func GetConf(ctx context.Context) ClientConfig {
+func GetConf(ctx context.Context) *ClientConfig {
 	v := ctx.Value(configCtxKey)
 	if v != nil {
-		return v.(ClientConfig)
+		return (v.(*ClientConfig))
 	}
 	panic(fmt.Errorf("failed to find config in ctx"))
 }
@@ -235,8 +235,7 @@ func GetConfig() (ClientConfig, error) {
 	return config, nil
 }
 
-func SetConfig(config ClientConfig) error {
-	// TODO: Currently there is a consistency bug here where we update fields in the ClientConfig, and we write that to disk, but we never re-store it in hctx
+func SetConfig(config *ClientConfig) error {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
@@ -269,7 +268,7 @@ func InitConfig() error {
 	}
 	_, err = os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
 	if errors.Is(err, os.ErrNotExist) {
-		return SetConfig(ClientConfig{})
+		return SetConfig(&ClientConfig{})
 	}
 	return err
 }

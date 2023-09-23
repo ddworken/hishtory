@@ -92,7 +92,7 @@ func handlePotentialUploadFailure(err error, config *hctx.ClientConfig, entryTim
 				// Set MissedUploadTimestamp to `entry timestamp - 1` so that the current entry will get
 				// uploaded once network access is regained.
 				config.MissedUploadTimestamp = entryTimestamp.UTC().Unix() - 1
-				lib.CheckFatalError(hctx.SetConfig(*config))
+				lib.CheckFatalError(hctx.SetConfig(config))
 			}
 		} else {
 			lib.CheckFatalError(err)
@@ -143,7 +143,7 @@ func presaveHistoryEntry(ctx context.Context) {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		handlePotentialUploadFailure(err, &config, entry.StartTime)
+		handlePotentialUploadFailure(err, config, entry.StartTime)
 	}
 }
 
@@ -175,7 +175,7 @@ func saveHistoryEntry(ctx context.Context) {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		w, err := lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		handlePotentialUploadFailure(err, &config, entry.StartTime)
+		handlePotentialUploadFailure(err, config, entry.StartTime)
 		if err == nil {
 			submitResponse := shared.SubmitResponse{}
 			err := json.Unmarshal(w, &submitResponse)
