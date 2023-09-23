@@ -57,7 +57,6 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 
 	// Upload the missing entries
 	db := hctx.GetDb(ctx)
-	// TODO: There is a bug here because MissedUploadTimestamp is going to be a second or two after the history entry that needs to be uploaded
 	query := fmt.Sprintf("after:%s", time.Unix(config.MissedUploadTimestamp, 0).Format("2006-01-02"))
 	entries, err := lib.Search(ctx, db, query, 0)
 	if err != nil {
@@ -84,13 +83,15 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 	return nil
 }
 
-func handlePotentialUploadFailure(err error, config *hctx.ClientConfig) {
+func handlePotentialUploadFailure(err error, config *hctx.ClientConfig, entryTimestamp time.Time) {
 	if err != nil {
 		if lib.IsOfflineError(err) {
 			hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
 			if !config.HaveMissedUploads {
 				config.HaveMissedUploads = true
-				config.MissedUploadTimestamp = time.Now().Unix()
+				// Set MissedUploadTimestamp to `entry timestamp - 1` so that the current entry will get
+				// uploaded once network access is regained.
+				config.MissedUploadTimestamp = entryTimestamp.UTC().Unix() - 1
 				lib.CheckFatalError(hctx.SetConfig(*config))
 			}
 		} else {
@@ -142,7 +143,7 @@ func presaveHistoryEntry(ctx context.Context) {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		handlePotentialUploadFailure(err, &config)
+		handlePotentialUploadFailure(err, &config, entry.StartTime)
 	}
 }
 
@@ -174,7 +175,7 @@ func saveHistoryEntry(ctx context.Context) {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		w, err := lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		handlePotentialUploadFailure(err, &config)
+		handlePotentialUploadFailure(err, &config, entry.StartTime)
 		if err == nil {
 			submitResponse := shared.SubmitResponse{}
 			err := json.Unmarshal(w, &submitResponse)
