@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 const TABLE_HEIGHT = 20
 const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
 
+var CURRENT_QUERY_FOR_HIGHLIGHTING string = ""
 var SELECTED_COMMAND string = ""
 
 var baseStyle = lipgloss.NewStyle().
@@ -207,6 +209,7 @@ func initialModel(ctx context.Context, initialQuery string) model {
 	if initialQuery != "" {
 		queryInput.SetValue(initialQuery)
 	}
+	CURRENT_QUERY_FOR_HIGHLIGHTING = initialQuery
 	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New()}
 }
 
@@ -319,6 +322,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.queryInput = i
 			searchQuery := m.queryInput.Value()
 			m.runQuery = &searchQuery
+			CURRENT_QUERY_FOR_HIGHLIGHTING = searchQuery
 			cmd3 := runQueryAndUpdateTable(m, false, false)
 			preventTableOverscrolling(m)
 			return m, tea.Batch(pendingCommands, cmd2, cmd3)
@@ -579,6 +583,68 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 		Foreground(lipgloss.Color("229")).
 		Background(lipgloss.Color("57")).
 		Bold(false)
+	if config.BetaMode {
+		s.RenderCell = func(model table.Model, value string, position table.CellPosition) string {
+			MATCH_NOTHING_REGEXP := regexp.MustCompile("a^")
+			var re *regexp.Regexp
+			CURRENT_QUERY_FOR_HIGHLIGHTING = strings.TrimSpace(CURRENT_QUERY_FOR_HIGHLIGHTING)
+			if CURRENT_QUERY_FOR_HIGHLIGHTING == "" {
+				re = MATCH_NOTHING_REGEXP
+			} else {
+				queryRegex := lib.MakeRegexFromQuery(CURRENT_QUERY_FOR_HIGHLIGHTING)
+				r, err := regexp.Compile(queryRegex)
+				if err != nil {
+					// Failed to compile the regex for highlighting matches, this should never happen. In this
+					// case, just use a regexp that matches nothing to ensure that the TUI doesn't crash.
+					re = MATCH_NOTHING_REGEXP
+				} else {
+					re = r
+				}
+			}
+
+			renderChunk := func(v string, isMatching, isLeftMost, isRightMost bool) string {
+				hctx.GetLogger().Infof("Rendering chunk=%#v with isMatching=%#v", v, isMatching)
+				baseStyle := lipgloss.NewStyle()
+				if position.IsRowSelected {
+					baseStyle = s.Selected.Copy()
+				}
+				if isLeftMost {
+					baseStyle = baseStyle.PaddingLeft(1)
+				}
+				if isRightMost {
+					baseStyle = baseStyle.PaddingRight(1)
+				}
+				if isMatching {
+					baseStyle = baseStyle.Bold(true)
+				}
+				return baseStyle.Render(v)
+			}
+
+			matches := re.FindAllStringIndex(value, -1)
+			if len(matches) == 0 {
+				return renderChunk(value, false, true, true)
+			}
+
+			ret := ""
+			lastIncludedIdx := 0
+			for _, match := range re.FindAllStringIndex(value, -1) {
+				matchStartIdx := match[0]
+				matchEndIdx := match[1]
+				beforeMatch := value[lastIncludedIdx:matchStartIdx]
+				if beforeMatch != "" {
+					ret += renderChunk(beforeMatch, false, lastIncludedIdx == 0, false)
+				}
+				match := value[matchStartIdx:matchEndIdx]
+				ret += renderChunk(match, true, matchStartIdx == 0, matchEndIdx == len(value))
+				lastIncludedIdx = matchEndIdx
+			}
+			if lastIncludedIdx != len(value) {
+				ret += renderChunk(value[lastIncludedIdx:], false, false, true)
+			}
+			hctx.GetLogger().Infof("bolded=%#v, original=%#v", ret, s.Cell.Render(value))
+			return ret
+		}
+	}
 	t.SetStyles(s)
 	t.Focus()
 	return t, nil
