@@ -31,6 +31,7 @@ var saveHistoryEntryCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(maybeUploadSkippedHistoryEntries(ctx))
+		lib.CheckFatalError(maybeSubmitPendingDeletionRequests(ctx))
 		saveHistoryEntry(ctx)
 	},
 }
@@ -44,6 +45,32 @@ var presaveHistoryEntryCmd = &cobra.Command{
 		ctx := hctx.MakeContext()
 		presaveHistoryEntry(ctx)
 	},
+}
+
+func maybeSubmitPendingDeletionRequests(ctx context.Context) error {
+	config := hctx.GetConf(ctx)
+	if config.IsOffline {
+		return nil
+	}
+	if len(config.PendingDeletionRequests) == 0 {
+		return nil
+	}
+
+	// Upload the missing deletion requests
+	for _, dr := range config.PendingDeletionRequests {
+		err := lib.SendDeletionRequest(dr)
+		if lib.IsOfflineError(err) {
+			// We're still offline, so nothing to do
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	// Mark down that we sent all of them
+	config.PendingDeletionRequests = make([]shared.DeletionRequest, 0)
+	return hctx.SetConfig(config)
 }
 
 func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
@@ -163,19 +190,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
-		err := deletePresavedEntries(ctx, entry)
-		if err != nil {
-			if lib.IsOfflineError(err) {
-				// Do Nothing: This means that if an entry is pre-saved, the user goes offline, and the
-				// command finishes running, then there will be a syncing inconsistency where remote devices
-				// will have the pre-saved entry and the main entry.
-				//
-				// TODO: Fix this by having the config store deletion requests to be resent once the device goes
-				// back online.
-			} else {
-				lib.CheckFatalError(err)
-			}
-		}
+		lib.CheckFatalError(deletePresavedEntries(ctx, entry))
 	}
 
 	// Persist it locally
@@ -248,14 +263,23 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error 
 
 	// And delete it remotely
 	config := hctx.GetConf(ctx)
-	var deletionRequest shared.DeletionRequest
-	deletionRequest.SendTime = time.Now()
-	deletionRequest.UserId = data.UserId(config.UserSecret)
-	deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
-		// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
-		shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
-	)
-	return lib.SendDeletionRequest(deletionRequest)
+	if !config.IsOffline {
+		var deletionRequest shared.DeletionRequest
+		deletionRequest.SendTime = time.Now()
+		deletionRequest.UserId = data.UserId(config.UserSecret)
+		deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
+			// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
+			shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
+		)
+		err = lib.SendDeletionRequest(deletionRequest)
+		if lib.IsOfflineError(err) {
+			// Cache the deletion request to send once the client comes back online
+			config.PendingDeletionRequests = append(config.PendingDeletionRequests, deletionRequest)
+			return hctx.SetConfig(config)
+		}
+		return err
+	}
+	return nil
 }
 
 func init() {

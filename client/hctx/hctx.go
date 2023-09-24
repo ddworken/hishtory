@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -171,6 +172,10 @@ type ClientConfig struct {
 	// Used for uploading history entries that we failed to upload due to a missing network connection
 	HaveMissedUploads     bool  `json:"have_missed_uploads"`
 	MissedUploadTimestamp int64 `json:"missed_upload_timestamp"`
+	// Used for uploading deletion requests that we failed to upload due to a missed network connection
+	// Note that this is only applicable for deleting pre-saved entries. For interactive deletion, we just
+	// show the user an error message if they're offline.
+	PendingDeletionRequests []shared.DeletionRequest `json:"pending_deletion_requests"`
 	// Used for avoiding double imports of .bash_history
 	HaveCompletedInitialImport bool `json:"have_completed_initial_import"`
 	// Whether control-r bindings are enabled

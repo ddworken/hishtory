@@ -33,7 +33,7 @@ func printOnlineStatus(config *hctx.ClientConfig) {
 		fmt.Println("Sync Mode: Disabled")
 	} else {
 		fmt.Println("Sync Mode: Enabled")
-		if config.HaveMissedUploads {
+		if config.HaveMissedUploads || len(config.PendingDeletionRequests) > 0 {
 			fmt.Println("Sync Status: Unsynced (device is offline?)")
 		} else {
 			fmt.Println("Sync Status: Synced")
