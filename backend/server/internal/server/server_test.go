@@ -524,7 +524,7 @@ func TestDeletionRequests(t *testing.T) {
 }
 
 func TestHealthcheck(t *testing.T) {
-	s := NewServer(DB, TrackUsageData(false))
+	s := NewServer(DB, TrackUsageData(true))
 	w := httptest.NewRecorder()
 	s.healthCheckHandler(w, httptest.NewRequest(http.MethodGet, "/", nil))
 	if w.Code != 200 {

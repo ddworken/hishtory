@@ -180,6 +180,7 @@ func main() {
 		server.IsProductionEnvironment(isProductionEnvironment()),
 		server.WithCron(cron),
 		server.WithUpdateInfo(release.BuildUpdateInfo(release.Version)),
+		server.TrackUsageData(true),
 	)
 
 	go runBackgroundJobs(context.Background(), srv, db, stats)
