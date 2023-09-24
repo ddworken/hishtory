@@ -84,6 +84,7 @@ You can customize the columns that are displayed via `hishtory config-set displa
 ```
 hishtory config-set displayed-columns CWD Command
 ```
+
 </details>
 
 <details>
@@ -117,7 +118,7 @@ hishtory config-set filter-duplicate-commands true
 </details>
 
 <details>
-<summary>Offline Install</summary>
+<summary>Offline Install Without Syncing</summary>
 
 If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode. 
 
@@ -134,7 +135,7 @@ But if you'd like to self-host the hishtory backend, you can! The backend is a s
 
 To make `hishtory` use your self-hosted server, set the `HISHTORY_SERVER` environment variable to the origin of your self-hosted server. For example, put `export HISHTORY_SERVER=http://my-hishtory-server.example.com` at the end of your `.bashrc`.
 
-Check out the [`docker-compose.yml`](https://github.com/ddworken/hishtory/blob/master/backend/server/docker-compose.yml) file for an example config to start a hiSHtory server using postgres.
+Check out the [`docker-compose.yml`](https://github.com/ddworken/hishtory/blob/master/backend/server/docker-compose.yml) file for an example config to start a hiSHtory server using Postgres.
 
 A few configuration options:
 
@@ -176,13 +177,13 @@ Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues,
 
 If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
 
-Note that if you're uninstalling hishtory due to bad latency, try running `hishtory update` first! Latency has been improved over 100x since the first release so I'd highly recommend checking out the latest version. 
+Note that if you're experiencing any issues with hiSHtory, try running `hishtory update` first! Performance and reliability is always improving, and we highly value [your feedback](https://github.com/ddworken/hishtory/issues).
 
 </details>
 
 ## Design
 
-The `hishtory` CLI is written in Go. It hooks into the shell in order to track information about all commands that are run. It takes this data and saves it in a local SQLite DB managed via [GORM](https://gorm.io/). This data is then encrypted and sent to your other devices through a backend that essentially functions as a one-to-many queue. When you run `hishtory query`, a SQL query is run to find matching entries in the local SQLite DB. 
+The `hishtory` CLI is written in Go. It hooks into the shell in order to track information about all commands that are run. It takes this data and saves it in a local SQLite DB managed via [GORM](https://gorm.io/). This data is then encrypted and sent to your other devices through a backend that essentially functions as a one-to-many queue. When you press press `Control+R` or run `hishtory query`, a SQL query is run to find matching entries in the local SQLite DB. 
 
 ### Syncing Design 
 
@@ -197,6 +198,6 @@ See [hiSHtory: Cross-device Encrypted Syncing Design](https://blog.daviddworken.
 
 `hishtory` is a CLI tool written in Go and uses AES-GCM for end-to-end encrypting your history entries while syncing them. The binary is reproducibly built and [SLSA Level 3](https://slsa.dev/) to make it easy to verify you're getting the code contained in this repository. 
 
-This all ensures that the minimalist backend cannot read your shell history, it only sees encrypted data. 
+This all ensures that the minimalist backend cannot read your shell history, it only sees encrypted data. hiSHtory also respects general convention and will not record any commands prefixed with a space.
 
 If you find any security issues in hiSHtory, please reach out to `david@daviddworken.com`. 
