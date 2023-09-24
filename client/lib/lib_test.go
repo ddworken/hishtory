@@ -15,6 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMain(m *testing.M) {
+	// Set env variable
+	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
+	os.Setenv("HISHTORY_TEST", "1")
+}
+
 func TestSetup(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
@@ -359,6 +365,8 @@ func TestSplitEscaped(t *testing.T) {
 }
 
 func TestAugmentedIsOfflineError(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.RunTestServer()()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
 
 	// By default, when the hishtory server is up, then IsOfflineError checks the error msg
