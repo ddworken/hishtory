@@ -387,7 +387,7 @@ func Values[Slice ~[]Elem, Elem any](s Slice) Seq2[Elem, error] {
 func readFileToIterator(path string) Seq2[string, error] {
 	return func(yield func(string, error) bool) bool {
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-			return yield("", fmt.Errorf("file does not exist: %w", err))
+			return true
 		}
 		file, err := os.Open(path)
 		if err != nil {
