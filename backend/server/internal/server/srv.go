@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
@@ -152,7 +153,7 @@ func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr
 	}
 	var usageData []shared.UsageData
 	usageData, err := s.db.UsageDataFindByUserAndDevice(ctx, userId, deviceId)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "record not found") {
 		return fmt.Errorf("db.UsageDataFindByUserAndDevice: %w", err)
 	}
 	if len(usageData) == 0 {
