@@ -1575,6 +1575,7 @@ func testTui_resize(t testing.TB) {
 	out := captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 	})
+	require.Contains(t, out, "hishtory tquery")
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-SmallTerminal")
 
@@ -1678,7 +1679,7 @@ func testTui_delete(t testing.TB) {
 
 	// And that it stays deleted
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.5},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
@@ -1711,7 +1712,7 @@ func testTui_search(t testing.TB) {
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		// Extra delay to ensure that the search for 'ls' finishes before we select an entry
-		{Keys: "ls", ExtraDelay: 1.0},
+		{Keys: "ls", ExtraDelay: 1.5},
 		{Keys: "ENTER"},
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
