@@ -155,7 +155,7 @@ func presaveHistoryEntry(ctx context.Context) {
 	entry.EndTime = time.Unix(0, 0).UTC()
 
 	// Skip saving references to presaving
-	if strings.Contains(entry.Command, "presaveHistoryEntry") {
+	if strings.Contains(entry.Command, "presaveHistoryEntry") || strings.Contains(entry.Command, "__history_control_r") {
 		return
 	}
 
