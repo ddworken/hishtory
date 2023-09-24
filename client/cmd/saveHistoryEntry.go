@@ -154,8 +154,14 @@ func presaveHistoryEntry(ctx context.Context) {
 	entry.StartTime = time.Unix(startTime, 0).UTC()
 	entry.EndTime = time.Unix(0, 0).UTC()
 
-	// Skip saving references to presaving
-	if strings.Contains(entry.Command, "presaveHistoryEntry") || strings.Contains(entry.Command, "__history_control_r") {
+	// Shell workaround: Pre-saving on bash relies on the $BASH_COMMAND variable which also will get set/executed
+	// when running shell scripts/functions, but saveHistoryEntry will never be invoked for those entries.
+	// This leads to problems where the history gets filled with some bogus pre-saved entries from shell
+	// scripts or .bashrc files. Attempt to workaround this by filtering out certain patterns that are
+	// especially likely to fall into this.
+	// TODO: Try to improve this ^
+	shellName := os.Args[2]
+	if shellName == "bash" && (strings.Contains(entry.Command, "presaveHistoryEntry") || strings.HasPrefix(entry.Command, "_")) {
 		return
 	}
 
