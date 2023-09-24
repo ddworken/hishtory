@@ -497,6 +497,7 @@ func IsOfflineError(err error) bool {
 		return false
 	}
 	if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
+		strings.Contains(err.Error(), ": no such host") ||
 		strings.Contains(err.Error(), "connect: network is unreachable") ||
 		strings.Contains(err.Error(), "read: connection reset by peer") ||
 		strings.Contains(err.Error(), ": EOF") ||
