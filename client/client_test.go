@@ -2051,11 +2051,9 @@ func testPresaving(t *testing.T, tester shellTester) {
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("table_sizing aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	// Enable beta-mode since presaving is behind that feature flag
-	out := strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`))
-	require.Equal(t, out, "false")
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
 	tester.RunInteractiveShell(t, `hishtory config-set beta-mode true`)
-	out = strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`))
-	require.Equal(t, out, "true")
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
 
 	// Start a command that will take a long time to execute in the background, so
 	// we can check that it was recorded even though it never finished.
@@ -2064,7 +2062,7 @@ func testPresaving(t *testing.T, tester shellTester) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Test that it shows up in hishtory export
-	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	out := tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
 	expectedOutput := "sleep 13371337\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -2074,6 +2072,16 @@ func testPresaving(t *testing.T, tester shellTester) {
 	tester.RunInteractiveShell(t, ` hishtory config-set displayed-columns CWD Runtime Command`)
 	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
 	testutils.CompareGoldens(t, out, "testPresaving-query")
+
+	// And then record a few other commands, and run an export of all commands, to ensure no funkiness happened
+	tester.RunInteractiveShell(t, `ls /`)
+	time.Sleep(time.Second)
+	tester.RunInteractiveShell(t, `sleep 0.5`)
+	out = tester.RunInteractiveShell(t, ` hishtory export -hishtory -table_sizing -pipefail`)
+	expectedOutput = "sleep 13371337\nls /\nsleep 0.5\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
 
 	// Create a new device, and confirm it shows up there too
 	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "device1")
@@ -2087,12 +2095,19 @@ func testPresaving(t *testing.T, tester shellTester) {
 
 	// And confirm it was redacted
 	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
-	require.Equal(t, "", out)
+	require.Equal(t, "sleep 0.5\n", out)
 
 	// Then go back to device1 and confirm it was redacted there too
 	restoreDevice1()
 	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
-	require.Equal(t, "", out)
+	require.Equal(t, "sleep 0.5\n", out)
+
+	// And then record a few commands, and run a final export of all commands, to ensure no funkiness happened
+	out = tester.RunInteractiveShell(t, ` hishtory export -hishtory -table_sizing -pipefail`)
+	expectedOutput = "ls /\nsleep 0.5\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
 }
 
 func testUninstall(t *testing.T, tester shellTester) {
@@ -2291,7 +2306,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 			c.DeviceId = strings.Repeat("B", i*2)
 			c.HaveMissedUploads = (i % 2) == 0
 			// Write it
-			err := hctx.SetConfig(&c)
+			require.NoError(t, hctx.SetConfig(&c))
 			require.NoError(t, err)
 			// Check that we can read
 			c2, err := hctx.GetConfig()
