@@ -198,15 +198,15 @@ func hishtoryQuery(t testing.TB, tester shellTester, query string) string {
 
 func manuallySubmitHistoryEntry(t testing.TB, userSecret string, entry data.HistoryEntry) {
 	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if encEntry.Date != entry.EndTime {
 		t.Fatalf("encEntry.Date does not match the entry")
 	}
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	require.NotEqual(t, "", entry.DeviceId)
 	resp, err := http.Post("http://localhost:8080/api/v1/submit?source_device_id="+entry.DeviceId, "application/json", bytes.NewBuffer(jsonValue))
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
 	}
@@ -291,9 +291,9 @@ func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellT
 
 func assertNoLeakedConnections(t testing.TB) {
 	resp, err := lib.ApiGet("/api/v1/get-num-connections")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	numConnections, err := strconv.Atoi(string(resp))
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if numConnections > 1 {
 		t.Fatalf("DB has %d open connections, expected to have 1 or less", numConnections)
 	}
