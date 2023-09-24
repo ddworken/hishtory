@@ -163,7 +163,19 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
-		lib.CheckFatalError(deletePresavedEntries(ctx, entry))
+		err := deletePresavedEntries(ctx, entry)
+		if err != nil {
+			if lib.IsOfflineError(err) {
+				// Do Nothing: This means that if an entry is pre-saved, the user goes offline, and the
+				// command finishes running, then there will be a syncing inconsistency where remote devices
+				// will have the pre-saved entry and the main entry.
+				//
+				// TODO: Fix this by having the config store deletion requests to be resent once the device goes
+				// back online.
+			} else {
+				lib.CheckFatalError(err)
+			}
+		}
 	}
 
 	// Persist it locally
