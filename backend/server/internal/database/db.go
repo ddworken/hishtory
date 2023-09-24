@@ -53,11 +53,9 @@ func (db *DB) AddDatabaseTables() error {
 	}
 
 	for _, model := range models {
-		fmt.Printf("Beginning migration of %#v\n", model)
 		if err := db.AutoMigrate(model); err != nil {
 			return fmt.Errorf("db.AutoMigrate: %w", err)
 		}
-		fmt.Printf("Done migrating %#v\n", model)
 	}
 
 	return nil
