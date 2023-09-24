@@ -230,7 +230,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error 
 	if err != nil {
 		return fmt.Errorf("failed to query for pre-saved history entry: %w", err)
 	}
-	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Session(&gorm.Session{})
+	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Where("device_id = ?", entry.DeviceId).Session(&gorm.Session{})
 
 	// Get the presaved entry since we need it for doing remote deletes
 	presavedEntry, err := lib.RetryingDbFunctionWithResult(func() (data.HistoryEntry, error) {
@@ -250,9 +250,6 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error 
 		res := matchingEntryQuery.Delete(&data.HistoryEntry{})
 		if res.Error != nil {
 			return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
-		}
-		if res.RowsAffected > 1 {
-			return fmt.Errorf("attempted to delete pre-saved entry, but something went wrong since we deleted %d rows", res.RowsAffected)
 		}
 		return nil
 	}
