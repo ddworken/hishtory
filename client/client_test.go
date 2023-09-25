@@ -111,6 +111,7 @@ func TestParam(t *testing.T) {
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
 	runTestsWithRetries(t, "testTui/delete", testTui_delete)
+	runTestsWithRetries(t, "testTui/color", testTui_color)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1604,9 +1605,6 @@ func testTui_resize(t testing.TB) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
-
-	// Assert there are no leaked connections
-	// assertNoLeakedConnections(t)
 }
 
 func testTui_scroll(t testing.TB) {
@@ -1644,6 +1642,23 @@ func testTui_scroll(t testing.TB) {
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
 
+}
+
+func testTui_color(t testing.TB) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t)
+
+	// Capture the TUI with full colored output, note that this golden will be harder to undersand
+	// from inspection and primarily servers to detect unintended changes in hishtory's output.
+	out := captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}}, true)
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutput")
+
+	// And the same once a search query has been typed in
+	out = captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, true)
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
 }
 
 func testTui_delete(t testing.TB) {
