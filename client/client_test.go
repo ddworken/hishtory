@@ -1651,19 +1651,19 @@ func testTui_color(t testing.TB) {
 
 	// Capture the TUI with full colored output, note that this golden will be harder to undersand
 	// from inspection and primarily servers to detect unintended changes in hishtory's output.
-	out := captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}}, true)
+	out := captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}}, includeEscapeSequences: true})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutput")
 
 	// And the same once a search query has been typed in
-	out = captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, true)
+	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
 
 	// And one more time with beta-mode for highlighting matches
 	tester.RunInteractiveShell(t, ` hishtory config-set beta-mode true`)
 	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
-	out = captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, true)
+	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
 }
