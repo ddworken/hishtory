@@ -584,8 +584,8 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 		Background(lipgloss.Color("57")).
 		Bold(false)
 	if config.BetaMode {
+		MATCH_NOTHING_REGEXP := regexp.MustCompile("a^")
 		s.RenderCell = func(model table.Model, value string, position table.CellPosition) string {
-			MATCH_NOTHING_REGEXP := regexp.MustCompile("a^")
 			var re *regexp.Regexp
 			CURRENT_QUERY_FOR_HIGHLIGHTING = strings.TrimSpace(CURRENT_QUERY_FOR_HIGHLIGHTING)
 			if CURRENT_QUERY_FOR_HIGHLIGHTING == "" {
