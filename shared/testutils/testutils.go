@@ -291,13 +291,6 @@ func RunTestServer() func() {
 	}
 }
 
-func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
-	if err != nil {
-		_, filename, line, _ := runtime.Caller(1)
-		t.Fatalf("Unexpected error: %v at %s:%d! Additional info: %v", err, filename, line, additionalInfo)
-	}
-}
-
 func IsOnline() bool {
 	_, err := http.Get("https://hishtory.dev")
 	return err == nil
