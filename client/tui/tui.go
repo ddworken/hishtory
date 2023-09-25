@@ -603,7 +603,6 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 			}
 
 			renderChunk := func(v string, isMatching, isLeftMost, isRightMost bool) string {
-				hctx.GetLogger().Infof("Rendering chunk=%#v with isMatching=%#v", v, isMatching)
 				baseStyle := lipgloss.NewStyle()
 				if position.IsRowSelected {
 					baseStyle = s.Selected.Copy()
@@ -641,7 +640,6 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 			if lastIncludedIdx != len(value) {
 				ret += renderChunk(value[lastIncludedIdx:], false, false, true)
 			}
-			hctx.GetLogger().Infof("bolded=%#v, original=%#v", ret, s.Cell.Render(value))
 			return ret
 		}
 	}
