@@ -246,6 +246,10 @@ func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overri
 }
 
 func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
+	return captureTerminalOutputComplex(t, tester, overriddenShellName, width, height, commands, false)
+}
+
+func captureTerminalOutputComplex(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand, includeEscapeSequences bool) string {
 	sleepAmount := "0.1"
 	if runtime.GOOS == "linux" {
 		sleepAmount = "0.2"
@@ -283,7 +287,11 @@ func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellT
 	if testutils.IsGithubAction() {
 		fullCommand += " sleep 2.5\n"
 	}
-	fullCommand += " tmux capture-pane -t foo -p\n"
+	fullCommand += " tmux capture-pane -t foo -p"
+	if includeEscapeSequences {
+		fullCommand += "e"
+	}
+	fullCommand += "\n"
 	fullCommand += " tmux kill-session -t foo\n"
 	testutils.TestLog(t, "Running tmux command: "+fullCommand)
 	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
