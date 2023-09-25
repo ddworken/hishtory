@@ -589,6 +589,7 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 			var re *regexp.Regexp
 			CURRENT_QUERY_FOR_HIGHLIGHTING = strings.TrimSpace(CURRENT_QUERY_FOR_HIGHLIGHTING)
 			if CURRENT_QUERY_FOR_HIGHLIGHTING == "" {
+				// If there is no search query, then there is nothing to highlight
 				re = MATCH_NOTHING_REGEXP
 			} else {
 				queryRegex := lib.MakeRegexFromQuery(CURRENT_QUERY_FOR_HIGHLIGHTING)
@@ -602,28 +603,34 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 				}
 			}
 
+			// func to render a given chunk of `value`. `isMatching` is whether `v` matches the search query (and
+			// thus needs to be highlighted). `isLeftMost` and `isRightMost` determines whether additional
+			// padding is added (to reproduce the padding that `s.Cell` normally adds).
 			renderChunk := func(v string, isMatching, isLeftMost, isRightMost bool) string {
-				baseStyle := lipgloss.NewStyle()
+				chunkStyle := lipgloss.NewStyle()
 				if position.IsRowSelected {
-					baseStyle = s.Selected.Copy()
+					// Apply the selected style as the base style if this is the highlighted row of the table
+					chunkStyle = s.Selected.Copy()
 				}
 				if isLeftMost {
-					baseStyle = baseStyle.PaddingLeft(1)
+					chunkStyle = chunkStyle.PaddingLeft(1)
 				}
 				if isRightMost {
-					baseStyle = baseStyle.PaddingRight(1)
+					chunkStyle = chunkStyle.PaddingRight(1)
 				}
 				if isMatching {
-					baseStyle = baseStyle.Bold(true)
+					chunkStyle = chunkStyle.Bold(true)
 				}
-				return baseStyle.Render(v)
+				return chunkStyle.Render(v)
 			}
 
 			matches := re.FindAllStringIndex(value, -1)
 			if len(matches) == 0 {
-				return renderChunk(value, false, true, true)
+				// No matches, so render the entire value
+				return renderChunk(value /*isMatching = */, false /*isLeftMost = */, true /*isRightMost = */, true)
 			}
 
+			// Iterate through the chunks of the value and highlight the relevant pieces
 			ret := ""
 			lastIncludedIdx := 0
 			for _, match := range re.FindAllStringIndex(value, -1) {
