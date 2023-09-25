@@ -246,15 +246,41 @@ func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overri
 }
 
 func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
-	return captureTerminalOutputComplex(t, tester, overriddenShellName, width, height, commands, false)
+	return captureTerminalOutputComplex(t,
+		TmuxCaptureConfig{
+			tester:              tester,
+			overriddenShellName: overriddenShellName,
+			width:               width,
+			height:              height,
+			complexCommands:     commands,
+		})
 }
 
-func captureTerminalOutputComplex(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand, includeEscapeSequences bool) string {
+type TmuxCaptureConfig struct {
+	tester                 shellTester
+	overriddenShellName    string
+	commands               []string
+	complexCommands        []TmuxCommand
+	width, height          int
+	includeEscapeSequences bool
+}
+
+func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig) string {
+	require.NotNil(t, captureConfig.tester)
+	if captureConfig.overriddenShellName == "" {
+		captureConfig.overriddenShellName = captureConfig.tester.ShellName()
+	}
+	if captureConfig.width == 0 {
+		captureConfig.width = 200
+	}
+	if captureConfig.height == 0 {
+		captureConfig.height = 50
+	}
 	sleepAmount := "0.1"
 	if runtime.GOOS == "linux" {
 		sleepAmount = "0.2"
 	}
-	if overriddenShellName == "fish" {
+	if captureConfig.overriddenShellName == "fish" {
 		// Fish is considerably slower so this is sadly necessary
 		sleepAmount = "0.5"
 	}
@@ -263,13 +289,20 @@ func captureTerminalOutputComplex(t testing.TB, tester shellTester, overriddenSh
 	}
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
-	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
+	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", captureConfig.width, captureConfig.height, captureConfig.overriddenShellName)
 	fullCommand += " sleep 1\n"
-	if overriddenShellName == "bash" {
+	if captureConfig.overriddenShellName == "bash" {
 		fullCommand += " tmux send -t foo SPACE source SPACE ~/.bashrc ENTER\n"
 	}
 	fullCommand += " sleep " + sleepAmount + "\n"
-	for _, cmd := range commands {
+	if len(captureConfig.commands) > 0 {
+		require.Empty(t, captureConfig.complexCommands)
+		for _, command := range captureConfig.commands {
+			captureConfig.complexCommands = append(captureConfig.complexCommands, TmuxCommand{Keys: command})
+		}
+	}
+	require.NotEmpty(t, captureConfig.complexCommands)
+	for _, cmd := range captureConfig.complexCommands {
 		if cmd.Keys != "" {
 			fullCommand += " tmux send -t foo -- "
 			fullCommand += cmd.Keys
@@ -288,13 +321,13 @@ func captureTerminalOutputComplex(t testing.TB, tester shellTester, overriddenSh
 		fullCommand += " sleep 2.5\n"
 	}
 	fullCommand += " tmux capture-pane -t foo -p"
-	if includeEscapeSequences {
+	if captureConfig.includeEscapeSequences {
 		fullCommand += "e"
 	}
 	fullCommand += "\n"
 	fullCommand += " tmux kill-session -t foo\n"
 	testutils.TestLog(t, "Running tmux command: "+fullCommand)
-	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
+	return strings.TrimSpace(captureConfig.tester.RunInteractiveShell(t, fullCommand))
 }
 
 func assertNoLeakedConnections(t testing.TB) {
