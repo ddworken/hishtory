@@ -1659,6 +1659,13 @@ func testTui_color(t testing.TB) {
 	out = captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, true)
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
+
+	// And one more time with beta-mode for highlighting matches
+	tester.RunInteractiveShell(t, ` hishtory config-set beta-mode true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
+	out = captureTerminalOutputComplex(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, true)
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
 }
 
 func testTui_delete(t testing.TB) {
