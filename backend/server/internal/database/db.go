@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/ddworken/hishtory/shared"
 	"github.com/jackc/pgx/v4/stdlib"
@@ -65,15 +66,25 @@ func (db *DB) CreateIndices() error {
 	// Note: If adding a new index here, consider manually running it on the prod DB using CONCURRENTLY to
 	// make server startup non-blocking. The benefit of this function is primarily for other people so they
 	// don't have to manually create these indexes.
-	var indices = []string{
-		`CREATE INDEX IF NOT EXISTS entry_id_idx ON enc_history_entries USING btree(encrypted_id);`,
-		`CREATE INDEX IF NOT EXISTS device_id_idx ON enc_history_entries USING btree(device_id);`,
-		`CREATE INDEX IF NOT EXISTS read_count_idx ON enc_history_entries USING btree(read_count);`,
-		`CREATE INDEX IF NOT EXISTS redact_idx ON enc_history_entries USING btree(user_id, device_id, date);`,
-		`CREATE INDEX IF NOT EXISTS del_user_idx ON deletion_requests USING btree(user_id);`,
+	indices := []struct {
+		name    string
+		table   string
+		columns []string
+	}{
+		{"entry_id_idx", "enc_history_entries", []string{"encrypted_id"}},
+		{"device_id_idx", "enc_history_entries", []string{"device_id"}},
+		{"read_count_idx", "enc_history_entries", []string{"read_count"}},
+		{"redact_idx", "enc_history_entries", []string{"user_id", "device_id", "date"}},
+		{"del_user_idx", "deletion_requests", []string{"user_id"}},
 	}
 	for _, index := range indices {
-		r := db.Exec(index)
+		sql := ""
+		if db.Name() == "sqlite" {
+			sql = fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s)", index.name, index.table, strings.Join(index.columns, ","))
+		} else {
+			sql = fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s USING btree(%s)", index.name, index.table, strings.Join(index.columns, ","))
+		}
+		r := db.Exec(sql)
 		if r.Error != nil {
 			return fmt.Errorf("failed to execute index creation sql=%#v: %w", index, r.Error)
 		}
