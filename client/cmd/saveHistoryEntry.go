@@ -144,8 +144,11 @@ func presaveHistoryEntry(ctx context.Context) {
 	}
 
 	// Augment it with os.Args
-	entry.Command = trimTrailingWhitespace(os.Args[3])
-	if strings.HasPrefix(" ", entry.Command) || entry.Command == "" {
+	shellName := os.Args[2]
+	cmd, err := extractCommandFromArg(ctx, shellName, os.Args[3])
+	lib.CheckFatalError(err)
+	entry.Command = cmd
+	if strings.HasPrefix(" ", entry.Command) || strings.TrimSpace(entry.Command) == "" {
 		// Don't save commands that start with a space
 		return
 	}
@@ -153,17 +156,6 @@ func presaveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 	entry.StartTime = time.Unix(startTime, 0).UTC()
 	entry.EndTime = time.Unix(0, 0).UTC()
-
-	// Shell workaround: Pre-saving on bash relies on the $BASH_COMMAND variable which also will get set/executed
-	// when running shell scripts/functions, but saveHistoryEntry will never be invoked for those entries.
-	// This leads to problems where the history gets filled with some bogus pre-saved entries from shell
-	// scripts or .bashrc files. Attempt to workaround this by filtering out certain patterns that are
-	// especially likely to fall into this.
-	// TODO: Try to improve this ^
-	shellName := os.Args[2]
-	if shellName == "bash" && (strings.Contains(entry.Command, "presaveHistoryEntry") || strings.HasPrefix(entry.Command, "_")) {
-		return
-	}
 
 	// And persist it locally.
 	db := hctx.GetDb(ctx)
@@ -387,40 +379,49 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	entry.EndTime = time.Now().UTC()
 
 	// command
-	if shell == "bash" {
-		cmd, err := getLastCommand(args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to build history entry: %w", err)
-		}
-		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to check if command was hidden: %w", err)
-		}
-		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
-			return nil, nil
-		}
-		cmd, err = maybeSkipBashHistTimePrefix(cmd)
-		if err != nil {
-			return nil, err
-		}
-		entry.Command = cmd
-	} else if shell == "zsh" || shell == "fish" {
-		cmd := trimTrailingWhitespace(args[4])
-		if strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
-			return nil, nil
-		}
-		entry.Command = cmd
-	} else {
-		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
+	cmd, err := extractCommandFromArg(ctx, shell, args[4])
+	if err != nil {
+		return nil, err
 	}
+	entry.Command = cmd
 	if strings.TrimSpace(entry.Command) == "" {
 		// Skip recording empty commands where the user just hits enter in their terminal
 		return nil, nil
 	}
 
 	return entry, nil
+}
+
+func extractCommandFromArg(ctx context.Context, shell, arg string) (string, error) {
+	if shell == "bash" {
+		cmd, err := getLastCommand(arg)
+		if err != nil {
+			return "", fmt.Errorf("failed to build history entry: %w", err)
+		}
+		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, arg)
+		if err != nil {
+			return "", fmt.Errorf("failed to check if command was hidden: %w", err)
+		}
+		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return "", nil
+		}
+		cmd, err = maybeSkipBashHistTimePrefix(cmd)
+		if err != nil {
+			return "", err
+		}
+		return cmd, nil
+	} else if shell == "zsh" || shell == "fish" {
+		cmd := trimTrailingWhitespace(arg)
+		if strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return "", nil
+		}
+		return cmd, nil
+	} else {
+		return "", fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
+	}
+
 }
 
 func trimTrailingWhitespace(s string) string {
