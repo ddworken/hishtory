@@ -1752,7 +1752,7 @@ func testTui_search(t testing.TB) {
 	// Check the output when the initial search is invalid
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		// ExtraDelay to ensure that after searching for 'foo:' it gets the real results for an empty query
-		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.0},
+		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.5},
 		{Keys: "ls", ExtraDelay: 1.0},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
@@ -1762,7 +1762,7 @@ func testTui_search(t testing.TB) {
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		// ExtraDelay to ensure that the search for 'ls' finishes before we make it invalid by adding ':'
-		{Keys: "ls", ExtraDelay: 1.0},
+		{Keys: "ls", ExtraDelay: 1.5},
 		{Keys: ":"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
