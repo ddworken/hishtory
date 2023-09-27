@@ -2117,6 +2117,13 @@ func testPresaving(t *testing.T, tester shellTester) {
 	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
 	testutils.CompareGoldens(t, out, "testPresaving-query")
 
+	// And that all the other commands do to
+	out = tester.RunInteractiveShell(t, ` hishtory export -hishtory -table_sizing -pipefail`)
+	expectedOutput = "sleep 13371337\nls /\nsleep 0.5\n"
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+
 	// And then redact it from device2
 	tester.RunInteractiveShell(t, ` HISHTORY_REDACT_FORCE=true hishtory redact sleep 13371337`)
 
