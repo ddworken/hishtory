@@ -1775,7 +1775,6 @@ func testTui_search(t testing.TB) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
-
 }
 
 func testTui_general(t testing.TB) {
