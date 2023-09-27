@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ddworken/hishtory/shared"
 	"github.com/jackc/pgx/v4/stdlib"
@@ -51,6 +52,7 @@ func (db *DB) AddDatabaseTables() error {
 		&shared.DumpRequest{},
 		&shared.DeletionRequest{},
 		&shared.Feedback{},
+		&ActiveUserStats{},
 	}
 
 	for _, model := range models {
@@ -262,6 +264,74 @@ func (db *DB) Clean(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func extractInt64FromRow(row *sql.Row) (int64, error) {
+	var ret int64
+	err := row.Scan(&ret)
+	if err != nil {
+		return 0, fmt.Errorf("extractInt64FromRow: %w", err)
+	}
+	return ret, nil
+}
+
+type ActiveUserStats struct {
+	Date                    time.Time
+	TotalNumDevices         int64
+	TotalNumUsers           int64
+	DailyActiveSubmitUsers  int64
+	DailyActiveQueryUsers   int64
+	WeeklyActiveSubmitUsers int64
+	WeeklyActiveQueryUsers  int64
+	DailyInstalls           int64
+	DailyUninstalls         int64
+}
+
+func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
+	totalNumDevices, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.device_id) FROM devices").Row())
+	if err != nil {
+		return err
+	}
+	totalNumUsers, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices").Row())
+	if err != nil {
+		return err
+	}
+	dauSubmit, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_used > (now()::date-1)::timestamp").Row())
+	if err != nil {
+		return err
+	}
+	dauQuery, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_queried > (now()::date-1)::timestamp").Row())
+	if err != nil {
+		return err
+	}
+	wauSubmit, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_used > (now()::date-7)::timestamp").Row())
+	if err != nil {
+		return err
+	}
+	wauQuery, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_queried > (now()::date-7)::timestamp").Row())
+	if err != nil {
+		return err
+	}
+	dailyInstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT count(distinct device_id) FROM devices WHERE registration_date > (now()::date-1)::timestamp").Row())
+	if err != nil {
+		return err
+	}
+	dailyUninstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(*) FROM feedbacks WHERE date > (now()::date-1)::timestamp").Row())
+	if err != nil {
+		return err
+	}
+
+	return db.Create(ActiveUserStats{
+		Date:                    time.Now(),
+		TotalNumDevices:         totalNumDevices,
+		TotalNumUsers:           totalNumUsers,
+		DailyActiveSubmitUsers:  dauSubmit,
+		DailyActiveQueryUsers:   dauQuery,
+		WeeklyActiveSubmitUsers: wauSubmit,
+		WeeklyActiveQueryUsers:  wauQuery,
+		DailyInstalls:           dailyInstalls,
+		DailyUninstalls:         dailyUninstalls,
+	}).Error
 }
 
 func (db *DB) DeepClean(ctx context.Context) error {
