@@ -288,6 +288,11 @@ type ActiveUserStats struct {
 }
 
 func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
+	if db.DB.Name() == "sqlite" {
+		// Not supported on sqlite
+		return nil
+	}
+
 	totalNumDevices, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.device_id) FROM devices").Row())
 	if err != nil {
 		return err
