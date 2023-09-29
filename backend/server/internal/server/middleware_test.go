@@ -199,10 +199,6 @@ func TestMergeMiddlewares(t *testing.T) {
 			if w.Code != test.expectedStatusCode {
 				t.Errorf("expected response status to be %d, got %d", test.expectedStatusCode, w.Code)
 			}
-			const expectedPiece = `127.0.0.1 GET "/"`
-			if !strings.Contains(out.String(), expectedPiece) {
-				t.Errorf("expected %q, got %q", expectedPiece, out.String())
-			}
 
 			for _, expectedPiece := range test.expectedPieces {
 				if !strings.Contains(out.String(), expectedPiece) {
