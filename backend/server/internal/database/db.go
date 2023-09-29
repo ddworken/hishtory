@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/ddworken/hishtory/shared"
 	"github.com/jackc/pgx/v4/stdlib"
@@ -52,13 +50,14 @@ func (db *DB) AddDatabaseTables() error {
 		&shared.DumpRequest{},
 		&shared.DeletionRequest{},
 		&shared.Feedback{},
-		&ActiveUserStats{},
 	}
 
 	for _, model := range models {
+		fmt.Printf("Beginning migration of %#v\n", model)
 		if err := db.AutoMigrate(model); err != nil {
 			return fmt.Errorf("db.AutoMigrate: %w", err)
 		}
+		fmt.Printf("Done migrating %#v\n", model)
 	}
 
 	return nil
@@ -68,25 +67,15 @@ func (db *DB) CreateIndices() error {
 	// Note: If adding a new index here, consider manually running it on the prod DB using CONCURRENTLY to
 	// make server startup non-blocking. The benefit of this function is primarily for other people so they
 	// don't have to manually create these indexes.
-	indices := []struct {
-		name    string
-		table   string
-		columns []string
-	}{
-		{"entry_id_idx", "enc_history_entries", []string{"encrypted_id"}},
-		{"device_id_idx", "enc_history_entries", []string{"device_id"}},
-		{"read_count_idx", "enc_history_entries", []string{"read_count"}},
-		{"redact_idx", "enc_history_entries", []string{"user_id", "device_id", "date"}},
-		{"del_user_idx", "deletion_requests", []string{"user_id"}},
+	var indices = []string{
+		`CREATE INDEX IF NOT EXISTS entry_id_idx ON enc_history_entries USING btree(encrypted_id);`,
+		`CREATE INDEX IF NOT EXISTS device_id_idx ON enc_history_entries USING btree(device_id);`,
+		`CREATE INDEX IF NOT EXISTS read_count_idx ON enc_history_entries USING btree(read_count);`,
+		`CREATE INDEX IF NOT EXISTS redact_idx ON enc_history_entries USING btree(user_id, device_id, date);`,
+		`CREATE INDEX IF NOT EXISTS del_user_idx ON deletion_requests USING btree(user_id);`,
 	}
 	for _, index := range indices {
-		sql := ""
-		if db.Name() == "sqlite" {
-			sql = fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s)", index.name, index.table, strings.Join(index.columns, ","))
-		} else {
-			sql = fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s USING btree(%s)", index.name, index.table, strings.Join(index.columns, ","))
-		}
-		r := db.Exec(sql)
+		r := db.Exec(index)
 		if r.Error != nil {
 			return fmt.Errorf("failed to execute index creation sql=%#v: %w", index, r.Error)
 		}
@@ -264,79 +253,6 @@ func (db *DB) Clean(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func extractInt64FromRow(row *sql.Row) (int64, error) {
-	var ret int64
-	err := row.Scan(&ret)
-	if err != nil {
-		return 0, fmt.Errorf("extractInt64FromRow: %w", err)
-	}
-	return ret, nil
-}
-
-type ActiveUserStats struct {
-	Date                    time.Time
-	TotalNumDevices         int64
-	TotalNumUsers           int64
-	DailyActiveSubmitUsers  int64
-	DailyActiveQueryUsers   int64
-	WeeklyActiveSubmitUsers int64
-	WeeklyActiveQueryUsers  int64
-	DailyInstalls           int64
-	DailyUninstalls         int64
-}
-
-func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
-	if db.DB.Name() == "sqlite" {
-		// Not supported on sqlite
-		return nil
-	}
-
-	totalNumDevices, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.device_id) FROM devices").Row())
-	if err != nil {
-		return err
-	}
-	totalNumUsers, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices").Row())
-	if err != nil {
-		return err
-	}
-	dauSubmit, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_used > (now()::date-1)::timestamp").Row())
-	if err != nil {
-		return err
-	}
-	dauQuery, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_queried > (now()::date-1)::timestamp").Row())
-	if err != nil {
-		return err
-	}
-	wauSubmit, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_used > (now()::date-7)::timestamp").Row())
-	if err != nil {
-		return err
-	}
-	wauQuery, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE last_queried > (now()::date-7)::timestamp").Row())
-	if err != nil {
-		return err
-	}
-	dailyInstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT count(distinct device_id) FROM devices WHERE registration_date > (now()::date-1)::timestamp").Row())
-	if err != nil {
-		return err
-	}
-	dailyUninstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(*) FROM feedbacks WHERE date > (now()::date-1)::timestamp").Row())
-	if err != nil {
-		return err
-	}
-
-	return db.Create(ActiveUserStats{
-		Date:                    time.Now(),
-		TotalNumDevices:         totalNumDevices,
-		TotalNumUsers:           totalNumUsers,
-		DailyActiveSubmitUsers:  dauSubmit,
-		DailyActiveQueryUsers:   dauQuery,
-		WeeklyActiveSubmitUsers: wauSubmit,
-		WeeklyActiveQueryUsers:  wauQuery,
-		DailyInstalls:           dailyInstalls,
-		DailyUninstalls:         dailyUninstalls,
-	}).Error
 }
 
 func (db *DB) DeepClean(ctx context.Context) error {

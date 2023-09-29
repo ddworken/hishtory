@@ -198,15 +198,15 @@ func hishtoryQuery(t testing.TB, tester shellTester, query string) string {
 
 func manuallySubmitHistoryEntry(t testing.TB, userSecret string, entry data.HistoryEntry) {
 	encEntry, err := data.EncryptHistoryEntry(userSecret, entry)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if encEntry.Date != entry.EndTime {
 		t.Fatalf("encEntry.Date does not match the entry")
 	}
 	jsonValue, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	require.NotEqual(t, "", entry.DeviceId)
 	resp, err := http.Post("http://localhost:8080/api/v1/submit?source_device_id="+entry.DeviceId, "application/json", bytes.NewBuffer(jsonValue))
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if resp.StatusCode != 200 {
 		t.Fatalf("failed to submit result to backend, status_code=%d", resp.StatusCode)
 	}
@@ -246,41 +246,11 @@ func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overri
 }
 
 func captureTerminalOutputWithShellNameAndDimensions(t testing.TB, tester shellTester, overriddenShellName string, width, height int, commands []TmuxCommand) string {
-	return captureTerminalOutputComplex(t,
-		TmuxCaptureConfig{
-			tester:              tester,
-			overriddenShellName: overriddenShellName,
-			width:               width,
-			height:              height,
-			complexCommands:     commands,
-		})
-}
-
-type TmuxCaptureConfig struct {
-	tester                 shellTester
-	overriddenShellName    string
-	commands               []string
-	complexCommands        []TmuxCommand
-	width, height          int
-	includeEscapeSequences bool
-}
-
-func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig) string {
-	require.NotNil(t, captureConfig.tester)
-	if captureConfig.overriddenShellName == "" {
-		captureConfig.overriddenShellName = captureConfig.tester.ShellName()
-	}
-	if captureConfig.width == 0 {
-		captureConfig.width = 200
-	}
-	if captureConfig.height == 0 {
-		captureConfig.height = 50
-	}
 	sleepAmount := "0.1"
 	if runtime.GOOS == "linux" {
 		sleepAmount = "0.2"
 	}
-	if captureConfig.overriddenShellName == "fish" {
+	if overriddenShellName == "fish" {
 		// Fish is considerably slower so this is sadly necessary
 		sleepAmount = "0.5"
 	}
@@ -289,20 +259,13 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 	}
 	fullCommand := ""
 	fullCommand += " tmux kill-session -t foo || true\n"
-	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", captureConfig.width, captureConfig.height, captureConfig.overriddenShellName)
+	fullCommand += fmt.Sprintf(" tmux -u new-session -d -x %d -y %d -s foo %s\n", width, height, overriddenShellName)
 	fullCommand += " sleep 1\n"
-	if captureConfig.overriddenShellName == "bash" {
+	if overriddenShellName == "bash" {
 		fullCommand += " tmux send -t foo SPACE source SPACE ~/.bashrc ENTER\n"
 	}
 	fullCommand += " sleep " + sleepAmount + "\n"
-	if len(captureConfig.commands) > 0 {
-		require.Empty(t, captureConfig.complexCommands)
-		for _, command := range captureConfig.commands {
-			captureConfig.complexCommands = append(captureConfig.complexCommands, TmuxCommand{Keys: command})
-		}
-	}
-	require.NotEmpty(t, captureConfig.complexCommands)
-	for _, cmd := range captureConfig.complexCommands {
+	for _, cmd := range commands {
 		if cmd.Keys != "" {
 			fullCommand += " tmux send -t foo -- "
 			fullCommand += cmd.Keys
@@ -320,21 +283,17 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 	if testutils.IsGithubAction() {
 		fullCommand += " sleep 2.5\n"
 	}
-	fullCommand += " tmux capture-pane -t foo -p"
-	if captureConfig.includeEscapeSequences {
-		fullCommand += "e"
-	}
-	fullCommand += "\n"
+	fullCommand += " tmux capture-pane -t foo -p\n"
 	fullCommand += " tmux kill-session -t foo\n"
 	testutils.TestLog(t, "Running tmux command: "+fullCommand)
-	return strings.TrimSpace(captureConfig.tester.RunInteractiveShell(t, fullCommand))
+	return strings.TrimSpace(tester.RunInteractiveShell(t, fullCommand))
 }
 
 func assertNoLeakedConnections(t testing.TB) {
 	resp, err := lib.ApiGet("/api/v1/get-num-connections")
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	numConnections, err := strconv.Atoi(string(resp))
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if numConnections > 1 {
 		t.Fatalf("DB has %d open connections, expected to have 1 or less", numConnections)
 	}

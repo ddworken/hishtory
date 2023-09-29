@@ -10,17 +10,16 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBuildHistoryEntry(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
-	require.NoError(t, lib.Setup("", false))
+	testutils.Check(t, lib.Setup("", false))
 
 	// Test building an actual entry for bash
 	entry, err := buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958"})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
@@ -49,7 +48,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 	// Test building an entry for zsh
 	entry, err = buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "120", "ls /foo\n", "1641774958"})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
@@ -74,7 +73,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 	// Test building an entry for fish
 	entry, err = buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "fish", "120", "ls /foo\n", "1641774958"})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if entry.ExitCode != 120 {
 		t.Fatalf("history entry has unexpected exit code: %v", entry.ExitCode)
 	}
@@ -99,7 +98,7 @@ func TestBuildHistoryEntry(t *testing.T) {
 
 	// Test building an entry that is empty, and thus not saved
 	entry, err = buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "120", " \n", "1641774958"})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if entry != nil {
 		t.Fatalf("expected history entry to be nil")
 	}
@@ -109,7 +108,7 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 	defer testutils.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
-	require.NoError(t, lib.Setup("", false))
+	testutils.Check(t, lib.Setup("", false))
 
 	testcases := []struct {
 		input, histtimeformat, expectedCommand string
@@ -121,11 +120,11 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 	for _, tc := range testcases {
 		conf := hctx.GetConf(hctx.MakeContext())
 		conf.LastSavedHistoryLine = ""
-		require.NoError(t, hctx.SetConfig(conf))
+		testutils.Check(t, hctx.SetConfig(conf))
 
 		os.Setenv("HISTTIMEFORMAT", tc.histtimeformat)
 		entry, err := buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", tc.input, "1641774958"})
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		if entry == nil {
 			t.Fatalf("entry is unexpectedly nil")
 		}
@@ -137,12 +136,12 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 
 func TestParseCrossPlatformInt(t *testing.T) {
 	res, err := parseCrossPlatformInt("123")
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
 	res, err = parseCrossPlatformInt("123N")
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if res != 123 {
 		t.Fatalf("failed to parse cross platform int %d", res)
 	}
@@ -178,7 +177,7 @@ func TestGetLastCommand(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		actualOutput, err := getLastCommand(tc.input)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		if actualOutput != tc.expectedOutput {
 			t.Fatalf("getLastCommand(%#v) returned %#v (expected=%#v)", tc.input, actualOutput, tc.expectedOutput)
 		}
@@ -220,7 +219,7 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 	for _, tc := range testcases {
 		os.Setenv("HISTTIMEFORMAT", tc.env)
 		stripped, err := maybeSkipBashHistTimePrefix(tc.cmdLine)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		if stripped != tc.expected {
 			t.Fatalf("skipping the time prefix returned %#v (expected=%#v for %#v)", stripped, tc.expected, tc.cmdLine)
 		}

@@ -74,9 +74,9 @@ func TestESubmitThenQuery(t *testing.T) {
 	// Submit a few entries for different devices
 	entry := testutils.MakeFakeHistoryEntry("ls ~/")
 	encEntry, err := data.EncryptHistoryEntry("key", entry)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
 	w := httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
@@ -92,16 +92,16 @@ func TestESubmitThenQuery(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	require.Equal(t, 1, len(retrievedEntries))
 	dbEntry := retrievedEntries[0]
 	require.Equal(t, devId1, dbEntry.DeviceId)
 	require.Equal(t, data.UserId("key"), dbEntry.UserId)
 	require.Equal(t, 0, dbEntry.ReadCount)
 	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	require.True(t, data.EntryEquals(decEntry, entry))
 
 	// Same for device id 2
@@ -111,8 +111,8 @@ func TestESubmitThenQuery(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -127,7 +127,7 @@ func TestESubmitThenQuery(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err = data.DecryptHistoryEntry("key", *dbEntry)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, entry)
 	}
@@ -139,8 +139,8 @@ func TestESubmitThenQuery(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
@@ -175,9 +175,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	var dumpRequests []*shared.DumpRequest
-	require.NoError(t, json.Unmarshal(respBody, &dumpRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
@@ -195,9 +195,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
-	require.NoError(t, json.Unmarshal(respBody, &dumpRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
@@ -215,7 +215,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	resp := strings.TrimSpace(string(respBody))
 	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(resp))
 
@@ -225,19 +225,19 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	resp = strings.TrimSpace(string(respBody))
 	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(resp))
 
 	// Now submit a dump for userId
 	entry1Dec := testutils.MakeFakeHistoryEntry("ls ~/")
 	entry1, err := data.EncryptHistoryEntry("dkey", entry1Dec)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	entry2Dec := testutils.MakeFakeHistoryEntry("aaaaaaáaaa")
 	entry2, err := data.EncryptHistoryEntry("dkey", entry1Dec)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{entry1, entry2})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/?user_id="+userId+"&requesting_device_id="+devId2+"&source_device_id="+devId1, bytes.NewReader(reqBody))
 	s.apiSubmitDumpHandler(httptest.NewRecorder(), submitReq)
 
@@ -247,7 +247,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	resp = strings.TrimSpace(string(respBody))
 	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(respBody))
 
@@ -258,7 +258,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	resp = strings.TrimSpace(string(respBody))
 	require.Equalf(t, "[]", resp, "got unexpected respBody: %#v", string(respBody))
 
@@ -268,9 +268,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
-	require.NoError(t, json.Unmarshal(respBody, &dumpRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &dumpRequests))
 	if len(dumpRequests) != 1 {
 		t.Fatalf("expected one pending dump request, got %#v", dumpRequests)
 	}
@@ -289,9 +289,9 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 2 entries, found %d", len(retrievedEntries))
 	}
@@ -306,7 +306,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		if !data.EntryEquals(decEntry, entry1Dec) && !data.EntryEquals(decEntry, entry2Dec) {
 			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1Dec, entry2Dec)
 		}
@@ -340,9 +340,9 @@ func TestDeletionRequests(t *testing.T) {
 	entry1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	entry1.DeviceId = devId1
 	encEntry, err := data.EncryptHistoryEntry("dkey", entry1)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
 	w := httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
@@ -354,9 +354,9 @@ func TestDeletionRequests(t *testing.T) {
 	entry2 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
 	entry2.DeviceId = devId2
 	encEntry, err = data.EncryptHistoryEntry("dkey", entry2)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId2, bytes.NewReader(reqBody))
 	w = httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
@@ -369,9 +369,9 @@ func TestDeletionRequests(t *testing.T) {
 	entry3.StartTime = entry1.StartTime
 	entry3.EndTime = entry1.EndTime
 	encEntry, err = data.EncryptHistoryEntry("dOtherkey", entry3)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
 	w = httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
@@ -386,9 +386,9 @@ func TestDeletionRequests(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -403,7 +403,7 @@ func TestDeletionRequests(t *testing.T) {
 			t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		if !data.EntryEquals(decEntry, entry1) && !data.EntryEquals(decEntry, entry2) {
 			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1, entry2)
 		}
@@ -419,7 +419,7 @@ func TestDeletionRequests(t *testing.T) {
 		}},
 	}
 	reqBody, err = json.Marshal(delReq)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
 	s.addDeletionRequestHandler(httptest.NewRecorder(), req)
 
@@ -431,8 +431,8 @@ func TestDeletionRequests(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -447,7 +447,7 @@ func TestDeletionRequests(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry2) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry2)
 	}
@@ -459,8 +459,8 @@ func TestDeletionRequests(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
+	testutils.Check(t, err)
+	testutils.Check(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
@@ -475,16 +475,16 @@ func TestDeletionRequests(t *testing.T) {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
 	decEntry, err = data.DecryptHistoryEntry("dOtherkey", *dbEntry)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !data.EntryEquals(decEntry, entry3) {
 		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry3)
 	}
 
 	// Check that apiSubmit tells the client that there is a pending deletion request
 	encEntry, err = data.EncryptHistoryEntry("dkey", entry2)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err = json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq = httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId2, bytes.NewReader(reqBody))
 	w = httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
@@ -499,9 +499,9 @@ func TestDeletionRequests(t *testing.T) {
 	res = w.Result()
 	defer res.Body.Close()
 	respBody, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	var deletionRequests []*shared.DeletionRequest
-	require.NoError(t, json.Unmarshal(respBody, &deletionRequests))
+	testutils.Check(t, json.Unmarshal(respBody, &deletionRequests))
 	if len(deletionRequests) != 1 {
 		t.Fatalf("received %d deletion requests, expected only one", len(deletionRequests))
 	}
@@ -533,7 +533,7 @@ func TestHealthcheck(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	respBody, err := io.ReadAll(res.Body)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if string(respBody) != "OK" {
 		t.Fatalf("expected healthcheckHandler to return OK")
 	}
@@ -583,9 +583,9 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	entry1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	entry1.DeviceId = devId1
 	encEntry, err := data.EncryptHistoryEntry("dkey", entry1)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	reqBody, err := json.Marshal([]shared.EncHistoryEntry{encEntry})
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	submitReq := httptest.NewRequest(http.MethodPost, "/?source_device_id="+devId1, bytes.NewReader(reqBody))
 	w := httptest.NewRecorder()
 	s.apiSubmitHandler(w, submitReq)
@@ -594,7 +594,7 @@ func TestCleanDatabaseNoErrors(t *testing.T) {
 	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Call cleanDatabase and just check that there are no panics
-	require.NoError(t, DB.Clean(context.TODO()))
+	testutils.Check(t, DB.Clean(context.TODO()))
 }
 
 func assertNoLeakedConnections(t *testing.T, db *database.DB) {
