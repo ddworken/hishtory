@@ -102,36 +102,19 @@ func OpenDB() (*database.DB, error) {
 	return db, nil
 }
 
-var CRON_COUNTER = 0
-
 func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
-	// Determine the latest released version of hishtory to serve via the /api/v1/download
-	// endpoint for hishtory updates.
 	if err := release.UpdateReleaseVersion(); err != nil {
 		return fmt.Errorf("updateReleaseVersion: %w", err)
 	}
 
-	// Clean the DB to remove entries that have already been read
 	if err := db.Clean(ctx); err != nil {
 		return fmt.Errorf("db.Clean: %w", err)
 	}
-
-	// Flush out datadog statsd
 	if stats != nil {
 		if err := stats.Flush(); err != nil {
 			return fmt.Errorf("stats.Flush: %w", err)
 		}
 	}
-
-	// Collect and store metrics on active users so we can track trends over time. This doesn't
-	// have to be run as often, so only run it for a fraction of cron jobs
-	if CRON_COUNTER%40 == 0 {
-		if err := db.GenerateAndStoreActiveUserStats(ctx); err != nil {
-			return fmt.Errorf("db.GenerateAndStoreActiveUserStats: %w", err)
-		}
-	}
-
-	CRON_COUNTER += 1
 	return nil
 }
 
@@ -140,7 +123,10 @@ func runBackgroundJobs(ctx context.Context, srv *server.Server, db *database.DB,
 	for {
 		err := cron(ctx, db, stats)
 		if err != nil {
-			panic(fmt.Sprintf("Cron failure: %v", err))
+			fmt.Printf("Cron failure: %v", err)
+
+			// cron no longer panics, panicking here.
+			panic(err)
 		}
 		srv.UpdateReleaseVersion(release.Version, release.BuildUpdateInfo(release.Version))
 		time.Sleep(10 * time.Minute)

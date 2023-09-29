@@ -111,7 +111,6 @@ func TestParam(t *testing.T) {
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
 	runTestsWithRetries(t, "testTui/delete", testTui_delete)
-	runTestsWithRetries(t, "testTui/color", testTui_color)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -169,7 +168,7 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	// Set the secret key to the previous secret key
 	out, err := tester.RunInteractiveShellRelaxed(t, ` export HISHTORY_SKIP_INIT_IMPORT=1
 yes | hishtory init `+userSecret)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	require.Contains(t, out, "Setting secret hishtory key to "+userSecret, "Failed to re-init with the user secret")
 
 	// Querying shouldn't show the entry from the previous account
@@ -298,22 +297,22 @@ echo thisisrecorded`)
 	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
 	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	match, err := regexp.MatchString(line3Matcher, out)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
 	}
 	match, err = regexp.MatchString(line1Matcher, out)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the headings: %v", out)
 	}
 	match, err = regexp.MatchString(line2Matcher, out)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output is missing the pipefail: %v", out)
 	}
 	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher, out)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if !match {
 		t.Fatalf("output doesn't match the expected table: %v", out)
 	}
@@ -791,7 +790,7 @@ func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 
 	// Check that we can find the go binary
 	_, err := exec.LookPath("go")
-	require.NoError(t, err)
+	testutils.Check(t, err)
 
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := tester.RunInteractiveShell(t, `unset HISHTORY_TEST
@@ -890,7 +889,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 	// Add a custom column
 	tester.RunInteractiveShell(t, `hishtory config-add custom-columns foo "echo aaaaaaaaaaaaa"`)
-	require.NoError(t, os.Chdir("/"))
+	testutils.Check(t, os.Chdir("/"))
 	tester.RunInteractiveShell(t, ` hishtory enable`)
 	tester.RunInteractiveShell(t, `echo table-1`)
 	tester.RunInteractiveShell(t, `echo table-2`)
@@ -1356,7 +1355,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	if out != "This will permanently delete 1 entries, are you sure? [y/N]" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
@@ -1474,12 +1473,12 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 
 func clearControlRSearchFromConfig(t testing.TB) {
 	configContents, err := hctx.GetConfigContents()
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	configContents = []byte(strings.ReplaceAll(string(configContents), "enable_control_r_search", "something-else"))
 	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	err = os.WriteFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH), configContents, 0o644)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 }
 
 func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
@@ -1489,9 +1488,9 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 	// Install, and there is no prompt since the config already mentions control-r
 	_, err := tester.RunInteractiveShellRelaxed(t, `/tmp/client install`)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	_, err = tester.RunInteractiveShellRelaxed(t, `hishtory disable`)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 
 	// Ensure that the config doesn't mention control-r
 	clearControlRSearchFromConfig(t)
@@ -1520,7 +1519,7 @@ func TestFish(t *testing.T) {
 	installHishtory(t, tester, "")
 
 	// Test recording in fish
-	require.NoError(t, os.Chdir("/"))
+	testutils.Check(t, os.Chdir("/"))
 	out := captureTerminalOutputWithShellName(t, tester, "fish", []string{
 		"echo SPACE foo ENTER",
 		"ENTER",
@@ -1559,10 +1558,10 @@ func setupTestTui(t testing.TB) (shellTester, string, *gorm.DB) {
 	// Insert a couple hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
 	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
-	require.NoError(t, db.Create(e1).Error)
+	testutils.Check(t, db.Create(e1).Error)
 	manuallySubmitHistoryEntry(t, userSecret, e1)
 	e2 := testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")
-	require.NoError(t, db.Create(e2).Error)
+	testutils.Check(t, db.Create(e2).Error)
 	manuallySubmitHistoryEntry(t, userSecret, e2)
 	return tester, userSecret, db
 }
@@ -1605,6 +1604,9 @@ func testTui_resize(t testing.TB) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
+
+	// Assert there are no leaked connections
+	assertNoLeakedConnections(t)
 }
 
 func testTui_scroll(t testing.TB) {
@@ -1642,36 +1644,6 @@ func testTui_scroll(t testing.TB) {
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
 
-}
-
-func testTui_color(t testing.TB) {
-	if runtime.GOOS == "linux" {
-		// For some reason, this test fails on linux. Since this test isn't critical and is expected to be
-		// flaky, we can just skip it on linux.
-		t.Skip()
-	}
-
-	// Setup
-	defer testutils.BackupAndRestore(t)()
-	tester, _, _ := setupTestTui(t)
-
-	// Capture the TUI with full colored output, note that this golden will be harder to undersand
-	// from inspection and primarily servers to detect unintended changes in hishtory's output.
-	out := captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}}, includeEscapeSequences: true})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutput")
-
-	// And the same once a search query has been typed in
-	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
-
-	// And one more time with beta-mode for highlighting matches
-	tester.RunInteractiveShell(t, ` hishtory config-set beta-mode true`)
-	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
-	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
 }
 
 func testTui_delete(t testing.TB) {
@@ -1752,7 +1724,7 @@ func testTui_search(t testing.TB) {
 	// Check the output when the initial search is invalid
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		// ExtraDelay to ensure that after searching for 'foo:' it gets the real results for an empty query
-		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.5},
+		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.0},
 		{Keys: "ls", ExtraDelay: 1.0},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
@@ -1762,7 +1734,7 @@ func testTui_search(t testing.TB) {
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		// ExtraDelay to ensure that the search for 'ls' finishes before we make it invalid by adding ':'
-		{Keys: "ls", ExtraDelay: 1.5},
+		{Keys: "ls", ExtraDelay: 1.0},
 		{Keys: ":"},
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
@@ -1775,6 +1747,7 @@ func testTui_search(t testing.TB) {
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
+
 }
 
 func testTui_general(t testing.TB) {
@@ -1853,11 +1826,11 @@ func testControlR(t testing.TB, tester shellTester, shellName string, onlineStat
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
 	e1.ExitCode = 127
-	require.NoError(t, db.Create(e1).Error)
-	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/foo/")).Error)
-	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/bar/")).Error)
-	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
-	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &")).Error)
+	testutils.Check(t, db.Create(e1).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/foo/")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/bar/")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
+	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &")).Error)
 
 	// Check that they're there
 	var historyEntries []*data.HistoryEntry
@@ -1992,7 +1965,7 @@ func testControlR(t testing.TB, tester shellTester, shellName string, onlineStat
 
 	// Re-enable control-r
 	_, err := tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 
 	// And check that the control-r bindings work again
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail SPACE -exit_code:0"})
@@ -2072,20 +2045,17 @@ echo bar`)
 }
 
 func testPresaving(t *testing.T, tester shellTester) {
-	if testutils.IsGithubAction() && tester.ShellName() == "bash" {
-		// TODO: Debug the issues with presaving and bash, and re-enable this test
-		t.Skip()
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("table_sizing aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	// Enable beta-mode since presaving is behind that feature flag
-	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
+	out := strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`))
+	require.Equal(t, out, "false")
 	tester.RunInteractiveShell(t, `hishtory config-set beta-mode true`)
-	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
+	out = strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`))
+	require.Equal(t, out, "true")
 
 	// Start a command that will take a long time to execute in the background, so
 	// we can check that it was recorded even though it never finished.
@@ -2094,7 +2064,7 @@ func testPresaving(t *testing.T, tester shellTester) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Test that it shows up in hishtory export
-	out := tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
 	expectedOutput := "sleep 13371337\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -2105,16 +2075,6 @@ func testPresaving(t *testing.T, tester shellTester) {
 	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
 	testutils.CompareGoldens(t, out, "testPresaving-query")
 
-	// And then record a few other commands, and run an export of all commands, to ensure no funkiness happened
-	tester.RunInteractiveShell(t, `ls /`)
-	time.Sleep(time.Second)
-	tester.RunInteractiveShell(t, `sleep 0.5`)
-	out = tester.RunInteractiveShell(t, ` hishtory export -hishtory -table_sizing -pipefail`)
-	expectedOutput = "sleep 13371337\nls /\nsleep 0.5\n"
-	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
-	}
-
 	// Create a new device, and confirm it shows up there too
 	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "device1")
 	installHishtory(t, tester, userSecret)
@@ -2122,31 +2082,17 @@ func testPresaving(t *testing.T, tester shellTester) {
 	out = tester.RunInteractiveShell(t, ` hishtory query sleep 13371337 -export -tquery`)
 	testutils.CompareGoldens(t, out, "testPresaving-query")
 
-	// And that all the other commands do to
-	out = tester.RunInteractiveShell(t, ` hishtory export -hishtory -table_sizing -pipefail`)
-	expectedOutput = "sleep 13371337\nls /\nsleep 0.5\n"
-	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
-	}
-
 	// And then redact it from device2
 	tester.RunInteractiveShell(t, ` HISHTORY_REDACT_FORCE=true hishtory redact sleep 13371337`)
 
 	// And confirm it was redacted
 	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
-	require.Equal(t, "sleep 0.5\n", out)
+	require.Equal(t, "", out)
 
 	// Then go back to device1 and confirm it was redacted there too
 	restoreDevice1()
 	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
-	require.Equal(t, "sleep 0.5\n", out)
-
-	// And then record a few commands, and run a final export of all commands, to ensure no funkiness happened
-	out = tester.RunInteractiveShell(t, ` hishtory export -hishtory -table_sizing -pipefail`)
-	expectedOutput = "ls /\nsleep 0.5\n"
-	if diff := cmp.Diff(expectedOutput, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
-	}
+	require.Equal(t, "", out)
 }
 
 func testUninstall(t *testing.T, tester shellTester) {
@@ -2162,14 +2108,14 @@ echo baz`)
 
 	// And then uninstall
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory uninstall`)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	testutils.CompareGoldens(t, out, "testUninstall-uninstall")
 
 	// And check that hishtory has been uninstalled
 	out, err = tester.RunInteractiveShellRelaxed(t, `echo foo
 hishtory
 echo bar`)
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	testutils.CompareGoldens(t, out, "testUninstall-post-uninstall")
 
 	// And check again, but in a way that shows the full terminal output
@@ -2236,15 +2182,15 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	entry1 := testutils.MakeFakeHistoryEntry("first_entry")
 	entry1.StartTime = time.Unix(timestamp, 0).In(ny_time)
 	entry1.EndTime = time.Unix(timestamp+1, 0).In(ny_time)
-	require.NoError(t, lib.ReliableDbCreate(db, entry1))
+	testutils.Check(t, lib.ReliableDbCreate(db, entry1))
 	entry2 := testutils.MakeFakeHistoryEntry("second_entry")
 	entry2.StartTime = time.Unix(timestamp+1000, 0).In(la_time)
 	entry2.EndTime = time.Unix(timestamp+1001, 0).In(la_time)
-	require.NoError(t, lib.ReliableDbCreate(db, entry2))
+	testutils.Check(t, lib.ReliableDbCreate(db, entry2))
 	entry3 := testutils.MakeFakeHistoryEntry("third_entry")
 	entry3.StartTime = time.Unix(timestamp+2000, 0).In(ny_time)
 	entry3.EndTime = time.Unix(timestamp+2001, 0).In(ny_time)
-	require.NoError(t, lib.ReliableDbCreate(db, entry3))
+	testutils.Check(t, lib.ReliableDbCreate(db, entry3))
 
 	// And check that they're displayed in the correct order
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
@@ -2262,13 +2208,13 @@ func TestZDotDir(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
 	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	zdotdir := path.Join(homedir, "foo")
-	require.NoError(t, os.MkdirAll(zdotdir, 0o744))
+	testutils.Check(t, os.MkdirAll(zdotdir, 0o744))
 	os.Setenv("ZDOTDIR", zdotdir)
 	userSecret := installHishtory(t, tester, "")
 	defer func() {
-		require.NoError(t, os.Remove(path.Join(zdotdir, ".zshrc")))
+		testutils.Check(t, os.Remove(path.Join(zdotdir, ".zshrc")))
 	}()
 
 	// Check the status command
@@ -2286,7 +2232,7 @@ func TestZDotDir(t *testing.T) {
 
 	// Check that hishtory respected ZDOTDIR
 	zshrc, err := os.ReadFile(path.Join(zdotdir, ".zshrc"))
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	require.Contains(t, string(zshrc), "# Hishtory Config:", "zshrc had unexpected contents")
 }
 
@@ -2318,7 +2264,7 @@ echo foo`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER", "Down Down", "ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
@@ -2334,7 +2280,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 
 	// A test that tries writing a config many different times in parallel, and confirms there is no corruption
 	conf, err := hctx.GetConfig()
-	require.NoError(t, err)
+	testutils.Check(t, err)
 	var doneWg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		doneWg.Add(1)
@@ -2345,7 +2291,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 			c.DeviceId = strings.Repeat("B", i*2)
 			c.HaveMissedUploads = (i % 2) == 0
 			// Write it
-			require.NoError(t, hctx.SetConfig(&c))
+			err := hctx.SetConfig(&c)
 			require.NoError(t, err)
 			// Check that we can read
 			c2, err := hctx.GetConfig()
@@ -2431,7 +2377,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	for _, d := range []device{u1d1, u1d2} {
 		switchToDevice(&devices, d)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -pipefail -export`)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		expectedOutput := "echo u1d1\necho u1d2\necho u1d1-b\necho u1d1-c\necho u1d2-b\necho u1d2-c\n"
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -2450,7 +2396,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	for _, d := range []device{u2d1, u2d2, u2d3} {
 		switchToDevice(&devices, d)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		expectedOutput := "echo u2d1\necho u2d2\necho u2d3\necho u1d1-b\necho u1d1-c\necho u2d3-b\necho u2d3-c\n"
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)

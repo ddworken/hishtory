@@ -170,21 +170,6 @@ func BuildTableRow(ctx context.Context, columnNames []string, entry data.History
 	return row, nil
 }
 
-// Make a regex that matches the non-tokenized bits of the given query
-func MakeRegexFromQuery(query string) string {
-	tokens := tokenize(strings.TrimSpace(query))
-	r := ""
-	for _, token := range tokens {
-		if !strings.HasPrefix(token, "-") && !containsUnescaped(token, ":") {
-			if r != "" {
-				r += "|"
-			}
-			r += fmt.Sprintf("(%s)", regexp.QuoteMeta(token))
-		}
-	}
-	return r
-}
-
 func stringArrayToAnyArray(arr []string) []any {
 	ret := make([]any, 0)
 	for _, item := range arr {
@@ -726,7 +711,10 @@ func where(tx *gorm.DB, s string, v1 any, v2 any) *gorm.DB {
 }
 
 func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
-	tokens := tokenize(query)
+	tokens, err := tokenize(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to tokenize query: %w", err)
+	}
 	tx := db.Model(&data.HistoryEntry{}).Where("true")
 	for _, token := range tokens {
 		if strings.HasPrefix(token, "-") {
@@ -903,11 +891,11 @@ func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
 	return ccNames, nil
 }
 
-func tokenize(query string) []string {
+func tokenize(query string) ([]string, error) {
 	if query == "" {
-		return []string{}
+		return []string{}, nil
 	}
-	return splitEscaped(query, ' ', -1)
+	return splitEscaped(query, ' ', -1), nil
 }
 
 func splitEscaped(query string, separator rune, maxSplit int) []string {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/require"
 )
 
 type operation struct {
@@ -80,11 +79,11 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 		switchToDevice(&devices, op.device)
 		if op.cmd != "" {
 			_, err := tester.RunInteractiveShellRelaxed(t, op.cmd)
-			require.NoError(t, err)
+			testutils.Check(t, err)
 		}
 		if op.redactQuery != "" {
 			_, err := tester.RunInteractiveShellRelaxed(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+op.redactQuery)
-			require.NoError(t, err)
+			testutils.Check(t, err)
 		}
 
 		// Calculate the expected output of hishtory export
@@ -112,7 +111,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 
 		// Run hishtory export and check the output
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		expectedOutput := keyToCommands[op.device.key]
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch for input=%#v key=%s (-expected +got):\n%s\nout=%#v", input, op.device.key, diff, out)
@@ -123,7 +122,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 	for _, op := range ops {
 		switchToDevice(&devices, op.device)
 		out, err := tester.RunInteractiveShellRelaxed(t, `hishtory export -export -pipefail`)
-		require.NoError(t, err)
+		testutils.Check(t, err)
 		expectedOutput := keyToCommands[op.device.key]
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch for key=%s (-expected +got):\n%s\nout=%#v", op.device.key, diff, out)
