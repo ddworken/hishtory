@@ -227,7 +227,7 @@ func updateTable(m model, rows []table.Row, entries []*data.HistoryEntry, search
 	if m.table != nil {
 		initialCursor = m.table.Cursor()
 	}
-	if forceUpdateTable {
+	if forceUpdateTable || m.table == nil {
 		t, err := makeTable(m.ctx, rows)
 		if err != nil {
 			m.fatalErr = err
