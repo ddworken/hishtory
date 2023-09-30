@@ -26,16 +26,16 @@ func TestSetup(t *testing.T) {
 	defer testutils.RunTestServer()()
 
 	homedir, err := os.UserHomeDir()
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	testutils.Check(t, Setup("", false))
+	require.NoError(t, Setup("", false))
 	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
 	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
 	}
@@ -50,16 +50,16 @@ func TestSetupOffline(t *testing.T) {
 	defer testutils.RunTestServer()()
 
 	homedir, err := os.UserHomeDir()
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
-	testutils.Check(t, Setup("", true))
+	require.NoError(t, Setup("", true))
 	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
 	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
 	}
@@ -70,14 +70,14 @@ func TestSetupOffline(t *testing.T) {
 }
 func TestPersist(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
-	testutils.Check(t, hctx.InitConfig())
+	require.NoError(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	entry := testutils.MakeFakeHistoryEntry("ls ~/")
-	testutils.Check(t, db.Create(entry).Error)
+	require.NoError(t, db.Create(entry).Error)
 	var historyEntries []*data.HistoryEntry
 	result := db.Find(&historyEntries)
-	testutils.Check(t, result.Error)
+	require.NoError(t, result.Error)
 	if len(historyEntries) != 1 {
 		t.Fatalf("DB has %d entries, expected 1!", len(historyEntries))
 	}
@@ -89,19 +89,19 @@ func TestPersist(t *testing.T) {
 
 func TestSearch(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
-	testutils.Check(t, hctx.InitConfig())
+	require.NoError(t, hctx.InitConfig())
 	ctx := hctx.MakeContext()
 	db := hctx.GetDb(ctx)
 
 	// Insert data
 	entry1 := testutils.MakeFakeHistoryEntry("ls /foo")
-	testutils.Check(t, db.Create(entry1).Error)
+	require.NoError(t, db.Create(entry1).Error)
 	entry2 := testutils.MakeFakeHistoryEntry("ls /bar")
-	testutils.Check(t, db.Create(entry2).Error)
+	require.NoError(t, db.Create(entry2).Error)
 
 	// Search for data
 	results, err := Search(ctx, db, "ls", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2, results=%#v", len(results), results)
 	}
@@ -114,61 +114,61 @@ func TestSearch(t *testing.T) {
 
 	// Search but exclude bar
 	results, err = Search(ctx, db, "ls -bar", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
 	}
 
 	// Search but exclude foo
 	results, err = Search(ctx, db, "ls -foo", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
 	}
 
 	// Search but include / also
 	results, err = Search(ctx, db, "ls /", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
 	}
 
 	// Search but exclude slash
 	results, err = Search(ctx, db, "ls -/", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 0 {
 		t.Fatalf("Search() returned %d results, expected 0, results=%#v", len(results), results)
 	}
 
 	// Tests for escaping
-	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("ls -baz")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("ls -baz")).Error)
 	results, err = Search(ctx, db, "ls", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 3 {
 		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
 	}
 	results, err = Search(ctx, db, "ls -baz", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2, results=%#v", len(results), results)
 	}
 	results, err = Search(ctx, db, "ls \\-baz", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 1, results=%#v", len(results), results)
 	}
 
 	// A malformed search query, but we should just ignore the dash since this is a common enough thing
 	results, err = Search(ctx, db, "ls -", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 3 {
 		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
 	}
 
 	// A search for an entry containing a backslash
-	testutils.Check(t, db.Create(testutils.MakeFakeHistoryEntry("echo '\\'")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo '\\'")).Error)
 	results, err = Search(ctx, db, "\\\\", 5)
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
 	}
@@ -177,7 +177,7 @@ func TestSearch(t *testing.T) {
 func TestAddToDbIfNew(t *testing.T) {
 	// Set up
 	defer testutils.BackupAndRestore(t)()
-	testutils.Check(t, hctx.InitConfig())
+	require.NoError(t, hctx.InitConfig())
 	db := hctx.GetDb(hctx.MakeContext())
 
 	// Add duplicate entries
@@ -239,52 +239,52 @@ func TestZshWeirdness(t *testing.T) {
 
 func TestParseTimeGenerously(t *testing.T) {
 	ts, err := parseTimeGenerously("2006-01-02T15:04:00-08:00")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Unix() != 1136243040 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02 T15:04:00 -08:00")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Unix() != 1136243040 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02_T15:04:00_-08:00")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Unix() != 1136243040 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02T15:04:00")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02_T15:04:00")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02_15:04:00")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02T15:04")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02_15:04")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 15 || ts.Minute() != 4 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("2006-01-02")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2006 || ts.Month() != time.January || ts.Day() != 2 || ts.Hour() != 0 || ts.Minute() != 0 || ts.Second() != 0 {
 		t.Fatalf("parsed time incorrectly: %d", ts.Unix())
 	}
 	ts, err = parseTimeGenerously("1693163976")
-	testutils.Check(t, err)
+	require.NoError(t, err)
 	if ts.Year() != 2023 || ts.Month() != time.August || ts.Day() != 27 || ts.Hour() != 12 || ts.Minute() != 19 || ts.Second() != 36 {
 		t.Fatalf("parsed time incorrectly: %d %s", ts.Unix(), ts.GoString())
 	}

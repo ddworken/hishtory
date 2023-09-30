@@ -14,9 +14,10 @@ function __hishtory_precommand() {
 
   # Run before every command
   HISHTORY_START_TIME=`date +%s`
-  if ! [ -z "BASH_COMMAND " ] && [ "$BASH_COMMAND" != "__hishtory_postcommand" ]; then
-    (hishtory presaveHistoryEntry bash "$BASH_COMMAND" $HISHTORY_START_TIME &) # Background Run
-    # hishtory presaveHistoryEntry bash "$BASH_COMMAND" $HISHTORY_START_TIME  # Foreground Run
+  CMD=`history 1`
+  if ! [ -z "CMD " ] ; then
+    (hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME &) # Background Run
+    # hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME  # Foreground Run
   fi
 }
 trap "__hishtory_precommand" DEBUG

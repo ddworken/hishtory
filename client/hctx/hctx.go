@@ -168,6 +168,8 @@ type ClientConfig struct {
 	// A device ID used to track which history entry came from which device for remote syncing
 	DeviceId string `json:"device_id"`
 	// Used for skipping history entries prefixed with a space in bash
+	LastPreSavedHistoryLine string `json:"last_presaved_history_line"`
+	// Used for skipping history entries prefixed with a space in bash
 	LastSavedHistoryLine string `json:"last_saved_history_line"`
 	// Used for uploading history entries that we failed to upload due to a missing network connection
 	HaveMissedUploads     bool  `json:"have_missed_uploads"`

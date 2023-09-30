@@ -144,8 +144,11 @@ func presaveHistoryEntry(ctx context.Context) {
 	}
 
 	// Augment it with os.Args
-	entry.Command = trimTrailingWhitespace(os.Args[3])
-	if strings.HasPrefix(" ", entry.Command) || entry.Command == "" {
+	shellName := os.Args[2]
+	cmd, err := extractCommandFromArg(ctx, shellName, os.Args[3] /* isPresave = */, true)
+	lib.CheckFatalError(err)
+	entry.Command = cmd
+	if strings.HasPrefix(" ", entry.Command) || strings.TrimSpace(entry.Command) == "" {
 		// Don't save commands that start with a space
 		return
 	}
@@ -153,11 +156,6 @@ func presaveHistoryEntry(ctx context.Context) {
 	lib.CheckFatalError(err)
 	entry.StartTime = time.Unix(startTime, 0).UTC()
 	entry.EndTime = time.Unix(0, 0).UTC()
-
-	// Skip saving references to presaving
-	if strings.Contains(entry.Command, "presaveHistoryEntry") || strings.Contains(entry.Command, "__history_control_r") {
-		return
-	}
 
 	// And persist it locally.
 	db := hctx.GetDb(ctx)
@@ -381,40 +379,49 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	entry.EndTime = time.Now().UTC()
 
 	// command
-	if shell == "bash" {
-		cmd, err := getLastCommand(args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to build history entry: %w", err)
-		}
-		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, args[4])
-		if err != nil {
-			return nil, fmt.Errorf("failed to check if command was hidden: %w", err)
-		}
-		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
-			return nil, nil
-		}
-		cmd, err = maybeSkipBashHistTimePrefix(cmd)
-		if err != nil {
-			return nil, err
-		}
-		entry.Command = cmd
-	} else if shell == "zsh" || shell == "fish" {
-		cmd := trimTrailingWhitespace(args[4])
-		if strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
-			return nil, nil
-		}
-		entry.Command = cmd
-	} else {
-		return nil, fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
+	cmd, err := extractCommandFromArg(ctx, shell, args[4] /* isPresave = */, false)
+	if err != nil {
+		return nil, err
 	}
+	entry.Command = cmd
 	if strings.TrimSpace(entry.Command) == "" {
 		// Skip recording empty commands where the user just hits enter in their terminal
 		return nil, nil
 	}
 
 	return entry, nil
+}
+
+func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave bool) (string, error) {
+	if shell == "bash" {
+		cmd, err := getLastCommand(arg)
+		if err != nil {
+			return "", fmt.Errorf("failed to build history entry: %w", err)
+		}
+		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, arg, isPresave)
+		if err != nil {
+			return "", fmt.Errorf("failed to check if command was hidden: %w", err)
+		}
+		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return "", nil
+		}
+		cmd, err = maybeSkipBashHistTimePrefix(cmd)
+		if err != nil {
+			return "", err
+		}
+		return cmd, nil
+	} else if shell == "zsh" || shell == "fish" {
+		cmd := trimTrailingWhitespace(arg)
+		if strings.HasPrefix(cmd, " ") {
+			// Don't save commands that start with a space
+			return "", nil
+		}
+		return cmd, nil
+	} else {
+		return "", fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
+	}
+
 }
 
 func trimTrailingWhitespace(s string) string {
@@ -559,12 +566,19 @@ func getLastCommand(history string) (string, error) {
 	return split[1], nil
 }
 
-func shouldSkipHiddenCommand(ctx context.Context, historyLine string) (bool, error) {
+func shouldSkipHiddenCommand(ctx context.Context, historyLine string, isPresave bool) (bool, error) {
 	config := hctx.GetConf(ctx)
-	if config.LastSavedHistoryLine == historyLine {
+	if isPresave && config.LastPreSavedHistoryLine == historyLine {
 		return true, nil
 	}
-	config.LastSavedHistoryLine = historyLine
+	if !isPresave && config.LastSavedHistoryLine == historyLine {
+		return true, nil
+	}
+	if isPresave {
+		config.LastPreSavedHistoryLine = historyLine
+	} else {
+		config.LastSavedHistoryLine = historyLine
+	}
 	err := hctx.SetConfig(config)
 	if err != nil {
 		return false, err
