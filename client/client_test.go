@@ -2072,11 +2072,6 @@ echo bar`)
 }
 
 func testPresaving(t *testing.T, tester shellTester) {
-	if testutils.IsGithubAction() && tester.ShellName() == "bash" {
-		// TODO: Debug the issues with presaving and bash, and re-enable this test
-		t.Skip()
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -2090,7 +2085,7 @@ func testPresaving(t *testing.T, tester shellTester) {
 	// Start a command that will take a long time to execute in the background, so
 	// we can check that it was recorded even though it never finished.
 	require.NoError(t, os.Chdir("/"))
-	go tester.RunInteractiveShell(t, `sleep 13371337`)
+	require.NoError(t, tester.RunInteractiveShellBackground(t, `sleep 13371337`))
 	time.Sleep(time.Millisecond * 500)
 
 	// Test that it shows up in hishtory export

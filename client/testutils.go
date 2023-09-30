@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/DataDog/datadog-go/statsd"
@@ -27,6 +28,7 @@ var GLOBAL_STATSD *statsd.Client
 type shellTester interface {
 	RunInteractiveShell(t testing.TB, script string) string
 	RunInteractiveShellRelaxed(t testing.TB, script string) (string, error)
+	RunInteractiveShellBackground(t testing.TB, script string) error
 	ShellName() string
 }
 type bashTester struct {
@@ -58,6 +60,16 @@ func (b bashTester) RunInteractiveShellRelaxed(t testing.TB, script string) (str
 	return outStr, nil
 }
 
+func (b bashTester) RunInteractiveShellBackground(t testing.TB, script string) error {
+	cmd := exec.Command("bash", "-i")
+	// SetSid: true is required to prevent SIGTTIN signal killing the entire test
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	cmd.Stdin = strings.NewReader(script)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Start()
+}
+
 func (b bashTester) ShellName() string {
 	return "bash"
 }
@@ -86,6 +98,14 @@ func (z zshTester) RunInteractiveShellRelaxed(t testing.TB, script string) (stri
 	outStr := stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error")
 	return outStr, nil
+}
+
+func (z zshTester) RunInteractiveShellBackground(t testing.TB, script string) error {
+	cmd := exec.Command("zsh", "-is")
+	cmd.Stdin = strings.NewReader(script)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Start()
 }
 
 func (z zshTester) ShellName() string {
