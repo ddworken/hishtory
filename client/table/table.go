@@ -1,4 +1,5 @@
 // Forked from https://github.com/charmbracelet/bubbles/blob/master/table/table.go to add horizontal scrolling
+// Also includes https://github.com/charmbracelet/bubbles/pull/397/files to support cell styling
 
 package table
 
@@ -29,6 +30,13 @@ type Model struct {
 	hcol    int
 	hstep   int
 	hcursor int
+}
+
+// CellPosition holds row and column indexes.
+type CellPosition struct {
+	RowID         int
+	Column        int
+	IsRowSelected bool
 }
 
 // Row represents one line in the table.
@@ -108,6 +116,32 @@ type Styles struct {
 	Header   lipgloss.Style
 	Cell     lipgloss.Style
 	Selected lipgloss.Style
+
+	// RenderCell is a low-level primitive for stylizing cells.
+	// It is responsible for rendering the selection style. Styles.Cell is ignored.
+	//
+	// Example implementation:
+	// s.RenderCell = func(model table.Model, value string, position table.CellPosition) string {
+	// 	cellStyle := s.Cell.Copy()
+	//
+	// 	switch {
+	// 	case position.IsRowSelected:
+	// 		return cellStyle.Background(lipgloss.Color("57")).Render(value)
+	// 	case position.Column == 1:
+	// 		return cellStyle.Foreground(lipgloss.Color("21")).Render(value)
+	// 	default:
+	// 		return cellStyle.Render(value)
+	// 	}
+	// }
+	RenderCell func(model Model, value string, position CellPosition) string
+}
+
+func (s Styles) renderCell(model Model, value string, position CellPosition) string {
+	if s.RenderCell != nil {
+		return s.RenderCell(model, value, position)
+	}
+
+	return s.Cell.Render(value)
 }
 
 // DefaultStyles returns a set of default style definitions for this table.
@@ -445,21 +479,30 @@ func (m Model) headersView() string {
 }
 
 func (m *Model) renderRow(rowID int) string {
+	isRowSelected := rowID == m.cursor
 	var s = make([]string, 0, len(m.cols))
 	for i, value := range m.rows[rowID] {
 		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
+
+		position := CellPosition{
+			RowID:         rowID,
+			Column:        i,
+			IsRowSelected: isRowSelected,
+		}
+
 		var renderedCell string
 		if i == m.ColIndex(m.hcol) && m.hcursor > 0 {
-			renderedCell = m.styles.Cell.Render(style.Render(runewidth.Truncate(runewidth.TruncateLeft(value, m.hcursor, "…"), m.cols[i].Width, "…")))
+			renderedCell = style.Render(runewidth.Truncate(runewidth.TruncateLeft(value, m.hcursor, "…"), m.cols[i].Width, "…"))
 		} else {
-			renderedCell = m.styles.Cell.Render(style.Render(runewidth.Truncate(value, m.cols[i].Width, "…")))
+			renderedCell = style.Render(runewidth.Truncate(value, m.cols[i].Width, "…"))
 		}
+		renderedCell = m.styles.renderCell(*m, renderedCell, position)
 		s = append(s, renderedCell)
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, s...)
 
-	if rowID == m.cursor {
+	if isRowSelected {
 		return m.styles.Selected.Render(row)
 	}
 

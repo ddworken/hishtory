@@ -18,6 +18,7 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -49,7 +50,7 @@ func getInitialWd() string {
 
 func ResetLocalState(t *testing.T) {
 	homedir, err := os.UserHomeDir()
-	Check(t, err)
+	require.NoError(t, err)
 	persistLog()
 	_ = BackupAndRestoreWithId(t, "-reset-local-state")
 	_ = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
@@ -69,10 +70,10 @@ func getBackPath(file, id string) string {
 func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	ResetFakeHistoryTimestamp()
 	homedir, err := os.UserHomeDir()
-	Check(t, err)
+	require.NoError(t, err)
 	initialWd, err := os.Getwd()
-	Check(t, err)
-	Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()+".test"), os.ModePerm))
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()+".test"), os.ModePerm))
 
 	renameFiles := []string{
 		path.Join(homedir, data.GetHishtoryPath(), data.DB_PATH),
@@ -89,7 +90,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	}
 	for _, file := range renameFiles {
 		touchFile(file)
-		Check(t, os.Rename(file, getBackPath(file, id)))
+		require.NoError(t, os.Rename(file, getBackPath(file, id)))
 	}
 	copyFiles := []string{
 		path.Join(homedir, ".zshrc"),
@@ -98,7 +99,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	}
 	for _, file := range copyFiles {
 		touchFile(file)
-		Check(t, copy(file, getBackPath(file, id)))
+		require.NoError(t, copy(file, getBackPath(file, id)))
 	}
 	configureZshrc(homedir)
 	touchFile(path.Join(homedir, ".bash_history"))
@@ -111,8 +112,8 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 		}
 		persistLog()
-		Check(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
-		Check(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
+		require.NoError(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
+		require.NoError(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
 		for _, file := range renameFiles {
 			checkError(os.Rename(getBackPath(file, id), file))
 		}
@@ -290,20 +291,6 @@ func RunTestServer() func() {
 	}
 }
 
-func Check(t testing.TB, err error) {
-	if err != nil {
-		_, filename, line, _ := runtime.Caller(1)
-		t.Fatalf("Unexpected error at %s:%d: %v", filename, line, err)
-	}
-}
-
-func CheckWithInfo(t *testing.T, err error, additionalInfo string) {
-	if err != nil {
-		_, filename, line, _ := runtime.Caller(1)
-		t.Fatalf("Unexpected error: %v at %s:%d! Additional info: %v", err, filename, line, additionalInfo)
-	}
-}
-
 func IsOnline() bool {
 	_, err := http.Get("https://hishtory.dev")
 	return err == nil
@@ -338,12 +325,12 @@ func IsGithubAction() bool {
 func TestLog(t testing.TB, line string) {
 	f, err := os.OpenFile("/tmp/test.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		Check(t, err)
+		require.NoError(t, err)
 	}
 	defer f.Close()
 	_, err = f.WriteString(line + "\n")
 	if err != nil {
-		Check(t, err)
+		require.NoError(t, err)
 	}
 }
 
@@ -372,7 +359,7 @@ func CompareGoldens(t testing.TB, out, goldenName string) {
 		if os.IsNotExist(err) {
 			expected = []byte("ERR_FILE_NOT_FOUND:" + goldenPath)
 		} else {
-			Check(t, err)
+			require.NoError(t, err)
 		}
 	}
 	if diff := cmp.Diff(string(expected), out); diff != "" {
@@ -380,7 +367,7 @@ func CompareGoldens(t testing.TB, out, goldenName string) {
 			_, filename, line, _ := runtime.Caller(1)
 			t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s\nactual=\n%s", goldenName, filename, line, diff, out)
 		} else {
-			Check(t, os.WriteFile(goldenPath, []byte(out), 0644))
+			require.NoError(t, os.WriteFile(goldenPath, []byte(out), 0644))
 		}
 	}
 }
