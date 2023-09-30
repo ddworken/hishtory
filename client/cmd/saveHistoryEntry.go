@@ -145,7 +145,7 @@ func presaveHistoryEntry(ctx context.Context) {
 
 	// Augment it with os.Args
 	shellName := os.Args[2]
-	cmd, err := extractCommandFromArg(ctx, shellName, os.Args[3])
+	cmd, err := extractCommandFromArg(ctx, shellName, os.Args[3] /* isPresave = */, true)
 	lib.CheckFatalError(err)
 	entry.Command = cmd
 	if strings.HasPrefix(" ", entry.Command) || strings.TrimSpace(entry.Command) == "" {
@@ -379,7 +379,7 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	entry.EndTime = time.Now().UTC()
 
 	// command
-	cmd, err := extractCommandFromArg(ctx, shell, args[4])
+	cmd, err := extractCommandFromArg(ctx, shell, args[4] /* isPresave = */, false)
 	if err != nil {
 		return nil, err
 	}
@@ -392,13 +392,13 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	return entry, nil
 }
 
-func extractCommandFromArg(ctx context.Context, shell, arg string) (string, error) {
+func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave bool) (string, error) {
 	if shell == "bash" {
 		cmd, err := getLastCommand(arg)
 		if err != nil {
 			return "", fmt.Errorf("failed to build history entry: %w", err)
 		}
-		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, arg)
+		shouldBeSkipped, err := shouldSkipHiddenCommand(ctx, arg, isPresave)
 		if err != nil {
 			return "", fmt.Errorf("failed to check if command was hidden: %w", err)
 		}
@@ -566,12 +566,19 @@ func getLastCommand(history string) (string, error) {
 	return split[1], nil
 }
 
-func shouldSkipHiddenCommand(ctx context.Context, historyLine string) (bool, error) {
+func shouldSkipHiddenCommand(ctx context.Context, historyLine string, isPresave bool) (bool, error) {
 	config := hctx.GetConf(ctx)
-	if config.LastSavedHistoryLine == historyLine {
+	if isPresave && config.LastPreSavedHistoryLine == historyLine {
 		return true, nil
 	}
-	config.LastSavedHistoryLine = historyLine
+	if !isPresave && config.LastSavedHistoryLine == historyLine {
+		return true, nil
+	}
+	if isPresave {
+		config.LastPreSavedHistoryLine = historyLine
+	} else {
+		config.LastSavedHistoryLine = historyLine
+	}
 	err := hctx.SetConfig(config)
 	if err != nil {
 		return false, err
