@@ -114,7 +114,8 @@ func withPanicGuard() Middleware {
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Printf("panic: %s\n", r)
-					rw.WriteHeader(http.StatusInternalServerError)
+					// Note that we need to return a 503 error code since that is the error handled by the client in lib.IsOfflineError
+					rw.WriteHeader(http.StatusServiceUnavailable)
 				}
 			}()
 			h.ServeHTTP(rw, r)
