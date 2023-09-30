@@ -87,7 +87,7 @@ func withLogging(s *statsd.Client, out io.Writer) Middleware {
 				// log panics
 				if err := recover(); err != nil {
 					duration := time.Since(start)
-					fmt.Fprintf(out, "%s %s %#v %s %s %s %v\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size), err)
+					_, _ = fmt.Fprintf(out, "%s %s %#v %s %s %s %v\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size), err)
 
 					// keep panicking
 					panic(err)
@@ -97,7 +97,7 @@ func withLogging(s *statsd.Client, out io.Writer) Middleware {
 			h.ServeHTTP(&lrw, r.WithContext(ctx))
 
 			duration := time.Since(start)
-			fmt.Fprintf(out, "%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
+			_, _ = fmt.Fprintf(out, "%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
 			if s != nil {
 				s.Distribution("hishtory.request_duration", float64(duration.Microseconds())/1_000, []string{"handler:" + getFunctionName(h)}, 1.0)
 				s.Incr("hishtory.request", []string{"handler:" + getFunctionName(h)}, 1.0)
