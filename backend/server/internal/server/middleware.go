@@ -106,7 +106,7 @@ func withLogging(s *statsd.Client, out io.Writer) Middleware {
 	}
 }
 
-// withPanicGuard is the last defence from a panic. it will log them and return a 500 error
+// withPanicGuard is the last defence from a panic. it will log them and return a 503 error
 // to the client and prevent the http server from breaking
 func withPanicGuard() Middleware {
 	return func(h http.Handler) http.Handler {

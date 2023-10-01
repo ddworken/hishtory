@@ -101,8 +101,8 @@ func TestPanicGuard(t *testing.T) {
 	if panicked {
 		t.Fatalf("expected no panic")
 	}
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected status %d, got %d", http.StatusServiceUnavailable, w.Code)
 	}
 }
 
@@ -162,7 +162,7 @@ func TestMergeMiddlewares(t *testing.T) {
 		{
 			name:               "panics",
 			handler:            panicHandler,
-			expectedStatusCode: http.StatusInternalServerError,
+			expectedStatusCode: http.StatusServiceUnavailable,
 			expectedPieces: []string{
 				`oh no`,
 				`127.0.0.1 GET "/"`,
