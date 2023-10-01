@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -50,10 +51,23 @@ func byteCountToString(b int) string {
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMG"[exp])
 }
 
-type Middleware func(http.HandlerFunc) http.Handler
+type Middleware func(http.Handler) http.Handler
 
-func withLogging(s *statsd.Client) Middleware {
-	return func(h http.HandlerFunc) http.Handler {
+// mergeMiddlewares creates a new middleware that runs the given middlewares in reverse order. The first middleware
+// passed will be the "outermost" one
+func mergeMiddlewares(middlewares ...Middleware) Middleware {
+	return func(h http.Handler) http.Handler {
+		for i := len(middlewares) - 1; i >= 0; i-- {
+			h = middlewares[i](h)
+		}
+		return h
+	}
+}
+
+// withLogging will log every request made to the wrapped endpoint. It will also log
+// panics, but won't stop them.
+func withLogging(s *statsd.Client, out io.Writer) Middleware {
+	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			var responseData loggedResponseData
 			lrw := loggingResponseWriter{
@@ -69,14 +83,42 @@ func withLogging(s *statsd.Client) Middleware {
 			)
 			defer span.Finish()
 
+			defer func() {
+				// log panics
+				if err := recover(); err != nil {
+					duration := time.Since(start)
+					_, _ = fmt.Fprintf(out, "%s %s %#v %s %s %s %v\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size), err)
+
+					// keep panicking
+					panic(err)
+				}
+			}()
+
 			h.ServeHTTP(&lrw, r.WithContext(ctx))
 
 			duration := time.Since(start)
-			fmt.Printf("%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
+			_, _ = fmt.Fprintf(out, "%s %s %#v %s %s %s\n", getRemoteAddr(r), r.Method, r.RequestURI, getHishtoryVersion(r), duration.String(), byteCountToString(responseData.size))
 			if s != nil {
 				s.Distribution("hishtory.request_duration", float64(duration.Microseconds())/1_000, []string{"handler:" + getFunctionName(h)}, 1.0)
 				s.Incr("hishtory.request", []string{"handler:" + getFunctionName(h)}, 1.0)
 			}
+		})
+	}
+}
+
+// withPanicGuard is the last defence from a panic. it will log them and return a 503 error
+// to the client and prevent the http server from breaking
+func withPanicGuard() Middleware {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("panic: %s\n", r)
+					// Note that we need to return a 503 error code since that is the error handled by the client in lib.IsOfflineError
+					rw.WriteHeader(http.StatusServiceUnavailable)
+				}
+			}()
+			h.ServeHTTP(rw, r)
 		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -93,28 +94,31 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 			}
 		}()
 	}
-	loggerMiddleware := withLogging(s.statsd)
+	middlewares := mergeMiddlewares(
+		withPanicGuard(),
+		withLogging(s.statsd, os.Stdout),
+	)
 
-	mux.Handle("/api/v1/submit", loggerMiddleware(s.apiSubmitHandler))
-	mux.Handle("/api/v1/get-dump-requests", loggerMiddleware(s.apiGetPendingDumpRequestsHandler))
-	mux.Handle("/api/v1/submit-dump", loggerMiddleware(s.apiSubmitDumpHandler))
-	mux.Handle("/api/v1/query", loggerMiddleware(s.apiQueryHandler))
-	mux.Handle("/api/v1/bootstrap", loggerMiddleware(s.apiBootstrapHandler))
-	mux.Handle("/api/v1/register", loggerMiddleware(s.apiRegisterHandler))
-	mux.Handle("/api/v1/banner", loggerMiddleware(s.apiBannerHandler))
-	mux.Handle("/api/v1/download", loggerMiddleware(s.apiDownloadHandler))
-	mux.Handle("/api/v1/trigger-cron", loggerMiddleware(s.triggerCronHandler))
-	mux.Handle("/api/v1/get-deletion-requests", loggerMiddleware(s.getDeletionRequestsHandler))
-	mux.Handle("/api/v1/add-deletion-request", loggerMiddleware(s.addDeletionRequestHandler))
-	mux.Handle("/api/v1/slsa-status", loggerMiddleware(s.slsaStatusHandler))
-	mux.Handle("/api/v1/feedback", loggerMiddleware(s.feedbackHandler))
-	mux.Handle("/api/v1/ping", loggerMiddleware(s.pingHandler))
-	mux.Handle("/healthcheck", loggerMiddleware(s.healthCheckHandler))
-	mux.Handle("/internal/api/v1/usage-stats", loggerMiddleware(s.usageStatsHandler))
-	mux.Handle("/internal/api/v1/stats", loggerMiddleware(s.statsHandler))
+	mux.Handle("/api/v1/submit", middlewares(http.HandlerFunc(s.apiSubmitHandler)))
+	mux.Handle("/api/v1/get-dump-requests", middlewares(http.HandlerFunc(s.apiGetPendingDumpRequestsHandler)))
+	mux.Handle("/api/v1/submit-dump", middlewares(http.HandlerFunc(s.apiSubmitDumpHandler)))
+	mux.Handle("/api/v1/query", middlewares(http.HandlerFunc(s.apiQueryHandler)))
+	mux.Handle("/api/v1/bootstrap", middlewares(http.HandlerFunc(s.apiBootstrapHandler)))
+	mux.Handle("/api/v1/register", middlewares(http.HandlerFunc(s.apiRegisterHandler)))
+	mux.Handle("/api/v1/banner", middlewares(http.HandlerFunc(s.apiBannerHandler)))
+	mux.Handle("/api/v1/download", middlewares(http.HandlerFunc(s.apiDownloadHandler)))
+	mux.Handle("/api/v1/trigger-cron", middlewares(http.HandlerFunc(s.triggerCronHandler)))
+	mux.Handle("/api/v1/get-deletion-requests", middlewares(http.HandlerFunc(s.getDeletionRequestsHandler)))
+	mux.Handle("/api/v1/add-deletion-request", middlewares(http.HandlerFunc(s.addDeletionRequestHandler)))
+	mux.Handle("/api/v1/slsa-status", middlewares(http.HandlerFunc(s.slsaStatusHandler)))
+	mux.Handle("/api/v1/feedback", middlewares(http.HandlerFunc(s.feedbackHandler)))
+	mux.Handle("/api/v1/ping", middlewares(http.HandlerFunc(s.pingHandler)))
+	mux.Handle("/healthcheck", middlewares(http.HandlerFunc(s.healthCheckHandler)))
+	mux.Handle("/internal/api/v1/usage-stats", middlewares(http.HandlerFunc(s.usageStatsHandler)))
+	mux.Handle("/internal/api/v1/stats", middlewares(http.HandlerFunc(s.statsHandler)))
 	if s.isTestEnvironment {
-		mux.Handle("/api/v1/wipe-db-entries", loggerMiddleware(s.wipeDbEntriesHandler))
-		mux.Handle("/api/v1/get-num-connections", loggerMiddleware(s.getNumConnectionsHandler))
+		mux.Handle("/api/v1/wipe-db-entries", middlewares(http.HandlerFunc(s.wipeDbEntriesHandler)))
+		mux.Handle("/api/v1/get-num-connections", middlewares(http.HandlerFunc(s.getNumConnectionsHandler)))
 	}
 
 	httpServer := &http.Server{
