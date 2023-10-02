@@ -1740,7 +1740,7 @@ func testTui_search(t testing.TB) {
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		// Extra delay to ensure that the search for 'ls' finishes before we select an entry
-		{Keys: "ls", ExtraDelay: 1.5},
+		{Keys: "ls", ExtraDelay: 2.0},
 		{Keys: "ENTER"},
 	})
 	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
