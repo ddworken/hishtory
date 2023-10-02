@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/backend/server/internal/database"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
@@ -102,7 +103,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	require.Equal(t, 0, dbEntry.ReadCount)
 	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
 	require.NoError(t, err)
-	require.True(t, data.EntryEquals(decEntry, entry))
+	require.Equal(t, decEntry, entry)
 
 	// Same for device id 2
 	w = httptest.NewRecorder()
@@ -128,9 +129,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	}
 	decEntry, err = data.DecryptHistoryEntry("key", *dbEntry)
 	require.NoError(t, err)
-	if !data.EntryEquals(decEntry, entry) {
-		t.Fatalf("DB data is different than input! \ndb   =%#v\ninput=%#v", *dbEntry, entry)
-	}
+	require.Equal(t, decEntry, entry)
 
 	// Bootstrap handler should return 2 entries, one for each device
 	w = httptest.NewRecorder()
@@ -307,9 +306,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
 		require.NoError(t, err)
-		if !data.EntryEquals(decEntry, entry1Dec) && !data.EntryEquals(decEntry, entry2Dec) {
-			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1Dec, entry2Dec)
-		}
+		require.True(t, assert.ObjectsAreEqual(decEntry, entry1Dec) || assert.ObjectsAreEqual(decEntry, entry2Dec))
 	}
 
 	// Assert that we aren't leaking connections
@@ -404,9 +401,7 @@ func TestDeletionRequests(t *testing.T) {
 		}
 		decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
 		require.NoError(t, err)
-		if !data.EntryEquals(decEntry, entry1) && !data.EntryEquals(decEntry, entry2) {
-			t.Fatalf("DB data is different than input! \ndb   =%#v\nentry1=%#v\nentry2=%#v", *dbEntry, entry1, entry2)
-		}
+		require.True(t, assert.ObjectsAreEqual(decEntry, entry1) || assert.ObjectsAreEqual(decEntry, entry2))
 	}
 
 	// Submit a redact request for entry1
@@ -448,9 +443,7 @@ func TestDeletionRequests(t *testing.T) {
 	}
 	decEntry, err := data.DecryptHistoryEntry("dkey", *dbEntry)
 	require.NoError(t, err)
-	if !data.EntryEquals(decEntry, entry2) {
-		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry2)
-	}
+	require.Equal(t, decEntry, entry2)
 
 	// Query for user 2
 	w = httptest.NewRecorder()
@@ -476,9 +469,7 @@ func TestDeletionRequests(t *testing.T) {
 	}
 	decEntry, err = data.DecryptHistoryEntry("dOtherkey", *dbEntry)
 	require.NoError(t, err)
-	if !data.EntryEquals(decEntry, entry3) {
-		t.Fatalf("DB data is different than input! \ndb   =%#v\nentry=%#v", *dbEntry, entry3)
-	}
+	require.Equal(t, decEntry, entry3)
 
 	// Check that apiSubmit tells the client that there is a pending deletion request
 	encEntry, err = data.EncryptHistoryEntry("dkey", entry2)

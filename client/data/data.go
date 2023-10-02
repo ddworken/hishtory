@@ -157,18 +157,6 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	return decryptedEntry, nil
 }
 
-func EntryEquals(entry1, entry2 HistoryEntry) bool {
-	// TODO: Can we remove this function? Or at least move it to a test-only file?
-	return entry1.LocalUsername == entry2.LocalUsername &&
-		entry1.Hostname == entry2.Hostname &&
-		entry1.Command == entry2.Command &&
-		entry1.CurrentWorkingDirectory == entry2.CurrentWorkingDirectory &&
-		entry1.HomeDirectory == entry2.HomeDirectory &&
-		entry1.ExitCode == entry2.ExitCode &&
-		entry1.StartTime.Format(time.RFC3339) == entry2.StartTime.Format(time.RFC3339) &&
-		entry1.EndTime.Format(time.RFC3339) == entry2.EndTime.Format(time.RFC3339)
-}
-
 func GetHishtoryPath() string {
 	hishtoryPath := os.Getenv("HISHTORY_PATH")
 	if hishtoryPath != "" {

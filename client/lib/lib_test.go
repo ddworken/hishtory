@@ -82,9 +82,7 @@ func TestPersist(t *testing.T) {
 		t.Fatalf("DB has %d entries, expected 1!", len(historyEntries))
 	}
 	dbEntry := historyEntries[0]
-	if !data.EntryEquals(entry, *dbEntry) {
-		t.Fatalf("DB data is different than input! \ndb   =%#v \ninput=%#v", *dbEntry, entry)
-	}
+	require.Equal(t, entry, *dbEntry)
 }
 
 func TestSearch(t *testing.T) {
@@ -105,12 +103,8 @@ func TestSearch(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2, results=%#v", len(results), results)
 	}
-	if !data.EntryEquals(*results[0], entry2) {
-		t.Fatalf("Search()[0]=%#v, expected: %#v", results[0], entry2)
-	}
-	if !data.EntryEquals(*results[1], entry1) {
-		t.Fatalf("Search()[0]=%#v, expected: %#v", results[1], entry1)
-	}
+	require.Equal(t, entry2, *results[0])
+	require.Equal(t, entry1, *results[1])
 
 	// Search but exclude bar
 	results, err = Search(ctx, db, "ls -bar", 5)
