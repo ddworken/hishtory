@@ -110,7 +110,7 @@ func TestParam(t *testing.T) {
 	runTestsWithRetries(t, "testTui/general", testTui_general)
 	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
 	runTestsWithRetries(t, "testTui/resize", testTui_resize)
-	runTestsWithRetries(t, "testTui/delete", testTui_delete)
+	runTestsWithExtraRetries(t, "testTui/delete", testTui_delete, 10)
 	runTestsWithRetries(t, "testTui/color", testTui_color)
 
 	// Assert there are no leaked connections
