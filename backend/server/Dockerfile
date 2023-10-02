@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine3.17 AS builder
+FROM golang:1.21-alpine3.17 AS builder
 
 WORKDIR /app
 RUN apk add --update --no-cache --virtual .build-deps build-base 
