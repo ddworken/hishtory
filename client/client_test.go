@@ -2453,4 +2453,39 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	}
 }
 
+func BenchmarkImport(b *testing.B) {
+	b.StopTimer()
+	// Setup
+	tester := bashTester{}
+	defer testutils.BackupAndRestore(b)()
+
+	// Benchmark it
+	for n := 0; n < b.N; n++ {
+		// Setup
+		testutils.ResetLocalState(b)
+		installHishtory(b, tester, "")
+
+		// Create a large history in bash that we will pre-import
+		numSyntheticEntries := 100_000
+		homedir, err := os.UserHomeDir()
+		require.NoError(b, err)
+		f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		require.NoError(b, err)
+		defer f.Close()
+		for i := 1; i <= numSyntheticEntries; i++ {
+			_, err := f.WriteString(fmt.Sprintf("echo command-%d\n", i))
+			require.NoError(b, err)
+		}
+		require.NoError(b, f.Close())
+
+		// Benchmarked code:
+		b.StartTimer()
+		ctx := hctx.MakeContext()
+		numImported, err := lib.ImportHistory(ctx, false, true)
+		require.NoError(b, err)
+		require.GreaterOrEqual(b, numImported, numSyntheticEntries)
+		b.StopTimer()
+	}
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

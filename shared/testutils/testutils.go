@@ -48,7 +48,7 @@ func getInitialWd() string {
 	return dir
 }
 
-func ResetLocalState(t *testing.T) {
+func ResetLocalState(t testing.TB) {
 	homedir, err := os.UserHomeDir()
 	require.NoError(t, err)
 	persistLog()

@@ -237,23 +237,25 @@ func CheckFatalError(err error) {
 	}
 }
 
+var ZSH_FIRST_COMMAND_BUG_REGEX = regexp.MustCompile(`: \d+:\d;(.*)`)
+
 func stripZshWeirdness(cmd string) string {
 	// Zsh has this weird behavior where sometimes commands are saved in the hishtory file
 	// with a weird prefix. I've never been able to figure out why this happens, but we
 	// can at least strip it.
-	firstCommandBugRegex := regexp.MustCompile(`: \d+:\d;(.*)`)
-	matches := firstCommandBugRegex.FindStringSubmatch(cmd)
+	matches := ZSH_FIRST_COMMAND_BUG_REGEX.FindStringSubmatch(cmd)
 	if len(matches) == 2 {
 		return matches[1]
 	}
 	return cmd
 }
 
+var BASH_FIRST_COMMAND_BUG_REGEX = regexp.MustCompile(`^#\d+\s+$`)
+
 func isBashWeirdness(cmd string) bool {
 	// Bash has this weird behavior where the it has entries like `#1664342754` in the
 	// history file. We want to skip these.
-	firstCommandBugRegex := regexp.MustCompile(`^#\d+\s+$`)
-	return firstCommandBugRegex.MatchString(cmd)
+	return BASH_FIRST_COMMAND_BUG_REGEX.MatchString(cmd)
 }
 
 func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error) {
@@ -287,6 +289,8 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	}
 	numEntriesImported := 0
 	var iteratorError error = nil
+	var batch []data.HistoryEntry
+	batchSize := 100
 	entriesIter(func(cmd string, err error) bool {
 		if err != nil {
 			iteratorError = err
@@ -296,7 +300,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
 			return true
 		}
-		entry := data.HistoryEntry{
+		entry := normalizeEntryTimezone(data.HistoryEntry{
 			LocalUsername:           currentUser.Name,
 			Hostname:                hostname,
 			Command:                 cmd,
@@ -307,17 +311,30 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			EndTime:                 time.Now().UTC(),
 			DeviceId:                config.DeviceId,
 			EntryId:                 uuid.Must(uuid.NewRandom()).String(),
+		})
+		batch = append(batch, entry)
+		if len(batch) > batchSize {
+			err = RetryingDbFunction(func() error {
+				return db.Create(batch).Error
+			})
+			if err != nil {
+				iteratorError = fmt.Errorf("failed to insert imported history entry: %w", err)
+				return false
+			}
+			batch = make([]data.HistoryEntry, 0)
 		}
-		err = ReliableDbCreate(db, entry)
 		numEntriesImported += 1
-		if err != nil {
-			iteratorError = fmt.Errorf("failed to insert imported history entry: %w", err)
-			return false
-		}
 		return true
 	})
 	if iteratorError != nil {
 		return 0, iteratorError
+	}
+	// Also create any entries remaining in an unfinished batch
+	err = RetryingDbFunction(func() error {
+		return db.Create(batch).Error
+	})
+	if err != nil {
+		return 0, err
 	}
 	err = Reupload(ctx)
 	if err != nil {
