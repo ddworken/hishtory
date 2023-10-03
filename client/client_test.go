@@ -1264,8 +1264,6 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 	}
 }
 
-// TODO: tests for hishtory import
-
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
@@ -2453,6 +2451,48 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 	}
 }
 
+func createSyntheticImportEntries(t testing.TB, numSyntheticEntries int) {
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+	f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	require.NoError(t, err)
+	defer f.Close()
+	for i := 1; i <= numSyntheticEntries; i++ {
+		_, err := f.WriteString(fmt.Sprintf("echo command-%d\n", i))
+		require.NoError(t, err)
+	}
+	require.NoError(t, f.Close())
+}
+
+func TestImportHistory(t *testing.T) {
+	// Setup
+	tester := bashTester{}
+	defer testutils.BackupAndRestore(t)()
+	userSecret := installHishtory(t, tester, "")
+	numSyntheticEntries := 305
+	createSyntheticImportEntries(t, numSyntheticEntries)
+
+	// Run the import
+	ctx := hctx.MakeContext()
+	numImported, err := lib.ImportHistory(ctx, false, true)
+	require.NoError(t, err)
+	require.Equal(t, numImported, numSyntheticEntries+1)
+
+	// Check that it imported all of them
+	out := tester.RunInteractiveShell(t, ` hishtory export -pipefail`)
+	testutils.CompareGoldens(t, out, "TestImportHistory-export")
+
+	// Check that it was uploaded so that another user can get it
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	out = strings.TrimSpace(tester.RunInteractiveShell(t, ` hishtory export -pipefail | wc -l`))
+	require.Equal(t, "305", out)
+	out = tester.RunInteractiveShell(t, ` hishtory export -pipefail`)
+	require.Contains(t, out, "echo command-305")
+
+	// TODO: There is a bug here that will be evident if you check that the export is in the correct order on the remote device, because timestamps don't have sufficient granularity
+}
+
 func BenchmarkImport(b *testing.B) {
 	b.StopTimer()
 	// Setup
@@ -2467,16 +2507,7 @@ func BenchmarkImport(b *testing.B) {
 
 		// Create a large history in bash that we will pre-import
 		numSyntheticEntries := 100_000
-		homedir, err := os.UserHomeDir()
-		require.NoError(b, err)
-		f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		require.NoError(b, err)
-		defer f.Close()
-		for i := 1; i <= numSyntheticEntries; i++ {
-			_, err := f.WriteString(fmt.Sprintf("echo command-%d\n", i))
-			require.NoError(b, err)
-		}
-		require.NoError(b, f.Close())
+		createSyntheticImportEntries(b, numSyntheticEntries)
 
 		// Benchmarked code:
 		b.StartTimer()
