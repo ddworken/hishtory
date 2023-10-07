@@ -826,12 +826,12 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit int, c
 	return historyEntries, nil
 }
 
-func parseNonAtomizedToken(token string) (string, interface{}, interface{}, interface{}, error) {
+func parseNonAtomizedToken(token string) (string, any, any, any, error) {
 	wildcardedToken := "%" + unescape(token) + "%"
 	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
 }
 
-func parseAtomizedToken(ctx context.Context, token string) (string, interface{}, interface{}, error) {
+func parseAtomizedToken(ctx context.Context, token string) (string, any, any, error) {
 	splitToken := splitEscaped(token, ':', 2)
 	field := unescape(splitToken[0])
 	val := unescape(splitToken[1])

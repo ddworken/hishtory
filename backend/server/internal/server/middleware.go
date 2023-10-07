@@ -33,7 +33,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 }
 
-func getFunctionName(temp interface{}) string {
+func getFunctionName(temp any) string {
 	strs := strings.Split((runtime.FuncForPC(reflect.ValueOf(temp).Pointer()).Name()), ".")
 	return strs[len(strs)-1]
 }

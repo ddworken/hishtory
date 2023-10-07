@@ -49,7 +49,7 @@ type CustomColumn struct {
 	Val  string `json:"value"`
 }
 
-func (c *CustomColumns) Scan(value interface{}) error {
+func (c *CustomColumns) Scan(value any) error {
 	bytes, ok := value.([]byte)
 	if !ok {
 		return fmt.Errorf("failed to unmarshal CustomColumns value %#v", value)
