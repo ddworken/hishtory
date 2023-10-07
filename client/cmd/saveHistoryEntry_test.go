@@ -135,17 +135,18 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 	}
 }
 
-func TestParseCrossPlatformInt(t *testing.T) {
-	res, err := parseCrossPlatformInt("123")
-	require.NoError(t, err)
-	if res != 123 {
-		t.Fatalf("failed to parse cross platform int %d", res)
-	}
-	res, err = parseCrossPlatformInt("123N")
-	require.NoError(t, err)
-	if res != 123 {
-		t.Fatalf("failed to parse cross platform int %d", res)
-	}
+func TestParseCrossPlatformTime(t *testing.T) {
+	res := parseCrossPlatformTime("1696715149")
+	require.Equal(t, time.Unix(1696715149, 0).UTC(), res)
+
+	res = parseCrossPlatformTime("1696715149N")
+	require.Equal(t, time.Unix(1696715149, 0).UTC(), res)
+
+	res = parseCrossPlatformTime("1696715218277655463")
+	require.Equal(t, time.Unix(0, 1696715218277655463).UTC(), res)
+
+	res = parseCrossPlatformTime("1696715218277655463N")
+	require.Equal(t, time.Unix(0, 1696715218277655463).UTC(), res)
 }
 
 func TestBuildRegexFromTimeFormat(t *testing.T) {
