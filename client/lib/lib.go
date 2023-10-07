@@ -290,6 +290,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	numEntriesImported := 0
 	var iteratorError error = nil
 	var batch []data.HistoryEntry
+	importTimestamp := time.Now().UTC()
 	batchSize := 100
 	entriesIter(func(cmd string, err error) bool {
 		if err != nil {
@@ -300,6 +301,8 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
 			return true
 		}
+		startTime := importTimestamp.Add(time.Millisecond * time.Duration(numEntriesImported*2))
+		endTime := startTime.Add(time.Millisecond)
 		entry := normalizeEntryTimezone(data.HistoryEntry{
 			LocalUsername:           currentUser.Name,
 			Hostname:                hostname,
@@ -307,8 +310,8 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			CurrentWorkingDirectory: "Unknown",
 			HomeDirectory:           homedir,
 			ExitCode:                0,
-			StartTime:               time.Now().UTC(),
-			EndTime:                 time.Now().UTC(),
+			StartTime:               startTime,
+			EndTime:                 endTime,
 			DeviceId:                config.DeviceId,
 			EntryId:                 uuid.Must(uuid.NewRandom()).String(),
 		})

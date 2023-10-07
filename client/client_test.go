@@ -2489,7 +2489,8 @@ func TestImportHistory(t *testing.T) {
 	require.Equal(t, "305", out)
 	out = tester.RunInteractiveShell(t, ` hishtory export -pipefail`)
 	require.Contains(t, out, "echo command-305")
-
+	out = tester.RunInteractiveShell(t, ` hishtory export -pipefail`)
+	testutils.CompareGoldens(t, out, "TestImportHistory-export")
 	// TODO: There is a bug here that will be evident if you check that the export is in the correct order on the remote device, because timestamps don't have sufficient granularity
 }
 
