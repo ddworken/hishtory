@@ -271,6 +271,10 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	if histfile := os.Getenv("HISTFILE"); histfile != "" && histfile != zshHistPath && histfile != bashHistPath {
 		entriesIter = concatIterators(entriesIter, readFileToIterator(histfile))
 	}
+	zHistPath := filepath.Join(homedir, ".zhistory")
+	if zHistPath != os.Getenv("HISTFILE") {
+		entriesIter = concatIterators(entriesIter, readFileToIterator(zHistPath))
+	}
 	if shouldReadStdin {
 		extraEntries, err := readStdin()
 		if err != nil {
