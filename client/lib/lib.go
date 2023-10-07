@@ -292,6 +292,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	var batch []data.HistoryEntry
 	importTimestamp := time.Now().UTC()
 	batchSize := 100
+	importEntryId := uuid.Must(uuid.NewRandom()).String()
 	entriesIter(func(cmd string, err error) bool {
 		if err != nil {
 			iteratorError = err
@@ -301,8 +302,12 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
 			return true
 		}
+		// Set the timestamps so that they are monotonically increasing
 		startTime := importTimestamp.Add(time.Millisecond * time.Duration(numEntriesImported*2))
 		endTime := startTime.Add(time.Millisecond)
+		// And set the entryId in a similar way. This isn't critical from a correctness POV, but uuid.NewRandom() is
+		// quite slow, so this makes imports considerably faster
+		entryId := importEntryId + fmt.Sprintf("%d", numEntriesImported)
 		entry := normalizeEntryTimezone(data.HistoryEntry{
 			LocalUsername:           currentUser.Name,
 			Hostname:                hostname,
@@ -313,7 +318,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			StartTime:               startTime,
 			EndTime:                 endTime,
 			DeviceId:                config.DeviceId,
-			EntryId:                 uuid.Must(uuid.NewRandom()).String(),
+			EntryId:                 entryId,
 		})
 		batch = append(batch, entry)
 		if len(batch) > batchSize {
