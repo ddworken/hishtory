@@ -152,7 +152,9 @@ func presaveHistoryEntry(ctx context.Context) {
 		// Don't save commands that start with a space
 		return
 	}
-	entry.StartTime = parseCrossPlatformTime(os.Args[4])
+	startTime, err := parseCrossPlatformInt(os.Args[4])
+	lib.CheckFatalError(err)
+	entry.StartTime = time.Unix(startTime, 0).UTC()
 	entry.EndTime = time.Unix(0, 0).UTC()
 
 	// And persist it locally.
@@ -367,7 +369,11 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	entry.ExitCode = exitCode
 
 	// start time
-	entry.StartTime = parseCrossPlatformTime(args[5])
+	seconds, err := parseCrossPlatformInt(args[5])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse start time %s as int: %w", args[5], err)
+	}
+	entry.StartTime = time.Unix(seconds, 0).UTC()
 
 	// end time
 	entry.EndTime = time.Now().UTC()
@@ -543,16 +549,9 @@ func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
 	return re.ReplaceAllLiteralString(cmdLine, ""), nil
 }
 
-func parseCrossPlatformTime(data string) time.Time {
-	data = strings.TrimSuffix(data, "N") // Trim the N suffix that is present on MacOS where the date CLI doesn't support %N
-	startTime, err := strconv.ParseInt(data, 10, 64)
-	lib.CheckFatalError(err)
-	if len(data) >= 18 {
-		return time.Unix(0, startTime).UTC()
-	} else {
-		return time.Unix(startTime, 0).UTC()
-	}
-
+func parseCrossPlatformInt(data string) (int64, error) {
+	data = strings.TrimSuffix(data, "N")
+	return strconv.ParseInt(data, 10, 64)
 }
 
 func getLastCommand(history string) (string, error) {

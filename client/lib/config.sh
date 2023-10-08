@@ -13,7 +13,7 @@ function __hishtory_precommand() {
   unset HISHTORY_AT_PROMPT
 
   # Run before every command
-  HISHTORY_START_TIME=`date +%s%N`
+  HISHTORY_START_TIME=`date +%s`
   CMD=`history 1`
   if ! [ -z "CMD " ] ; then
     (hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME &) # Background Run
