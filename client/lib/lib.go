@@ -626,7 +626,7 @@ func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) 
 	for _, entry := range entries {
 		encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt history entry")
+			return nil, fmt.Errorf("failed to encrypt history entry: %w", err)
 		}
 		encEntry.DeviceId = config.DeviceId
 		encEntries = append(encEntries, encEntry)
