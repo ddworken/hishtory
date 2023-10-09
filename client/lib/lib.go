@@ -352,9 +352,9 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			}
 			return nil
 		})
-	}
-	if err != nil {
-		return 0, err
+		if err != nil {
+			return 0, err
+		}
 	}
 	err = Reupload(ctx)
 	if err != nil {
