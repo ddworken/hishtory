@@ -327,7 +327,10 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		batch = append(batch, entry)
 		if len(batch) > batchSize {
 			err = RetryingDbFunction(func() error {
-				return db.Create(batch).Error
+				if err := db.Create(batch).Error; err != nil {
+					return fmt.Errorf("failed to import batch of history entries: %w", err)
+				}
+				return nil
 			})
 			if err != nil {
 				iteratorError = fmt.Errorf("failed to insert imported history entry: %w", err)
@@ -342,9 +345,14 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		return 0, iteratorError
 	}
 	// Also create any entries remaining in an unfinished batch
-	err = RetryingDbFunction(func() error {
-		return db.Create(batch).Error
-	})
+	if len(batch) > 0 {
+		err = RetryingDbFunction(func() error {
+			if err := db.Create(batch).Error; err != nil {
+				return fmt.Errorf("failed to import final batch of history entries: %w", err)
+			}
+			return nil
+		})
+	}
 	if err != nil {
 		return 0, err
 	}
