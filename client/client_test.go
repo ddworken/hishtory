@@ -556,12 +556,12 @@ func updateToRelease(t *testing.T, tester shellTester) string {
 	require.NoError(t, err)
 
 	// Update
-	out := tester.RunInteractiveShell(t, ` hishtory update`)
+	out := tester.RunInteractiveShell(t, " hishtory update\necho postupdate")
 	require.Regexp(t, regexp.MustCompile(`Successfully updated hishtory from v0[.][a-zA-Z0-9]+ to `+dd.Version), out)
 	require.NotContains(t, out, "skipping SLSA validation")
 
 	// Update again and assert that it skipped the update
-	out = tester.RunInteractiveShell(t, ` hishtory update`)
+	out = tester.RunInteractiveShell(t, " hishtory update")
 	if strings.Count(out, "\n") != 1 || !strings.Contains(out, "is already installed") {
 		t.Fatalf("repeated hishtory update didn't skip the update, out=%#v", out)
 	}
@@ -570,8 +570,8 @@ func updateToRelease(t *testing.T, tester shellTester) string {
 }
 
 func updateToHead(t *testing.T, tester shellTester) string {
-	out := tester.RunInteractiveShell(t, ` /tmp/client install`)
-	require.Equal(t, out, "")
+	out := tester.RunInteractiveShell(t, " /tmp/client install\necho postupdate")
+	require.Equal(t, "postupdate\n", out)
 	return "v0.Unknown"
 }
 
@@ -596,9 +596,6 @@ func testGenericUpdate(t *testing.T, tester shellTester, installInitialVersion f
 	}
 	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
 		t.Skip("skipping on linux/arm64 which is unsupported")
-	}
-	if skipSlowTests() {
-		t.Skip("skipping slow tests")
 	}
 	// Set up
 	defer testutils.BackupAndRestore(t)()
@@ -628,7 +625,7 @@ func testGenericUpdate(t *testing.T, tester shellTester, installInitialVersion f
 
 	// Check that the history was preserved after the update
 	out = tester.RunInteractiveShell(t, "hishtory export -pipefail | grep -v '/tmp/client install'")
-	expectedOutput := "echo hello\nhishtory status\nhishtory status\n"
+	expectedOutput := "echo hello\nhishtory status\necho postupdate\nhishtory status\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
