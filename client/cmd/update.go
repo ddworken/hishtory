@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -47,7 +48,7 @@ func update(ctx context.Context) error {
 	if runtime.GOOS == "darwin" {
 		slsaError = verifyBinaryMac(ctx, getTmpClientPath(), downloadData)
 	} else {
-		slsaError = lib.VerifyBinary(ctx, getTmpClientPath(), getTmpClientPath()+".intoto.jsonl", downloadData.Version)
+		slsaError = lib.VerifyBinary(ctx, getTmpClientPath(), getTmpClientPath()+".intoto.jsonl", getPossiblyOverriddenVersion(downloadData))
 	}
 	if slsaError != nil {
 		err = lib.HandleSlsaFailure(slsaError)
@@ -83,7 +84,7 @@ func update(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to install update (stderr=%#v), is %s in a noexec directory? (if so, set the TMPDIR environment variable): %w", stderr.String(), getTmpClientPath(), err)
 	}
-	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", lib.Version, downloadData.Version)
+	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", lib.Version, getPossiblyOverriddenVersion(downloadData))
 	return nil
 }
 
@@ -100,13 +101,19 @@ func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared
 	// go compiler.
 	unsignedBinaryPath := binaryPath + "-unsigned"
 	var err error = nil
+	unsignedUrl := ""
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
-		err = downloadFile(unsignedBinaryPath, downloadData.DarwinAmd64UnsignedUrl)
+		unsignedUrl = downloadData.DarwinAmd64UnsignedUrl
 	} else if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		err = downloadFile(unsignedBinaryPath, downloadData.DarwinArm64UnsignedUrl)
+		unsignedUrl = downloadData.DarwinArm64UnsignedUrl
 	} else {
-		err = fmt.Errorf("verifyBinaryMac() called for the unhandled branch GOOS=%s, GOARCH=%s", runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("verifyBinaryMac() called for the unhandled branch GOOS=%s, GOARCH=%s", runtime.GOOS, runtime.GOARCH)
 	}
+	if forcedVersion := os.Getenv("HISHTORY_FORCE_CLIENT_VERSION"); forcedVersion != "" {
+		unsignedUrl = strings.ReplaceAll(unsignedUrl, downloadData.Version, forcedVersion)
+	}
+
+	err = downloadFile(unsignedBinaryPath, unsignedUrl)
 	if err != nil {
 		return err
 	}
@@ -129,7 +136,7 @@ func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared
 	}
 
 	// Step 4: Use SLSA to verify the unsigned binary
-	return lib.VerifyBinary(ctx, unsignedBinaryPath, getTmpClientPath()+".intoto.jsonl", downloadData.Version)
+	return lib.VerifyBinary(ctx, unsignedBinaryPath, getTmpClientPath()+".intoto.jsonl", getPossiblyOverriddenVersion(downloadData))
 }
 
 func assertIdenticalBinaries(bin1Path, bin2Path string) error {
@@ -199,6 +206,10 @@ func downloadFiles(updateInfo shared.UpdateInfo) error {
 	} else {
 		return fmt.Errorf("no update info found for GOOS=%s, GOARCH=%s", runtime.GOOS, runtime.GOARCH)
 	}
+	if forcedVersion := os.Getenv("HISHTORY_FORCE_CLIENT_VERSION"); forcedVersion != "" {
+		clientUrl = strings.ReplaceAll(clientUrl, updateInfo.Version, forcedVersion)
+		clientProvenanceUrl = strings.ReplaceAll(clientProvenanceUrl, updateInfo.Version, forcedVersion)
+	}
 	err := downloadFile(getTmpClientPath(), clientUrl)
 	if err != nil {
 		return err
@@ -208,6 +219,13 @@ func downloadFiles(updateInfo shared.UpdateInfo) error {
 		return err
 	}
 	return nil
+}
+
+func getPossiblyOverriddenVersion(updateInfo shared.UpdateInfo) string {
+	if forcedVersion := os.Getenv("HISHTORY_FORCE_CLIENT_VERSION"); forcedVersion != "" {
+		return forcedVersion
+	}
+	return updateInfo.Version
 }
 
 func getTmpClientPath() string {

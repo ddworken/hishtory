@@ -21,6 +21,7 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -77,7 +78,9 @@ func TestParam(t *testing.T) {
 		t.Run("testRepeatedCommandAndQuery/"+tester.ShellName(), func(t *testing.T) { testRepeatedCommandAndQuery(t, tester) })
 		t.Run("testRepeatedEnableDisable/"+tester.ShellName(), func(t *testing.T) { testRepeatedEnableDisable(t, tester) })
 		t.Run("testExcludeHiddenCommand/"+tester.ShellName(), func(t *testing.T) { testExcludeHiddenCommand(t, tester) })
-		t.Run("testUpdate/"+tester.ShellName(), func(t *testing.T) { testUpdate(t, tester) })
+		t.Run("testUpdate/head->release/"+tester.ShellName(), func(t *testing.T) { testUpdateFromHeadToRelease(t, tester) })
+		t.Run("testUpdate/prev->release/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToRelease(t, tester) })
+		t.Run("testUpdate/prev->current/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToCurrent(t, tester) })
 		t.Run("testAdvancedQuery/"+tester.ShellName(), func(t *testing.T) { testAdvancedQuery(t, tester) })
 		t.Run("testIntegration/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Online) })
 		t.Run("testIntegration/offline/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Offline) })
@@ -530,7 +533,64 @@ hishtory disable`)
 	}
 }
 
-func testUpdate(t *testing.T, tester shellTester) {
+func installFromHead(t *testing.T, tester shellTester) (string, string) {
+	return installHishtory(t, tester, ""), "v0.Unknown"
+}
+
+func installFromPrev(t *testing.T, tester shellTester) (string, string) {
+	defer testutils.BackupAndRestoreEnv("HISHTORY_FORCE_CLIENT_VERSION")()
+	dd, err := lib.GetDownloadData()
+	require.NoError(t, err)
+	pv, err := shared.ParseVersionString(dd.Version)
+	require.NoError(t, err)
+	previousVersion := pv.Decrement()
+	os.Setenv("HISHTORY_FORCE_CLIENT_VERSION", previousVersion.String())
+	userSecret := installHishtory(t, tester, "")
+	out := tester.RunInteractiveShell(t, ` hishtory update`)
+	require.Regexp(t, regexp.MustCompile(`Successfully updated hishtory from v0[.]Unknown to `+previousVersion.String()), out)
+	return userSecret, previousVersion.String()
+}
+
+func updateToRelease(t *testing.T, tester shellTester) string {
+	dd, err := lib.GetDownloadData()
+	require.NoError(t, err)
+
+	// Update
+	out := tester.RunInteractiveShell(t, ` hishtory update`)
+	require.Regexp(t, regexp.MustCompile(`Successfully updated hishtory from v0[.][a-zA-Z0-9]+ to `+dd.Version), out)
+	require.NotContains(t, out, "skipping SLSA validation")
+
+	// Update again and assert that it skipped the update
+	out = tester.RunInteractiveShell(t, ` hishtory update`)
+	if strings.Count(out, "\n") != 1 || !strings.Contains(out, "is already installed") {
+		t.Fatalf("repeated hishtory update didn't skip the update, out=%#v", out)
+	}
+
+	return dd.Version
+}
+
+func updateToHead(t *testing.T, tester shellTester) string {
+	out := tester.RunInteractiveShell(t, ` /tmp/client install`)
+	require.Equal(t, out, "")
+	return "v0.Unknown"
+}
+
+func testUpdateFromHeadToRelease(t *testing.T, tester shellTester) {
+	testGenericUpdate(t, tester, installFromHead, updateToRelease)
+}
+
+func testUpdateFromPrevToRelease(t *testing.T, tester shellTester) {
+	testGenericUpdate(t, tester, installFromPrev, updateToRelease)
+}
+
+func testUpdateFromPrevToCurrent(t *testing.T, tester shellTester) {
+	testGenericUpdate(t, tester, installFromPrev, updateToHead)
+}
+
+// TODO: Can we duplicate testUpdateFromPrevToCurrent to also run with the prod server?
+
+func testGenericUpdate(t *testing.T, tester shellTester, installInitialVersion func(*testing.T, shellTester) (string, string), installUpdatedVersion func(*testing.T, shellTester) string) {
+	defer testutils.BackupAndRestoreEnv("HISHTORY_FORCE_CLIENT_VERSION")()
 	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
@@ -542,45 +602,36 @@ func testUpdate(t *testing.T, tester shellTester) {
 	}
 	// Set up
 	defer testutils.BackupAndRestore(t)()
-	userSecret := installHishtory(t, tester, "")
+	userSecret, initialVersion := installInitialVersion(t, tester)
 
 	// Record a command before the update
 	tester.RunInteractiveShell(t, "echo hello")
 
 	// Check the status command
 	out := tester.RunInteractiveShell(t, `hishtory status`)
-	if out != fmt.Sprintf("hiSHtory: v0.Unknown\nEnabled: true\nSecret Key: %s\nCommit Hash: Unknown\n", userSecret) {
-		t.Fatalf("status command has unexpected output: %#v", out)
+	require.Contains(t, out, fmt.Sprintf("hiSHtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", initialVersion, userSecret))
+	if initialVersion == "v0.Unknown" {
+		require.Contains(t, out, "Commit Hash: Unknown")
+	} else {
+		require.NotContains(t, out, "Commit Hash: Unknown")
 	}
 
 	// Update
-	out = tester.RunInteractiveShell(t, `hishtory update`)
-	isExpected, err := regexp.MatchString(`Successfully updated hishtory from v0[.]Unknown to v0.\d+`, out)
-	require.NoError(t, err, "regex failure")
-	if !isExpected {
-		t.Fatalf("hishtory update returned unexpected out=%#v", out)
-	}
-	require.NotContains(t, out, "skipping SLSA validation")
-
-	// Update again and assert that it skipped the update
-	out = tester.RunInteractiveShell(t, `hishtory update`)
-	if strings.Count(out, "\n") != 1 || !strings.Contains(out, "is already installed") {
-		t.Fatalf("repeated hishtory update didn't skip the update, out=%#v", out)
-	}
+	updatedVersion := installUpdatedVersion(t, tester)
 
 	// Then check the status command again to confirm the update worked
 	out = tester.RunInteractiveShell(t, `hishtory status`)
 	require.Contains(t, out, fmt.Sprintf("\nEnabled: true\nSecret Key: %s\nCommit Hash: ", userSecret))
-	require.NotContains(t, out, "\nCommit Hash: Unknown\n")
+	if updatedVersion != "v0.Unknown" {
+		require.NotContains(t, out, "\nCommit Hash: Unknown\n")
+	}
 
 	// Check that the history was preserved after the update
 	out = tester.RunInteractiveShell(t, "hishtory export -pipefail | grep -v '/tmp/client install'")
-	expectedOutput := "echo hello\nhishtory status\nhishtory update\nhishtory update\nhishtory status\n"
+	expectedOutput := "echo hello\nhishtory status\nhishtory status\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
-
-	// TODO: write a test that updates from v.prev to latest rather than v.Unknown to latest
 }
 
 func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {

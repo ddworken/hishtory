@@ -52,8 +52,8 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 
 	deviceId := getOptionalQueryParam(r, "source_device_id", s.isTestEnvironment)
 	if deviceId != "" {
-		hv, err := parseVersionString(version)
-		if err != nil || hv.greaterThan(parsedVersion{0, 221}) {
+		hv, err := shared.ParseVersionString(version)
+		if err != nil || hv.GreaterThan(shared.ParsedVersion{0, 221}) {
 			// Note that if we fail to parse the version string, we do return dump and deletion requests. This is necessary
 			// since tests run with v0.Unknown which obviously fails to parse.
 			dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, deviceId)

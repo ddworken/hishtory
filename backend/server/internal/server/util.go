@@ -6,7 +6,6 @@ import (
 	"net/http"
 	pprofhttp "net/http/pprof"
 	"os"
-	"regexp"
 	"runtime"
 	"strconv"
 
@@ -98,43 +97,4 @@ func checkGormError(err error) {
 
 	_, filename, line, _ := runtime.Caller(1)
 	panic(fmt.Sprintf("DB error at %s:%d: %v", filename, line, err))
-}
-
-type parsedVersion struct {
-	majorVersion int
-	minorVersion int
-}
-
-func (pv parsedVersion) greaterThan(other parsedVersion) bool {
-	if pv.majorVersion == other.majorVersion && pv.minorVersion == other.minorVersion {
-		return false
-	}
-	return !pv.lessThan(other)
-}
-
-func (pv parsedVersion) lessThan(other parsedVersion) bool {
-	if pv.majorVersion != other.majorVersion {
-		return pv.majorVersion < other.majorVersion
-	}
-	return pv.minorVersion < other.minorVersion
-}
-
-func parseVersionString(versionString string) (parsedVersion, error) {
-	re := regexp.MustCompile(`v(\d+)[.](\d+)`)
-	matches := re.FindAllStringSubmatch(versionString, -1)
-	if len(matches) != 1 {
-		return parsedVersion{}, fmt.Errorf("failed to parse version=%#v (matches=%#v)", versionString, matches)
-	}
-	if len(matches[0]) != 3 {
-		return parsedVersion{}, fmt.Errorf("failed to parse version=%#v (matches[0]=%#v)", versionString, matches[0])
-	}
-	majorVersion, err := strconv.Atoi(matches[0][1])
-	if err != nil {
-		return parsedVersion{}, fmt.Errorf("failed to parse major version %#v", matches[0][1])
-	}
-	minorVersion, err := strconv.Atoi(matches[0][2])
-	if err != nil {
-		return parsedVersion{}, fmt.Errorf("failed to parse minor version %#v", matches[0][2])
-	}
-	return parsedVersion{majorVersion, minorVersion}, nil
 }
