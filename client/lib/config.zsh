@@ -8,7 +8,7 @@ function _hishtory_add() {
     # Runs after <ENTER>, but before the command is executed
     # $1 contains the command that was run 
     _hishtory_command=$1
-    _hishtory_start_time=`date +%s`
+    _hishtory_start_time=`date +%s%N`
     if ! [ -z "$_hishtory_command " ]; then
         (hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time &)  # Background Run
         # hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time  # Foreground Run
