@@ -547,7 +547,7 @@ func installFromPrev(t *testing.T, tester shellTester) (string, string) {
 	os.Setenv("HISHTORY_FORCE_CLIENT_VERSION", previousVersion.String())
 	userSecret := installHishtory(t, tester, "")
 	out := tester.RunInteractiveShell(t, ` hishtory update`)
-	require.Regexp(t, regexp.MustCompile(`Successfully updated hishtory from v0[.]Unknown to `+previousVersion.String()), out)
+	require.Regexp(t, regexp.MustCompile(`^Successfully updated hishtory from v0[.]Unknown to `+previousVersion.String()+`\n$`), out)
 	return userSecret, previousVersion.String()
 }
 
@@ -557,14 +557,12 @@ func updateToRelease(t *testing.T, tester shellTester) string {
 
 	// Update
 	out := tester.RunInteractiveShell(t, " hishtory update\necho postupdate")
-	require.Regexp(t, regexp.MustCompile(`Successfully updated hishtory from v0[.][a-zA-Z0-9]+ to `+dd.Version), out)
+	require.Regexp(t, regexp.MustCompile(`^Successfully updated hishtory from v0[.][a-zA-Z0-9]+ to `+dd.Version+`\npostupdate\n$`), out)
 	require.NotContains(t, out, "skipping SLSA validation")
 
 	// Update again and assert that it skipped the update
 	out = tester.RunInteractiveShell(t, " hishtory update")
-	if strings.Count(out, "\n") != 1 || !strings.Contains(out, "is already installed") {
-		t.Fatalf("repeated hishtory update didn't skip the update, out=%#v", out)
-	}
+	require.Equal(t, fmt.Sprintf("Latest version (%s) is already installed\n", dd.Version), out)
 
 	return dd.Version
 }
