@@ -80,6 +80,7 @@ func TestParam(t *testing.T) {
 		t.Run("testExcludeHiddenCommand/"+tester.ShellName(), func(t *testing.T) { testExcludeHiddenCommand(t, tester) })
 		t.Run("testUpdate/head->release/"+tester.ShellName(), func(t *testing.T) { testUpdateFromHeadToRelease(t, tester) })
 		t.Run("testUpdate/prev->release/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToRelease(t, tester) })
+		t.Run("testUpdate/prev->release/prod/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToReleaseViaProd(t, tester) })
 		t.Run("testUpdate/prev->current/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToCurrent(t, tester) })
 		t.Run("testAdvancedQuery/"+tester.ShellName(), func(t *testing.T) { testAdvancedQuery(t, tester) })
 		t.Run("testIntegration/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Online) })
@@ -583,6 +584,12 @@ func testUpdateFromPrevToRelease(t *testing.T, tester shellTester) {
 
 func testUpdateFromPrevToCurrent(t *testing.T, tester shellTester) {
 	testGenericUpdate(t, tester, installFromPrev, updateToHead)
+}
+
+func testUpdateFromPrevToReleaseViaProd(t *testing.T, tester shellTester) {
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SERVER")()
+	os.Setenv("HISHTORY_SERVER", "https://api.hishtory.dev")
+	testGenericUpdate(t, tester, installFromPrev, updateToRelease)
 }
 
 // TODO: Can we duplicate testUpdateFromPrevToCurrent to also run with the prod server?
