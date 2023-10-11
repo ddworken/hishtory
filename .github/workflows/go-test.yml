@@ -22,7 +22,7 @@ jobs:
       with:
         go-version: 1.21
     - name: Linux Setup
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'ubuntu-latest'}}
+      if: ${{ matrix.os == 'ubuntu-latest'}}
       run: |
 
           # Install our dependencies
@@ -35,7 +35,7 @@ jobs:
           # Set a consistent hostname so we can run tests that depend on it
           sudo hostname ghaction-runner-hostname  
     - name: MacOS Setup
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'macos-latest'}}
+      if: ${{ matrix.os == 'macos-latest'}}
       run: |
 
           # Install our dependencies
@@ -44,7 +44,7 @@ jobs:
           # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname
     - name: MacOS Docker Setup
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && matrix.os == 'macos-latest'}}
+      if: ${{ matrix.os == 'macos-latest'}}
       continue-on-error: true
       run: |
           # Install docker so it can be used for datadog
@@ -52,12 +52,18 @@ jobs:
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') && github.ref == 'refs/heads/master' }}
+      if: ${{ github.ref == 'refs/heads/master' }}
       uses: datadog/agent-github-action@v1.3
       with:
           api_key: ${{ secrets.DD_API_KEY }}
+    - name: Extra Delay
+      if: ${{ startsWith(github.event.head_commit.message, 'Release') }}
+      run: |
+
+        # If this is a release, then sleep for before starting the tests so that the newest version is released
+        # and pushed to the updated server before we run the tests
+        sleep 1200 # 20 minutes
     - name: Go test
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
       run: |

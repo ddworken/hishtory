@@ -16,7 +16,6 @@ jobs:
       with:
         go-version: 1.21
     - name: Docker Compose setup 
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           set -euo pipefail
           sudo apt-get update  
@@ -31,7 +30,6 @@ jobs:
           ./hishtory install
     - name: Docker Compose test 
       shell: bash -il {0} 
-      if: ${{ !startsWith(github.event.head_commit.message, 'Release') }}
       run: |
           set -eo pipefail
           export HISHTORY_SERVER=http://localhost
