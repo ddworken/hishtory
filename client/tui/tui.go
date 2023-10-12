@@ -583,7 +583,7 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 		Foreground(lipgloss.Color("229")).
 		Background(lipgloss.Color("57")).
 		Bold(false)
-	if config.BetaMode {
+	if config.HighlightMatches {
 		MATCH_NOTHING_REGEXP := regexp.MustCompile("a^")
 		s.RenderCell = func(model table.Model, value string, position table.CellPosition) string {
 			var re *regexp.Regexp

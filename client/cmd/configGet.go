@@ -30,6 +30,16 @@ var getEnableControlRCmd = &cobra.Command{
 	},
 }
 
+var getHighlightMatchesCmd = &cobra.Command{
+	Use:   "highlight-matches",
+	Short: "Whether hishtory highlights matches in the search results",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.HighlightMatches)
+	},
+}
+
 var getFilterDuplicateCommandsCmd = &cobra.Command{
 	Use:   "filter-duplicate-commands",
 	Short: "Whether hishtory filters out duplicate commands when displaying your history",
@@ -98,4 +108,5 @@ func init() {
 	configGetCmd.AddCommand(getTimestampFormatCmd)
 	configGetCmd.AddCommand(getCustomColumnsCmd)
 	configGetCmd.AddCommand(getBetaModeCmd)
+	configGetCmd.AddCommand(getHighlightMatchesCmd)
 }

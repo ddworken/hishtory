@@ -185,24 +185,27 @@ func handleDbUpgrades(ctx context.Context) error {
 }
 
 // Handles people running `hishtory update` from an old version of hishtory that
-// doesn't support the control-r integration, so that they'll get control-r enabled
-// but someone who has it explicitly disabled will keep it that way.
+// doesn't support certain config options that we now default to true. This ensures
+// that upgrades get them enabled by default, but if someone has it explicitly disabled,
+// we keep it that way.
 func handleUpgradedFeatures() error {
 	configContents, err := hctx.GetConfigContents()
 	if err != nil {
 		// No config, so this is a new install and thus there is nothing to do
 		return nil
 	}
-	if strings.Contains(string(configContents), "enable_control_r_search") {
-		// control-r search is already configured, so there is nothing to do
-		return nil
-	}
-	// Enable control-r search
 	config, err := hctx.GetConfig()
 	if err != nil {
 		return err
 	}
-	config.ControlRSearchEnabled = true
+	if !strings.Contains(string(configContents), "enable_control_r_search") {
+		// control-r search is not yet configured, so enable it
+		config.ControlRSearchEnabled = true
+	}
+	if !strings.Contains(string(configContents), "highlight_matches") {
+		// highlighting is not yet configured, so enable it
+		config.HighlightMatches = true
+	}
 	return hctx.SetConfig(&config)
 }
 

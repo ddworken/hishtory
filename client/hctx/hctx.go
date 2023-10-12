@@ -195,6 +195,8 @@ type ClientConfig struct {
 	// Beta mode, enables unspecified additional beta features
 	// Currently: This enables pre-saving of history entries to better handle long-running commands
 	BetaMode bool `json:"beta_mode"`
+	// Whether to highlight matches in search results
+	HighlightMatches bool `json:"highlight_matches"`
 }
 
 type CustomColumnDefinition struct {

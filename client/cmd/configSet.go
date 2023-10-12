@@ -70,6 +70,23 @@ var setBetaModeCommand = &cobra.Command{
 	},
 }
 
+var setHighlightMatchesCmd = &cobra.Command{
+	Use:       "highlight-matches",
+	Short:     "Enable highlight-matches to enable highlighting of matches in the search results",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		val := args[0]
+		if val != "true" && val != "false" {
+			log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.HighlightMatches = (val == "true")
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setDisplayedColumnsCmd = &cobra.Command{
 	Use:   "displayed-columns",
 	Short: "The list of columns that hishtory displays",
@@ -101,4 +118,5 @@ func init() {
 	configSetCmd.AddCommand(setDisplayedColumnsCmd)
 	configSetCmd.AddCommand(setTimestampFormatCmd)
 	configSetCmd.AddCommand(setBetaModeCommand)
+	configSetCmd.AddCommand(setHighlightMatchesCmd)
 }

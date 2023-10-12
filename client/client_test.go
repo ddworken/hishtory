@@ -1692,7 +1692,6 @@ func testTui_scroll(t testing.TB) {
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
-
 }
 
 func testTui_color(t testing.TB) {
@@ -1705,6 +1704,7 @@ func testTui_color(t testing.TB) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t)
+	tester.RunInteractiveShell(t, ` hishtory config-set highlight-matches false`)
 
 	// Capture the TUI with full colored output, note that this golden will be harder to undersand
 	// from inspection and primarily servers to detect unintended changes in hishtory's output.
@@ -1717,9 +1717,9 @@ func testTui_color(t testing.TB) {
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
 
-	// And one more time with beta-mode for highlighting matches
-	tester.RunInteractiveShell(t, ` hishtory config-set beta-mode true`)
-	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
+	// And one more time with highlight-matches
+	tester.RunInteractiveShell(t, ` hishtory config-set highlight-matches true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get highlight-matches`)))
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
