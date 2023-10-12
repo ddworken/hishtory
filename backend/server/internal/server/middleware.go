@@ -108,12 +108,15 @@ func withLogging(s *statsd.Client, out io.Writer) Middleware {
 
 // withPanicGuard is the last defence from a panic. it will log them and return a 503 error
 // to the client and prevent the http server from breaking
-func withPanicGuard() Middleware {
+func withPanicGuard(s *statsd.Client) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Printf("panic: %s\n", r)
+					if s != nil {
+						s.Incr("hishtory.error", []string{"handler:" + getFunctionName(h)}, 1.0)
+					}
 					// Note that we need to return a 503 error code since that is the error handled by the client in lib.IsOfflineError
 					rw.WriteHeader(http.StatusServiceUnavailable)
 				}

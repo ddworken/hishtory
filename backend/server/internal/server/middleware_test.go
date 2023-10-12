@@ -86,7 +86,7 @@ func TestPanicGuard(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add("X-Real-Ip", "127.0.0.1")
-	wrappedHandler := withPanicGuard()(handler)
+	wrappedHandler := withPanicGuard(nil)(handler)
 
 	var panicked bool
 	func() {
@@ -115,7 +115,7 @@ func TestPanicGuardNoPanic(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add("X-Real-Ip", "127.0.0.1")
 
-	wrappedHandler := withPanicGuard()(handler)
+	wrappedHandler := withPanicGuard(nil)(handler)
 
 	var panicked bool
 	func() {
@@ -174,7 +174,7 @@ func TestMergeMiddlewares(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var out strings.Builder
 			middlewares := mergeMiddlewares(
-				withPanicGuard(),
+				withPanicGuard(nil),
 				withLogging(nil, &out),
 			)
 

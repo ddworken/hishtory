@@ -95,7 +95,7 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 		}()
 	}
 	middlewares := mergeMiddlewares(
-		withPanicGuard(),
+		withPanicGuard(s.statsd),
 		withLogging(s.statsd, os.Stdout),
 	)
 
