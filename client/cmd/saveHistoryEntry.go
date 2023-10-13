@@ -297,6 +297,7 @@ func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest)
 		lib.CheckFatalError(err)
 		for _, dumpRequest := range dumpRequests {
 			if !config.IsOffline {
+				// TODO: Test whether this fails if the data is extremely large? It may need to be chunked
 				_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
 				lib.CheckFatalError(err)
 			}
