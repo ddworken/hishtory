@@ -1335,9 +1335,9 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 
 	// Check that hishtory export has the commands
 	out := tester.RunInteractiveShell(t, `hishtory export `+randomCmdUuid[:5])
-	expectedOutput := strings.ReplaceAll(`echo UUID-foo
+	expectedOutput := strings.ReplaceAll(`echo UUID-fishcommand
+echo UUID-foo
 echo UUID-bar
-echo UUID-fishcommand
 `, "UUID", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
