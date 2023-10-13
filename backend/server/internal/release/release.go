@@ -31,7 +31,7 @@ func UpdateReleaseVersion() error {
 		return fmt.Errorf("failed to read github API response body: %w", err)
 	}
 	if resp.StatusCode == 403 && strings.Contains(string(respBody), "API rate limit exceeded for ") {
-		fmt.Printf("failed to update release version due to 403 err, body=%#v\n", string(respBody))
+		fmt.Printf("skipping updating release version due to 403 rate limiting err, body=%#v\n", string(respBody))
 		return nil
 	}
 	if resp.StatusCode != 200 {
