@@ -18,16 +18,19 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	_ "embed" // for embedding config.sh
 
+	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 
 	"github.com/araddon/dateparse"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/rodaine/table"
+	"github.com/schollz/progressbar/v3"
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
@@ -258,6 +261,48 @@ func isBashWeirdness(cmd string) bool {
 	return BASH_FIRST_COMMAND_BUG_REGEX.MatchString(cmd)
 }
 
+func countLinesInFile(filename string) (int, error) {
+	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+		return 0, nil
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		return 0, err
+	}
+	buf := make([]byte, 32*1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := file.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+
+		case err != nil:
+			return count, err
+		}
+	}
+}
+
+func countLinesInFiles(filenames ...string) (int, error) {
+	total := 0
+	for _, f := range filenames {
+		l, err := countLinesInFile(f)
+		if err != nil {
+			return 0, err
+		}
+		total += l
+	}
+	return total, nil
+}
+
+// The number of entries where if we're importing more than this many entries, the import is likely to be
+// slow, and it is then worth displaying a progress bar.
+const NUM_IMPORTED_ENTRIES_SLOW int = 20_000
+
 func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error) {
 	config := hctx.GetConf(ctx)
 	if config.HaveCompletedInitialImport && !force {
@@ -265,15 +310,24 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		return 0, nil
 	}
 	homedir := hctx.GetHome(ctx)
-	bashHistPath := filepath.Join(homedir, ".bash_history")
-	zshHistPath := filepath.Join(homedir, ".zsh_history")
-	entriesIter := concatIterators(readFileToIterator(bashHistPath), readFileToIterator(zshHistPath), parseFishHistory(homedir))
-	if histfile := os.Getenv("HISTFILE"); histfile != "" && histfile != zshHistPath && histfile != bashHistPath {
-		entriesIter = concatIterators(entriesIter, readFileToIterator(histfile))
+	inputFiles := []string{
+		filepath.Join(homedir, ".bash_history"),
+		filepath.Join(homedir, ".zsh_history"),
+	}
+	if histfile := os.Getenv("HISTFILE"); histfile != "" && !slices.Contains[string](inputFiles, histfile) {
+		inputFiles = append(inputFiles, histfile)
 	}
 	zHistPath := filepath.Join(homedir, ".zhistory")
-	if zHistPath != os.Getenv("HISTFILE") {
-		entriesIter = concatIterators(entriesIter, readFileToIterator(zHistPath))
+	if !slices.Contains(inputFiles, zHistPath) {
+		inputFiles = append(inputFiles, zHistPath)
+	}
+	entriesIter := parseFishHistory(homedir)
+	for _, file := range inputFiles {
+		entriesIter = concatIterators(entriesIter, readFileToIterator(file))
+	}
+	totalNumEntries, err := countLinesInFiles(inputFiles...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count input lines during hishtory import: %w", err)
 	}
 	if shouldReadStdin {
 		extraEntries, err := readStdin()
@@ -281,7 +335,13 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			return 0, fmt.Errorf("failed to read stdin: %w", err)
 		}
 		entriesIter = concatIterators(entriesIter, Values(extraEntries))
+		totalNumEntries += len(extraEntries)
 	}
+	fishLines, err := countLinesInFile(getFishHistoryPath(homedir))
+	if err != nil {
+		return 0, fmt.Errorf("failed to count fish history lines during hishtory import: %w", err)
+	}
+	totalNumEntries += fishLines
 	db := hctx.GetDb(ctx)
 	currentUser, err := user.Current()
 	if err != nil {
@@ -297,6 +357,12 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	importTimestamp := time.Now().UTC()
 	batchSize := 100
 	importEntryId := uuid.Must(uuid.NewRandom()).String()
+	var bar *progressbar.ProgressBar
+	if totalNumEntries > NUM_IMPORTED_ENTRIES_SLOW {
+		fmt.Println("Importing existing history entries")
+		bar = progressbar.Default(int64(totalNumEntries))
+		defer bar.Finish()
+	}
 	entriesIter(func(cmd string, err error) bool {
 		if err != nil {
 			iteratorError = err
@@ -339,6 +405,12 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			batch = make([]data.HistoryEntry, 0)
 		}
 		numEntriesImported += 1
+		if bar != nil {
+			_ = bar.Add(1)
+			if numEntriesImported > totalNumEntries {
+				bar.ChangeMax(-1)
+			}
+		}
 		return true
 	})
 	if iteratorError != nil {
@@ -389,8 +461,12 @@ func readStdin() ([]string, error) {
 	return ret, nil
 }
 
+func getFishHistoryPath(homedir string) string {
+	return filepath.Join(homedir, ".local/share/fish/fish_history")
+}
+
 func parseFishHistory(homedir string) Seq2[string, error] {
-	lines := readFileToIterator(filepath.Join(homedir, ".local/share/fish/fish_history"))
+	lines := readFileToIterator(getFishHistoryPath(homedir))
 	return func(yield func(string, error) bool) bool {
 		return lines(func(line string, err error) bool {
 			if err != nil {
@@ -646,6 +722,35 @@ func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) 
 	return jsonValue, nil
 }
 
+func forEach[T any](arr []T, numThreads int, fn func(T) error) error {
+	wg := &sync.WaitGroup{}
+	wg.Add(len(arr))
+
+	limiter := make(chan bool, numThreads)
+
+	var errors []error
+	for _, item := range arr {
+		limiter <- true
+		go func(x T) {
+			defer wg.Done()
+			err := fn(x)
+			if err != nil {
+				errors = append(errors, err)
+			}
+			<-limiter
+		}(item)
+		if len(errors) > 0 {
+			return errors[0]
+		}
+	}
+
+	wg.Wait()
+	if len(errors) > 0 {
+		return errors[0]
+	}
+	return nil
+}
+
 func Reupload(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
@@ -655,7 +760,15 @@ func Reupload(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to reupload due to failed search: %w", err)
 	}
-	for _, chunk := range shared.Chunks(entries, 100) {
+	var bar *progressbar.ProgressBar
+	if len(entries) > NUM_IMPORTED_ENTRIES_SLOW {
+		fmt.Println("Persisting history entries")
+		bar = progressbar.Default(int64(len(entries)))
+		defer bar.Finish()
+	}
+	chunkSize := 500
+	chunks := shared.Chunks(entries, chunkSize)
+	return forEach(chunks, 10, func(chunk []*data.HistoryEntry) error {
 		jsonValue, err := EncryptAndMarshal(config, chunk)
 		if err != nil {
 			return fmt.Errorf("failed to reupload due to failed encryption: %w", err)
@@ -664,8 +777,11 @@ func Reupload(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to reupload due to failed POST: %w", err)
 		}
-	}
-	return nil
+		if bar != nil {
+			_ = bar.Add(chunkSize)
+		}
+		return nil
+	})
 }
 
 func RetrieveAdditionalEntriesFromRemote(ctx context.Context) error {
