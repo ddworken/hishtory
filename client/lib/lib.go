@@ -53,6 +53,7 @@ var GitCommit string = "Unknown"
 // Funnily enough, 256KB actually wasn't enough. See https://github.com/ddworken/hishtory/issues/93
 var maxSupportedLineLengthForImport = 512_000
 
+// TODO: move this function to install.go
 func Setup(userSecret string, isOffline bool) error {
 	if userSecret == "" {
 		userSecret = uuid.Must(uuid.NewRandom()).String()
@@ -82,12 +83,13 @@ func Setup(userSecret string, isOffline bool) error {
 	if config.IsOffline {
 		return nil
 	}
-	_, err = ApiGet("/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	ctx := hctx.MakeContext()
+	_, err = ApiGet(ctx, "/api/v1/register?user_id="+data.UserId(userSecret)+"&device_id="+config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %w", err)
 	}
 
-	respBody, err := ApiGet("/api/v1/bootstrap?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId)
+	respBody, err := ApiGet(ctx, "/api/v1/bootstrap?user_id="+data.UserId(userSecret)+"&device_id="+config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap device from the backend: %w", err)
 	}
@@ -548,8 +550,8 @@ func getServerHostname() string {
 	return "https://api.hishtory.dev"
 }
 
-func GetDownloadData() (shared.UpdateInfo, error) {
-	respBody, err := ApiGet("/api/v1/download")
+func GetDownloadData(ctx context.Context) (shared.UpdateInfo, error) {
+	respBody, err := ApiGet(ctx, "/api/v1/download")
 	if err != nil {
 		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %w", err)
 	}
@@ -565,7 +567,7 @@ func httpClient() *http.Client {
 	return &http.Client{}
 }
 
-func ApiGet(path string) ([]byte, error) {
+func ApiGet(ctx context.Context, path string) ([]byte, error) {
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
@@ -575,6 +577,8 @@ func ApiGet(path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to create GET: %w", err)
 	}
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
+	req.Header.Set("X-Hishtory-Device-Id", hctx.GetConf(ctx).DeviceId)
+	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
 	resp, err := httpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET %s%s: %w", getServerHostname(), path, err)
@@ -592,17 +596,19 @@ func ApiGet(path string) ([]byte, error) {
 	return respBody, nil
 }
 
-func ApiPost(path, contentType string, data []byte) ([]byte, error) {
+func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]byte, error) {
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	req, err := http.NewRequest("POST", getServerHostname()+path, bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", getServerHostname()+path, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create POST: %w", err)
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
+	req.Header.Set("X-Hishtory-Device-Id", hctx.GetConf(ctx).DeviceId)
+	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
 	resp, err := httpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to POST %s: %w", getServerHostname()+path, err)
@@ -620,7 +626,7 @@ func ApiPost(path, contentType string, data []byte) ([]byte, error) {
 	return respBody, nil
 }
 
-func IsOfflineError(err error) bool {
+func IsOfflineError(ctx context.Context, err error) bool {
 	if err == nil {
 		return false
 	}
@@ -637,7 +643,7 @@ func IsOfflineError(err error) bool {
 		strings.Contains(err.Error(), "connect: connection refused") {
 		return true
 	}
-	if !isHishtoryServerUp() {
+	if !isHishtoryServerUp(ctx) {
 		// If the backend server is down, then treat all errors as offline errors
 		return true
 	}
@@ -645,8 +651,8 @@ func IsOfflineError(err error) bool {
 	return false
 }
 
-func isHishtoryServerUp() bool {
-	_, err := ApiGet("/api/v1/ping")
+func isHishtoryServerUp(ctx context.Context) bool {
+	_, err := ApiGet(ctx, "/api/v1/ping")
 	return err == nil
 }
 
@@ -773,7 +779,7 @@ func Reupload(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to reupload due to failed encryption: %w", err)
 		}
-		_, err = ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		_, err = ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 		if err != nil {
 			return fmt.Errorf("failed to reupload due to failed POST: %w", err)
 		}
@@ -790,8 +796,8 @@ func RetrieveAdditionalEntriesFromRemote(ctx context.Context) error {
 	if config.IsOffline {
 		return nil
 	}
-	respBody, err := ApiGet("/api/v1/query?device_id=" + config.DeviceId + "&user_id=" + data.UserId(config.UserSecret))
-	if IsOfflineError(err) {
+	respBody, err := ApiGet(ctx, "/api/v1/query?device_id="+config.DeviceId+"&user_id="+data.UserId(config.UserSecret))
+	if IsOfflineError(ctx, err) {
 		return nil
 	}
 	if err != nil {
@@ -817,8 +823,8 @@ func ProcessDeletionRequests(ctx context.Context) error {
 	if config.IsOffline {
 		return nil
 	}
-	resp, err := ApiGet("/api/v1/get-deletion-requests?user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId)
-	if IsOfflineError(err) {
+	resp, err := ApiGet(ctx, "/api/v1/get-deletion-requests?user_id="+data.UserId(config.UserSecret)+"&device_id="+config.DeviceId)
+	if IsOfflineError(ctx, err) {
 		return nil
 	}
 	if err != nil {
@@ -856,7 +862,7 @@ func GetBanner(ctx context.Context) ([]byte, error) {
 		return []byte{}, nil
 	}
 	url := "/api/v1/banner?commit_hash=" + GitCommit + "&user_id=" + data.UserId(config.UserSecret) + "&device_id=" + config.DeviceId + "&version=" + Version + "&forced_banner=" + os.Getenv("FORCED_BANNER")
-	return ApiGet(url)
+	return ApiGet(ctx, url)
 }
 
 func parseTimeGenerously(input string) (time.Time, error) {
@@ -1110,12 +1116,12 @@ func unescape(query string) string {
 	return string(newQuery)
 }
 
-func SendDeletionRequest(deletionRequest shared.DeletionRequest) error {
+func SendDeletionRequest(ctx context.Context, deletionRequest shared.DeletionRequest) error {
 	data, err := json.Marshal(deletionRequest)
 	if err != nil {
 		return err
 	}
-	_, err = ApiPost("/api/v1/add-deletion-request", "application/json", data)
+	_, err = ApiPost(ctx, "/api/v1/add-deletion-request", "application/json", data)
 	if err != nil {
 		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %w", err)
 	}

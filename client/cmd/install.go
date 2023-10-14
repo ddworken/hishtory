@@ -115,7 +115,7 @@ var uninstallCmd = &cobra.Command{
 		}
 		reqBody, err := json.Marshal(feedback)
 		lib.CheckFatalError(err)
-		_, _ = lib.ApiPost("/api/v1/feedback", "application/json", reqBody)
+		_, _ = lib.ApiPost(ctx, "/api/v1/feedback", "application/json", reqBody)
 		lib.CheckFatalError(uninstall(ctx))
 	},
 }

@@ -675,7 +675,7 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	dr.Messages.Ids = append(dr.Messages.Ids,
 		shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 	)
-	return lib.SendDeletionRequest(dr)
+	return lib.SendDeletionRequest(ctx, dr)
 }
 
 func TuiQuery(ctx context.Context, initialQuery string) error {
@@ -712,7 +712,7 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	go func() {
 		banner, err := lib.GetBanner(ctx)
 		if err != nil {
-			if lib.IsOfflineError(err) {
+			if lib.IsOfflineError(ctx, err) {
 				p.Send(offlineMsg{})
 			} else {
 				p.Send(err)

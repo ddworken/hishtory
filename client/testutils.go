@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -351,7 +353,7 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 }
 
 func assertNoLeakedConnections(t testing.TB) {
-	resp, err := lib.ApiGet("/api/v1/get-num-connections")
+	resp, err := lib.ApiGet(makeTestOnlyContextWithFakeConfig(), "/api/v1/get-num-connections")
 	require.NoError(t, err)
 	numConnections, err := strconv.Atoi(string(resp))
 	require.NoError(t, err)
@@ -366,6 +368,21 @@ func getPidofCommand() string {
 		return "pgrep"
 	}
 	return "pidof"
+}
+
+func makeTestOnlyContextWithFakeConfig() context.Context {
+	fakeConfig := hctx.ClientConfig{
+		UserSecret: "FAKE_TEST_DEVICE",
+		DeviceId:   "FAKE_TEST_DEVICE",
+	}
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, hctx.ConfigCtxKey, &fakeConfig)
+	// Note: We don't create a DB here
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		panic(fmt.Errorf("failed to get homedir: %w", err))
+	}
+	return context.WithValue(ctx, hctx.HomedirCtxKey, homedir)
 }
 
 type deviceSet struct {

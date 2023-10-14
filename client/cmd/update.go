@@ -30,7 +30,7 @@ var updateCmd = &cobra.Command{
 
 func update(ctx context.Context) error {
 	// Download the binary
-	downloadData, err := lib.GetDownloadData()
+	downloadData, err := lib.GetDownloadData(ctx)
 	if err != nil {
 		return err
 	}

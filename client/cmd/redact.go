@@ -90,7 +90,7 @@ func deleteOnRemoteInstances(ctx context.Context, historyEntries []*data.History
 			shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 		)
 	}
-	return lib.SendDeletionRequest(deletionRequest)
+	return lib.SendDeletionRequest(ctx, deletionRequest)
 }
 
 func init() {

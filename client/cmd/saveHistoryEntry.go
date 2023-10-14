@@ -58,8 +58,8 @@ func maybeSubmitPendingDeletionRequests(ctx context.Context) error {
 
 	// Upload the missing deletion requests
 	for _, dr := range config.PendingDeletionRequests {
-		err := lib.SendDeletionRequest(dr)
-		if lib.IsOfflineError(err) {
+		err := lib.SendDeletionRequest(ctx, dr)
+		if lib.IsOfflineError(ctx, err) {
 			// We're still offline, so nothing to do
 			return nil
 		}
@@ -94,7 +94,7 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+	_, err = lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
 	if err != nil {
 		// Failed to upload the history entry, so we must still be offline. So just return nil and we'll try again later.
 		return nil
@@ -110,9 +110,9 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 	return nil
 }
 
-func handlePotentialUploadFailure(err error, config *hctx.ClientConfig, entryTimestamp time.Time) {
+func handlePotentialUploadFailure(ctx context.Context, err error, config *hctx.ClientConfig, entryTimestamp time.Time) {
 	if err != nil {
-		if lib.IsOfflineError(err) {
+		if lib.IsOfflineError(ctx, err) {
 			hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
 			if !config.HaveMissedUploads {
 				config.HaveMissedUploads = true
@@ -165,8 +165,8 @@ func presaveHistoryEntry(ctx context.Context) {
 	if !config.IsOffline {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
-		_, err = lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		handlePotentialUploadFailure(err, config, entry.StartTime)
+		_, err = lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		handlePotentialUploadFailure(ctx, err, config, entry.StartTime)
 	}
 }
 
@@ -197,8 +197,8 @@ func saveHistoryEntry(ctx context.Context) {
 	if !config.IsOffline {
 		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
-		w, err := lib.ApiPost("/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
-		handlePotentialUploadFailure(err, config, entry.StartTime)
+		w, err := lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		handlePotentialUploadFailure(ctx, err, config, entry.StartTime)
 		if err == nil {
 			submitResponse := shared.SubmitResponse{}
 			err := json.Unmarshal(w, &submitResponse)
@@ -264,8 +264,8 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error 
 			// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
 			shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
 		)
-		err = lib.SendDeletionRequest(deletionRequest)
-		if lib.IsOfflineError(err) {
+		err = lib.SendDeletionRequest(ctx, deletionRequest)
+		if lib.IsOfflineError(ctx, err) {
 			// Cache the deletion request to send once the client comes back online
 			config.PendingDeletionRequests = append(config.PendingDeletionRequests, deletionRequest)
 			return hctx.SetConfig(config)
@@ -298,7 +298,7 @@ func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest)
 		for _, dumpRequest := range dumpRequests {
 			if !config.IsOffline {
 				// TODO: Test whether this fails if the data is extremely large? It may need to be chunked
-				_, err := lib.ApiPost("/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+				_, err := lib.ApiPost(ctx, "/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
 				lib.CheckFatalError(err)
 			}
 		}

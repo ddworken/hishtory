@@ -46,7 +46,7 @@ func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag s
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
-	resp, err := ApiGet("/api/v1/slsa-status?newVersion=" + versionTag)
+	resp, err := ApiGet(ctx, "/api/v1/slsa-status?newVersion="+versionTag)
 	if err != nil {
 		return nil
 	}

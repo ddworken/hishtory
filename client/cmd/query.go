@@ -65,7 +65,7 @@ func export(ctx context.Context, query string) {
 	db := hctx.GetDb(ctx)
 	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
-		if lib.IsOfflineError(err) {
+		if lib.IsOfflineError(ctx, err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
 		} else {
 			lib.CheckFatalError(err)
@@ -82,7 +82,7 @@ func query(ctx context.Context, query string) {
 	db := hctx.GetDb(ctx)
 	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
 	if err != nil {
-		if lib.IsOfflineError(err) {
+		if lib.IsOfflineError(ctx, err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
 		} else {
 			lib.CheckFatalError(err)
@@ -97,7 +97,7 @@ func query(ctx context.Context, query string) {
 
 func displayBannerIfSet(ctx context.Context) error {
 	respBody, err := lib.GetBanner(ctx)
-	if lib.IsOfflineError(err) {
+	if lib.IsOfflineError(ctx, err) {
 		return nil
 	}
 	if err != nil {

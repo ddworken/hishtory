@@ -540,7 +540,7 @@ func installFromHead(t *testing.T, tester shellTester) (string, string) {
 
 func installFromPrev(t *testing.T, tester shellTester) (string, string) {
 	defer testutils.BackupAndRestoreEnv("HISHTORY_FORCE_CLIENT_VERSION")()
-	dd, err := lib.GetDownloadData()
+	dd, err := lib.GetDownloadData(makeTestOnlyContextWithFakeConfig())
 	require.NoError(t, err)
 	pv, err := shared.ParseVersionString(dd.Version)
 	require.NoError(t, err)
@@ -553,7 +553,7 @@ func installFromPrev(t *testing.T, tester shellTester) (string, string) {
 }
 
 func updateToRelease(t *testing.T, tester shellTester) string {
-	dd, err := lib.GetDownloadData()
+	dd, err := lib.GetDownloadData(makeTestOnlyContextWithFakeConfig())
 	require.NoError(t, err)
 
 	// Update
@@ -962,9 +962,10 @@ func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	secretKey := installHishtory(t, tester, "")
 
 	// Confirm there are no pending dump requests
-	config := hctx.GetConf(hctx.MakeContext())
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
 	deviceId1 := config.DeviceId
-	respBytes, err := lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	respBytes, err := lib.ApiGet(ctx, "/api/v1/get-dump-requests?user_id="+data.UserId(secretKey)+"&device_id="+deviceId1)
 	resp := strings.TrimSpace(string(respBytes))
 	require.NoError(t, err, "failed to get pending dump requests")
 	require.Equalf(t, "[]", resp, "there are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), resp)
@@ -988,14 +989,14 @@ echo other`)
 	restoreFirstInstallation := testutils.BackupAndRestoreWithId(t, "-install1")
 
 	// Wipe the DB to simulate entries getting deleted because they've already been read and expired
-	_, err = lib.ApiGet("/api/v1/wipe-db-entries")
+	_, err = lib.ApiGet(ctx, "/api/v1/wipe-db-entries")
 	require.NoError(t, err, "failed to wipe the remote DB")
 
 	// Install a new one (with the same secret key but a diff device id)
 	installHishtory(t, tester, secretKey)
 
 	// Confirm there is now a pending dump requests that the first device should respond to
-	respBytes, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	respBytes, err = lib.ApiGet(ctx, "/api/v1/get-dump-requests?user_id="+data.UserId(secretKey)+"&device_id="+deviceId1)
 	resp = strings.TrimSpace(string(respBytes))
 	require.NoError(t, err, "failed to get pending dump requests")
 	require.NotEqualf(t, "[]", resp, "There are no pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
@@ -1025,7 +1026,7 @@ echo other`)
 	}
 
 	// Confirm there are no pending dump requests for the first device
-	respBytes, err = lib.ApiGet("/api/v1/get-dump-requests?user_id=" + data.UserId(secretKey) + "&device_id=" + deviceId1)
+	respBytes, err = lib.ApiGet(ctx, "/api/v1/get-dump-requests?user_id="+data.UserId(secretKey)+"&device_id="+deviceId1)
 	resp = strings.TrimSpace(string(respBytes))
 	require.NoError(t, err, "failed to get pending dump requests")
 	require.Equalf(t, "[]", resp, "There are pending dump requests! user_id=%#v, resp=%#v", data.UserId(secretKey), string(resp))
@@ -1090,7 +1091,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	userSecret := matches[1]
 
 	// Test the status subcommand
-	downloadData, err := lib.GetDownloadData()
+	downloadData, err := lib.GetDownloadData(makeTestOnlyContextWithFakeConfig())
 	require.NoError(t, err)
 	out = tester.RunInteractiveShell(t, `hishtory status`)
 	expectedOut := fmt.Sprintf("hiSHtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)
