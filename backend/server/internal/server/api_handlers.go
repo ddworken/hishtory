@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -121,8 +122,11 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	// blocking the entire response. This does have a potential race condition, but that is fine.
 	if s.isProductionEnvironment {
 		go func() {
-			span, ctx := tracer.StartSpanFromContext(ctx, "apiQueryHandler.incrementReadCount")
-			err := s.db.IncrementEntryReadCountsForDevice(ctx, deviceId)
+			span, backgroundCtx := tracer.StartSpanFromContext(context.Background(), "apiQueryHandler.incrementReadCount")
+			err := s.db.IncrementEntryReadCountsForDevice(backgroundCtx, deviceId)
+			if err != nil {
+				fmt.Printf("failed to increment read counts: %v\n", err)
+			}
 			span.Finish(tracer.WithError(err))
 		}()
 	} else {
