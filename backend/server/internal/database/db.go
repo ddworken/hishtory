@@ -68,6 +68,8 @@ func (db *DB) CreateIndices() error {
 	// Note: If adding a new index here, consider manually running it on the prod DB using CONCURRENTLY to
 	// make server startup non-blocking. The benefit of this function is primarily for other people so they
 	// don't have to manually create these indexes.
+	// Example:
+	// CREATE INDEX CONCURRENTLY IF NOT EXISTS redact_idx ON enc_history_entries USING btree(user_id, device_id, date)
 	indices := []struct {
 		name    string
 		table   string
