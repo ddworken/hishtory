@@ -182,11 +182,26 @@ func (db *DB) DumpRequestDeleteForUserAndDevice(ctx context.Context, userID, dev
 	return nil
 }
 
-func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, request *shared.DeletionRequest) (int64, error) {
+func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, requests []*shared.DeletionRequest) (int64, error) {
+	if len(requests) == 0 {
+		return 0, nil
+	}
+	deletedMessages := make([]shared.MessageIdentifier, 0)
+	userId := requests[0].UserId
+	for _, request := range requests {
+		deletedMessages = append(deletedMessages, request.Messages.Ids...)
+		if request.UserId != userId {
+			return 0, fmt.Errorf("deletion requests contain mismatched user IDs: %s vs %s", request.UserId, userId)
+		}
+	}
+	return db.DeleteMessagesFromBackend(ctx, userId, deletedMessages)
+}
+
+func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, deletedMessages []shared.MessageIdentifier) (int64, error) {
 	tx := db.WithContext(ctx).Where("false")
-	for _, message := range request.Messages.Ids {
+	for _, message := range deletedMessages {
 		// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
-		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", request.UserId, message.DeviceId, message.EndTime, message.EntryId))
+		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.DeviceId, message.EndTime, message.EntryId))
 	}
 	result := tx.Delete(&shared.EncHistoryEntry{})
 	if tx.Error != nil {
@@ -237,9 +252,9 @@ func (db *DB) DeletionRequestCreate(ctx context.Context, request *shared.Deletio
 		}
 	}
 
-	numDeleted, err := db.ApplyDeletionRequestsToBackend(ctx, request)
+	numDeleted, err := db.DeleteMessagesFromBackend(ctx, userID, request.Messages.Ids)
 	if err != nil {
-		return fmt.Errorf("db.ApplyDeletionRequestsToBackend: %w", err)
+		return fmt.Errorf("db.DeleteMessagesFromBackend: %w", err)
 	}
 	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
 

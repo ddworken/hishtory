@@ -105,10 +105,8 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	// Delete any entries that match a pending deletion request
 	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
 	checkGormError(err)
-	checkGormError(shared.ForEach(deletionRequests, 4, func(delRequest *shared.DeletionRequest) error {
-		_, err := s.db.ApplyDeletionRequestsToBackend(r.Context(), delRequest)
-		return err
-	}))
+	_, err = s.db.ApplyDeletionRequestsToBackend(r.Context(), deletionRequests)
+	checkGormError(err)
 
 	// Then retrieve
 	historyEntries, err := s.db.HistoryEntriesForDevice(r.Context(), deviceId, 5)
