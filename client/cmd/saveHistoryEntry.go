@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -186,7 +187,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.BetaMode {
-		lib.CheckFatalError(deletePresavedEntries(ctx, entry))
+		lib.CheckFatalError(deletePresavedEntries(ctx, entry, false))
 	}
 
 	// Persist it locally
@@ -215,7 +216,7 @@ func saveHistoryEntry(ctx context.Context) {
 	}
 }
 
-func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error {
+func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetry bool) error {
 	db := hctx.GetDb(ctx)
 
 	// Create the query to find the presaved entries
@@ -239,6 +240,23 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry) error 
 	})
 	if err != nil {
 		return err
+	}
+	if reflect.ValueOf(presavedEntry).IsZero() {
+		// Presaved entry is zero, aka there is no presaved entry. This can happen either due to:
+		//
+		// 1. A failure in presaving, or this feature was just enabled (in which case there is nothing to do here)
+		// 2. A race condition where presaving hasn't finished, but we're looking for the entry here
+		//
+		// We want to ensure this isn't case #2. There isn't a great way to do this, but we can just retry
+		// this function after a short delay. If it still is empty, then we assume we are in case #1.
+		if isRetry {
+			// Already retried, assume we're in case #1
+			hctx.GetLogger().Infof("failed to find presaved entry even with retry, skipping delete")
+			return nil
+		} else {
+			time.Sleep(500 * time.Millisecond)
+			return deletePresavedEntries(ctx, entry, true)
+		}
 	}
 
 	// Delete presaved entries locally
