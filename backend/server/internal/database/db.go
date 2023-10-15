@@ -328,11 +328,13 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 		return nil
 	}
 
-	totalNumDevices, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.device_id) FROM devices").Row())
+	// TODO: Update usage_data queries to reference is_integration_test_device
+
+	totalNumDevices, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.device_id) FROM devices WHERE NOT is_integration_test_device").Row())
 	if err != nil {
 		return err
 	}
-	totalNumUsers, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices").Row())
+	totalNumUsers, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(DISTINCT devices.user_id) FROM devices WHERE NOT is_integration_test_device").Row())
 	if err != nil {
 		return err
 	}
@@ -352,7 +354,7 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	dailyInstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT count(distinct device_id) FROM devices WHERE registration_date > (now()::date-1)::timestamp").Row())
+	dailyInstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT count(distinct device_id) FROM devices WHERE registration_date > (now()::date-1)::timestamp AND NOT is_integration_test_device").Row())
 	if err != nil {
 		return err
 	}
