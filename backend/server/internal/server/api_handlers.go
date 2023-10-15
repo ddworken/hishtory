@@ -236,7 +236,7 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false))
 
-	if s.statsd != nil {
+	if s.statsd != nil && !isIntegrationTestDevice {
 		s.statsd.Incr("hishtory.register", []string{}, 1.0)
 	}
 
