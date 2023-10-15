@@ -200,8 +200,22 @@ func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, requests []*sh
 func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, deletedMessages []shared.MessageIdentifier) (int64, error) {
 	tx := db.WithContext(ctx).Where("false")
 	for _, message := range deletedMessages {
-		// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
-		tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.DeviceId, message.EndTime, message.EntryId))
+		if userId == "" {
+			return 0, fmt.Errorf("failed to delete entry because userId is empty")
+		}
+		if message.DeviceId == "" {
+			return 0, fmt.Errorf("failed to delete entry because MessageIdentifier.DeviceId is empty")
+		}
+		if message.EndTime.UTC().UnixMilli() > 0 && message.EntryId != "" {
+			// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
+			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.DeviceId, message.EndTime, message.EntryId))
+		} else if message.EndTime.UTC().UnixMilli() > 0 && message.EntryId == "" {
+			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ?)", userId, message.DeviceId, message.EndTime))
+		} else if message.EndTime.UTC().UnixMilli() == 0 && message.EntryId != "" {
+			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (encrypted_id = ?)", userId, message.DeviceId, message.EntryId))
+		} else {
+			return 0, fmt.Errorf("failed to delete entry because message.EndTime and message.EntryId are both empty")
+		}
 	}
 	result := tx.Delete(&shared.EncHistoryEntry{})
 	if tx.Error != nil {
