@@ -257,22 +257,26 @@ func (db *DB) DeletionRequestCreate(ctx context.Context, request *shared.Deletio
 
 	fmt.Printf("db.DeletionRequestCreate: Found %d devices\n", len(devices))
 
-	return db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, device := range devices {
 			request.DestinationDeviceId = device.DeviceId
-			tx := db.WithContext(ctx).Create(&request)
+			tx := tx.WithContext(ctx).Create(&request)
 			if tx.Error != nil {
 				return fmt.Errorf("create: tx.Error: %w", tx.Error)
 			}
 		}
-
-		numDeleted, err := db.DeleteMessagesFromBackend(ctx, userID, request.Messages.Ids)
-		if err != nil {
-			return fmt.Errorf("db.DeleteMessagesFromBackend: %w", err)
-		}
-		fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	numDeleted, err := db.DeleteMessagesFromBackend(ctx, userID, request.Messages.Ids)
+	if err != nil {
+		return fmt.Errorf("db.DeleteMessagesFromBackend: %w", err)
+	}
+	fmt.Printf("addDeletionRequestHandler: Deleted %d rows in the backend\n", numDeleted)
+	return nil
 }
 
 func (db *DB) FeedbackCreate(ctx context.Context, feedback *shared.Feedback) error {
