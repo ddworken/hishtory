@@ -655,6 +655,7 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 	return t, nil
 }
 
+// TODO: It seems like the TUI lags sometimes when deleting many entries?
 func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	db := hctx.GetDb(ctx)
 	// Delete locally
