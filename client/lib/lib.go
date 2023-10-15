@@ -18,7 +18,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	_ "embed" // for embedding config.sh
@@ -728,35 +727,6 @@ func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) 
 	return jsonValue, nil
 }
 
-func forEach[T any](arr []T, numThreads int, fn func(T) error) error {
-	wg := &sync.WaitGroup{}
-	wg.Add(len(arr))
-
-	limiter := make(chan bool, numThreads)
-
-	var errors []error
-	for _, item := range arr {
-		limiter <- true
-		go func(x T) {
-			defer wg.Done()
-			err := fn(x)
-			if err != nil {
-				errors = append(errors, err)
-			}
-			<-limiter
-		}(item)
-		if len(errors) > 0 {
-			return errors[0]
-		}
-	}
-
-	wg.Wait()
-	if len(errors) > 0 {
-		return errors[0]
-	}
-	return nil
-}
-
 func Reupload(ctx context.Context) error {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
@@ -774,7 +744,7 @@ func Reupload(ctx context.Context) error {
 	}
 	chunkSize := 500
 	chunks := shared.Chunks(entries, chunkSize)
-	return forEach(chunks, 10, func(chunk []*data.HistoryEntry) error {
+	return shared.ForEach(chunks, 10, func(chunk []*data.HistoryEntry) error {
 		jsonValue, err := EncryptAndMarshal(config, chunk)
 		if err != nil {
 			return fmt.Errorf("failed to reupload due to failed encryption: %w", err)
