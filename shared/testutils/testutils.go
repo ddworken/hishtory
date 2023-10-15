@@ -275,7 +275,7 @@ func RunTestServer() func() {
 		}
 		allOutput := stdout.String() + stderr.String()
 		if strings.Contains(allOutput, "failed to") && IsOnline() {
-			panic(fmt.Sprintf("server failed to do something: stderr=%#v, stdout=%#v", stderr.String(), stdout.String()))
+			panic(fmt.Sprintf("server experienced an error\n\n\nstderr=\n%s\n\n\nstdout=%s", stderr.String(), stdout.String()))
 		}
 		if strings.Contains(allOutput, "ERROR:") || strings.Contains(allOutput, "http: panic serving") {
 			panic(fmt.Sprintf("server experienced an error\n\n\nstderr=\n%s\n\n\nstdout=%s", stderr.String(), stdout.String()))
