@@ -32,7 +32,7 @@ func TestLoggerMiddleware(t *testing.T) {
 
 func TestLoggerMiddlewareWithPanic(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic(fmt.Errorf("oh no"))
+		panic(fmt.Errorf("synthetic panic for tests"))
 	})
 
 	var out strings.Builder
@@ -62,7 +62,7 @@ func TestLoggerMiddlewareWithPanic(t *testing.T) {
 		t.Errorf("expected %d, got %d", http.StatusOK, w.Code)
 	}
 
-	const expectedPiece1 = `oh no`
+	const expectedPiece1 = `synthetic panic for tests`
 	const expectedPiece2 = `127.0.0.1 GET "/"`
 	outString := out.String()
 	if !strings.Contains(outString, expectedPiece1) {
@@ -73,14 +73,14 @@ func TestLoggerMiddlewareWithPanic(t *testing.T) {
 	}
 
 	panicStr := fmt.Sprintf("%v", panicError)
-	if !strings.Contains(panicStr, "oh no") {
-		t.Errorf("expected panic error to contain %q, got %q", "oh no", panicStr)
+	if !strings.Contains(panicStr, "synthetic panic for tests") {
+		t.Errorf("expected panic error to contain %q, got %q", "synthetic panic for tests", panicStr)
 	}
 }
 
 func TestPanicGuard(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic(fmt.Errorf("oh no"))
+		panic(fmt.Errorf("synthetic panic for tests"))
 	})
 
 	w := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestMergeMiddlewares(t *testing.T) {
 		w.Write([]byte("test"))
 	})
 	panicHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic(fmt.Errorf("oh no"))
+		panic(fmt.Errorf("synthetic panic for tests"))
 	})
 
 	// ===
@@ -164,7 +164,7 @@ func TestMergeMiddlewares(t *testing.T) {
 			handler:            panicHandler,
 			expectedStatusCode: http.StatusServiceUnavailable,
 			expectedPieces: []string{
-				`oh no`,
+				`synthetic panic for tests`,
 				`127.0.0.1 GET "/"`,
 			},
 		},
