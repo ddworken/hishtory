@@ -40,8 +40,10 @@ jobs:
           echo -e 'ls -Slah /\n' | zsh -is
           # Sleep to ensure there is time for it to be recorded, since recordings are async
           sleep 1
-          # And check that it was recorded
+          # Check that it was recorded
           ./hishtory export | grep "ls -Slah /"
+          # Check that we can redact it
+          yes | ./hishtory redact ls Slah
           # Assert that the entry is syncing properly
           ./hishtory status -v | grep 'Sync Status: Synced'
     # - name: Setup tmate session
