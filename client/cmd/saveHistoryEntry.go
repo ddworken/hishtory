@@ -284,7 +284,7 @@ func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest)
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if len(dumpRequests) > 0 {
-		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
+		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "newclient"))
 		entries, err := lib.Search(ctx, db, "", 0)
 		lib.CheckFatalError(err)
 		var encEntries []*shared.EncHistoryEntry

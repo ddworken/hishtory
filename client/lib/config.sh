@@ -35,6 +35,8 @@ function __hishtory_postcommand() {
   # Run after every prompt
   (hishtory saveHistoryEntry bash $EXIT_CODE "`history 1`" $HISHTORY_START_TIME &) # Background Run
   # hishtory saveHistoryEntry bash $EXIT_CODE "`history 1`" $HISHTORY_START_TIME  # Foreground Run
+
+  (hishtory updateLocalDbFromRemote &)
 }
 PROMPT_COMMAND="__hishtory_postcommand; $PROMPT_COMMAND"
 export HISTTIMEFORMAT=$HISTTIMEFORMAT

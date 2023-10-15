@@ -760,13 +760,13 @@ func Reupload(ctx context.Context) error {
 	})
 }
 
-func RetrieveAdditionalEntriesFromRemote(ctx context.Context) error {
+func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string) error {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil
 	}
-	respBody, err := ApiGet(ctx, "/api/v1/query?device_id="+config.DeviceId+"&user_id="+data.UserId(config.UserSecret))
+	respBody, err := ApiGet(ctx, "/api/v1/query?device_id="+config.DeviceId+"&user_id="+data.UserId(config.UserSecret)+"&queryReason="+queryReason)
 	if IsOfflineError(ctx, err) {
 		return nil
 	}

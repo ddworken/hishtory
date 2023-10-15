@@ -696,7 +696,7 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	}()
 	// Async: Retrieve additional entries from the backend
 	go func() {
-		err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
+		err := lib.RetrieveAdditionalEntriesFromRemote(ctx, "tui")
 		if err != nil {
 			p.Send(err)
 		}

@@ -25,6 +25,7 @@ function _hishtory_precmd() {
     fi
     (hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &)  # Background Run
     # hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time  # Foreground Run
+    (hishtory updateLocalDbFromRemote &)
 }
 
 _hishtory_widget() {

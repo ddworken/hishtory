@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -61,9 +62,34 @@ var exportCmd = &cobra.Command{
 	},
 }
 
+var updateLocalDbFromRemoteCmd = &cobra.Command{
+	Use:     "updateLocalDbFromRemote",
+	Hidden:  true,
+	Short:   "[Internal-only] Update local DB from remote",
+	GroupID: GROUP_ID_QUERYING,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Periodically, run a query so as to ensure that the local DB stays mostly up to date and that we don't
+		// accumulate a large number of entries that this device doesn't know about. This ensures that queries
+		// are always reasonably complete and fast (even when offline).
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		if config.IsOffline {
+			return
+		}
+		// TODO: Move this out of config.BetaMode only once we're confident in this change
+		if config.BetaMode {
+			// Do it a random percent of the time, which should be approximately often enough.
+			if rand.Intn(20) == 0 && !config.IsOffline {
+				lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "preload"))
+				lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+			}
+		}
+	},
+}
+
 func export(ctx context.Context, query string) {
 	db := hctx.GetDb(ctx)
-	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
+	err := lib.RetrieveAdditionalEntriesFromRemote(ctx, "export")
 	if err != nil {
 		if lib.IsOfflineError(ctx, err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
@@ -80,7 +106,7 @@ func export(ctx context.Context, query string) {
 
 func query(ctx context.Context, query string) {
 	db := hctx.GetDb(ctx)
-	err := lib.RetrieveAdditionalEntriesFromRemote(ctx)
+	err := lib.RetrieveAdditionalEntriesFromRemote(ctx, "query")
 	if err != nil {
 		if lib.IsOfflineError(ctx, err) {
 			fmt.Println("Warning: hishtory is offline so this may be missing recent results from your other machines!")
@@ -113,4 +139,5 @@ func init() {
 	rootCmd.AddCommand(queryCmd)
 	rootCmd.AddCommand(tqueryCmd)
 	rootCmd.AddCommand(exportCmd)
+	rootCmd.AddCommand(updateLocalDbFromRemoteCmd)
 }

@@ -26,7 +26,7 @@ var redactCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx))
+		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "redact"))
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		query := strings.Join(args, " ")
 		lib.CheckFatalError(redact(ctx, query, os.Getenv("HISHTORY_REDACT_FORCE") != ""))
