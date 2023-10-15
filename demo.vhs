@@ -1,4 +1,5 @@
-# Demo file used https://github.com/charmbracelet/vhs
+# Demo file uses https://github.com/charmbracelet/vhs
+
 Output backend/web/landing/www/img/demo.gif
 Set FontSize 22
 Set Width 2300
