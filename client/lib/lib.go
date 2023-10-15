@@ -83,7 +83,11 @@ func Setup(userSecret string, isOffline bool) error {
 		return nil
 	}
 	ctx := hctx.MakeContext()
-	_, err = ApiGet(ctx, "/api/v1/register?user_id="+data.UserId(userSecret)+"&device_id="+config.DeviceId)
+	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
+	if os.Getenv("HISHTORY_TEST") != "" {
+		registerPath += "&is_integration_test_device=true"
+	}
+	_, err = ApiGet(ctx, registerPath)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %w", err)
 	}

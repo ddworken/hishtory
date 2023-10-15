@@ -82,9 +82,9 @@ func getRequiredQueryParam(r *http.Request, queryParam string) string {
 	return val
 }
 
-func getOptionalQueryParam(r *http.Request, queryParam string, isTestEnvironment bool) string {
+func getOptionalQueryParam(r *http.Request, queryParam string, isRequiredInTestEnvironment bool) string {
 	val := r.URL.Query().Get(queryParam)
-	if val == "" && isTestEnvironment {
+	if val == "" && isRequiredInTestEnvironment {
 		panic(fmt.Sprintf("request to %s is missing optional query param=%#v that is required in test environments", r.URL, queryParam))
 	}
 	return val

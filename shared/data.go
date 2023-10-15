@@ -29,6 +29,9 @@ type Device struct {
 	// david@daviddworken.com and I can clear it from your device entries.
 	RegistrationIp   string    `json:"registration_ip"`
 	RegistrationDate time.Time `json:"registration_date"`
+	// Test devices, that should be aggressively cleaned from the DB
+	// TODO: Clean these from the DB
+	IsIntegrationTestDevice bool `json:"is_integration_test_device"`
 }
 
 // Represents a request to get all history entries from a given device. Used as part of bootstrapping

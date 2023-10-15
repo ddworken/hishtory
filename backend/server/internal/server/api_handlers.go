@@ -216,11 +216,12 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
+	isIntegrationTestDevice := getOptionalQueryParam(r, "is_integration_test_device", false) == "true"
 
 	existingDevicesCount, err := s.db.CountDevicesForUser(r.Context(), userId)
 	checkGormError(err)
 	fmt.Printf("apiRegisterHandler: existingDevicesCount=%d\n", existingDevicesCount)
-	if err := s.db.CreateDevice(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now()}); err != nil {
+	if err := s.db.CreateDevice(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now(), IsIntegrationTestDevice: isIntegrationTestDevice}); err != nil {
 		checkGormError(err)
 	}
 
