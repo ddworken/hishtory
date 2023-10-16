@@ -356,7 +356,7 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	dailyUninstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(*) FROM feedbacks WHERE date > (now()::date-1)::timestamp").Row())
+	dailyUninstalls, err := extractInt64FromRow(db.WithContext(ctx).Raw("SELECT COUNT(*) FROM feedbacks WHERE date > (now()::date-1)::timestamp AND user_id NOT IN (SELECT user_id FROM devices WHERE is_integration_test_device)").Row())
 	if err != nil {
 		return err
 	}
