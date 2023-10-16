@@ -104,7 +104,7 @@ func OpenDB() (*database.DB, error) {
 
 var CRON_COUNTER = 0
 
-// TODO: Update this to delete entries from integration tests
+// TODO: Update this to delete entries from integration test devices, as long as they are inactive
 func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
 	// Determine the latest released version of hishtory to serve via the /api/v1/download
 	// endpoint for hishtory updates.

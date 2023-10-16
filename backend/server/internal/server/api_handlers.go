@@ -91,7 +91,6 @@ func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// TODO: Update this to take into account the source of the query
 func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userId := getRequiredQueryParam(r, "user_id")
