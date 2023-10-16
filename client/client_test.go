@@ -1674,7 +1674,9 @@ func testTui_scroll(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-LeftScroll")
 
 	// Test horizontal scrolling by one to the right
-	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo '1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_0_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_1_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_2_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321'"))
+	veryLongEntry := testutils.MakeFakeHistoryEntry("echo '1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_0_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_1_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_2_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321'")
+	manuallySubmitHistoryEntry(t, userSecret, veryLongEntry)
+	require.NoError(t, hctx.GetDb(hctx.MakeContext()).Create(veryLongEntry).Error)
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 		"S-Left S-Right S-Right S-Left",
