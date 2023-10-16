@@ -1813,7 +1813,7 @@ func testTui_search(t testing.TB) {
 
 	// Check the output when the search is invalid
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
 		// ExtraDelay to ensure that the search for 'ls' finishes before we make it invalid by adding ':'
 		{Keys: "ls", ExtraDelay: 1.5},
 		{Keys: ":"},
