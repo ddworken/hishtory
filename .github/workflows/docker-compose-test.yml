@@ -44,6 +44,8 @@ jobs:
           ./hishtory export | grep "ls -Slah /"
           # Check that we can redact it
           HISHTORY_REDACT_FORCE=1 ./hishtory redact ls Slah
+          # And that it was redacted
+          ! (./hishtory export | grep "ls -Slah /")
           # Assert that the entry is syncing properly
           ./hishtory status -v | grep 'Sync Status: Synced'
     # - name: Setup tmate session
