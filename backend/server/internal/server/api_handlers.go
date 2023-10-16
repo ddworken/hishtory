@@ -96,12 +96,16 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
+	queryReason := getOptionalQueryParam(r, "queryReason", s.isTestEnvironment)
+	isBackgroundQuery := queryReason == "preload" || queryReason == "newclient"
 
 	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
-	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, true))
+	if !isBackgroundQuery {
+		s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, true))
+	}
 
 	// Delete any entries that match a pending deletion request
 	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
@@ -136,7 +140,7 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.statsd != nil {
-		s.statsd.Incr("hishtory.query", []string{}, 1.0)
+		s.statsd.Incr("hishtory.query", []string{"query_reason:" + queryReason}, 1.0)
 	}
 }
 
