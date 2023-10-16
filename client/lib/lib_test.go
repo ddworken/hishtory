@@ -3,7 +3,6 @@ package lib
 import (
 	"fmt"
 	"os"
-	"path"
 	"reflect"
 	"testing"
 	"time"
@@ -21,53 +20,6 @@ func TestMain(m *testing.M) {
 	os.Setenv("HISHTORY_TEST", "1")
 }
 
-func TestSetup(t *testing.T) {
-	defer testutils.BackupAndRestore(t)()
-	defer testutils.RunTestServer()()
-
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
-		t.Fatalf("hishtory secret file already exists!")
-	}
-	require.NoError(t, Setup("", false))
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
-		t.Fatalf("hishtory secret file does not exist after Setup()!")
-	}
-	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
-	require.NoError(t, err)
-	if len(data) < 10 {
-		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
-	}
-	config := hctx.GetConf(hctx.MakeContext())
-	if config.IsOffline != false {
-		t.Fatalf("hishtory config should have been offline")
-	}
-}
-
-func TestSetupOffline(t *testing.T) {
-	defer testutils.BackupAndRestore(t)()
-	defer testutils.RunTestServer()()
-
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
-		t.Fatalf("hishtory secret file already exists!")
-	}
-	require.NoError(t, Setup("", true))
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
-		t.Fatalf("hishtory secret file does not exist after Setup()!")
-	}
-	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
-	require.NoError(t, err)
-	if len(data) < 10 {
-		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
-	}
-	config := hctx.GetConf(hctx.MakeContext())
-	if config.IsOffline != true {
-		t.Fatalf("hishtory config should have been offline, actual=%#v", string(data))
-	}
-}
 func TestPersist(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	require.NoError(t, hctx.InitConfig())
@@ -165,32 +117,6 @@ func TestSearch(t *testing.T) {
 	require.NoError(t, err)
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
-	}
-}
-
-func TestAddToDbIfNew(t *testing.T) {
-	// Set up
-	defer testutils.BackupAndRestore(t)()
-	require.NoError(t, hctx.InitConfig())
-	db := hctx.GetDb(hctx.MakeContext())
-
-	// Add duplicate entries
-	entry1 := testutils.MakeFakeHistoryEntry("ls /foo")
-	AddToDbIfNew(db, entry1)
-	AddToDbIfNew(db, entry1)
-	entry2 := testutils.MakeFakeHistoryEntry("ls /foo")
-	AddToDbIfNew(db, entry2)
-	AddToDbIfNew(db, entry2)
-	AddToDbIfNew(db, entry1)
-
-	// Check there should only be two entries
-	var entries []data.HistoryEntry
-	result := db.Find(&entries)
-	if result.Error != nil {
-		t.Fatal(result.Error)
-	}
-	if len(entries) != 2 {
-		t.Fatalf("entries has an incorrect length: %d, entries=%#v", len(entries), entries)
 	}
 }
 

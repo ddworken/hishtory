@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/ddworken/hishtory/client/cmd"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -540,7 +541,7 @@ func installFromHead(t *testing.T, tester shellTester) (string, string) {
 
 func installFromPrev(t *testing.T, tester shellTester) (string, string) {
 	defer testutils.BackupAndRestoreEnv("HISHTORY_FORCE_CLIENT_VERSION")()
-	dd, err := lib.GetDownloadData(makeTestOnlyContextWithFakeConfig())
+	dd, err := cmd.GetDownloadData(makeTestOnlyContextWithFakeConfig())
 	require.NoError(t, err)
 	pv, err := shared.ParseVersionString(dd.Version)
 	require.NoError(t, err)
@@ -553,7 +554,7 @@ func installFromPrev(t *testing.T, tester shellTester) (string, string) {
 }
 
 func updateToRelease(t *testing.T, tester shellTester) string {
-	dd, err := lib.GetDownloadData(makeTestOnlyContextWithFakeConfig())
+	dd, err := cmd.GetDownloadData(makeTestOnlyContextWithFakeConfig())
 	require.NoError(t, err)
 
 	// Update
@@ -1089,7 +1090,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	userSecret := matches[1]
 
 	// Test the status subcommand
-	downloadData, err := lib.GetDownloadData(makeTestOnlyContextWithFakeConfig())
+	downloadData, err := cmd.GetDownloadData(makeTestOnlyContextWithFakeConfig())
 	require.NoError(t, err)
 	out = tester.RunInteractiveShell(t, `hishtory status`)
 	expectedOut := fmt.Sprintf("hiSHtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)

@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,9 +29,22 @@ var updateCmd = &cobra.Command{
 	},
 }
 
+func GetDownloadData(ctx context.Context) (shared.UpdateInfo, error) {
+	respBody, err := lib.ApiGet(ctx, "/api/v1/download")
+	if err != nil {
+		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %w", err)
+	}
+	var downloadData shared.UpdateInfo
+	err = json.Unmarshal(respBody, &downloadData)
+	if err != nil {
+		return shared.UpdateInfo{}, fmt.Errorf("failed to parse update info: %w", err)
+	}
+	return downloadData, nil
+}
+
 func update(ctx context.Context) error {
 	// Download the binary
-	downloadData, err := lib.GetDownloadData(ctx)
+	downloadData, err := GetDownloadData(ctx)
 	if err != nil {
 		return err
 	}

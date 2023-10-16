@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/hctx"
-	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +15,7 @@ import (
 func TestBuildHistoryEntry(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
-	require.NoError(t, lib.Setup("", false))
+	require.NoError(t, setup("", false))
 
 	// Test building an actual entry for bash
 	entry, err := buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "bash", "120", " 123  ls /foo  ", "1641774958"})
@@ -109,7 +108,7 @@ func TestBuildHistoryEntryWithTimestampStripping(t *testing.T) {
 	defer testutils.BackupAndRestoreEnv("HISTTIMEFORMAT")()
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.RunTestServer()()
-	require.NoError(t, lib.Setup("", false))
+	require.NoError(t, setup("", false))
 
 	testcases := []struct {
 		input, histtimeformat, expectedCommand string

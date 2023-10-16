@@ -19,6 +19,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +80,7 @@ var initCmd = &cobra.Command{
 		if len(args) > 0 {
 			secretKey = args[0]
 		}
-		lib.CheckFatalError(lib.Setup(secretKey, *offlineInit))
+		lib.CheckFatalError(setup(secretKey, *offlineInit))
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			fmt.Println("Importing existing shell history...")
 			ctx := hctx.MakeContext()
@@ -169,7 +170,7 @@ func install(secretKey string, offline bool) error {
 	_, err = hctx.GetConfig()
 	if err != nil {
 		// No config, so set up a new installation
-		return lib.Setup(secretKey, offline)
+		return setup(secretKey, offline)
 	}
 	err = handleDbUpgrades(hctx.MakeContext())
 	if err != nil {
@@ -536,6 +537,65 @@ func stripLines(filePath, lines string) error {
 		}
 	}
 	return os.WriteFile(filePath, []byte(ret), 0644)
+}
+
+func setup(userSecret string, isOffline bool) error {
+	if userSecret == "" {
+		userSecret = uuid.Must(uuid.NewRandom()).String()
+	}
+	fmt.Println("Setting secret hishtory key to " + string(userSecret))
+
+	// Create and set the config
+	var config hctx.ClientConfig
+	config.UserSecret = userSecret
+	config.IsEnabled = true
+	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
+	config.ControlRSearchEnabled = true
+	config.IsOffline = isOffline
+	err := hctx.SetConfig(&config)
+	if err != nil {
+		return fmt.Errorf("failed to persist config to disk: %w", err)
+	}
+
+	// Drop all existing data
+	db, err := hctx.OpenLocalSqliteDb()
+	if err != nil {
+		return err
+	}
+	db.Exec("DELETE FROM history_entries")
+
+	// Bootstrap from remote date
+	if config.IsOffline {
+		return nil
+	}
+	ctx := hctx.MakeContext()
+	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
+	if os.Getenv("HISHTORY_TEST") != "" {
+		registerPath += "&is_integration_test_device=true"
+	}
+	_, err = lib.ApiGet(ctx, registerPath)
+	if err != nil {
+		return fmt.Errorf("failed to register device with backend: %w", err)
+	}
+
+	respBody, err := lib.ApiGet(ctx, "/api/v1/bootstrap?user_id="+data.UserId(userSecret)+"&device_id="+config.DeviceId)
+	if err != nil {
+		return fmt.Errorf("failed to bootstrap device from the backend: %w", err)
+	}
+	var retrievedEntries []*shared.EncHistoryEntry
+	err = json.Unmarshal(respBody, &retrievedEntries)
+	if err != nil {
+		return fmt.Errorf("failed to load JSON response: %w", err)
+	}
+	for _, entry := range retrievedEntries {
+		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt history entry from server: %w", err)
+		}
+		lib.AddToDbIfNew(db, decEntry)
+	}
+
+	return nil
 }
 
 func init() {

@@ -52,66 +52,6 @@ var GitCommit string = "Unknown"
 // Funnily enough, 256KB actually wasn't enough. See https://github.com/ddworken/hishtory/issues/93
 var maxSupportedLineLengthForImport = 512_000
 
-// TODO: move this function to install.go
-func Setup(userSecret string, isOffline bool) error {
-	if userSecret == "" {
-		userSecret = uuid.Must(uuid.NewRandom()).String()
-	}
-	fmt.Println("Setting secret hishtory key to " + string(userSecret))
-
-	// Create and set the config
-	var config hctx.ClientConfig
-	config.UserSecret = userSecret
-	config.IsEnabled = true
-	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
-	config.ControlRSearchEnabled = true
-	config.IsOffline = isOffline
-	err := hctx.SetConfig(&config)
-	if err != nil {
-		return fmt.Errorf("failed to persist config to disk: %w", err)
-	}
-
-	// Drop all existing data
-	db, err := hctx.OpenLocalSqliteDb()
-	if err != nil {
-		return err
-	}
-	db.Exec("DELETE FROM history_entries")
-
-	// Bootstrap from remote date
-	if config.IsOffline {
-		return nil
-	}
-	ctx := hctx.MakeContext()
-	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
-	if os.Getenv("HISHTORY_TEST") != "" {
-		registerPath += "&is_integration_test_device=true"
-	}
-	_, err = ApiGet(ctx, registerPath)
-	if err != nil {
-		return fmt.Errorf("failed to register device with backend: %w", err)
-	}
-
-	respBody, err := ApiGet(ctx, "/api/v1/bootstrap?user_id="+data.UserId(userSecret)+"&device_id="+config.DeviceId)
-	if err != nil {
-		return fmt.Errorf("failed to bootstrap device from the backend: %w", err)
-	}
-	var retrievedEntries []*shared.EncHistoryEntry
-	err = json.Unmarshal(respBody, &retrievedEntries)
-	if err != nil {
-		return fmt.Errorf("failed to load JSON response: %w", err)
-	}
-	for _, entry := range retrievedEntries {
-		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
-		if err != nil {
-			return fmt.Errorf("failed to decrypt history entry from server: %w", err)
-		}
-		AddToDbIfNew(db, decEntry)
-	}
-
-	return nil
-}
-
 func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	tx := db.Where("local_username = ?", entry.LocalUsername)
 	tx = tx.Where("hostname = ?", entry.Hostname)
@@ -232,10 +172,6 @@ func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResult
 
 	tbl.Print()
 	return nil
-}
-
-func IsEnabled(ctx context.Context) (bool, error) {
-	return hctx.GetConf(ctx).IsEnabled, nil
 }
 
 func CheckFatalError(err error) {
@@ -551,19 +487,6 @@ func getServerHostname() string {
 		return server
 	}
 	return "https://api.hishtory.dev"
-}
-
-func GetDownloadData(ctx context.Context) (shared.UpdateInfo, error) {
-	respBody, err := ApiGet(ctx, "/api/v1/download")
-	if err != nil {
-		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %w", err)
-	}
-	var downloadData shared.UpdateInfo
-	err = json.Unmarshal(respBody, &downloadData)
-	if err != nil {
-		return shared.UpdateInfo{}, fmt.Errorf("failed to parse update info: %w", err)
-	}
-	return downloadData, nil
 }
 
 func httpClient() *http.Client {
