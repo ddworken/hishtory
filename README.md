@@ -196,8 +196,8 @@ See [hiSHtory: Cross-device Encrypted Syncing Design](https://blog.daviddworken.
 
 ## Security
 
-`hishtory` is a CLI tool written in Go and uses AES-GCM for end-to-end encrypting your history entries while syncing them. The binary is reproducibly built and [SLSA Level 3](https://slsa.dev/) to make it easy to verify you're getting the code contained in this repository. 
+`hishtory` is a CLI tool written in Go and uses AES-GCM for end-to-end encrypting your history entries and syncing them. The binary is reproducibly built and [SLSA Level 3](https://slsa.dev/) to make it easy to verify you're getting the code contained in this repository. 
 
-This all ensures that the minimalist backend cannot read your shell history, it only sees encrypted data. hiSHtory also respects general convention and will not record any commands prefixed with a space.
+This all ensures that the minimalist backend cannot read your shell history, it only sees encrypted data. hiSHtory also respects shell conventions and will not record any commands prefixed with a space.
 
 If you find any security issues in hiSHtory, please reach out to `david@daviddworken.com`. 
