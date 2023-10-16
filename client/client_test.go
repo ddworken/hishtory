@@ -592,8 +592,6 @@ func testUpdateFromPrevToReleaseViaProd(t *testing.T, tester shellTester) {
 	testGenericUpdate(t, tester, installFromPrev, updateToRelease)
 }
 
-// TODO: Can we duplicate testUpdateFromPrevToCurrent to also run with the prod server?
-
 func testGenericUpdate(t *testing.T, tester shellTester, installInitialVersion func(*testing.T, shellTester) (string, string), installUpdatedVersion func(*testing.T, shellTester) string) {
 	defer testutils.BackupAndRestoreEnv("HISHTORY_FORCE_CLIENT_VERSION")()
 	if !testutils.IsOnline() {
