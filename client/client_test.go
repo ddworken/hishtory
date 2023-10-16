@@ -2366,7 +2366,11 @@ echo foo`)
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER", "Down Down", "ENTER"})
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
+		{Keys: "Down Down"},
+		{Keys: "ENTER", ExtraDelay: 1.0},
+	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	out = strings.Split(out, "\n")[1]
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
