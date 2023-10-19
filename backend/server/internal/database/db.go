@@ -204,7 +204,8 @@ func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, dele
 			return 0, fmt.Errorf("failed to delete entry because userId is empty")
 		}
 		if message.DeviceId == "" {
-			return 0, fmt.Errorf("failed to delete entry because MessageIdentifier.DeviceId is empty")
+			// The DeviceId is empty, so there is nothing to do for this since it won't match anything
+			continue
 		}
 		if message.EndTime != (time.Time{}) && message.EntryId != "" {
 			// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
