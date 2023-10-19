@@ -85,6 +85,8 @@ You can customize the columns that are displayed via `hishtory config-set displa
 hishtory config-set displayed-columns CWD Command
 ```
 
+The list of supported columns are: `Hostname`, `CWD`, `Timestamp`, `Runtime`, `ExitCode`, `Command`, and `User`.
+
 </details>
 
 <details>
