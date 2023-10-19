@@ -12,7 +12,7 @@ To install `hishtory` on your first machine:
 curl https://hishtory.dev/install.py | python3 -
 ```
 
-At this point, `hishtory` is already managing your shell history (for bash, zsh, and fish!). Give it a try with `hishtory query` and see below for more details on the advanced query features. 
+At this point, `hishtory` is already managing your shell history (for bash, zsh, and fish!). Give it a try by pressing `Control+R` and see below for more details on the advanced search features. 
 
 Then to install `hishtory` on your other computers, you need your secret key. Get this by running `hishtory status`. Once you have it, you follow similar steps to install hiSHtory on your other computers:
 
@@ -21,7 +21,7 @@ curl https://hishtory.dev/install.py | python3 -
 hishtory init $YOUR_HISHTORY_SECRET
 ```
 
-Now if you run `hishtory query` on first computer, you can automatically see the commands you've run on all your other computers!
+Now if you press `Control+R` on first computer, you can automatically see the commands you've run on all your other computers!
 
 ## Features
 
@@ -44,7 +44,7 @@ Both support the same query format, see the below annotated queries:
 | `service before:2022-02-01` | Find all commands containing `service` run before February 1st 2022 |
 | `service after:2022-02-01` | Find all commands containing `service` run after February 1st 2022 |
 
-For true power users, you can even query in SQLite via `sqlite3 -cmd 'PRAGMA journal_mode = WAL' ~/.hishtory/.hishtory.db`. 
+For true power users, you can even query directly in SQLite via `sqlite3 -cmd 'PRAGMA journal_mode = WAL' ~/.hishtory/.hishtory.db`. 
 
 ### Enable/Disable
 
