@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -48,20 +47,6 @@ func TestMain(m *testing.M) {
 	err := cmd.Run()
 	if err != nil {
 		panic(fmt.Sprintf("failed to build client: %v", err))
-	}
-
-	// Configure the integration to export test failures to datadog for better monitoring
-	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); testutils.IsGithubAction() && has_dd_api_key {
-		ddStats, err := statsd.New("localhost:8125")
-		if err != nil {
-			err := fmt.Errorf("Failed to start DataDog statsd: %w\n", err)
-			if runtime.GOOS == "darwin" {
-				fmt.Printf("%v", err)
-			} else {
-				panic(err)
-			}
-		}
-		GLOBAL_STATSD = ddStats
 	}
 
 	// Start the tests

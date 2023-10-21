@@ -16,7 +16,6 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -24,8 +23,6 @@ import (
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/stretchr/testify/require"
 )
-
-var GLOBAL_STATSD *statsd.Client
 
 type shellTester interface {
 	RunInteractiveShell(t testing.TB, script string) string
