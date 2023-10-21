@@ -59,6 +59,7 @@ func (eventHandler) Event(event testjson.TestEvent, execution *testjson.Executio
 		NUM_TEST_RETRIES[testIdentifier] += 1
 	}
 	if event.Action == testjson.ActionPass {
+		GLOBAL_STATSD.Distribution("test_runtime", event.Elapsed, []string{"test:" + testIdentifier, "os:" + runtime.GOOS}, 1.0)
 		GLOBAL_STATSD.Incr("test_status", []string{"result:passed", "test:" + testIdentifier, "os:" + runtime.GOOS}, 1.0)
 		NUM_TEST_RETRIES[testIdentifier] += 1
 	}
