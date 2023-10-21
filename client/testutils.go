@@ -41,7 +41,7 @@ func (b bashTester) RunInteractiveShell(t testing.TB, script string) string {
 	out, err := b.RunInteractiveShellRelaxed(t, "set -emo pipefail\n"+script)
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
-		t.Fatalf("error when running command at %s:%d: %v", filename, line, err)
+		require.NoError(t, err, fmt.Sprintf("error when running command at %s:%dv", filename, line))
 	}
 	return out
 }

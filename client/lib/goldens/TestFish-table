@@ -1,5 +1,7 @@
 CWD  Hostname                  Exit Code  Command                                                                 
 /    ghaction-runner-hostname  0          hishtory config-set displayed-columns CWD Hostname 'Exit Code' Command  
+/    ghaction-runner-hostname  0          fish                                                                    
+/    ghaction-runner-hostname  0          echo foo                                                                
 /    ghaction-runner-hostname  0          ls /tmp/ &                                                              
 /    ghaction-runner-hostname  0          echo "foo"                                                              
 /    ghaction-runner-hostname  0          echo bar                                                                

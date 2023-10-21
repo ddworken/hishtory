@@ -1581,13 +1581,27 @@ func TestFish(t *testing.T) {
 		"SPACE echo SPACE foobar ENTER",
 		"ls SPACE /tmp/ SPACE '&' ENTER",
 	})
-	if !strings.Contains(out, "Welcome to fish, the friendly interactive shell") || !strings.Contains(out, "foo") || !strings.Contains(out, "bar") || !strings.Contains(out, "baz") {
-		t.Fatalf("fish output looks wrong")
-	}
+	require.Contains(t, out, "Welcome to fish, the friendly interactive shell")
+	require.Contains(t, out, "\nfoo\n")
+	require.Contains(t, out, "\nbar\n")
+	require.Contains(t, out, "\nbaz\n")
+	require.Contains(t, out, "\nfoobar\n")
+
+	// And test that fish exits properly, for #117
+	out = captureTerminalOutputWithShellName(t, tester, "bash", []string{
+		"fish ENTER",
+		"echo SPACE foo ENTER",
+		"exit ENTER",
+	})
+	require.Contains(t, out, "Welcome to fish, the friendly interactive shell")
+	require.Contains(t, out, "\nfoo\n")
+	require.NotContains(t, out, "There are still jobs active")
+	require.NotContains(t, out, "A second attempt to exit will terminate them.")
+	require.Contains(t, out, "exit\nbash")
 
 	// Check export
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
-	expectedOutput := "echo foo\necho bar\necho \"foo\"\nls /tmp/ &\n"
+	expectedOutput := "echo foo\necho bar\necho \"foo\"\nls /tmp/ &\necho foo\nfish\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
