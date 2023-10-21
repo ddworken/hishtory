@@ -1005,9 +1005,8 @@ echo other`)
 	if strings.Count(out, "\n") != 1 {
 		t.Fatalf("hishtory query has unexpected number of lines, should contain no entries: out=%#v", out)
 	}
-	if strings.Contains(out, "echo hello") || strings.Contains("echo other", out) {
-		t.Fatalf("hishtory query contains unexpected command, out=%#v", out)
-	}
+	require.NotContains(t, out, "echo hello", "hishtory query contains unexpected command")
+	require.NotContains(t, out, "echo other", "hishtory query contains unexpected command")
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
 	if out != "hishtory query echo\n" {
 		t.Fatalf("hishtory export has unexpected out=%#v", out)
@@ -2041,9 +2040,9 @@ func testControlR(t testing.TB, tester shellTester, shellName string, onlineStat
 	if strings.Contains(out, "\n\n\n") {
 		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
 	}
-	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
-		t.Fatalf("hishtory is showing a table even after control-c? out=%#v", out)
-	}
+	require.NotContains(t, out, "Search Query", "hishtory is showing a table even after control-c?")
+	require.NotContains(t, out, "─────", "hishtory is showing a table even after control-c?")
+	require.NotContains(t, out, "Exit Code", "hishtory is showing a table even after control-c?")
 	if !testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
 		testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
@@ -2053,9 +2052,9 @@ func testControlR(t testing.TB, tester shellTester, shellName string, onlineStat
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r false`)
 	// And it shouldn't pop up
 	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
-	if strings.Contains(out, "Search Query") || strings.Contains(out, "─────") || strings.Contains(out, "Exit Code") {
-		t.Fatalf("hishtory overrode control-r even when this was disabled? out=%#v", out)
-	}
+	require.NotContains(t, out, "Search Query", "hishtory overrode control-r even when this was disabled?")
+	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
+	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
 	if !testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
 		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
