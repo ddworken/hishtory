@@ -2,7 +2,7 @@ function _hishtory_post_exec --on-event fish_preexec
     # Runs after <ENTER>, but before the command is executed
     set --global _hishtory_command $argv
     set --global _hishtory_start_time (date +%s%N)
-    hishtory presaveHistoryEntry fish "$_hishtory_command" $_hishtory_start_time & # Background Run
+    hishtory presaveHistoryEntry fish "$_hishtory_command" $_hishtory_start_time &; disown # Background Run
     # hishtory presaveHistoryEntry fish "$_hishtory_command" $_hishtory_start_time # Foreground Run
 end
 
@@ -15,9 +15,9 @@ function __hishtory_on_prompt --on-event fish_prompt
     if [ -n "$_hishtory_first_prompt" ]
         set --global -e _hishtory_first_prompt
     else if [ -n "$_hishtory_command" ]
-        hishtory saveHistoryEntry fish $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &  # Background Run
+        hishtory saveHistoryEntry fish $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &; disown  # Background Run
         # hishtory saveHistoryEntry fish $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time  # Foreground Run
-        hishtory updateLocalDbFromRemote &
+        hishtory updateLocalDbFromRemote &; disown
         set --global -e _hishtory_command  # Unset _hishtory_command so we don't double-save entries when fish_prompt is invoked but fish_postexec isn't
     end 
 end
