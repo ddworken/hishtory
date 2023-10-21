@@ -107,16 +107,16 @@ func TestParam(t *testing.T) {
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester) })
-		runTestsWithRetries(t, "testControlR/"+tester.ShellName(), func(t testing.TB) { testControlR(t, tester, tester.ShellName(), Online) })
+		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 	}
-	runTestsWithRetries(t, "testControlR/offline/bash", func(t testing.TB) { testControlR(t, bashTester{}, "bash", Offline) })
-	runTestsWithRetries(t, "testControlR/fish", func(t testing.TB) { testControlR(t, bashTester{}, "fish", Online) })
-	runTestsWithExtraRetries(t, "testTui/search", testTui_search, 10)
-	runTestsWithRetries(t, "testTui/general", testTui_general)
-	runTestsWithRetries(t, "testTui/scroll", testTui_scroll)
-	runTestsWithRetries(t, "testTui/resize", testTui_resize)
-	runTestsWithExtraRetries(t, "testTui/delete", testTui_delete, 10)
-	runTestsWithRetries(t, "testTui/color", testTui_color)
+	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
+	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
+	t.Run("testTui/search", testTui_search)
+	t.Run("testTui/general", testTui_general)
+	t.Run("testTui/scroll", testTui_scroll)
+	t.Run("testTui/resize", testTui_resize)
+	t.Run("testTui/delete", testTui_delete)
+	t.Run("testTui/color", testTui_color)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1635,7 +1635,7 @@ func setupTestTui(t testing.TB) (shellTester, string, *gorm.DB) {
 	return tester, userSecret, db
 }
 
-func testTui_resize(t testing.TB) {
+func testTui_resize(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t)
@@ -1675,7 +1675,7 @@ func testTui_resize(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
 }
 
-func testTui_scroll(t testing.TB) {
+func testTui_scroll(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t)
@@ -1713,7 +1713,7 @@ func testTui_scroll(t testing.TB) {
 	assertNoLeakedConnections(t)
 }
 
-func testTui_color(t testing.TB) {
+func testTui_color(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		// For some reason, this test fails on linux. Since this test isn't critical and is expected to be
 		// flaky, we can just skip it on linux.
@@ -1744,7 +1744,7 @@ func testTui_color(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
 }
 
-func testTui_delete(t testing.TB) {
+func testTui_delete(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t)
@@ -1786,7 +1786,7 @@ func testTui_delete(t testing.TB) {
 	assertNoLeakedConnections(t)
 }
 
-func testTui_search(t testing.TB) {
+func testTui_search(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t)
@@ -1847,7 +1847,7 @@ func testTui_search(t testing.TB) {
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
 }
 
-func testTui_general(t testing.TB) {
+func testTui_general(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t)
@@ -1907,7 +1907,7 @@ func testTui_general(t testing.TB) {
 	assertNoLeakedConnections(t)
 }
 
-func testControlR(t testing.TB, tester shellTester, shellName string, onlineStatus OnlineStatus) {
+func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installWithOnlineStatus(t, tester, onlineStatus)

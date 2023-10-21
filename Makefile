@@ -1,16 +1,13 @@
 forcetest:
 	go clean -testcache
-	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -p 1 -timeout 60m ./...
+	make test
 
 test:
-	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -p 1 -timeout 60m ./...
+	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=10 --format testname -- -p 1 --rerun-fails-max-failures=30
 
 ftest:
 	go clean -testcache
-	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -v -p 1 -run "$(FILTER)" ./...
-
-retrying-test:
-	for i in `seq 1 3`; do echo "Test attempt number $$i"; rm -rf ~/.hishtory/; make test && break; done
+	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=3 --format testname -- -p 1 -run "$(FILTER)"
 
 acttest:
 	act push -j test -e .github/push_event.json --reuse --container-architecture linux/amd64

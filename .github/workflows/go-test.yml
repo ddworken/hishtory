@@ -67,7 +67,8 @@ jobs:
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
       run: |
-          make retrying-test
+          go install gotest.tools/gotestsum@latest
+          make test
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
