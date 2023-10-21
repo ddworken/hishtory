@@ -76,12 +76,19 @@ var updateLocalDbFromRemoteCmd = &cobra.Command{
 		if config.IsOffline {
 			return
 		}
-		// TODO: Move this out of config.BetaMode only once we're confident in this change
-		if config.BetaMode {
-			// Do it a random percent of the time, which should be approximately often enough.
-			if rand.Intn(20) == 0 && !config.IsOffline {
-				lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "preload"))
-				lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+		// Do it a random percent of the time, which should be approximately often enough.
+		if rand.Intn(20) == 0 && !config.IsOffline {
+			err := lib.RetrieveAdditionalEntriesFromRemote(ctx, "preload")
+			if config.BetaMode {
+				lib.CheckFatalError(err)
+			} else if err != nil {
+				hctx.GetLogger().Infof("updateLocalDbFromRemote: Failed to RetrieveAdditionalEntriesFromRemote: %v", err)
+			}
+			err = lib.ProcessDeletionRequests(ctx)
+			if config.BetaMode {
+				lib.CheckFatalError(err)
+			} else if err != nil {
+				hctx.GetLogger().Infof("updateLocalDbFromRemote: Failed to ProcessDeletionRequests: %v", err)
 			}
 		}
 	},
