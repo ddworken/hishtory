@@ -1597,7 +1597,11 @@ func TestFish(t *testing.T) {
 	require.Contains(t, out, "\nfoo\n")
 	require.NotContains(t, out, "There are still jobs active")
 	require.NotContains(t, out, "A second attempt to exit will terminate them.")
-	require.Contains(t, out, "exit\nbash")
+	if runtime.GOOS == "darwin" {
+		require.Contains(t, out, "exit\nbash")
+	} else {
+		require.Contains(t, out, "exit\nrunner@ghaction-runner-hostname:/$")
+	}
 
 	// Check export
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
