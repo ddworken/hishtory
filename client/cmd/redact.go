@@ -26,14 +26,26 @@ var redactCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
+		skipOnlineRedaction := false
+		if !lib.CanReachHishtoryServer(ctx) {
+			fmt.Printf("Cannot reach hishtory backend (is this device offline?) so redaction will only apply to this device and not other synced devices. Would you like to continue with a local-only redaction anyways? [y/N] ")
+			reader := bufio.NewReader(os.Stdin)
+			resp, err := reader.ReadString('\n')
+			lib.CheckFatalError(err)
+			if strings.TrimSpace(resp) != "y" {
+				fmt.Printf("Aborting redact per user response of %#v\n", strings.TrimSpace(resp))
+				return
+			}
+			skipOnlineRedaction = true
+		}
 		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "redact"))
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		query := strings.Join(args, " ")
-		lib.CheckFatalError(redact(ctx, query, os.Getenv("HISHTORY_REDACT_FORCE") != ""))
+		lib.CheckFatalError(redact(ctx, query, os.Getenv("HISHTORY_REDACT_FORCE") != "", skipOnlineRedaction))
 	},
 }
 
-func redact(ctx context.Context, query string, force bool) error {
+func redact(ctx context.Context, query string, skipUserConfirmation, skipOnlineRedaction bool) error {
 	tx, err := lib.MakeWhereQueryFromSearch(ctx, hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
@@ -43,17 +55,17 @@ func redact(ctx context.Context, query string, force bool) error {
 	if res.Error != nil {
 		return res.Error
 	}
-	if force {
+	if skipUserConfirmation {
 		fmt.Printf("Permanently deleting %d entries\n", len(historyEntries))
 	} else {
-		fmt.Printf("This will permanently delete %d entries, are you sure? [y/N]", len(historyEntries))
+		fmt.Printf("This will permanently delete %d entries, are you sure? [y/N] ", len(historyEntries))
 		reader := bufio.NewReader(os.Stdin)
 		resp, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("failed to read response: %w", err)
 		}
 		if strings.TrimSpace(resp) != "y" {
-			fmt.Printf("Aborting delete per user response of %#v\n", strings.TrimSpace(resp))
+			fmt.Printf("Aborting redact per user response of %#v\n", strings.TrimSpace(resp))
 			return nil
 		}
 	}
@@ -69,7 +81,7 @@ func redact(ctx context.Context, query string, force bool) error {
 		return fmt.Errorf("DB deleted %d rows, when we only expected to delete %d rows, something may have gone wrong", res.RowsAffected, len(historyEntries))
 	}
 	err = deleteOnRemoteInstances(ctx, historyEntries)
-	if err != nil {
+	if err != nil && !skipOnlineRedaction {
 		return err
 	}
 	return nil

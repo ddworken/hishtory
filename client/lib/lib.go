@@ -569,7 +569,7 @@ func IsOfflineError(ctx context.Context, err error) bool {
 		strings.Contains(err.Error(), "connect: connection refused") {
 		return true
 	}
-	if !isHishtoryServerUp(ctx) {
+	if !CanReachHishtoryServer(ctx) {
 		// If the backend server is down, then treat all errors as offline errors
 		return true
 	}
@@ -577,7 +577,7 @@ func IsOfflineError(ctx context.Context, err error) bool {
 	return false
 }
 
-func isHishtoryServerUp(ctx context.Context) bool {
+func CanReachHishtoryServer(ctx context.Context) bool {
 	_, err := ApiGet(ctx, "/api/v1/ping")
 	return err == nil
 }
