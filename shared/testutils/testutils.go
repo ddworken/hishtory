@@ -105,6 +105,8 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	touchFile(path.Join(homedir, ".bash_history"))
 	touchFile(path.Join(homedir, ".zsh_history"))
 	touchFile(path.Join(homedir, ".local/share/fish/fish_history"))
+	restoreHishtoryOffline := BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
 	return func() {
 		cmd := exec.Command("killall", "hishtory", "tmux")
 		stdout, err := cmd.Output()
@@ -121,6 +123,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 			checkError(copy(getBackPath(file, id), file))
 		}
 		checkError(os.Chdir(initialWd))
+		restoreHishtoryOffline()
 	}
 }
 
