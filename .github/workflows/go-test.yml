@@ -69,6 +69,12 @@ jobs:
       run: |
           go install gotest.tools/gotestsum@latest
           make test
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results.json
+        path: /tmp/testrun.json
+
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
