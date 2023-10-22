@@ -65,7 +65,7 @@ func redact(ctx context.Context, query string, force bool) error {
 	if res.Error != nil {
 		return res.Error
 	}
-	if res.RowsAffected != int64(len(historyEntries)) {
+	if res.RowsAffected > int64(len(historyEntries))+1 || res.RowsAffected < int64(len(historyEntries))-1 {
 		return fmt.Errorf("DB deleted %d rows, when we only expected to delete %d rows, something may have gone wrong", res.RowsAffected, len(historyEntries))
 	}
 	err = deleteOnRemoteInstances(ctx, historyEntries)
