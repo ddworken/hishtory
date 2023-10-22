@@ -27,10 +27,8 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userId := entries[0].UserId
 
-	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
-
 	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, entries[0].UserId, entries[0].DeviceId, len(entries), false))
 
 	devices, err := s.db.DevicesForUser(r.Context(), entries[0].UserId)
@@ -77,8 +75,6 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
-
-	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
@@ -97,8 +93,6 @@ func (s *Server) apiQueryHandler(w http.ResponseWriter, r *http.Request) {
 	deviceId := getRequiredQueryParam(r, "device_id")
 	queryReason := getOptionalQueryParam(r, "queryReason", s.isTestEnvironment)
 	isBackgroundQuery := queryReason == "preload" || queryReason == "newclient"
-
-	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
 
@@ -167,10 +161,8 @@ func (s *Server) apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	err = s.db.DumpRequestDeleteForUserAndDevice(r.Context(), userId, requestingDeviceId)
 	checkGormError(err)
 
-	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
-
 	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, srcDeviceId, len(entries), false))
 
 	w.Header().Set("Content-Length", "0")
@@ -234,10 +226,8 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		checkGormError(err)
 	}
 
-	// TODO: add these to the context in a middleware
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
-
 	s.handleNonCriticalError(s.updateUsageData(r.Context(), version, remoteIPAddr, userId, deviceId, 0, false))
 
 	if s.statsd != nil && !isIntegrationTestDevice {
