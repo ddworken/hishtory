@@ -71,8 +71,9 @@ jobs:
           make test
     - name: Archive test results
       uses: actions/upload-artifact@v3
+      if: success() || failure()
       with:
-        name: test-results.json
+        name: test-results-{{ matrix.os }}.json
         path: /tmp/testrun.json
 
     # - name: Setup tmate session
