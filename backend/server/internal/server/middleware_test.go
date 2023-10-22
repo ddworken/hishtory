@@ -138,7 +138,6 @@ func TestPanicGuardNoPanic(t *testing.T) {
 }
 
 func TestMergeMiddlewares(t *testing.T) {
-	fmt.Println("Output prefix to avoid breaking gotestsum with panics")
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("test"))
@@ -175,6 +174,7 @@ func TestMergeMiddlewares(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			fmt.Println("Output prefix to avoid breaking gotestsum with panics")
 			var out strings.Builder
 			middlewares := mergeMiddlewares(
 				withPanicGuard(nil),
