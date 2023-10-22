@@ -48,6 +48,7 @@ func main() {
 	for testId, count := range NUM_TEST_RETRIES {
 		GLOBAL_STATSD.Distribution("test_retry_count", float64(count), []string{"test:" + testId, "os:" + runtime.GOOS}, 1.0)
 	}
+	fmt.Printf("Uploaded data about %d tests to datadog\n", len(NUM_TEST_RETRIES))
 }
 
 type eventHandler struct{}
