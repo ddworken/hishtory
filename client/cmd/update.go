@@ -251,6 +251,11 @@ func getTmpClientPath() string {
 }
 
 func downloadFile(filename, url string) error {
+	// Support simulating network errors for the purposes of testing
+	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
+		return fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
+	}
+
 	// Download the data
 	resp, err := http.Get(url)
 	if err != nil {
