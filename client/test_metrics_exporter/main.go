@@ -11,26 +11,27 @@ import (
 	"gotest.tools/gotestsum/testjson"
 )
 
-var GLOBAL_STATSD *statsd.Client
+var GLOBAL_STATSD *statsd.Client = nil
 
 var NUM_TEST_RETRIES map[string]int
 
 func main() {
 	// Configure Datadog
-	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); !(has_dd_api_key) {
+	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); has_dd_api_key {
+		ddStats, err := statsd.New("localhost:8125")
+		if err != nil {
+			err := fmt.Errorf("failed to start DataDog statsd: %w", err)
+			if runtime.GOOS == "darwin" {
+				fmt.Printf("failed to init datadog: %v", err)
+				os.Exit(0)
+			} else {
+				log.Fatalf("failed to init datadog: %v", err)
+			}
+		}
+		GLOBAL_STATSD = ddStats
+	} else {
 		fmt.Printf("Skipping exporting test stats to datadog\n")
 	}
-	ddStats, err := statsd.New("localhost:8125")
-	if err != nil {
-		err := fmt.Errorf("failed to start DataDog statsd: %w", err)
-		if runtime.GOOS == "darwin" {
-			fmt.Printf("failed init datadog: %v", err)
-			os.Exit(0)
-		} else {
-			log.Fatalf("failed to init datadog: %v", err)
-		}
-	}
-	GLOBAL_STATSD = ddStats
 
 	// Parse the test output
 	NUM_TEST_RETRIES = make(map[string]int)
