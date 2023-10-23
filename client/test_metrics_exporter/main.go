@@ -52,6 +52,10 @@ func main() {
 	if GLOBAL_STATSD == nil {
 		fmt.Printf("Skipped uploading data about %d tests to datadog because GLOBAL_STATSD==nil\n", len(NUM_TEST_RETRIES))
 	} else {
+		err := GLOBAL_STATSD.Flush()
+		if err != nil {
+			log.Fatalf("failed to flush metrics: %v", err)
+		}
 		fmt.Printf("Uploaded data about %d tests to datadog\n", len(NUM_TEST_RETRIES))
 	}
 }
