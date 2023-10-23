@@ -67,7 +67,13 @@ jobs:
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
       run: |
-          go install gotest.tools/gotestsum@latest
+
+          # Once https://github.com/gotestyourself/gotestsum/pull/377 is merged, update this to pull from main rather than my fork
+          cd ../
+          git clone git@github.com:ddworken/gotestsum.git
+          cd gotestsum
+          go install .
+          cd ../hishtory
           make test
     - name: Archive test results
       uses: actions/upload-artifact@v3
