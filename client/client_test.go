@@ -1399,7 +1399,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	require.NoError(t, err)
-	if out != "This will permanently delete 1 entries, are you sure? [y/N]" {
+	if out != "This will permanently delete 1 entries, are you sure? [y/N] " {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
