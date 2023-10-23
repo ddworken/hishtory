@@ -75,6 +75,11 @@ jobs:
           go install .
           cd ../hishtory
           make test
+    - name: Extra Delay
+      run: |
+
+        # Add an extra short delay to allow datadog to flush metrics
+        sleep 300 # 5 minutes
     - name: Archive test results
       uses: actions/upload-artifact@v3
       if: success() || failure()
