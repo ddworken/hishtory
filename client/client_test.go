@@ -1231,7 +1231,7 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	restoreSecondProfile := testutils.BackupAndRestoreWithId(t, "-install2")
 	restoreFirstProfile()
 	out := tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
-	expectedOutput := "echo 1\n"
+	expectedOutput := "echo 1\necho 2\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1243,7 +1243,7 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 
 	// Device 2: Run export which contains all results (as it did all along since it is stored offline)
 	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
-	expectedOutput = "echo 1\necho 2; echo 3\necho 4\n"
+	expectedOutput = "echo 1\necho 2\necho 3\necho 4\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1251,7 +1251,7 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	// Device 1: Now it too sees all the results
 	restoreFirstProfile()
 	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail")
-	expectedOutput = "echo 1\necho 2; echo 3\necho 4\n"
+	expectedOutput = "echo 1\necho 2\necho 3\necho 4\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
