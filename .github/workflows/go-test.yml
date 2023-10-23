@@ -70,7 +70,7 @@ jobs:
 
           # Once https://github.com/gotestyourself/gotestsum/pull/377 is merged, update this to pull from main rather than my fork
           cd ../
-          git clone git@github.com:ddworken/gotestsum.git
+          git clone https://github.com/ddworken/gotestsum.git
           cd gotestsum
           go install .
           cd ../hishtory
