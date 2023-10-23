@@ -347,3 +347,10 @@ func installHishtory(t testing.TB, tester shellTester, userSecret string) string
 	}
 	return matches[1]
 }
+
+func stripShellPrefix(out string) string {
+	if strings.Contains(out, "\n\n\n") {
+		return strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
+	}
+	return out
+}

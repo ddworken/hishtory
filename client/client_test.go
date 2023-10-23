@@ -1963,25 +1963,16 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	}
 
 	// Search and check that the table is updated
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "echo"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "echo"}))
 	testutils.CompareGoldens(t, out, "testControlR-Search")
 
 	// An advanced search and check that the table is updated
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "cwd:/tmp/ SPACE ls"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "cwd:/tmp/ SPACE ls"}))
 	testutils.CompareGoldens(t, out, "testControlR-AdvancedSearch")
 
 	// Set some different columns to be displayed and check that the table displays those
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns Hostname 'Exit Code' Command`)
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"}))
 	testutils.CompareGoldens(t, out, "testControlR-displayedColumns")
 
 	// Add a custom column
@@ -1992,46 +1983,27 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 	// And run a query and confirm it is displayed
 	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns foo`)
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail"})
-	out = strings.TrimSpace(out)
-	if tester.ShellName() == "bash" {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail"}))
 	testutils.CompareGoldens(t, out, "testControlR-customColumn")
 
 	// Start with a search query, and then press control-r and it shows results for that query
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"ls", "C-R"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"ls", "C-R"}))
 	testutils.CompareGoldens(t, out, "testControlR-InitialSearch")
 
 	// Start with a search query, and then press control-r, then make the query more specific
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"e", "C-R", "cho"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"e", "C-R", "cho"}))
 	testutils.CompareGoldens(t, out, "testControlR-InitialSearchExpanded")
 
 	// Start with a search query for which there are no results
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R"}))
 	testutils.CompareGoldens(t, out, "testControlR-InitialSearchNoResults")
 
 	// Start with a search query for which there are no results
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R", "BSpace BSpace BSpace BSpace echo"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"asdf", "C-R", "BSpace BSpace BSpace BSpace echo"}))
 	testutils.CompareGoldens(t, out, "testControlR-InitialSearchNoResultsThenFoundResults")
 
 	// Search, hit control-c, and the table should be cleared
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"echo", "C-R", "c", "C-C"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"echo", "C-R", "c", "C-C"}))
 	require.NotContains(t, out, "Search Query", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "─────", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "Exit Code", "hishtory is showing a table even after control-c?")
@@ -2057,10 +2029,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NoError(t, err)
 
 	// And check that the control-r bindings work again
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail SPACE -exit_code:0"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "-pipefail SPACE -exit_code:0"}))
 	testutils.CompareGoldens(t, out, "testControlR-Final")
 
 	// Record a multi-line command
@@ -2071,17 +2040,11 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	tester.RunInteractiveShell(t, ` hishtory disable`)
 
 	// Check that we display it in the table reasonably
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah"}))
 	testutils.CompareGoldens(t, out, "testControlR-DisplayMultiline-"+shellName)
 
 	// Check that we can select it correctly
-	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"})
-	if strings.Contains(out, "\n\n\n") {
-		out = strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
-	}
+	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"}))
 	require.Contains(t, out, "-Slah", "out has unexpected output missing the selected row")
 	if !testutils.IsGithubAction() {
 		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
