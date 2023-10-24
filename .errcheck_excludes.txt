@@ -10,3 +10,4 @@ os.Unsetenv
 (*github.com/DataDog/datadog-go/statsd.Client).Incr
 (*github.com/DataDog/datadog-go/statsd.Client).Distribution
 (*github.com/schollz/progressbar/v3.ProgressBar).Finish
+(*github.com/DataDog/datadog-go/statsd.Client).Close

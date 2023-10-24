@@ -28,6 +28,7 @@ func main() {
 				log.Fatalf("failed to init datadog: %v", err)
 			}
 		}
+		defer ddStats.Close()
 		GLOBAL_STATSD = ddStats
 	} else {
 		fmt.Printf("Skipping exporting test stats to datadog\n")
