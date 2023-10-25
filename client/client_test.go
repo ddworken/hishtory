@@ -97,7 +97,6 @@ func TestParam(t *testing.T) {
 	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 	t.Run("testTui/search", testTui_search)
-	t.Run("testTui/invalidSearch", testTui_invalidSearch)
 	t.Run("testTui/general", testTui_general)
 	t.Run("testTui/scroll", testTui_scroll)
 	t.Run("testTui/resize", testTui_resize)
@@ -1810,19 +1809,6 @@ func testTui_search(t *testing.T) {
 	expected = `ls ~/`
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Fatalf("hishtory tquery selection mismatch (-expected +got):\n%s", diff)
-	}
-}
-
-func testTui_invalidSearch(t *testing.T) {
-	// Setup
-	defer testutils.BackupAndRestore(t)()
-	tester, _, _ := setupTestTui(t)
-
-	// Check hishtory export to confirm the right commands are in the initial set of history entries
-	out := tester.RunInteractiveShell(t, `hishtory export`)
-	expected := "ls ~/\necho 'aaaaaa bbbb'\n"
-	if diff := cmp.Diff(expected, out); diff != "" {
-		t.Fatalf("hishtory export mismatch (-expected +got):\n%s", diff)
 	}
 
 	// Check the output when the initial search is invalid
