@@ -183,11 +183,18 @@ type bannerMsg struct {
 	banner string
 }
 type asyncQueryFinishedMsg struct {
-	rows                  []table.Row
-	entries               []*data.HistoryEntry
-	searchErr             error
-	forceUpdateTable      bool
-	maintainCursor        bool
+	// The query that finished running. Used to ensure that we only process this message if it matches the current query.
+	searchedQuery string
+	// The table rows and entries
+	rows    []table.Row
+	entries []*data.HistoryEntry
+	// An error from searching, if one occurred
+	searchErr error
+	// Whether to force a full refresh of the table
+	forceUpdateTable bool
+	// Whether to maintain the cursor position
+	maintainCursor bool
+	// An updated search query. May be used for initial queries when they're invalid.
 	overriddenSearchQuery *string
 }
 
@@ -270,7 +277,7 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		}
 		return func() tea.Msg {
 			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
-			return asyncQueryFinishedMsg{rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
+			return asyncQueryFinishedMsg{query, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
 		}
 	}
 	return nil
@@ -342,9 +349,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.isLoading = false
 		return m, nil
 	case asyncQueryFinishedMsg:
-		m = updateTable(m, msg.rows, msg.entries, msg.searchErr, msg.forceUpdateTable, msg.maintainCursor)
-		if msg.overriddenSearchQuery != nil {
-			m.queryInput.SetValue(*msg.overriddenSearchQuery)
+		if m.runQuery != nil && *m.runQuery == msg.searchedQuery {
+			m = updateTable(m, msg.rows, msg.entries, msg.searchErr, msg.forceUpdateTable, msg.maintainCursor)
+			if msg.overriddenSearchQuery != nil {
+				m.queryInput.SetValue(*msg.overriddenSearchQuery)
+			}
 		}
 		return m, nil
 	default:
@@ -686,12 +695,12 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	go func() {
 		rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 		if err == nil || initialQuery == "" {
-			p.Send(asyncQueryFinishedMsg{rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
+			p.Send(asyncQueryFinishedMsg{searchedQuery: initialQuery, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
 		} else {
 			// initialQuery is likely invalid in some way, let's just drop it
 			emptyQuery := ""
 			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, emptyQuery, PADDED_NUM_ENTRIES)
-			p.Send(asyncQueryFinishedMsg{rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
+			p.Send(asyncQueryFinishedMsg{searchedQuery: emptyQuery, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
 		}
 	}()
 	// Async: Retrieve additional entries from the backend
