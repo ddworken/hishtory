@@ -96,8 +96,10 @@ func TestParam(t *testing.T) {
 	}
 	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
-	t.Run("testTui/search", testTui_search)
-	t.Run("testTui/general", testTui_general)
+	t.Run("testTui/search/online", func(t *testing.T) { testTui_search(t, Online) })
+	t.Run("testTui/search/offline", func(t *testing.T) { testTui_search(t, Offline) })
+	t.Run("testTui/general/online", func(t *testing.T) { testTui_general(t, Online) })
+	t.Run("testTui/general/offline", func(t *testing.T) { testTui_general(t, Offline) })
 	t.Run("testTui/scroll", testTui_scroll)
 	t.Run("testTui/resize", testTui_resize)
 	t.Run("testTui/delete", testTui_delete)
@@ -1609,9 +1611,10 @@ func TestFish(t *testing.T) {
 
 // TODO(ddworken): Run TestTui in online and offline mode
 
-func setupTestTui(t testing.TB) (shellTester, string, *gorm.DB) {
+func setupTestTui(t testing.TB, onlineStatus OnlineStatus) (shellTester, string, *gorm.DB) {
 	tester := zshTester{}
-	userSecret := installHishtory(t, tester, "")
+	userSecret := installWithOnlineStatus(t, tester, onlineStatus)
+	assertOnlineStatus(t, onlineStatus)
 
 	// Disable recording so that all our testing commands don't get recorded
 	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
@@ -1620,17 +1623,21 @@ func setupTestTui(t testing.TB) (shellTester, string, *gorm.DB) {
 	db := hctx.GetDb(hctx.MakeContext())
 	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	require.NoError(t, db.Create(e1).Error)
-	manuallySubmitHistoryEntry(t, userSecret, e1)
+	if onlineStatus == Online {
+		manuallySubmitHistoryEntry(t, userSecret, e1)
+	}
 	e2 := testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")
 	require.NoError(t, db.Create(e2).Error)
-	manuallySubmitHistoryEntry(t, userSecret, e2)
+	if onlineStatus == Online {
+		manuallySubmitHistoryEntry(t, userSecret, e2)
+	}
 	return tester, userSecret, db
 }
 
 func testTui_resize(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	tester, userSecret, _ := setupTestTui(t)
+	tester, userSecret, _ := setupTestTui(t, Online)
 
 	// Check the output when the size is smaller
 	out := captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
@@ -1670,7 +1677,7 @@ func testTui_resize(t *testing.T) {
 func testTui_scroll(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	tester, userSecret, _ := setupTestTui(t)
+	tester, userSecret, _ := setupTestTui(t, Online)
 
 	// Check that we can use left arrow keys to scroll
 	out := captureTerminalOutput(t, tester, []string{
@@ -1714,7 +1721,7 @@ func testTui_color(t *testing.T) {
 
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	tester, _, _ := setupTestTui(t)
+	tester, _, _ := setupTestTui(t, Online)
 	tester.RunInteractiveShell(t, ` hishtory config-set highlight-matches false`)
 
 	// Capture the TUI with full colored output, note that this golden will be harder to undersand
@@ -1739,7 +1746,7 @@ func testTui_color(t *testing.T) {
 func testTui_delete(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	tester, userSecret, _ := setupTestTui(t)
+	tester, userSecret, _ := setupTestTui(t, Online)
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
 
 	// Check that we can delete an entry
@@ -1778,10 +1785,10 @@ func testTui_delete(t *testing.T) {
 	assertNoLeakedConnections(t)
 }
 
-func testTui_search(t *testing.T) {
+func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	tester, _, _ := setupTestTui(t)
+	tester, _, _ := setupTestTui(t, onlineStatus)
 
 	// Check hishtory export to confirm the right commands are in the initial set of history entries
 	out := tester.RunInteractiveShell(t, `hishtory export`)
@@ -1839,10 +1846,10 @@ func testTui_search(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
 }
 
-func testTui_general(t *testing.T) {
+func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
-	tester, _, _ := setupTestTui(t)
+	tester, _, _ := setupTestTui(t, onlineStatus)
 
 	// Check the initial output when there is no search
 	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
