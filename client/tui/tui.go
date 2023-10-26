@@ -401,12 +401,17 @@ func (m model) View() string {
 	if m.isLoading {
 		loadingMessage = fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View())
 	}
-	// TODO: There is a bug where it is needed to add a new line between warnings
 	warning := ""
+	if loadingMessage != "" {
+		warning += "\n"
+	}
 	if m.isOffline {
 		warning += "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale"
 	}
 	if m.searchErr != nil {
+		if strings.TrimSpace(warning) != "" {
+			warning += "\n"
+		}
 		warning += fmt.Sprintf("Warning: failed to search: %v", m.searchErr)
 	}
 	warning += "\n"
