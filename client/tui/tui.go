@@ -31,6 +31,13 @@ const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
 var CURRENT_QUERY_FOR_HIGHLIGHTING string = ""
 var SELECTED_COMMAND string = ""
 
+// Globally shared monotonically increasing IDs used to prevent race conditions in handling async queries.
+// If the user types 'l' and then 's', two queries will be dispatched: One for 'l' and one for 'ls'. These
+// counters are used to ensure that we don't process the query results for 'ls' and then promptly overwrite
+// them with the results for 'l'.
+var LAST_DISPATCHED_QUERY_ID = 0
+var LAST_PROCESSED_QUERY_ID = -1
+
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
@@ -183,8 +190,8 @@ type bannerMsg struct {
 	banner string
 }
 type asyncQueryFinishedMsg struct {
-	// The query that finished running. Used to ensure that we only process this message if it matches the current query.
-	searchedQuery string
+	// The query ID finished running. Used to ensure that we only process this message if it is the latest query to finish.
+	queryId int
 	// The table rows and entries
 	rows    []table.Row
 	entries []*data.HistoryEntry
@@ -275,9 +282,11 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		if m.runQuery != nil {
 			query = *m.runQuery
 		}
+		queryId := LAST_DISPATCHED_QUERY_ID
+		LAST_DISPATCHED_QUERY_ID += 1
 		return func() tea.Msg {
 			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
-			return asyncQueryFinishedMsg{query, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
+			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
 		}
 	}
 	return nil
@@ -349,7 +358,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.isLoading = false
 		return m, nil
 	case asyncQueryFinishedMsg:
-		if m.runQuery != nil && *m.runQuery == msg.searchedQuery {
+		if msg.queryId > LAST_PROCESSED_QUERY_ID {
+			LAST_PROCESSED_QUERY_ID = msg.queryId
 			m = updateTable(m, msg.rows, msg.entries, msg.searchErr, msg.forceUpdateTable, msg.maintainCursor)
 			if msg.overriddenSearchQuery != nil {
 				m.queryInput.SetValue(*msg.overriddenSearchQuery)
@@ -391,6 +401,7 @@ func (m model) View() string {
 	if m.isLoading {
 		loadingMessage = fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View())
 	}
+	// TODO: There is a bug where it is needed to add a new line between warnings
 	warning := ""
 	if m.isOffline {
 		warning += "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale"
@@ -693,14 +704,16 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
 	go func() {
+		queryId := LAST_DISPATCHED_QUERY_ID
+		LAST_DISPATCHED_QUERY_ID++
 		rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 		if err == nil || initialQuery == "" {
-			p.Send(asyncQueryFinishedMsg{searchedQuery: initialQuery, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
+			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
 		} else {
 			// initialQuery is likely invalid in some way, let's just drop it
 			emptyQuery := ""
 			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, emptyQuery, PADDED_NUM_ENTRIES)
-			p.Send(asyncQueryFinishedMsg{searchedQuery: emptyQuery, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
+			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
 		}
 	}()
 	// Async: Retrieve additional entries from the backend
