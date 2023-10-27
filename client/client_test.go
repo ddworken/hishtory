@@ -104,6 +104,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/resize", testTui_resize)
 	t.Run("testTui/delete", testTui_delete)
 	t.Run("testTui/color", testTui_color)
+	t.Run("testTui/errors", testTui_errors)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1609,8 +1610,6 @@ func TestFish(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestFish-table")
 }
 
-// TODO(ddworken): Run TestTui in online and offline mode
-
 func setupTestTui(t testing.TB, onlineStatus OnlineStatus) (shellTester, string, *gorm.DB) {
 	tester := zshTester{}
 	userSecret := installWithOnlineStatus(t, tester, onlineStatus)
@@ -1904,6 +1903,32 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
+}
+
+func testTui_errors(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t, Online)
+
+	// Check the output when the device is offline
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
+	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
+	if len(strings.Split(out, "hishtory tquery")) != 2 {
+		t.Fatalf("failed to split out=%#v", out)
+	}
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-Offline")
+
+	// Check the output when the device is offline AND there is an invalid search
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "ls:"})
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
+	if len(strings.Split(out, "hishtory tquery")) != 2 {
+		t.Fatalf("failed to split out=%#v", out)
+	}
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-OfflineInvalid")
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
