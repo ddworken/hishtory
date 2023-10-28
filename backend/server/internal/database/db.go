@@ -382,7 +382,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 			SELECT user_id
 			FROM devices
 			GROUP BY user_id
-			HAVING COUNT(DISTINCT device_id) > 1
+			HAVING COUNT(DISTINCT device_id) = 1
 		)	
 		`)
 		if r.Error != nil {
@@ -392,7 +392,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 		CREATE TEMP TABLE temp_inactive_users AS (
 			SELECT user_id
 			FROM usage_data
-			WHERE last_used <= (now() - INTERVAL '90 days')
+			WHERE last_used <= (now() - INTERVAL '180 days')
 		)	
 		`)
 		if r.Error != nil {
@@ -400,7 +400,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 		}
 		r = tx.Exec(`
 		SELECT COUNT(*) FROM enc_history_entries WHERE
-			date <= (now() - INTERVAL '90 days')
+			date <= (now() - INTERVAL '180 days')
 			AND user_id IN (SELECT * FROM temp_users_with_one_device)
 			AND user_id IN (SELECT * FROM temp_inactive_users)
 		`)
