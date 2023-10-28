@@ -90,7 +90,7 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 		defer configureObservability(mux, s.releaseVersion)()
 		go func() {
 			if err := s.db.DeepClean(ctx); err != nil {
-				panic(err)
+				fmt.Println("failed to deep clean: %w", err)
 			}
 		}()
 	}

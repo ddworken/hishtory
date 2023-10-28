@@ -399,7 +399,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 			return r.Error
 		}
 		r = tx.Exec(`
-		SELECT COUNT(*) FROM enc_history_entries WHERE
+		DELETE FROM enc_history_entries WHERE
 			date <= (now() - INTERVAL '180 days')
 			AND user_id IN (SELECT * FROM temp_users_with_one_device)
 			AND user_id IN (SELECT * FROM temp_inactive_users)
