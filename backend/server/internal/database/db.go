@@ -376,7 +376,7 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 }
 
 func (db *DB) DeepClean(ctx context.Context) error {
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		r := tx.Exec(`
 		CREATE TEMP TABLE temp_users_with_one_device AS (
 			SELECT user_id
@@ -386,7 +386,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 		)	
 		`)
 		if r.Error != nil {
-			return r.Error
+			return fmt.Errorf("failed to create list of single device users: %w", r.Error)
 		}
 		r = tx.Exec(`
 		CREATE TEMP TABLE temp_inactive_users AS (
@@ -396,7 +396,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 		)	
 		`)
 		if r.Error != nil {
-			return r.Error
+			return fmt.Errorf("failed to create list of inactive users: %w", r.Error)
 		}
 		r = tx.Exec(`
 		DELETE FROM enc_history_entries WHERE
@@ -405,9 +405,35 @@ func (db *DB) DeepClean(ctx context.Context) error {
 			AND user_id IN (SELECT * FROM temp_inactive_users)
 		`)
 		if r.Error != nil {
-			return r.Error
+			return fmt.Errorf("failed to delete entries for inactive users: %w", r.Error)
 		}
-		fmt.Printf("Ran deep clean and deleted %d rows\n", r.RowsAffected)
+		fmt.Printf("Ran deep clean for inactive users and deleted %d rows\n", r.RowsAffected)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		r := tx.Exec(`
+		CREATE TEMP TABLE users_with_too_many_entries AS (
+			SELECT user_id
+			FROM enc_history_entries
+			GROUP BY user_id
+			HAVING count(*) > 50000000
+		)
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to create list of users with too many entries: %w", r.Error)
+		}
+		r = tx.Raw(`
+		DELETE FROM enc_history_entries WHERE
+			date <= (now() - INTERVAL '90 days')
+			AND user_id IN (SELECT * FROM users_with_too_many_entries)
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to delete entries for overly active users: %w", r.Error)
+		}
+		fmt.Printf("Ran deep clean for overly active users and deleted %d rows\n", r.RowsAffected)
 		return nil
 	})
 }
