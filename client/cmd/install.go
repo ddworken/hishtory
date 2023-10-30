@@ -21,6 +21,7 @@ import (
 	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
 var offlineInit *bool
@@ -40,8 +41,8 @@ var installCmd = &cobra.Command{
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
-			var count int64
-			lib.CheckFatalError(db.Model(&data.HistoryEntry{}).Count(&count).Error)
+			count, err := countStoredEntries(db)
+			lib.CheckFatalError(err)
 			if count < 10 {
 				fmt.Println("Importing existing shell history...")
 				ctx := hctx.MakeContext()
@@ -64,8 +65,8 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := hctx.OpenLocalSqliteDb()
 		lib.CheckFatalError(err)
-		var count int64
-		lib.CheckFatalError(db.Model(&data.HistoryEntry{}).Count(&count).Error)
+		count, err := countStoredEntries(db)
+		lib.CheckFatalError(err)
 		if count > 0 {
 			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset?\nNote: This won't clear any imported history entries from your existing shell\n[y/N]")
 			reader := bufio.NewReader(os.Stdin)
@@ -119,6 +120,13 @@ var uninstallCmd = &cobra.Command{
 		_, _ = lib.ApiPost(ctx, "/api/v1/feedback", "application/json", reqBody)
 		lib.CheckFatalError(uninstall(ctx))
 	},
+}
+
+func countStoredEntries(db *gorm.DB) (int64, error) {
+	return lib.RetryingDbFunctionWithResult(func() (int64, error) {
+		var count int64
+		return count, db.Model(&data.HistoryEntry{}).Count(&count).Error
+	})
 }
 
 func warnIfUnsupportedBashVersion() error {
@@ -182,7 +190,9 @@ func install(secretKey string, offline bool) error {
 // Handles people running `hishtory update` when the DB needs updating.
 func handleDbUpgrades(ctx context.Context) error {
 	db := hctx.GetDb(ctx)
-	return db.Exec(`UPDATE history_entries SET entry_id = lower(hex(randomblob(12))) WHERE entry_id IS NULL`).Error
+	return lib.RetryingDbFunction(func() error {
+		return db.Exec(`UPDATE history_entries SET entry_id = lower(hex(randomblob(12))) WHERE entry_id IS NULL`).Error
+	})
 }
 
 // Handles people running `hishtory update` from an old version of hishtory that
