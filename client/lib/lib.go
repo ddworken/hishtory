@@ -943,8 +943,7 @@ func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
 		SELECT DISTINCT json_extract(value, '$.name') as cc_name
 		FROM history_entries 
 		JOIN json_each(custom_columns)
-		WHERE value IS NOT NULL
-		LIMIT 10`
+		WHERE value IS NOT NULL`
 		return db.Raw(query).Rows()
 	})
 	if err != nil {
