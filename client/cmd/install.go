@@ -180,6 +180,7 @@ func install(secretKey string, offline bool) error {
 		// No config, so set up a new installation
 		return setup(secretKey, offline)
 	}
+	// TODO: Only trigger this if the version is old enough
 	err = handleDbUpgrades(hctx.MakeContext())
 	if err != nil {
 		return err
