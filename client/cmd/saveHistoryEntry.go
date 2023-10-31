@@ -149,7 +149,7 @@ func presaveHistoryEntry(ctx context.Context) {
 	cmd, err := extractCommandFromArg(ctx, shellName, os.Args[3] /* isPresave = */, true)
 	lib.CheckFatalError(err)
 	entry.Command = cmd
-	if strings.HasPrefix(" ", entry.Command) || strings.TrimSpace(entry.Command) == "" {
+	if strings.HasPrefix(entry.Command, " ") || strings.TrimSpace(entry.Command) == "" {
 		// Don't save commands that start with a space
 		return
 	}
