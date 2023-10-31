@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -937,15 +938,17 @@ func parseAtomizedToken(ctx context.Context, token string) (string, any, any, er
 
 func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
 	db := hctx.GetDb(ctx)
-	query := `
-	SELECT DISTINCT json_extract(value, '$.name') as cc_name
-	FROM history_entries 
-	JOIN json_each(custom_columns)
-	WHERE value IS NOT NULL
-	LIMIT 10`
-	rows, err := db.Raw(query).Rows()
+	rows, err := RetryingDbFunctionWithResult(func() (*sql.Rows, error) {
+		query := `
+		SELECT DISTINCT json_extract(value, '$.name') as cc_name
+		FROM history_entries 
+		JOIN json_each(custom_columns)
+		WHERE value IS NOT NULL
+		LIMIT 10`
+		return db.Raw(query).Rows()
+	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query for list of custom columns: %v", err)
 	}
 	ccNames := make([]string, 0)
 	for rows.Next() {
