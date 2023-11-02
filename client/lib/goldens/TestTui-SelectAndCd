@@ -1,1 +1,1 @@
-cd /tmp/ && echo 'aaaaaa bbbb'
+cd "/tmp/" && echo 'aaaaaa bbbb'
