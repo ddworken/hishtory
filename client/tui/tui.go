@@ -390,7 +390,7 @@ func (m model) View() string {
 		SELECTED_COMMAND = m.tableEntries[m.table.Cursor()].Command
 		if m.selected == SelectedWithChangeDir {
 			changeDir := m.tableEntries[m.table.Cursor()].CurrentWorkingDirectory
-			SELECTED_COMMAND = "cd " + changeDir + " && " + SELECTED_COMMAND
+			SELECTED_COMMAND = "cd \"" + changeDir + "\" && " + SELECTED_COMMAND
 		}
 		return ""
 	}
