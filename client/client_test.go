@@ -1784,6 +1784,8 @@ func testTui_delete(t *testing.T) {
 	assertNoLeakedConnections(t)
 }
 
+// TODO: Write a test for control-X to select and cd
+
 func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
