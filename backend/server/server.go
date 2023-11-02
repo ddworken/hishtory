@@ -102,7 +102,8 @@ func OpenDB() (*database.DB, error) {
 	return db, nil
 }
 
-var CRON_COUNTER = 0
+var LAST_USER_STATS_RUN = time.Unix(0, 0)
+var LAST_DEEP_CLEAN = time.Unix(0, 0)
 
 // TODO: Update this to delete entries from integration test devices, as long as they are inactive
 func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
@@ -124,15 +125,23 @@ func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
 		}
 	}
 
+	// Run a deep clean less often to cover some more edge cases that hurt DB performance
+	if isProductionEnvironment() && time.Since(LAST_DEEP_CLEAN) > 24*3*time.Hour {
+		LAST_DEEP_CLEAN = time.Now()
+		if err := db.DeepClean(ctx); err != nil {
+			return fmt.Errorf("db.DeepClean: %w", err)
+		}
+	}
+
 	// Collect and store metrics on active users so we can track trends over time. This doesn't
-	// have to be run as often, so only run it for a fraction of cron jobs
-	if CRON_COUNTER%40 == 0 {
+	// have to be run as often, so only run it periodically.
+	if time.Since(LAST_USER_STATS_RUN) > 12*time.Hour {
+		LAST_USER_STATS_RUN = time.Now()
 		if err := db.GenerateAndStoreActiveUserStats(ctx); err != nil {
 			return fmt.Errorf("db.GenerateAndStoreActiveUserStats: %w", err)
 		}
 	}
 
-	CRON_COUNTER += 1
 	return nil
 }
 
