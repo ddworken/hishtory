@@ -29,6 +29,28 @@ var updateCmd = &cobra.Command{
 	},
 }
 
+var validateBinaryCmd = &cobra.Command{
+	Use:    "validate-binary",
+	Hidden: true,
+	Short:  "[Test Only] Validate the given binary for SLSA compliance",
+	Args:   cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		version := args[0]
+		binaryPath := args[1]
+		attestationPath := args[2]
+		isMacOs, err := cmd.Flags().GetBool("is_macos")
+		lib.CheckFatalError(err)
+		if isMacOs {
+			macOsUnsignedBinaryPath, err := cmd.Flags().GetString("macos_unsigned_binary")
+			lib.CheckFatalError(err)
+			lib.CheckFatalError(verifyBinaryAgainstUnsignedBinaryForMac(ctx, binaryPath, macOsUnsignedBinaryPath, attestationPath, version))
+		} else {
+			lib.CheckFatalError(lib.VerifyBinary(ctx, binaryPath, attestationPath, version))
+		}
+	},
+}
+
 func GetDownloadData(ctx context.Context) (shared.UpdateInfo, error) {
 	respBody, err := lib.ApiGet(ctx, "/api/v1/download")
 	if err != nil {
@@ -132,9 +154,14 @@ func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared
 		return err
 	}
 
+	// Step 2, 3, and 4 in this function:
+	return verifyBinaryAgainstUnsignedBinaryForMac(ctx, binaryPath, unsignedBinaryPath, getTmpClientPath()+".intoto.jsonl", getPossiblyOverriddenVersion(downloadData))
+}
+
+func verifyBinaryAgainstUnsignedBinaryForMac(ctx context.Context, binaryPath, unsignedBinaryPath, attestationPath, version string) error {
 	// Step 2: Create the .nosig files that have no signatures whatsoever
 	noSigSuffix := ".nosig"
-	err = stripCodeSignature(binaryPath, binaryPath+noSigSuffix)
+	err := stripCodeSignature(binaryPath, binaryPath+noSigSuffix)
 	if err != nil {
 		return err
 	}
@@ -150,7 +177,7 @@ func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared
 	}
 
 	// Step 4: Use SLSA to verify the unsigned binary
-	return lib.VerifyBinary(ctx, unsignedBinaryPath, getTmpClientPath()+".intoto.jsonl", getPossiblyOverriddenVersion(downloadData))
+	return lib.VerifyBinary(ctx, unsignedBinaryPath, attestationPath, version)
 }
 
 func assertIdenticalBinaries(bin1Path, bin2Path string) error {
@@ -288,4 +315,7 @@ func downloadFile(filename, url string) error {
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(validateBinaryCmd)
+	validateBinaryCmd.PersistentFlags().Bool("is_macos", false, "Whether the binary we are validating is for MacOS")
+	validateBinaryCmd.PersistentFlags().String("macos_unsigned_binary", "", "The path to the unsigned MacOS binary, if is_macos=true")
 }
