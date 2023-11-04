@@ -120,6 +120,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-darwin-arm64
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-darwin-amd64
       - uses: actions/checkout@v2
       - name: Download and sign the latest executables
         env: 
