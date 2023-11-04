@@ -211,9 +211,8 @@ jobs:
           source ~/.bashrc
           ls
           pwd
-          which hishtory
           echo $PATH
-          hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
+          ~/.hishtory/hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # TODO: Validate other binaries here
     
