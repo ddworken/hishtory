@@ -115,7 +115,8 @@ jobs:
   macos_signer:
     runs-on: macos-11.0
     needs: 
-      - upload 
+      - build-darwin-amd64 
+      - build-darwin-arm64 
     permissions:
       contents: write
     steps:
@@ -151,6 +152,7 @@ jobs:
       - build-linux-amd64 
       - build-darwin-amd64 
       - build-darwin-arm64 
+      - macos_signer
     steps:
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
@@ -170,6 +172,12 @@ jobs:
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: hishtory-darwin-arm64.intoto.jsonl
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-darwin-arm64-unsigned
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-darwin-amd64-unsigned
       - name: Validate Release
         run: |
           curl https://hishtory.dev/install.py | python3 -
@@ -178,6 +186,7 @@ jobs:
           pwd
           which hishtory
           echo $PATH
+          hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # TODO: Validate other binaries here
     
