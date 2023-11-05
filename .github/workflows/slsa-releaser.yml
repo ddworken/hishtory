@@ -127,6 +127,10 @@ jobs:
         with:
           name: hishtory-darwin-amd64
       - uses: actions/checkout@v2
+      - name: Setup tmate session for debugging
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
       - name: Download and sign the latest executables
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
