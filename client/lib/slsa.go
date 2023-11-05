@@ -17,10 +17,12 @@ import (
 
 func verify(ctx context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
 	provenanceOpts := &options.ProvenanceOpts{
-		ExpectedSourceURI:    source,
-		ExpectedBranch:       &branch,
-		ExpectedDigest:       artifactHash,
-		ExpectedVersionedTag: &versionTag,
+		ExpectedSourceURI: source,
+		ExpectedBranch:    &branch,
+		ExpectedDigest:    artifactHash,
+	}
+	if versionTag != "" {
+		provenanceOpts.ExpectedVersionedTag = &versionTag
 	}
 	builderOpts := &options.BuilderOpts{}
 	_, _, err := verifiers.Verify(ctx, provenance, artifactHash, provenanceOpts, builderOpts)

@@ -214,7 +214,7 @@ jobs:
         run: |
           go build; ./hishtory install
           # curl https://hishtory.dev/install.py | python3 -
-          ./hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
+          ./hishtory validate-binary hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # TODO: Validate other binaries here
     

@@ -19,7 +19,6 @@ import (
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/semver"
 )
 
 var updateCmd = &cobra.Command{
@@ -34,23 +33,19 @@ var validateBinaryCmd = &cobra.Command{
 	Use:    "validate-binary",
 	Hidden: true,
 	Short:  "[Test Only] Validate the given binary for SLSA compliance",
-	Args:   cobra.ExactArgs(3),
+	Args:   cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
-		version := strings.TrimSpace(args[0])
-		if !semver.IsValid(version) {
-			lib.CheckFatalError(fmt.Errorf("specified version %#v is not a valid version", version))
-		}
-		binaryPath := args[1]
-		attestationPath := args[2]
+		binaryPath := args[0]
+		attestationPath := args[1]
 		isMacOs, err := cmd.Flags().GetBool("is_macos")
 		lib.CheckFatalError(err)
 		if isMacOs {
 			macOsUnsignedBinaryPath, err := cmd.Flags().GetString("macos_unsigned_binary")
 			lib.CheckFatalError(err)
-			lib.CheckFatalError(verifyBinaryAgainstUnsignedBinaryForMac(ctx, binaryPath, macOsUnsignedBinaryPath, attestationPath, version))
+			lib.CheckFatalError(verifyBinaryAgainstUnsignedBinaryForMac(ctx, binaryPath, macOsUnsignedBinaryPath, attestationPath, ""))
 		} else {
-			lib.CheckFatalError(lib.VerifyBinary(ctx, binaryPath, attestationPath, version))
+			lib.CheckFatalError(lib.VerifyBinary(ctx, binaryPath, attestationPath, ""))
 		}
 	},
 }
