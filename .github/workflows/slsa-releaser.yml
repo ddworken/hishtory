@@ -130,7 +130,6 @@ jobs:
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           gh run download -n hishtory-darwin-amd64
           gh run download -n hishtory-darwin-arm64
-          pip3 install requests
           brew install md5sha1sum
           python3 scripts/actions-sign.py
       - name: Upload Artifacts
