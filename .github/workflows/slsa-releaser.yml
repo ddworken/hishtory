@@ -212,12 +212,9 @@ jobs:
       #     name: hishtory-darwin-amd64-unsigned
       - name: Validate Release
         run: |
-          curl https://hishtory.dev/install.py | python3 -
-          source ~/.bashrc
-          ls
-          pwd
-          echo $PATH
-          ~/.hishtory/hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
+          go build; ./hishtory install
+          # curl https://hishtory.dev/install.py | python3 -
+          ./hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # hishtory validate-binary v0.`cat VERSION` hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
           # TODO: Validate other binaries here
     
