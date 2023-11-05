@@ -44,9 +44,11 @@ def validate_macos_signature(filename: str) -> None:
     assert "TeamIdentifier=QUXLNCT7FA" in out 
 
 def main() -> None:
+    print("Starting validation of MacOS signatures")
     for filename in ALL_FILES:
         if "darwin" in filename:
             validate_macos_signature(filename)
+    print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory")
 
 if __name__ == '__main__':
