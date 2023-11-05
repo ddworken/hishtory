@@ -121,12 +121,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v2
-      # - name: Setup tmate session for debugging
-      #   uses: mxschmitt/action-tmate@v3
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   with:
-      #     limit-access-to-actor: true
       - name: Download and sign the latest executables
         env: 
           GH_TOKEN: ${{ github.token }}
@@ -138,8 +132,6 @@ jobs:
           gh run download -n hishtory-darwin-arm64
           pip3 install requests
           brew install md5sha1sum
-          pwd
-          ls 
           python3 scripts/actions-sign.py
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3

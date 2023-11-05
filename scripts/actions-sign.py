@@ -10,11 +10,14 @@ def main():
     print("file:")
     os.system("file hishtory-* 2>&1")
 
-    notAscii("hishtory-darwin-arm64")
-    notAscii("hishtory-darwin-amd64")
+    assertPresentAndNotAscii("hishtory-darwin-arm64")
+    assertPresentAndNotAscii("hishtory-darwin-amd64")
+
+    # TODO: Update this file to fail if the input files don't exist
 
     print("signing...")
     os.system("""
+    set -emo pipefail
     cp hishtory-darwin-arm64 hishtory-darwin-arm64-unsigned
     cp hishtory-darwin-amd64 hishtory-darwin-amd64-unsigned
     echo $MACOS_CERTIFICATE | base64 -d > certificate.p12
@@ -32,10 +35,12 @@ def main():
 
 
 
-def notAscii(fn):
+def assertPresentAndNotAscii(fn):
+    if not os.path.exists(fn):
+        raise Exception(f"{fn=} does not exist, did it fail to download?")
     out = subprocess.check_output(["file", fn]).decode('utf-8')
     if "ASCII text" in out:
-        raise Exception(f"fn={fn} is of type {out}")
+        raise Exception(f"{fn=} is of type {out}")
 
 if __name__ == '__main__':
     main()
