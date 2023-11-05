@@ -190,6 +190,12 @@ jobs:
           name: hishtory-linux-amd64.intoto.jsonl
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
+          name: hishtory-linux-arm64
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-linux-arm64.intoto.jsonl
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
           name: hishtory-darwin-amd64
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
@@ -211,6 +217,7 @@ jobs:
           go build; ./hishtory install
           # curl https://hishtory.dev/install.py | python3 -
           ./hishtory validate-binary hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
+          ./hishtory validate-binary hishtory-linux-arm64 hishtory-linux-arm64.intoto.jsonl
           ./hishtory validate-binary hishtory-darwin-amd64 hishtory-darwin-amd64.intoto.jsonl --is_macos=True --macos_unsigned_binary=hishtory-darwin-amd64-unsigned
           ./hishtory validate-binary hishtory-darwin-arm64 hishtory-darwin-arm64.intoto.jsonl --is_macos=True --macos_unsigned_binary=hishtory-darwin-arm64-unsigned
           # TODO: Validate other binaries here
