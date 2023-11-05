@@ -129,6 +129,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup tmate session for debugging
         uses: mxschmitt/action-tmate@v3
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
           limit-access-to-actor: true
       - name: Download and sign the latest executables
