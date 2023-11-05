@@ -22,14 +22,14 @@ def validate_slsa(hishtory_binary: str) -> None:
                 slsa_attestation_file, 
                 "--is_macos=True", 
                 f"--macos_unsigned_binary={unsigned_filename}"
-            ]).decode('utf-8')
+            ], stderr=subprocess.STDOUT).decode('utf-8')
         else:
             out = subprocess.check_output([
                 hishtory_binary, 
                 "validate-binary", 
                 filename, 
                 slsa_attestation_file
-            ]).decode('utf-8')
+            ], stderr=subprocess.STDOUT).decode('utf-8')
         assert "Verified signature against tlog entry" in out, out
         assert "Verified build using builder" in out, out
 
