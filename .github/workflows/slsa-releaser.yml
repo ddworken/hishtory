@@ -214,12 +214,5 @@ jobs:
       - name: Validate Release
         run: |
           go build; ./hishtory install
-          # Validate SLSA attestations
-          ./hishtory validate-binary hishtory-linux-amd64 hishtory-linux-amd64.intoto.jsonl
-          ./hishtory validate-binary hishtory-linux-arm64 hishtory-linux-arm64.intoto.jsonl
-          ./hishtory validate-binary hishtory-darwin-amd64 hishtory-darwin-amd64.intoto.jsonl --is_macos=True --macos_unsigned_binary=hishtory-darwin-amd64-unsigned
-          ./hishtory validate-binary hishtory-darwin-arm64 hishtory-darwin-arm64.intoto.jsonl --is_macos=True --macos_unsigned_binary=hishtory-darwin-arm64-unsigned
-          # Validate MacOS signatures
-          python3 scripts/actions-validate-macos-signature.py hishtory-darwin-amd64
-          python3 scripts/actions-validate-macos-signature.py hishtory-darwin-arm64
+          python3 scripts/actions-validate.py
           # TODO: Run validation using hishtory built at HEAD too
