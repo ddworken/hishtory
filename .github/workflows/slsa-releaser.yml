@@ -170,7 +170,7 @@ jobs:
   validate:
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: 
       - build-linux-amd64 
       - build-darwin-amd64 
@@ -221,4 +221,3 @@ jobs:
           ./hishtory validate-binary hishtory-darwin-amd64 hishtory-darwin-amd64.intoto.jsonl --is_macos=True --macos_unsigned_binary=hishtory-darwin-amd64-unsigned
           ./hishtory validate-binary hishtory-darwin-arm64 hishtory-darwin-arm64.intoto.jsonl --is_macos=True --macos_unsigned_binary=hishtory-darwin-arm64-unsigned
           # TODO: Validate other binaries here
-    
