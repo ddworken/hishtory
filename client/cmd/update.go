@@ -19,6 +19,7 @@ import (
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 var updateCmd = &cobra.Command{
@@ -36,7 +37,10 @@ var validateBinaryCmd = &cobra.Command{
 	Args:   cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
-		version := args[0]
+		version := strings.TrimSpace(args[0])
+		if !semver.IsValid(version) {
+			lib.CheckFatalError(fmt.Errorf("specified version %#v is not a valid version", version))
+		}
 		binaryPath := args[1]
 		attestationPath := args[2]
 		isMacOs, err := cmd.Flags().GetBool("is_macos")

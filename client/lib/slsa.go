@@ -36,6 +36,7 @@ func checkForDowngrade(currentVersionS, newVersionS string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse updated version %#v", newVersionS)
 	}
+	// TODO: migrate this to the version parser struct
 	if currentVersion > newVersion {
 		return fmt.Errorf("failed to update because the new version (%#v) is a downgrade compared to the current version (%#v)", newVersionS, currentVersionS)
 	}
