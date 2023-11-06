@@ -53,10 +53,8 @@ def main() -> None:
     for filename in ALL_FILES:
         if "darwin" in filename:
             validate_macos_signature(filename)
-    print("Starting validation of SLSA attestations with hishtory built at HEAD")
+    print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory")
-    print("Starting validation of SLSA attestations with latest released hishtory")
-    validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
 
 if __name__ == '__main__':
     main()

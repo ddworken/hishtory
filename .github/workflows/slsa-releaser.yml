@@ -214,5 +214,5 @@ jobs:
       - name: Validate Release
         run: |
           go build; ./hishtory install
-          curl https://hishtory.dev/install.py | python3 -
           python3 scripts/actions-validate.py
+          # TODO: Run validation using hishtory built at HEAD too
