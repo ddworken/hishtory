@@ -217,7 +217,6 @@ jobs:
           python3 scripts/actions-validate.py
           # TODO: Run validation using hishtory built at HEAD too
       - name: Setup tmate session
-        if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
         with:
           limit-access-to-actor: true
