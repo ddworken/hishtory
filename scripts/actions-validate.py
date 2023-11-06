@@ -8,32 +8,36 @@ ALL_FILES = ['hishtory-linux-amd64', 'hishtory-linux-arm64', 'hishtory-darwin-am
 def validate_slsa(hishtory_binary: str) -> None:
     assert os.path.exists(hishtory_binary)
     for filename in ALL_FILES:
-        print(f"Validating {filename} with {hishtory_binary=}")
-        assert os.path.exists(filename)
-        slsa_attestation_file = filename + ".intoto.jsonl"
-        assert os.path.exists(slsa_attestation_file)
-        if "darwin" in filename:
-            continue # TODO: Enable SLSA validation for Mac binaries
-            unsigned_filename = f"{filename}-unsigned"
-            assert os.path.exists(unsigned_filename)
-            out = subprocess.check_output([
-                hishtory_binary, 
-                "validate-binary",
-                filename, 
-                slsa_attestation_file, 
-                "--is_macos=True", 
-                f"--macos_unsigned_binary={unsigned_filename}"
-            ], stderr=subprocess.STDOUT).decode('utf-8')
-        else:
-            out = subprocess.check_output([
-                hishtory_binary, 
-                "validate-binary", 
-                filename, 
-                slsa_attestation_file
-            ], stderr=subprocess.STDOUT).decode('utf-8')
-        assert "Verified signature against tlog entry" in out, out
-        assert "Verified build using builder" in out, out
-
+        try:
+            print(f"Validating {filename} with {hishtory_binary=}")
+            assert os.path.exists(filename)
+            slsa_attestation_file = filename + ".intoto.jsonl"
+            assert os.path.exists(slsa_attestation_file)
+            if "darwin" in filename:
+                unsigned_filename = f"{filename}-unsigned"
+                assert os.path.exists(unsigned_filename)
+                out = subprocess.check_output([
+                    hishtory_binary, 
+                    "validate-binary",
+                    filename, 
+                    slsa_attestation_file, 
+                    "--is_macos=True", 
+                    f"--macos_unsigned_binary={unsigned_filename}"
+                ], stderr=subprocess.STDOUT).decode('utf-8')
+            else:
+                out = subprocess.check_output([
+                    hishtory_binary, 
+                    "validate-binary", 
+                    filename, 
+                    slsa_attestation_file
+                ], stderr=subprocess.STDOUT).decode('utf-8')
+            assert "Verified signature against tlog entry" in out, out
+            assert "Verified build using builder" in out, out
+        except subprocess.CalledProcessError as e:
+            print(f"subprocess.CalledProcessError: stdout={repr(e.stdout)}")
+            if "darwin" in filename:
+                continue # TODO: Enable SLSA validation for Mac binaries
+            raise e
 
 def validate_macos_signature(filename: str) -> None:
     assert shutil.which('codesign') is not None 
