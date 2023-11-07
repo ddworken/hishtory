@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -390,7 +391,15 @@ func (m model) View() string {
 		SELECTED_COMMAND = m.tableEntries[m.table.Cursor()].Command
 		if m.selected == SelectedWithChangeDir {
 			changeDir := m.tableEntries[m.table.Cursor()].CurrentWorkingDirectory
-			// TODO: There is a bug here if changeDir contains ~, see https://askubuntu.com/questions/1032370/why-cant-i-cd-to-a-quoted-tilde
+			if strings.HasPrefix(changeDir, "~/") {
+				homedir, err := os.UserHomeDir()
+				if err != nil {
+					hctx.GetLogger().Infof("UserHomeDir() return err=%v, skipping replacing ~/", err)
+				} else {
+					strippedChangeDir, _ := strings.CutPrefix(changeDir, "~/")
+					changeDir = filepath.Join(homedir, strippedChangeDir)
+				}
+			}
 			SELECTED_COMMAND = "cd \"" + changeDir + "\" && " + SELECTED_COMMAND
 		}
 		return ""
