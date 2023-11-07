@@ -128,8 +128,9 @@ jobs:
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          gh run download -n hishtory-darwin-amd64
-          gh run download -n hishtory-darwin-arm64
+          sleep 10
+          gh run download ${{ github.run_id }} -n hishtory-darwin-amd64
+          gh run download ${{ github.run_id }} -n hishtory-darwin-arm64
           brew install coreutils
           python3 scripts/actions-sign.py
       - name: Upload Artifacts
