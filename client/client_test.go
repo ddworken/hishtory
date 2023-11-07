@@ -1652,6 +1652,7 @@ func testTui_resize(t *testing.T) {
 		{Keys: "hishtory SPACE tquery ENTER"},
 		{ResizeX: 300, ResizeY: 100},
 	})
+	require.Contains(t, out, "hishtory tquery")
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-Resize")
 
@@ -1669,6 +1670,7 @@ func testTui_resize(t *testing.T) {
 		{Keys: "hishtory SPACE tquery ENTER"},
 		{Keys: "1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip"},
 	})
+	require.Contains(t, out, "hishtory tquery")
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
 }
