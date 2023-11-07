@@ -5,6 +5,8 @@ import subprocess
 def main():
     print("before sha1sum:")
     os.system("sha1sum hishtory-* 2>&1")
+    print("before sha256sum:")
+    os.system("sha256sum hishtory-* 2>&1")
 
     print("file:")
     os.system("file hishtory-* 2>&1")
@@ -31,7 +33,8 @@ def main():
 
     print("after sha1sum:")
     os.system("sha1sum hishtory-* 2>&1")
-
+    print("after sha256sum:")
+    os.system("sha256sum hishtory-* 2>&1")
 
 
 def assertPresentAndNotAscii(fn):
