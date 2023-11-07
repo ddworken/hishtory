@@ -390,6 +390,7 @@ func (m model) View() string {
 		SELECTED_COMMAND = m.tableEntries[m.table.Cursor()].Command
 		if m.selected == SelectedWithChangeDir {
 			changeDir := m.tableEntries[m.table.Cursor()].CurrentWorkingDirectory
+			// TODO: There is a bug here if changeDir contains ~, see https://askubuntu.com/questions/1032370/why-cant-i-cd-to-a-quoted-tilde
 			SELECTED_COMMAND = "cd \"" + changeDir + "\" && " + SELECTED_COMMAND
 		}
 		return ""
