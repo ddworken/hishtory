@@ -128,7 +128,7 @@ jobs:
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          sleep 120
+          sleep 300
           gh run download ${{ github.run_id }} -n hishtory-darwin-amd64
           gh run download ${{ github.run_id }} -n hishtory-darwin-arm64
           brew install coreutils
