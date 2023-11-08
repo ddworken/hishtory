@@ -126,6 +126,15 @@ jobs:
         with:
           limit-access-to-actor: true
           detached: true
+      - name: Extra Sleep
+        run: |
+          sleep 300
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-darwin-arm64
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: hishtory-darwin-amd64
       - name: Download and sign the latest executables
         env: 
           GH_TOKEN: ${{ github.token }}
@@ -133,9 +142,6 @@ jobs:
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          sleep 300
-          gh run download -n hishtory-darwin-amd64
-          gh run download -n hishtory-darwin-arm64
           brew install coreutils
           python3 scripts/actions-sign.py
       - name: Upload Artifacts
