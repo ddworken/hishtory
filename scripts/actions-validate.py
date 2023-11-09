@@ -49,6 +49,7 @@ def validate_macos_signature(filename: str) -> None:
 
 def validate_hishtory_status(filename: str) -> None:
     assert os.path.exists(filename)
+    subprocess.check_output(['chmod', "+x", filename])
     status = subprocess.check_output([filename, "status", "-v"]).decode('utf-8')
     git_hash = os.environ['GITHUB_SHA']
     assert git_hash, git_hash
