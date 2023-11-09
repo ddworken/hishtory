@@ -67,6 +67,7 @@ def main() -> None:
             validate_macos_signature(filename)
     print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory")
+    validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
     # TODO: Run validation using hishtory built at HEAD too
     print("Validating other metadata")
     validate_hishtory_status("./hishtory-darwin-amd64")
