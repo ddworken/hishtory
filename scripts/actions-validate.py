@@ -35,8 +35,6 @@ def validate_slsa(hishtory_binary: str) -> None:
             assert "Verified build using builder" in out, out
         except subprocess.CalledProcessError as e:
             print(f"subprocess.CalledProcessError: stdout={repr(e.stdout)}")
-            if "darwin" in filename:
-                continue # TODO: Enable SLSA validation for Mac binaries
             raise e
 
 def validate_macos_signature(filename: str) -> None:
