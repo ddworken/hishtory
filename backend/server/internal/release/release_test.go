@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ddworken/hishtory/shared/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateReleaseVersion(t *testing.T) {
@@ -31,4 +32,10 @@ func TestUpdateReleaseVersion(t *testing.T) {
 	if !strings.HasPrefix(Version, "v0.") {
 		t.Fatalf("ReleaseVersion wasn't updated to contain a version: %#v", Version)
 	}
+}
+
+func TestDecrement(t *testing.T) {
+	pv, err := decrementVersion("v0.100")
+	require.NoError(t, err)
+	require.Equal(t, "v0.99", pv)
 }

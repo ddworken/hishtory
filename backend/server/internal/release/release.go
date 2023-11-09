@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/ddworken/hishtory/shared"
@@ -101,6 +100,14 @@ func assertValidUpdate(updateInfo shared.UpdateInfo) error {
 		updateInfo.DarwinArm64UnsignedUrl,
 		updateInfo.DarwinArm64AttestationUrl,
 	}
+	// TODO: Delete this version checking logic once v0.251 has been released
+	pv, err := shared.ParseVersionString(updateInfo.Version)
+	if err != nil {
+		return fmt.Errorf("failed to parse version string: %w", err)
+	}
+	if pv.GreaterThan(shared.ParsedVersion{MajorVersion: 0, MinorVersion: 246}) {
+		urls = append(urls, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-release-validation-completed", updateInfo.Version))
+	}
 	for _, url := range urls {
 		resp, err := http.Get(url)
 		if err != nil {
@@ -118,13 +125,9 @@ func decrementVersion(version string) (string, error) {
 	if version == "UNKNOWN" {
 		return "", fmt.Errorf("cannot decrement UNKNOWN")
 	}
-	parts := strings.Split(version, ".")
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid version: %s", version)
-	}
-	versionNumber, err := strconv.Atoi(parts[1])
+	pv, err := shared.ParseVersionString(version)
 	if err != nil {
-		return "", fmt.Errorf("invalid version: %s", version)
+		return "", fmt.Errorf("failed to parse version %#v to decrement it: %w", version, err)
 	}
-	return parts[0] + "." + strconv.Itoa(versionNumber-1), nil
+	return pv.Decrement().String(), nil
 }
