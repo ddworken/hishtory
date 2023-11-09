@@ -3,6 +3,9 @@ import time
 import subprocess
 
 def main():
+    assertPresentAndNotAscii("hishtory-darwin-arm64")
+    assertPresentAndNotAscii("hishtory-darwin-amd64")
+    
     print("before sha1sum:")
     os.system("sha1sum hishtory-* 2>&1")
     print("before sha256sum:")
@@ -10,11 +13,6 @@ def main():
 
     print("file:")
     os.system("file hishtory-* 2>&1")
-
-    assertPresentAndNotAscii("hishtory-darwin-arm64")
-    assertPresentAndNotAscii("hishtory-darwin-amd64")
-
-    # TODO: Update this file to fail if the input files don't exist
 
     print("signing...")
     os.system("""
