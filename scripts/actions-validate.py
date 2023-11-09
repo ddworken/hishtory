@@ -68,7 +68,7 @@ def main() -> None:
     validate_slsa("./hishtory")
     # TODO: Run validation using hishtory built at HEAD too
     print("Validating other metadata")
-    validate_hishtory_status("hishtory-darwin-amd64")
+    validate_hishtory_status("./hishtory-darwin-amd64")
 
 if __name__ == '__main__':
     main()
