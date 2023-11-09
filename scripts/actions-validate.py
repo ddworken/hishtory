@@ -1,3 +1,4 @@
+from re import sub
 import subprocess
 import shutil
 import sys 
@@ -46,6 +47,18 @@ def validate_macos_signature(filename: str) -> None:
     assert "Authority=Apple Root CA" in out 
     assert "TeamIdentifier=QUXLNCT7FA" in out 
 
+def validate_hishtory_status(filename: str) -> None:
+    assert os.path.exists(filename)
+    status = subprocess.check_output([filename, "status", "-v"]).decode('utf-8')
+    git_hash = os.environ['GITHUB_SHA']
+    assert git_hash, git_hash
+    assert f"Commit Hash: {git_hash}" in status, status 
+    assert os.path.exists('VERSION')
+    with open('VERSION') as f:
+        version = "v0." + f.read().strip()
+    assert f"hiSHtory: {version}" in status, status
+
+
 def main() -> None:
     print("Starting validation of MacOS signatures")
     for filename in ALL_FILES:
@@ -53,6 +66,8 @@ def main() -> None:
             validate_macos_signature(filename)
     print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory")
+    print("Validating other metadata")
+    validate_hishtory_status("hishtory-darwin-amd64")
 
 if __name__ == '__main__':
     main()
