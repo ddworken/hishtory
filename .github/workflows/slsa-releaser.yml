@@ -172,7 +172,7 @@ jobs:
   # Validate the signed binaries
   validate:
     permissions:
-      contents: read
+      contents: write
     runs-on: macos-latest
     needs: 
       - build-linux-amd64 
