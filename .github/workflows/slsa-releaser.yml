@@ -168,9 +168,6 @@ jobs:
             hishtory-darwin-arm64-unsigned
             hishtory-darwin-amd64
             hishtory-darwin-amd64-unsigned
-      - name: Trigger the backend API service so it knows a release is finished
-        run: |
-          curl https://api.hishtory.dev/api/v1/trigger-cron
 
   # Validate the signed binaries
   validate:
@@ -222,4 +219,14 @@ jobs:
         run: |
           go build; ./hishtory install
           python3 scripts/actions-validate.py
-          # TODO: Run validation using hishtory built at HEAD too
+          echo DONE > hishtory-release-validation-completed
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            hishtory-release-validation-completed
+      - name: Trigger the backend API service so it knows a release is finished
+        run: |
+          sleep 10
+          curl https://api.hishtory.dev/api/v1/trigger-cron
