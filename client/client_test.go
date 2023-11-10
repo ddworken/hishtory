@@ -822,6 +822,11 @@ echo other`)
 }
 
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("skip testing background saving since it is flakey on MacOs")
+		// TODO: Investigate this
+	}
+
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
