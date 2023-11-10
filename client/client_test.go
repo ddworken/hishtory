@@ -2584,4 +2584,20 @@ func BenchmarkImport(b *testing.B) {
 	}
 }
 
+func TestAugmentedIsOfflineError(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, zshTester{}, "")
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
+	ctx := hctx.MakeContext()
+
+	// By default, when the hishtory server is up, then IsOfflineError checks the error msg
+	require.True(t, lib.CanReachHishtoryServer(ctx))
+	require.False(t, lib.IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
+
+	// When the hishtory server is down, then all error messages are treated as being due to offline errors
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
+	require.False(t, lib.CanReachHishtoryServer(ctx))
+	require.True(t, lib.IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

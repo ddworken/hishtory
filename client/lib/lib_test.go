@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -18,6 +17,11 @@ func TestMain(m *testing.M) {
 	// Set env variable
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 	os.Setenv("HISHTORY_TEST", "1")
+	m.Run()
+}
+
+func requireEntriesEqual(t *testing.T, expected, actual data.HistoryEntry) {
+	require.Equal(t, normalizeEntryTimezone(expected), normalizeEntryTimezone(actual))
 }
 
 func TestPersist(t *testing.T) {
@@ -34,7 +38,7 @@ func TestPersist(t *testing.T) {
 		t.Fatalf("DB has %d entries, expected 1!", len(historyEntries))
 	}
 	dbEntry := historyEntries[0]
-	require.Equal(t, entry, *dbEntry)
+	requireEntriesEqual(t, entry, *dbEntry)
 }
 
 func TestSearch(t *testing.T) {
@@ -55,8 +59,8 @@ func TestSearch(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("Search() returned %d results, expected 2, results=%#v", len(results), results)
 	}
-	require.Equal(t, entry2, *results[0])
-	require.Equal(t, entry1, *results[1])
+	requireEntriesEqual(t, entry2, *results[0])
+	requireEntriesEqual(t, entry1, *results[1])
 
 	// Search but exclude bar
 	results, err = Search(ctx, db, "ls -bar", 5)
@@ -282,20 +286,4 @@ func TestSplitEscaped(t *testing.T) {
 			t.Fatalf("containsUnescaped failure for splitEscaped(%#v, %#v, %#v), actual=%#v", tc.input, string(tc.char), tc.limit, actual)
 		}
 	}
-}
-
-func TestAugmentedIsOfflineError(t *testing.T) {
-	defer testutils.BackupAndRestore(t)()
-	defer testutils.RunTestServer()()
-	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
-	ctx := hctx.MakeContext()
-
-	// By default, when the hishtory server is up, then IsOfflineError checks the error msg
-	require.True(t, CanReachHishtoryServer(ctx))
-	require.False(t, IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
-
-	// When the hishtory server is down, then all error messages are treated as being due to offline errors
-	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
-	require.False(t, CanReachHishtoryServer(ctx))
-	require.True(t, IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
 }
