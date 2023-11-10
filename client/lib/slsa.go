@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/ddworken/hishtory/shared"
 	"github.com/slsa-framework/slsa-verifier/options"
 	"github.com/slsa-framework/slsa-verifier/verifiers"
 )
@@ -30,16 +30,15 @@ func verify(ctx context.Context, provenance []byte, artifactHash, source, branch
 }
 
 func checkForDowngrade(currentVersionS, newVersionS string) error {
-	currentVersion, err := strconv.Atoi(strings.TrimPrefix(currentVersionS, "v0."))
+	currentVersion, err := shared.ParseVersionString(currentVersionS)
 	if err != nil {
-		return fmt.Errorf("failed to parse current version %#v", currentVersionS)
+		return fmt.Errorf("failed to parse current version string: %w", err)
 	}
-	newVersion, err := strconv.Atoi(strings.TrimPrefix(newVersionS, "v0."))
+	newVersion, err := shared.ParseVersionString(newVersionS)
 	if err != nil {
-		return fmt.Errorf("failed to parse updated version %#v", newVersionS)
+		return fmt.Errorf("failed to parse new version string: %w", err)
 	}
-	// TODO: migrate this to the version parser struct
-	if currentVersion > newVersion {
+	if currentVersion.GreaterThan(newVersion) {
 		return fmt.Errorf("failed to update because the new version (%#v) is a downgrade compared to the current version (%#v)", newVersionS, currentVersionS)
 	}
 	return nil
