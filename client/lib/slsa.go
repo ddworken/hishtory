@@ -5,15 +5,19 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/slsa-framework/slsa-verifier/options"
 	"github.com/slsa-framework/slsa-verifier/verifiers"
 )
+
+var errUserAbortUpdate error = errors.New("update cancelled")
 
 func verify(ctx context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
 	provenanceOpts := &options.ProvenanceOpts{
@@ -50,13 +54,36 @@ func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag s
 	}
 	resp, err := ApiGet(ctx, "/api/v1/slsa-status?newVersion="+versionTag)
 	if err != nil {
-		return nil
+		hctx.GetLogger().Infof("Failed to query SLSA status (err=%#v), assuming that SLSA is currently working", err)
 	}
-	if string(resp) != "OK" {
-		fmt.Printf("SLSA verification is currently broken (%s), skipping SLSA validation...\n", string(resp))
-		return nil
+	if err == nil && string(resp) != "OK" {
+	slsa_status_error:
+		fmt.Printf("SLSA verification is currently experiencing issues:%s\nWhat would you like to do?", string(resp))
+		fmt.Println("To abort the update, type 'a'")
+		fmt.Println("To continue with the update even though it may fail, type 'c'")
+		fmt.Println("To update and skip SLSA validation, type 's'")
+		reader := bufio.NewReader(os.Stdin)
+		userChoice, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("failed to read response: %v\n", err)
+			goto slsa_status_error
+		}
+		userChoice = strings.TrimSpace(userChoice)
+		switch userChoice {
+		case "a", "A":
+			return errUserAbortUpdate
+		case "c", "C":
+			// Continue the update and perform SLSA validation even though it may fail
+			goto slsa_status_error_continue_update
+		case "s", "S":
+			// Skip validation and return nil as if the binary passed validation
+			return nil
+		default:
+			fmt.Printf("user selection %#v was not one of 'a', 'c', 's'\n", userChoice)
+			goto slsa_status_error
+		}
 	}
-
+slsa_status_error_continue_update:
 	if err := checkForDowngrade(Version, versionTag); err != nil && os.Getenv("HISHTORY_ALLOW_DOWNGRADE") == "true" {
 		return err
 	}
@@ -90,6 +117,9 @@ func getFileHash(binaryPath string) (string, error) {
 }
 
 func HandleSlsaFailure(srcErr error) error {
+	if errors.Is(srcErr, errUserAbortUpdate) {
+		return srcErr
+	}
 	fmt.Printf("\nFailed to verify SLSA provenance! This is likely due to a SLSA bug (SLSA is a brand new standard, and like all new things, has bugs). Ignoring this failure means falling back to the way most software does updates. Do you want to ignore this failure and update anyways? [y/N]")
 	reader := bufio.NewReader(os.Stdin)
 	resp, err := reader.ReadString('\n')
