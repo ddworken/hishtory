@@ -947,7 +947,7 @@ func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
 		return db.Raw(query).Rows()
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to query for list of custom columns: %v", err)
+		return nil, fmt.Errorf("failed to query for list of custom columns: %w", err)
 	}
 	ccNames := make([]string, 0)
 	for rows.Next() {
