@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -1935,9 +1936,14 @@ func testTui_ai(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t, Online)
+	req, err := json.Marshal(
+		ai.TestOnlyOverrideAiSuggestionRequest{Query: "myQuery", Suggestions: []string{"result 1", "result 2", "longer result 3"}},
+	)
+	require.NoError(t, err)
+	_, err = lib.ApiPost(hctx.MakeContext(), "/api/v1/ai-suggest-override", "application/json", req)
+	require.NoError(t, err)
 
 	// Test running an AI query
-	ai.TestOnlyOverrideAiSuggestions["myQuery"] = []string{"result 1", "result 2", "longer result 3"}
 	out := captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 		"?myQuery",
