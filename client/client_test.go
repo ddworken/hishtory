@@ -22,6 +22,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/ai"
 	"github.com/ddworken/hishtory/shared/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -105,6 +106,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/delete", testTui_delete)
 	t.Run("testTui/color", testTui_color)
 	t.Run("testTui/errors", testTui_errors)
+	t.Run("testTui/ai", testTui_ai)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1927,6 +1929,21 @@ func testTui_errors(t *testing.T) {
 	}
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-OfflineInvalid")
+}
+
+func testTui_ai(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t, Online)
+
+	// Test running an AI query
+	ai.TestOnlyOverrideAiSuggestions["myQuery"] = []string{"result 1", "result 2", "longer result 3"}
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"?myQuery",
+	})
+	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	testutils.CompareGoldens(t, out, "TestTui-AiQuery")
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
