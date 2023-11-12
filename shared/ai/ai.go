@@ -65,7 +65,7 @@ func GetAiSuggestionsViaOpenAiApi(query string, numberCompletions int) ([]string
 		Model:             "gpt-3.5-turbo",
 		NumberCompletions: numberCompletions,
 		Messages: []openAiMessage{
-			{Role: "system", Content: "You are an expert programmer that loves to help people with writing shell commands. You always reply with just a shell command and no additional context or information. Your replies will be directly executed in bash, so ensure that they are correct and do not contain anything other than a bash command."},
+			{Role: "system", Content: "You are an expert programmer that loves to help people with writing shell commands. You always reply with just a shell command and no additional context, information, or formatting. Your replies will be directly executed in bash, so ensure that they are correct and do not contain anything other than a bash command."},
 			{Role: "user", Content: query},
 		},
 	}
