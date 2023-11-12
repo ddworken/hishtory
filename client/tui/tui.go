@@ -438,7 +438,6 @@ func renderNullableTable(m model) string {
 }
 
 func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, query string) ([]table.Row, []*data.HistoryEntry, error) {
-	// TODO: Add debouncing here so we don't waste API queries on half-typed search queries
 	suggestions, err := ai.DebouncedGetAiSuggestions(ctx, strings.TrimPrefix(query, "?"), 5)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get AI query suggestions: %w", err)
