@@ -1946,7 +1946,7 @@ func testTui_ai(t *testing.T) {
 	// Test running an AI query
 	out := captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"myQuery",
+		"?myQuery",
 	})
 	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
 	testutils.CompareGoldens(t, out, "TestTui-AiQuery")
