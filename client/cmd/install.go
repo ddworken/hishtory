@@ -218,6 +218,10 @@ func handleUpgradedFeatures() error {
 		// highlighting is not yet configured, so enable it
 		config.HighlightMatches = true
 	}
+	if !strings.Contains(string(configContents), "enable_presaving") {
+		// Presaving is not yet configured, so enable it
+		config.HighlightMatches = true
+	}
 	if !strings.Contains(string(configContents), "ai_completion") {
 		// AI completion is not yet configured, disable it for upgrades since this is a new feature
 		config.AiCompletion = false
@@ -569,6 +573,7 @@ func setup(userSecret string, isOffline bool) error {
 	// TODO: Set config.HighlightMatches = true here, so that we enable highlighting by default
 	config.AiCompletion = true
 	config.IsOffline = isOffline
+	config.EnablePresaving = true
 	err := hctx.SetConfig(&config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %w", err)

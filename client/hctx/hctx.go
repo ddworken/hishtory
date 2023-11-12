@@ -199,6 +199,8 @@ type ClientConfig struct {
 	HighlightMatches bool `json:"highlight_matches"`
 	// Whether to enable AI completion
 	AiCompletion bool `json:"ai_completion"`
+	// Whether to enable presaving
+	EnablePresaving bool `json:"enable_presaving"`
 }
 
 type CustomColumnDefinition struct {

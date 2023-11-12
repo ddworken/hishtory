@@ -2163,10 +2163,10 @@ func testPresaving(t *testing.T, tester shellTester) {
 	userSecret := installHishtory(t, tester, "")
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("table_sizing aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
-	// Enable beta-mode since presaving is behind that feature flag
-	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
-	tester.RunInteractiveShell(t, `hishtory config-set beta-mode true`)
-	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get beta-mode`)))
+	// Enable the presaving feature
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
+	tester.RunInteractiveShell(t, `hishtory config-set presaving true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
 
 	// Start a command that will take a long time to execute in the background, so
 	// we can check that it was recorded even though it never finished.

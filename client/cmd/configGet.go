@@ -61,6 +61,17 @@ var getEnableAiCompletion = &cobra.Command{
 	},
 }
 
+var getPresavingCmd = &cobra.Command{
+	Use:   "presaving",
+	Short: "Enable 'presaving' of shell entries that never finish running",
+	Long:  "If enabled, there is a slight risk of duplicate history entries. If disabled, non-terminating history entries will not be recorded.",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.EnablePresaving)
+	},
+}
+
 var getBetaModeCmd = &cobra.Command{
 	Use:   "beta-mode",
 	Short: "Enable beta-mode to opt-in to unreleased features",
@@ -121,4 +132,5 @@ func init() {
 	configGetCmd.AddCommand(getBetaModeCmd)
 	configGetCmd.AddCommand(getHighlightMatchesCmd)
 	configGetCmd.AddCommand(getEnableAiCompletion)
+	configGetCmd.AddCommand(getPresavingCmd)
 }
