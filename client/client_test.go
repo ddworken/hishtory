@@ -1641,8 +1641,7 @@ func testTui_resize(t *testing.T) {
 	out := captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 	})
-	require.Contains(t, out, "hishtory tquery")
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-SmallTerminal")
 
 	// Check that it resizes after the terminal size is adjusted
@@ -1651,8 +1650,7 @@ func testTui_resize(t *testing.T) {
 		{Keys: "hishtory SPACE tquery ENTER"},
 		{ResizeX: 300, ResizeY: 100},
 	})
-	require.Contains(t, out, "hishtory tquery")
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-Resize")
 
 	// Check that the cursor position is maintained after it is resized
@@ -1669,8 +1667,7 @@ func testTui_resize(t *testing.T) {
 		{Keys: "hishtory SPACE tquery ENTER"},
 		{Keys: "1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip1234567890qwertyuip"},
 	})
-	require.Contains(t, out, "hishtory tquery")
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
 }
 
@@ -1686,7 +1683,7 @@ func testTui_scroll(t *testing.T) {
 		"Left",
 		"l",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-LeftScroll")
 
 	// Test horizontal scrolling by one to the right
@@ -1697,7 +1694,7 @@ func testTui_scroll(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 		"S-Left S-Right S-Right S-Left",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-RightScroll")
 
 	// Test horizontal scrolling by two
@@ -1705,7 +1702,7 @@ func testTui_scroll(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 		"S-Right S-Right",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
 
 	// Assert there are no leaked connections
@@ -1727,19 +1724,19 @@ func testTui_color(t *testing.T) {
 	// Capture the TUI with full colored output, note that this golden will be harder to undersand
 	// from inspection and primarily servers to detect unintended changes in hishtory's output.
 	out := captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}}, includeEscapeSequences: true})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutput")
 
 	// And the same once a search query has been typed in
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
 
 	// And one more time with highlight-matches
 	tester.RunInteractiveShell(t, ` hishtory config-set highlight-matches true`)
 	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get highlight-matches`)))
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
 }
 
@@ -1756,14 +1753,14 @@ func testTui_delete(t *testing.T) {
 		{Keys: "aaaaaa", ExtraDelay: 1.0},
 		{Keys: "C-K"},
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-Delete")
 
 	// And that it stays deleted
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-DeleteStill")
 
 	// And that we can then delete another entry
@@ -1771,14 +1768,14 @@ func testTui_delete(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 		"C-K",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-DeleteAgain")
 
 	// And that it stays deleted
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.5},
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-DeleteAgainStill")
 
 	// Assert there are no leaked connections
@@ -1802,7 +1799,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		"hishtory SPACE tquery ENTER",
 		"ls",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-Search")
 
 	// Check the output when there is a selected result
@@ -1812,7 +1809,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		{Keys: "ls", ExtraDelay: 2.0},
 		{Keys: "ENTER"},
 	})
-	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
+	out = strings.Split(stripTuiCommandPrefix(t, out), "\n")[0]
 	expected = `ls ~/`
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Fatalf("hishtory tquery selection mismatch (-expected +got):\n%s", diff)
@@ -1824,7 +1821,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.5},
 		{Keys: "ls", ExtraDelay: 1.0},
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
 
 	// Check the output when the search is invalid
@@ -1834,7 +1831,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		{Keys: "ls", ExtraDelay: 1.5},
 		{Keys: ":"},
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearch")
 
 	// Check the output when the search is invalid and then edited to become valid
@@ -1842,7 +1839,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		"hishtory SPACE tquery ENTER",
 		"ls: BSpace",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
 }
 
@@ -1853,10 +1850,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 
 	// Check the initial output when there is no search
 	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
-	if len(strings.Split(out, "hishtory tquery")) != 2 {
-		t.Fatalf("failed to split out=%#v", out)
-	}
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-Initial")
 
 	// Check that we can exit the TUI via pressing esc
@@ -1874,7 +1868,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 		"hishtory SPACE tquery ENTER",
 		"C-h",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-HelpPage")
 
 	// Test closing the help page
@@ -1882,7 +1876,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 		"hishtory SPACE tquery ENTER",
 		"C-h C-h",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-HelpPageClosed")
 
 	// Test selecting and cd-ing
@@ -1890,7 +1884,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 		"hishtory SPACE tquery ENTER",
 		"C-x",
 	})
-	out = strings.Split(strings.TrimSpace(strings.Split(out, "hishtory tquery")[1]), "\n")[0]
+	out = strings.Split(stripTuiCommandPrefix(t, out), "\n")[0]
 	testutils.CompareGoldens(t, out, "TestTui-SelectAndCd")
 
 	// Test the User column
@@ -1898,7 +1892,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	require.Contains(t, out, "   User")
 	require.Contains(t, out, " david ")
 
@@ -1915,20 +1909,14 @@ func testTui_errors(t *testing.T) {
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
 	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER"})
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
-	if len(strings.Split(out, "hishtory tquery")) != 2 {
-		t.Fatalf("failed to split out=%#v", out)
-	}
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-Offline")
 
 	// Check the output when the device is offline AND there is an invalid search
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "ls:"})
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
-	if len(strings.Split(out, "hishtory tquery")) != 2 {
-		t.Fatalf("failed to split out=%#v", out)
-	}
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-OfflineInvalid")
 }
 
@@ -1948,7 +1936,7 @@ func testTui_ai(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 		"?myQuery",
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-AiQuery")
 }
 
@@ -2331,7 +2319,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -tablesizing`)
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-export")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	require.Regexp(t, regexp.MustCompile(`Timestamp[\s\S]*Command[\s\S]*Apr 16 2022 01:36:26 PDT[\s\S]*third_entry[\s\S]*Apr 16 2022 01:19:46 PDT[\s\S]*second_entry[\s\S]*Apr 16 2022 01:03:06 PDT[\s\S]*first_entry`), out)
 }
 
@@ -2404,7 +2392,7 @@ echo foo`)
 		{Keys: "Down Down"},
 		{Keys: "ENTER", ExtraDelay: 1.0},
 	})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+	out = stripTuiCommandPrefix(t, out)
 	out = strings.Split(out, "\n")[1]
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
 }
