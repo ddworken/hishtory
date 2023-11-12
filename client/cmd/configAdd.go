@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/spf13/cobra"
@@ -26,6 +29,11 @@ var addCustomColumnsCmd = &cobra.Command{
 		config := hctx.GetConf(ctx)
 		if config.CustomColumns == nil {
 			config.CustomColumns = make([]hctx.CustomColumnDefinition, 0)
+		}
+		for _, existingColumn := range config.CustomColumns {
+			if strings.EqualFold(existingColumn.ColumnName, columnName) {
+				lib.CheckFatalError(fmt.Errorf("cannot create a column named %#v since there is already one named %#v", existingColumn.ColumnName, columnName))
+			}
 		}
 		config.CustomColumns = append(config.CustomColumns, hctx.CustomColumnDefinition{ColumnName: columnName, ColumnCommand: command})
 		lib.CheckFatalError(hctx.SetConfig(config))

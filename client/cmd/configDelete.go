@@ -28,18 +28,28 @@ var deleteCustomColumnsCmd = &cobra.Command{
 		if config.CustomColumns == nil {
 			log.Fatalf("Did not find a column with name %#v to delete (current columns = %#v)", columnName, config.CustomColumns)
 		}
+		// Delete it from the list of custom columns
 		newColumns := make([]hctx.CustomColumnDefinition, 0)
-		deletedColumns := false
+		foundColumnToDelete := false
 		for _, c := range config.CustomColumns {
-			if c.ColumnName != columnName {
+			if c.ColumnName == columnName {
+				foundColumnToDelete = true
+			} else {
 				newColumns = append(newColumns, c)
-				deletedColumns = true
 			}
 		}
-		if !deletedColumns {
+		if !foundColumnToDelete {
 			log.Fatalf("Did not find a column with name %#v to delete (current columns = %#v)", columnName, config.CustomColumns)
 		}
 		config.CustomColumns = newColumns
+		// And also delete it from the list of displayed columns
+		newDisplayedColumns := make([]string, 0)
+		for _, c := range config.DisplayedColumns {
+			if c != columnName {
+				newDisplayedColumns = append(newDisplayedColumns, c)
+			}
+		}
+		config.DisplayedColumns = newDisplayedColumns
 		lib.CheckFatalError(hctx.SetConfig(config))
 	},
 }

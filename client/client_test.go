@@ -2114,7 +2114,7 @@ echo bar`)
 	}
 
 	// And check that it is all recorded correctly
-	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command `)
+	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
@@ -2124,6 +2124,12 @@ echo bar`)
 		testName += "-isAction"
 	}
 	testutils.CompareGoldens(t, out, testName)
+
+	// And check that we can delete the custom column and that it also gets automatically removed from displayed-columns
+	require.Equal(t, `"Exit Code" git_remote Command`, strings.TrimSpace(tester.RunInteractiveShell(t, "hishtory config-get displayed-columns")))
+	require.Equal(t, "git_remote:   (git remote -v 2>/dev/null | grep origin 1>/dev/null ) && git remote get-url origin || true", strings.TrimSpace(tester.RunInteractiveShell(t, "hishtory config-get custom-columns")))
+	tester.RunInteractiveShell(t, `hishtory config-delete custom-columns git_remote`)
+	require.Equal(t, `"Exit Code" Command`, strings.TrimSpace(tester.RunInteractiveShell(t, "hishtory config-get displayed-columns")))
 }
 
 func testPresaving(t *testing.T, tester shellTester) {
