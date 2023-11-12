@@ -240,9 +240,9 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 	require.NotEmpty(t, captureConfig.complexCommands)
 	for _, cmd := range captureConfig.complexCommands {
 		if cmd.Keys != "" {
-			fullCommand += " tmux send -t foo -- "
+			fullCommand += " tmux send -t foo -- '"
 			fullCommand += cmd.Keys
-			fullCommand += "\n"
+			fullCommand += "'\n"
 		}
 		if cmd.ResizeX != 0 && cmd.ResizeY != 0 {
 			fullCommand += fmt.Sprintf(" tmux resize-window -t foo -x %d -y %d\n", cmd.ResizeX, cmd.ResizeY)
