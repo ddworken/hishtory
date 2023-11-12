@@ -2129,7 +2129,7 @@ echo bar`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
+	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
 	if testutils.IsGithubAction() {
 		testName += "-isAction"
@@ -2280,7 +2280,7 @@ func TestTimestampFormat(t *testing.T) {
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail -tablesizing")[1])
+	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
 
@@ -2375,7 +2375,7 @@ echo foo`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
+	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-tquery")
 
 	// And change the config to filter out duplicate rows
@@ -2385,7 +2385,7 @@ echo foo`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = strings.TrimSpace(strings.Split(out, "hishtory tquery -pipefail")[1])
+	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
@@ -2393,6 +2393,7 @@ echo foo`)
 		{Keys: "ENTER", ExtraDelay: 1.0},
 	})
 	out = stripTuiCommandPrefix(t, out)
+	require.Contains(t, out, "\n")
 	out = strings.Split(out, "\n")[1]
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
 }
