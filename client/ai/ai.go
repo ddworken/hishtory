@@ -34,6 +34,7 @@ func GetAiSuggestions(ctx context.Context, query string, numberCompletions int) 
 }
 
 func GetAiSuggestionsViaHishtoryApi(ctx context.Context, query string, numberCompletions int) ([]string, error) {
+	hctx.GetLogger().Infof("Running OpenAI query for %#v", query)
 	req := ai.AiSuggestionRequest{
 		DeviceId:          hctx.GetConf(ctx).DeviceId,
 		UserId:            data.UserId(hctx.GetConf(ctx).UserSecret),
@@ -53,5 +54,6 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, query string, numberCom
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse /api/v1/ai-suggest response: %w", err)
 	}
+	hctx.GetLogger().Infof("For OpenAI query=%#v ==> %#v", query, resp.Suggestions)
 	return resp.Suggestions, nil
 }
