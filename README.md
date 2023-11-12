@@ -63,6 +63,19 @@ To update `hishtory` to the latest version, just run `hishtory update` to secure
 ### Advanced Features
 
 <details>
+<summary>AI Shell Assistance</summary>
+If you are ever trying to figure out a bash command and searching your history isn't working, you can query ChatGPT by prefixing your query with `?`. For example, press `Control+R` and then type in `? list all files larger than 1MB`:
+
+![demo showing ChatGPT suggesting the right command](https://raw.githubusercontent.com/ddworken/hishtory/master/backend/web/landing/www/img/aidemo.png)
+
+If you would like to:
+* Disable this, you can run `hishtory config-set ai-completion false`
+* Run this with your own OpenAI API key (thereby ensuring that your queries do not pass through the centrally hosted hiSHtory server), you can run `export OPENAI_API_KEY='...'`
+
+</details>
+
+
+<details>
 <summary>TUI key bindings</summary>
 The TUI (opened via `Control+R`) supports a number of key bindings:
 
@@ -73,6 +86,8 @@ The TUI (opened via `Control+R`) supports a number of key bindings:
 | Page Up/Down       | Scroll the table up/down by one page                           |
 | Shift + Left/Right | Scroll the table left/right  |
 | Control+K          | Delete the selected command                                    |
+
+Press `Control+H` to view a help page documenting these.
 
 </details>
 

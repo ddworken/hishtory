@@ -70,6 +70,24 @@ var setBetaModeCommand = &cobra.Command{
 	},
 }
 
+var setEnableAiCompletionCmd = &cobra.Command{
+	Use:       "ai-completion",
+	Short:     "Enable AI completion for searches starting with '?'",
+	Long:      "Note that AI completion requests are sent to the shared hiSHtory backend and then to OpenAI. Requests are not logged, but still be careful not to put anything sensitive in queries.",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		val := args[0]
+		if val != "true" && val != "false" {
+			log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.AiCompletion = (val == "true")
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setHighlightMatchesCmd = &cobra.Command{
 	Use:       "highlight-matches",
 	Short:     "Enable highlight-matches to enable highlighting of matches in the search results",
@@ -119,4 +137,5 @@ func init() {
 	configSetCmd.AddCommand(setTimestampFormatCmd)
 	configSetCmd.AddCommand(setBetaModeCommand)
 	configSetCmd.AddCommand(setHighlightMatchesCmd)
+	configSetCmd.AddCommand(setEnableAiCompletionCmd)
 }

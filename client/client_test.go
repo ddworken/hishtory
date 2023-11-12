@@ -1934,7 +1934,7 @@ func testTui_ai(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test running an AI query
-	tester.RunInteractiveShell(t, `hishtory config-set beta-mode true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get ai-completion`)))
 	out := captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER"},
 		// ExtraDelay since AI queries are debounced and thus slower
@@ -1942,6 +1942,16 @@ func testTui_ai(t *testing.T) {
 	})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-AiQuery")
+
+	// Test that when it is disabled, no AI queries are run
+	tester.RunInteractiveShell(t, `hishtory config-set ai-completion false`)
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'?myQuery'",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-AiQuery-Disabled")
+
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {

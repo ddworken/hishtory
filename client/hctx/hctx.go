@@ -197,6 +197,8 @@ type ClientConfig struct {
 	BetaMode bool `json:"beta_mode"`
 	// Whether to highlight matches in search results
 	HighlightMatches bool `json:"highlight_matches"`
+	// Whether to enable AI completion
+	AiCompletion bool `json:"ai_completion"`
 }
 
 type CustomColumnDefinition struct {

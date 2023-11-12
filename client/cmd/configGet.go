@@ -50,6 +50,17 @@ var getFilterDuplicateCommandsCmd = &cobra.Command{
 	},
 }
 
+var getEnableAiCompletion = &cobra.Command{
+	Use:   "ai-completion",
+	Short: "Enable AI completion for searches starting with '?'",
+	Long:  "Note that AI completion requests are sent to the shared hiSHtory backend and then to OpenAI. Requests are not logged, but still be careful not to put anything sensitive in queries.",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.AiCompletion)
+	},
+}
+
 var getBetaModeCmd = &cobra.Command{
 	Use:   "beta-mode",
 	Short: "Enable beta-mode to opt-in to unreleased features",
@@ -109,4 +120,5 @@ func init() {
 	configGetCmd.AddCommand(getCustomColumnsCmd)
 	configGetCmd.AddCommand(getBetaModeCmd)
 	configGetCmd.AddCommand(getHighlightMatchesCmd)
+	configGetCmd.AddCommand(getEnableAiCompletion)
 }

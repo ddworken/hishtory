@@ -198,8 +198,8 @@ func handleDbUpgrades(ctx context.Context) error {
 
 // Handles people running `hishtory update` from an old version of hishtory that
 // doesn't support certain config options that we now default to true. This ensures
-// that upgrades get them enabled by default, but if someone has it explicitly disabled,
-// we keep it that way.
+// that we can customize the behavior for upgrades while still respecting the option
+// if  someone has it explicitly set.
 func handleUpgradedFeatures() error {
 	configContents, err := hctx.GetConfigContents()
 	if err != nil {
@@ -217,6 +217,10 @@ func handleUpgradedFeatures() error {
 	if !strings.Contains(string(configContents), "highlight_matches") {
 		// highlighting is not yet configured, so enable it
 		config.HighlightMatches = true
+	}
+	if !strings.Contains(string(configContents), "ai_completion") {
+		// AI completion is not yet configured, disable it for upgrades since this is a new feature
+		config.AiCompletion = false
 	}
 	return hctx.SetConfig(&config)
 }
@@ -562,6 +566,8 @@ func setup(userSecret string, isOffline bool) error {
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
 	config.ControlRSearchEnabled = true
+	// TODO: Set config.HighlightMatches = true here, so that we enable highlighting by default
+	config.AiCompletion = true
 	config.IsOffline = isOffline
 	err := hctx.SetConfig(&config)
 	if err != nil {
