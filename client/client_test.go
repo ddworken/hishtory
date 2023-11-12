@@ -1932,9 +1932,11 @@ func testTui_ai(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test running an AI query
-	out := captureTerminalOutput(t, tester, []string{
-		"hishtory SPACE tquery ENTER",
-		"?myQuery",
+	tester.RunInteractiveShell(t, `hishtory config-set beta-mode true`)
+	out := captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		// ExtraDelay since AI queries are debounced and thus slower
+		{Keys: "'?myQuery'", ExtraDelay: 1.0},
 	})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-AiQuery")
