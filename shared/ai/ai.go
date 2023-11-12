@@ -91,10 +91,10 @@ func GetAiSuggestionsViaOpenAiApi(query string, numberCompletions int) ([]string
 	var apiResp openAiResponse
 	err = json.Unmarshal(bodyText, &apiResp)
 	if err != nil {
-		return nil, OpenAiUsage{}, fmt.Errorf("failed to parse OpenAI API response: %w", err)
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to parse OpenAI API response=%#v: %w", bodyText, err)
 	}
 	if len(apiResp.Choices) == 0 {
-		return nil, OpenAiUsage{}, fmt.Errorf("OpenAI API returned zero choicesm, resp=%#v", apiResp)
+		return nil, OpenAiUsage{}, fmt.Errorf("OpenAI API returned zero choices, resp=%#v", apiResp)
 	}
 	ret := make([]string, 0)
 	for _, item := range apiResp.Choices {
