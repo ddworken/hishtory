@@ -118,6 +118,7 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	mux.Handle("/internal/api/v1/usage-stats", middlewares(http.HandlerFunc(s.usageStatsHandler)))
 	mux.Handle("/internal/api/v1/stats", middlewares(http.HandlerFunc(s.statsHandler)))
 	if s.isTestEnvironment {
+		mux.Handle("/api/v1/ai-suggest-override", middlewares(http.HandlerFunc(s.testOnlyOverrideAiSuggestions)))
 		mux.Handle("/api/v1/wipe-db-entries", middlewares(http.HandlerFunc(s.wipeDbEntriesHandler)))
 		mux.Handle("/api/v1/get-num-connections", middlewares(http.HandlerFunc(s.getNumConnectionsHandler)))
 	}

@@ -44,6 +44,11 @@ type OpenAiUsage struct {
 	TotalTokens      int `json:"total_tokens"`
 }
 
+type TestOnlyOverrideAiSuggestionRequest struct {
+	Query       string   `json:"query"`
+	Suggestions []string `json:"suggestions"`
+}
+
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
 func GetAiSuggestionsViaOpenAiApi(query string, numberCompletions int) ([]string, OpenAiUsage, error) {

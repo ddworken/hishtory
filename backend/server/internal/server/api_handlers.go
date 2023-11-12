@@ -313,7 +313,7 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 	var req ai.AiSuggestionRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		panic(fmt.Errorf("failed to decode: %w", err))
+		panic(fmt.Errorf("failed to decode AiSuggestionRequest: %w", err))
 	}
 	if req.NumberCompletions > 10 {
 		panic(fmt.Errorf("request for %d completions is greater than max allowed", req.NumberCompletions))
@@ -336,6 +336,17 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		panic(fmt.Errorf("failed to JSON marshall the API response: %w", err))
 	}
+}
+
+func (s *Server) testOnlyOverrideAiSuggestions(w http.ResponseWriter, r *http.Request) {
+	var req ai.TestOnlyOverrideAiSuggestionRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		panic(fmt.Errorf("failed to decode TestOnlyOverrideAiSuggestionRequest: %w", err))
+	}
+	ai.TestOnlyOverrideAiSuggestions[req.Query] = req.Suggestions
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
