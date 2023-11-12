@@ -1923,6 +1923,8 @@ func testTui_errors(t *testing.T) {
 func testTui_ai(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("OPENAI_API_KEY")()
+	os.Setenv("OPENAI_API_KEY", "")
 	tester, _, _ := setupTestTui(t, Online)
 	req, err := json.Marshal(
 		ai.TestOnlyOverrideAiSuggestionRequest{Query: "myQuery", Suggestions: []string{"result 1", "result 2", "longer result 3"}},
