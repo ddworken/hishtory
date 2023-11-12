@@ -291,7 +291,7 @@ echo thisisrecorded`)
 	exitCodeMatcher := `0`
 	pipefailMatcher := `set -em?o pipefail`
 	line1Matcher := `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command\s*\n`
-	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `hishtory query` + tableDividerMatcher + `\n`
+	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + `N/A` + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `hishtory query` + tableDividerMatcher + `\n`
 	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
 	line4Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	match, err := regexp.MatchString(line3Matcher, out)
@@ -682,13 +682,13 @@ func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 	for i := 0; i < 25; i++ {
 		tester.RunInteractiveShell(t, fmt.Sprintf("echo mycommand-%d", i))
 		out = hishtoryQuery(t, tester, fmt.Sprintf("mycommand-%d", i))
-		if strings.Count(out, "\n") != 2 {
+		if strings.Count(out, "\n") != 3 {
 			t.Fatalf("hishtory query #%d has the wrong number of lines=%d, out=%#v", i, strings.Count(out, "\n"), out)
 		}
 		if strings.Count(out, "echo mycommand") != 1 {
 			t.Fatalf("hishtory query #%d has the wrong number of commands=%d, out=%#v", i, strings.Count(out, "echo mycommand"), out)
 		}
-
+		require.Contains(t, out, "hishtory query echo mycommand-")
 	}
 }
 
@@ -711,7 +711,7 @@ hishtory enable`, i))
 		if strings.Count(out, "echo mycommand") != 1 {
 			t.Fatalf("hishtory query #%d has the wrong number of commands=%d, out=%#v", i, strings.Count(out, "echo mycommand"), out)
 		}
-		require.Contains(t, out, "hishtory tquery mycommand-")
+		require.Contains(t, out, "hishtory query mycommand-")
 		out = hishtoryQuery(t, tester, "")
 		require.NotContains(t, out, "shouldnotshowup")
 	}
@@ -993,9 +993,10 @@ echo other`)
 
 	// Check that the new one doesn't have the commands yet
 	out = hishtoryQuery(t, tester, "echo")
-	if strings.Count(out, "\n") != 1 {
+	if strings.Count(out, "\n") != 2 {
 		t.Fatalf("hishtory query has unexpected number of lines, should contain no entries: out=%#v", out)
 	}
+	require.Contains(t, out, "hishtory query echo")
 	require.NotContains(t, out, "echo hello", "hishtory query contains unexpected command")
 	require.NotContains(t, out, "echo other", "hishtory query contains unexpected command")
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
@@ -1406,7 +1407,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	require.NoError(t, err)
-	if out != "This will permanently delete 1 entries, are you sure? [y/N] " {
+	if out != "This will permanently delete 2 entries, are you sure? [y/N] " {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
@@ -1454,7 +1455,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	restoreInstall2 := testutils.BackupAndRestoreWithId(t, "-2")
 	restoreInstall1()
 	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+randomCmdUuid)
-	if out != "Permanently deleting 2 entries\n" {
+	if out != "Permanently deleting 3 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
