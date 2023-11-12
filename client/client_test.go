@@ -291,8 +291,9 @@ echo thisisrecorded`)
 	exitCodeMatcher := `0`
 	pipefailMatcher := `set -em?o pipefail`
 	line1Matcher := `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command\s*\n`
-	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
-	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
+	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `hishtory query` + tableDividerMatcher + `\n`
+	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
+	line4Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	match, err := regexp.MatchString(line3Matcher, out)
 	require.NoError(t, err)
 	if !match {
@@ -308,7 +309,7 @@ echo thisisrecorded`)
 	if !match {
 		t.Fatalf("output is missing the pipefail: %v", out)
 	}
-	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher, out)
+	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher+line4Matcher, out)
 	require.NoError(t, err)
 	if !match {
 		t.Fatalf("output doesn't match the expected table: %v", out)
@@ -363,7 +364,7 @@ hishtory disable`)
 	// A super basic query just to ensure the basics are working
 	out := hishtoryQuery(t, tester, `echo`)
 	require.Contains(t, out, "echo querybydir", "hishtory query doesn't contain result matching echo querybydir")
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
@@ -371,21 +372,21 @@ hishtory disable`)
 	out = hishtoryQuery(t, tester, `cwd:/tmp`)
 	require.Contains(t, out, "echo querybydir", "hishtory query doesn't contain result matching cwd:/tmp")
 	require.NotContains(t, out, "nevershouldappear")
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	// And again, but with a strailing slash
 	out = hishtoryQuery(t, tester, `cwd:/tmp/`)
 	require.Contains(t, out, "echo querybydir", "hishtory query doesn't contain result matching cwd:/tmp/")
 	require.NotContains(t, out, "nevershouldappear")
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on cwd without the slash
 	out = hishtoryQuery(t, tester, `cwd:tmp`)
 	require.Contains(t, out, "echo querybydir")
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
@@ -647,9 +648,10 @@ func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
 	if strings.Count(out, "\n") != 26 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
-	if strings.Count(out, "echo mycommand") != 25 {
+	if strings.Count(out, "echo mycommand") != 24 {
 		t.Fatalf("hishtory query has the wrong number of commands=%d, out=%#v", strings.Count(out, "echo mycommand"), out)
 	}
+	require.Contains(t, out, "hishtory query mycommand")
 
 	// Run a few more commands including some empty lines that don't get recorded
 	tester.RunInteractiveShell(t, `echo mycommand-30
@@ -703,12 +705,13 @@ echo shouldnotshowup
 sleep 0.5
 hishtory enable`, i))
 		out := hishtoryQuery(t, tester, fmt.Sprintf("mycommand-%d", i))
-		if strings.Count(out, "\n") != 2 {
+		if strings.Count(out, "\n") != 3 {
 			t.Fatalf("hishtory query #%d has the wrong number of lines=%d, out=%#v", i, strings.Count(out, "\n"), out)
 		}
 		if strings.Count(out, "echo mycommand") != 1 {
 			t.Fatalf("hishtory query #%d has the wrong number of commands=%d, out=%#v", i, strings.Count(out, "echo mycommand"), out)
 		}
+		require.Contains(t, out, "hishtory tquery mycommand-")
 		out = hishtoryQuery(t, tester, "")
 		require.NotContains(t, out, "shouldnotshowup")
 	}
@@ -790,7 +793,7 @@ func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 
 	// Query for it and check that the timestamp that gets recorded looks reasonable
 	out = hishtoryQuery(t, tester, "echo hello")
-	if strings.Count(out, "\n") != 2 {
+	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
 	expectedDate := time.Now().Format("Jan 2 2006")
@@ -813,12 +816,12 @@ echo other`)
 
 	// Query for it and check that the directory gets recorded correctly
 	out = hishtoryQuery(t, tester, "echo hello")
-	if strings.Count(out, "\n") != 2 {
+	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
 	require.Contains(t, out, "~/"+data.GetHishtoryPath())
 	out = hishtoryQuery(t, tester, "echo other")
-	if strings.Count(out, "\n") != 2 {
+	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
 	require.Contains(t, out, "/tmp")
@@ -965,9 +968,10 @@ echo other`)
 
 	// Query for it and check that the directory gets recorded correctly
 	out = hishtoryQuery(t, tester, "echo")
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
+	require.Contains(t, out, "hishtory query echo")
 	require.Contains(t, out, "echo hello")
 	require.Contains(t, out, "echo other")
 
@@ -1137,7 +1141,7 @@ sleep 1`)
 
 	// Test using export with a query
 	out = tester.RunInteractiveShell(t, `hishtory export foo`)
-	if out != "ls /foo\necho foo\nhishtory query foo\n" {
+	if out != "ls /foo\necho foo\nhishtory query foo\nhishtory export foo\n" {
 		t.Fatalf("expected hishtory export to equal out=%#v", out)
 	}
 
@@ -1185,7 +1189,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 
 	// Check it shows up correctly
 	out := tester.RunInteractiveShell(t, "hishtory export ls")
-	if out != "ls -Slah\n" {
+	if out != "ls -Slah\nhishtory export ls\n" {
 		t.Fatalf("hishtory had unexpected output=%#v", out)
 	}
 
@@ -1331,6 +1335,7 @@ echo %v-bar`, randomCmdUuid, randomCmdUuid)
 	expectedOutput := strings.ReplaceAll(`echo UUID-fishcommand
 echo UUID-foo
 echo UUID-bar
+hishtory export `+randomCmdUuid[:5]+`
 `, "UUID", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -1366,7 +1371,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact foo
 	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact foo`)
-	if out != "Permanently deleting 2 entries\n" {
+	if out != "Permanently deleting 3 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
@@ -1598,7 +1603,7 @@ func TestFish(t *testing.T) {
 
 	// Check export
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v ps`)
-	expectedOutput := "echo foo\necho bar\necho \"foo\"\nls /tmp/ &\necho foo\nfish\n"
+	expectedOutput := "echo foo\necho bar\necho \"foo\"\nls /tmp/ &\nfish\necho foo\nexit\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1979,8 +1984,8 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Check that they're there
 	var historyEntries []*data.HistoryEntry
 	db.Model(&data.HistoryEntry{}).Find(&historyEntries)
-	if len(historyEntries) != 5 {
-		t.Fatalf("expected to find 5 history entries, actual found %d: %#v", len(historyEntries), historyEntries)
+	if len(historyEntries) != 6 {
+		t.Fatalf("expected to find 6 history entries, actual found %d: %#v", len(historyEntries), historyEntries)
 	}
 
 	// And check that the control-r binding brings up the search
