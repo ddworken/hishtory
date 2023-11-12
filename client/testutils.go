@@ -30,9 +30,7 @@ type shellTester interface {
 	RunInteractiveShellBackground(t testing.TB, script string) error
 	ShellName() string
 }
-type bashTester struct {
-	shellTester
-}
+type bashTester struct{}
 
 func (b bashTester) RunInteractiveShell(t testing.TB, script string) string {
 	out, err := b.RunInteractiveShellRelaxed(t, "set -emo pipefail\n"+script)
@@ -73,9 +71,7 @@ func (b bashTester) ShellName() string {
 	return "bash"
 }
 
-type zshTester struct {
-	shellTester
-}
+type zshTester struct{}
 
 func (z zshTester) RunInteractiveShell(t testing.TB, script string) string {
 	res, err := z.RunInteractiveShellRelaxed(t, "set -eo pipefail\n"+script)
