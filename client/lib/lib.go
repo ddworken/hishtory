@@ -94,7 +94,11 @@ func BuildTableRow(ctx context.Context, columnNames []string, entry data.History
 		case "CWD", "cwd":
 			row = append(row, entry.CurrentWorkingDirectory)
 		case "Timestamp", "timestamp":
-			row = append(row, entry.StartTime.Local().Format(hctx.GetConf(ctx).TimestampFormat))
+			if entry.StartTime.UnixMilli() == 0 {
+				row = append(row, "N/A")
+			} else {
+				row = append(row, entry.StartTime.Local().Format(hctx.GetConf(ctx).TimestampFormat))
+			}
 		case "Runtime", "runtime":
 			if entry.EndTime.UnixMilli() == 0 {
 				// An EndTime of zero means this is a pre-saved entry that never finished
