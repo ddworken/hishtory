@@ -354,3 +354,8 @@ func stripShellPrefix(out string) string {
 	}
 	return out
 }
+
+func stripTuiCommandPrefix(t *testing.T, out string) string {
+	require.Contains(t, out, "hishtory tquery")
+	return strings.TrimSpace(strings.Split(out, "hishtory tquery")[1])
+}
