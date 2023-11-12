@@ -17,12 +17,12 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ddworken/hishtory/client/ai"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/table"
 	"github.com/ddworken/hishtory/shared"
-	"github.com/ddworken/hishtory/shared/ai"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
 )
