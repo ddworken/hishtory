@@ -44,10 +44,10 @@ type OpenAiUsage struct {
 	TotalTokens      int `json:"total_tokens"`
 }
 
-var testOnlyOverrideAiSuggestions map[string][]string
+var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
 func GetAiSuggestionsViaOpenAiApi(query string, numberCompletions int) ([]string, OpenAiUsage, error) {
-	if results := testOnlyOverrideAiSuggestions[query]; len(results) > 0 {
+	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
 	}
 	hctx.GetLogger().Infof("Running OpenAI query for %#v", query)
