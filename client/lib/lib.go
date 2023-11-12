@@ -429,11 +429,11 @@ func parseFishHistory(homedir string) Seq2[string, error] {
 
 type (
 	// Represents an iterator of (K,V). Equivalent of the future Go stdlib type iter.Seq2.
+	// TODO: Swap this to the stdlib function once it has been released, along with the below two functions
 	Seq2[K, V any] func(yield func(K, V) bool) bool
 )
 
 // Concatenate two iterators. Equivalent of the future Go stdlib function iter.Concat2.
-// TODO: Swap this to the stdlib function
 func concatIterators(iters ...Seq2[string, error]) Seq2[string, error] {
 	return func(yield func(string, error) bool) bool {
 		for _, seq := range iters {
@@ -446,7 +446,6 @@ func concatIterators(iters ...Seq2[string, error]) Seq2[string, error] {
 }
 
 // Convert a slice into an iterator. Equivalent of the future Go stdlib function iter.Values
-// TODO: Swap this to the stdlib function
 func Values[Slice ~[]Elem, Elem any](s Slice) Seq2[Elem, error] {
 	return func(yield func(Elem, error) bool) bool {
 		for _, v := range s {

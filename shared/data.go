@@ -30,7 +30,6 @@ type Device struct {
 	RegistrationIp   string    `json:"registration_ip"`
 	RegistrationDate time.Time `json:"registration_date"`
 	// Test devices, that should be aggressively cleaned from the DB
-	// TODO: Clean these from the DB
 	IsIntegrationTestDevice bool `json:"is_integration_test_device"`
 }
 
