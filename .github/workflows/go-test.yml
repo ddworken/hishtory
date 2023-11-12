@@ -66,6 +66,7 @@ jobs:
     - name: Go test
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
 
           # Once https://github.com/gotestyourself/gotestsum/pull/377 is merged, update this to pull from main rather than my fork
