@@ -560,13 +560,13 @@ func setup(userSecret string, isOffline bool) error {
 	}
 	fmt.Println("Setting secret hishtory key to " + string(userSecret))
 
-	// Create and set the config with the defaults that we want for new installs
+	// Create and set the config
 	var config hctx.ClientConfig
 	config.UserSecret = userSecret
 	config.IsEnabled = true
 	config.DeviceId = uuid.Must(uuid.NewRandom()).String()
 	config.ControlRSearchEnabled = true
-	config.HighlightMatches = true
+	// TODO: Set config.HighlightMatches = true here, so that we enable highlighting by default
 	config.AiCompletion = true
 	config.IsOffline = isOffline
 	err := hctx.SetConfig(&config)
