@@ -7,8 +7,6 @@ import (
 	"html"
 	"math"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
@@ -273,17 +271,12 @@ func (s *Server) addDeletionRequestHandler(w http.ResponseWriter, r *http.Reques
 func (s *Server) slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 	// returns "OK" unless there is a current SLSA bug
 	v := getHishtoryVersion(r)
-	// TODO: Migrate this to a version parsing library
-	if !strings.Contains(v, "v0.") {
-		w.Write([]byte("OK"))
-		return
-	}
-	vNum, err := strconv.Atoi(strings.Split(v, ".")[1])
+	pv, err := shared.ParseVersionString(v)
 	if err != nil {
 		w.Write([]byte("OK"))
 		return
 	}
-	if vNum < 159 {
+	if pv.LessThan(shared.ParsedVersion{MajorVersion: 0, MinorVersion: 159}) {
 		w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
 		return
 	}
