@@ -94,10 +94,10 @@ func OpenDB() (*database.DB, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
 		}
-	}
-	err := db.CreateIndices()
-	if err != nil {
-		return nil, err
+		err = db.CreateIndices()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return db, nil
 }
