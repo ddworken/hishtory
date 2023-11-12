@@ -325,11 +325,12 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 	if numDevices == 0 {
 		panic(fmt.Errorf("rejecting OpenAI request for user_id=%#v since it does not exist", req.UserId))
 	}
-	suggestions, err := ai.GetAiSuggestionsViaOpenAiApi(req.Query, req.NumberCompletions)
+	suggestions, usage, err := ai.GetAiSuggestionsViaOpenAiApi(req.Query, req.NumberCompletions)
 	if err != nil {
 		panic(fmt.Errorf("failed to query OpenAI API: %w", err))
 	}
 	s.statsd.Incr("hishtory.openai.query", []string{}, float64(req.NumberCompletions))
+	s.statsd.Incr("hishtory.openai.tokens", []string{}, float64(usage.TotalTokens))
 	var resp ai.AiSuggestionResponse
 	resp.Suggestions = suggestions
 	if err := json.NewEncoder(w).Encode(resp); err != nil {

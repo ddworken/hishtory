@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	resp, err := ai.GetAiSuggestions("Find all CSV files in the current directory or subdirectories and select the first column, then prepend `foo` to each line", 3)
+	resp, _, err := ai.GetAiSuggestionsViaOpenAiApi("Find all CSV files in the current directory or subdirectories and select the first column, then prepend `foo` to each line", 3)
 	if err != nil {
 		log.Fatal(err)
 	}
