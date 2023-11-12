@@ -22,6 +22,7 @@ import (
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/table"
 	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/ai"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
 )
@@ -436,9 +437,44 @@ func renderNullableTable(m model) string {
 	return baseStyle.Render(m.table.View())
 }
 
+func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, query string) ([]table.Row, []*data.HistoryEntry, error) {
+	// TODO: Add debouncing here so we don't waste API queries on half-typed search queries
+	suggestions, err := ai.DebouncedGetAiSuggestions(ctx, strings.TrimPrefix(query, "?"), 5)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get AI query suggestions: %w", err)
+	}
+	var rows []table.Row
+	var entries []*data.HistoryEntry
+	for _, suggestion := range suggestions {
+		entry := data.HistoryEntry{
+			LocalUsername:           "OpenAI",
+			Hostname:                "OpenAI",
+			Command:                 suggestion,
+			CurrentWorkingDirectory: "N/A",
+			HomeDirectory:           "N/A",
+			ExitCode:                0,
+			StartTime:               time.Unix(0, 0).UTC(),
+			EndTime:                 time.Unix(0, 0).UTC(),
+			DeviceId:                "OpenAI",
+			EntryId:                 "OpenAI",
+		}
+		entries = append(entries, &entry)
+		row, err := lib.BuildTableRow(ctx, columnNames, entry)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %w", entry, err)
+		}
+		rows = append(rows, row)
+	}
+	hctx.GetLogger().Infof("getRowsFromAiSuggestions(%#v) ==> %#v", query, suggestions)
+	return rows, entries, nil
+}
+
 func getRows(ctx context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
+	if config.BetaMode && strings.HasPrefix(query, "?") && len(query) > 1 {
+		return getRowsFromAiSuggestions(ctx, columnNames, query)
+	}
 	searchResults, err := lib.Search(ctx, db, query, numEntries)
 	if err != nil {
 		return nil, nil, err

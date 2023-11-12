@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/ai"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -272,6 +273,7 @@ func (s *Server) addDeletionRequestHandler(w http.ResponseWriter, r *http.Reques
 func (s *Server) slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 	// returns "OK" unless there is a current SLSA bug
 	v := getHishtoryVersion(r)
+	// TODO: Migrate this to a version parsing library
 	if !strings.Contains(v, "v0.") {
 		w.Write([]byte("OK"))
 		return
@@ -304,6 +306,35 @@ func (s *Server) feedbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Length", "0")
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var req ai.AiSuggestionRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		panic(fmt.Errorf("failed to decode: %w", err))
+	}
+	if req.NumberCompletions > 10 {
+		panic(fmt.Errorf("request for %d completions is greater than max allowed", req.NumberCompletions))
+	}
+	numDevices, err := s.db.CountDevicesForUser(ctx, req.UserId)
+	if err != nil {
+		panic(fmt.Errorf("failed to count devices for user: %w", err))
+	}
+	if numDevices == 0 {
+		panic(fmt.Errorf("rejecting OpenAI request for user_id=%#v since it does not exist", req.UserId))
+	}
+	suggestions, err := ai.GetAiSuggestionsViaOpenAiApi(req.Query, req.NumberCompletions)
+	if err != nil {
+		panic(fmt.Errorf("failed to query OpenAI API: %w", err))
+	}
+	s.statsd.Incr("hishtory.openai.query", []string{}, float64(req.NumberCompletions))
+	var resp ai.AiSuggestionResponse
+	resp.Suggestions = suggestions
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		panic(fmt.Errorf("failed to JSON marshall the API response: %w", err))
+	}
 }
 
 func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
