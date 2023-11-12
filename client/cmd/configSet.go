@@ -87,6 +87,23 @@ var setEnableAiCompletionCmd = &cobra.Command{
 		lib.CheckFatalError(hctx.SetConfig(config))
 	},
 }
+var setPresavingCmd = &cobra.Command{
+	Use:       "presaving",
+	Short:     "Enable 'presaving' of shell entries that never finish running",
+	Long:      "If enabled, there is a slight risk of duplicate history entries. If disabled, non-terminating history entries will not be recorded.",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		val := args[0]
+		if val != "true" && val != "false" {
+			log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.EnablePresaving = (val == "true")
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
 
 var setHighlightMatchesCmd = &cobra.Command{
 	Use:       "highlight-matches",
@@ -138,4 +155,5 @@ func init() {
 	configSetCmd.AddCommand(setBetaModeCommand)
 	configSetCmd.AddCommand(setHighlightMatchesCmd)
 	configSetCmd.AddCommand(setEnableAiCompletionCmd)
+	configSetCmd.AddCommand(setPresavingCmd)
 }

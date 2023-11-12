@@ -142,7 +142,7 @@ func presaveHistoryEntry(ctx context.Context) {
 	if !config.IsEnabled {
 		return
 	}
-	if !config.BetaMode {
+	if !config.EnablePresaving {
 		return
 	}
 
@@ -195,7 +195,7 @@ func saveHistoryEntry(ctx context.Context) {
 	db := hctx.GetDb(ctx)
 
 	// Drop any entries from pre-saving since they're no longer needed
-	if config.BetaMode {
+	if config.EnablePresaving {
 		lib.CheckFatalError(deletePresavedEntries(ctx, entry, false))
 	}
 
@@ -220,7 +220,7 @@ func saveHistoryEntry(ctx context.Context) {
 		}
 	}
 
-	if config.BetaMode {
+	if config.EnablePresaving {
 		db.Commit()
 	}
 }

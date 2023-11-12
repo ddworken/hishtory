@@ -840,7 +840,8 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit int, c
 	if err != nil {
 		return nil, err
 	}
-	if hctx.GetConf(ctx).BetaMode {
+	if hctx.GetConf(ctx).EnablePresaving {
+		// Sort by StartTime when presaving is enabled, since presaved entries may not have an end time
 		tx = tx.Order("start_time DESC")
 	} else {
 		tx = tx.Order("end_time DESC")
