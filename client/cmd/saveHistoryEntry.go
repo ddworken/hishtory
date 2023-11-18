@@ -567,6 +567,10 @@ func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
 }
 
 func parseCrossPlatformTime(data string) time.Time {
+	// Note that this code is required to handle the case where timestamps are passed from `date %s%N`.
+	// As of f1a36d2, this is no longer the case. But, we want to ensure that when people upgrade from
+	// the old version (where they'll have an active shell session still using date) that we handle it
+	// properly. So we sadly have to keep this lax parsing code around indefinitely.
 	data = strings.TrimSuffix(data, "N") // Trim the N suffix that is present on MacOS where the date CLI doesn't support %N
 	startTime, err := strconv.ParseInt(data, 10, 64)
 	lib.CheckFatalError(err)
