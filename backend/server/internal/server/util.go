@@ -69,7 +69,7 @@ func getHishtoryVersion(r *http.Request) string {
 func getRemoteAddr(r *http.Request) string {
 	addr, ok := r.Header["X-Real-Ip"]
 	if !ok || len(addr) == 0 {
-		return "UnknownIp"
+		return r.RemoteAddr
 	}
 	return addr[0]
 }
