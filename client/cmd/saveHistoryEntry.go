@@ -24,6 +24,15 @@ import (
 	"gorm.io/gorm"
 )
 
+var getTimestampCmd = &cobra.Command{
+	Use:    "getTimestamp",
+	Hidden: true,
+	Short:  "[Internal-only] Returns a timestamp in Unix nanoseconds",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(time.Now().UnixNano())
+	},
+}
+
 var saveHistoryEntryCmd = &cobra.Command{
 	Use:                "saveHistoryEntry",
 	Hidden:             true,
@@ -291,11 +300,6 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 		return err
 	}
 	return nil
-}
-
-func init() {
-	rootCmd.AddCommand(saveHistoryEntryCmd)
-	rootCmd.AddCommand(presaveHistoryEntryCmd)
 }
 
 func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) error {
@@ -635,4 +639,10 @@ func getCwdWithoutSubstitution() (string, error) {
 		}
 	}
 	return "", err
+}
+
+func init() {
+	rootCmd.AddCommand(saveHistoryEntryCmd)
+	rootCmd.AddCommand(presaveHistoryEntryCmd)
+	rootCmd.AddCommand(getTimestampCmd)
 }
