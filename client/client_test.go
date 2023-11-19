@@ -320,10 +320,11 @@ echo thisisrecorded`)
 
 	// Query for it
 	out = hishtoryQuery(t, tester, "complex")
-	if strings.Count(out, "\n") != 2 {
+	if strings.Count(out, "\n") != 3 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	require.Contains(t, out, complexCommand, "hishtory query doesn't contain the expected complex command")
+	require.Contains(t, out, "hishtory query complex")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -403,17 +404,17 @@ hishtory disable`)
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	out = hishtoryQuery(t, tester, `before:2125-07-02 cwd:tmp`)
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	out = hishtoryQuery(t, tester, `before:2125-07-02 cwd:mp`)
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
 	// Query based on after: and cwd:
 	out = hishtoryQuery(t, tester, `after:1980-07-02 cwd:/tmp`)
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
@@ -1959,7 +1960,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 	// Insert a few hishtory entries that we'll use for testing into an empty DB
 	db := hctx.GetDb(hctx.MakeContext())
-	require.NoError(t, db.Where("true").Delete(&data.HistoryEntry{}).Commit().Error)
+	require.NoError(t, db.Where("true").Delete(&data.HistoryEntry{}).Error)
 	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
