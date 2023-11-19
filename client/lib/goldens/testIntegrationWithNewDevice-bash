@@ -5,6 +5,7 @@ ls /bar
 ls /foo
 echo foo
 echo bar
+hishtory disable
 hishtory enable
 echo thisisrecorded
 hishtory query
