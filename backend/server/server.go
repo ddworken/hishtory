@@ -34,9 +34,19 @@ func isProductionEnvironment() bool {
 	return os.Getenv("HISHTORY_ENV") == "prod"
 }
 
+func getLoggerConfig() logger.Interface {
+	// The same as the default logger, except with a higher SlowThreshold
+	return logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
+		SlowThreshold:             1000 * time.Millisecond,
+		LogLevel:                  logger.Info,
+		IgnoreRecordNotFoundError: false,
+		Colorful:                  true,
+	})
+}
+
 func OpenDB() (*database.DB, error) {
 	if isTestEnvironment() {
-		db, err := database.OpenSQLite("file::memory:?_journal_mode=WAL&cache=shared", &gorm.Config{})
+		db, err := database.OpenSQLite("file::memory:?_journal_mode=WAL&cache=shared", &gorm.Config{Logger: getLoggerConfig()})
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
@@ -53,20 +63,12 @@ func OpenDB() (*database.DB, error) {
 		return db, nil
 	}
 
-	// The same as the default logger, except with a higher SlowThreshold
-	customLogger := logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
-		SlowThreshold:             1000 * time.Millisecond,
-		LogLevel:                  logger.Warn,
-		IgnoreRecordNotFoundError: false,
-		Colorful:                  true,
-	})
-
 	var sqliteDb string
 	if os.Getenv("HISHTORY_SQLITE_DB") != "" {
 		sqliteDb = os.Getenv("HISHTORY_SQLITE_DB")
 	}
 
-	config := gorm.Config{Logger: customLogger}
+	config := gorm.Config{Logger: getLoggerConfig()}
 
 	fmt.Println("Connecting to DB")
 	var db *database.DB
