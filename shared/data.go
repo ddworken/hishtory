@@ -11,8 +11,9 @@ import (
 type EncHistoryEntry struct {
 	EncryptedData []byte `json:"enc_data"`
 	Nonce         []byte `json:"nonce"`
-	DeviceId      string `json:"device_id"`
-	UserId        string `json:"user_id"`
+	// DeviceId is the ID of the device that will read this entry from the backend. It is *not* the ID of the device that recorded the command.
+	DeviceId string `json:"device_id"`
+	UserId   string `json:"user_id"`
 	// Note that EncHistoryEntry.Date == HistoryEntry.EndTime
 	Date time.Time `json:"time"`
 	// Note that EncHistoryEntry.EncryptedId == HistoryEntry.Id (for entries created after pre-saving support)

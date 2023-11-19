@@ -209,11 +209,11 @@ func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, dele
 		}
 		if message.EndTime != (time.Time{}) && message.EntryId != "" {
 			// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.DeviceId, message.EndTime, message.EntryId))
+			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.EndTime, message.EntryId))
 		} else if message.EndTime != (time.Time{}) && message.EntryId == "" {
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (date = ?)", userId, message.DeviceId, message.EndTime))
+			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ?)", userId, message.EndTime))
 		} else if message.EndTime == (time.Time{}) && message.EntryId != "" {
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND device_id = ? AND (encrypted_id = ?)", userId, message.DeviceId, message.EntryId))
+			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (encrypted_id = ?)", userId, message.EntryId))
 		} else {
 			return 0, fmt.Errorf("failed to delete entry because message.EndTime=%#v and message.EntryId=%#v are both empty", message.EndTime, message.EntryId)
 		}
