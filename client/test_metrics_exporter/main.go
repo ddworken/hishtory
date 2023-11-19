@@ -66,6 +66,7 @@ type eventHandler struct{}
 func (eventHandler) Event(event testjson.TestEvent, execution *testjson.Execution) error {
 	testIdentifier := event.Test
 	if event.Action == testjson.ActionFail {
+		fmt.Println("Recorded failure for " + testIdentifier)
 		GLOBAL_STATSD.Incr("test_status", []string{"result:failed", "test:" + testIdentifier, "os:" + runtime.GOOS}, 1.0)
 		NUM_TEST_RETRIES[testIdentifier] += 1
 	}
