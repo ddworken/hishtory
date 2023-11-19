@@ -150,7 +150,7 @@ func runBackgroundJobs(ctx context.Context, srv *server.Server, db *database.DB,
 	for {
 		err := cron(ctx, db, stats)
 		if err != nil {
-			panic(fmt.Sprintf("Cron failure: %v", err))
+			fmt.Printf("Cron failure: %v", err)
 		}
 		srv.UpdateReleaseVersion(release.Version, release.BuildUpdateInfo(release.Version))
 		time.Sleep(10 * time.Minute)
