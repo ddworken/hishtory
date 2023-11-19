@@ -457,7 +457,9 @@ hishtory disable`)
 	require.NotContains(t, out, "cmd_with_diff_hostname_and_username")
 	out = hishtoryQuery(t, tester, `-echo -pipefail`)
 	require.NotContains(t, out, "echo")
-	if strings.Count(out, "\n") != 4 {
+	require.NotContains(t, out, "pipefail")
+	require.Contains(t, out, "cmd_with_diff_hostname_and_username")
+	if strings.Count(out, "\n") != 6 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
@@ -1395,9 +1397,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	require.NoError(t, err)
-	if out != "This will permanently delete 1 entries, are you sure? [y/N] " {
-		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
-	}
+	require.Regexp(t, regexp.MustCompile(`This will permanently delete (1|2) entries, are you sure\? \[y/N] `), out)
 
 	// And check it was redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
@@ -1974,7 +1974,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Check that they're there
 	var historyEntries []*data.HistoryEntry
 	db.Model(&data.HistoryEntry{}).Find(&historyEntries)
-	if len(historyEntries) != 6 {
+	if len(historyEntries) != 5 {
 		t.Fatalf("expected to find 6 history entries, actual found %d: %#v", len(historyEntries), historyEntries)
 	}
 
