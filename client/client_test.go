@@ -128,10 +128,8 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	// Run the test
 	userSecret := testBasicUserFlow(t, tester, Online)
 
-	// Clear all local state
-	testutils.ResetLocalState(t)
-
 	// Install it again
+	testutils.ResetLocalState(t)
 	installHishtory(t, tester, userSecret)
 
 	// Querying should show the history from the previous run
@@ -151,16 +149,16 @@ func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 		t.Fatalf("output has `echo mynewcommand` the wrong number of times")
 	}
 
-	// Clear local state again
-	testutils.ResetLocalState(t)
-
 	// Install it a 3rd time
+	testutils.ResetLocalState(t)
 	installHishtory(t, tester, "adifferentsecret")
 
 	// Run a command that shouldn't be in the hishtory later on
 	tester.RunInteractiveShell(t, `echo notinthehistory`)
 	out = hishtoryQuery(t, tester, "")
 	require.Contains(t, out, "echo notinthehistory")
+	require.NotContains(t, out, "mynewcommand")
+	require.NotContains(t, out, "thisisrecorded")
 
 	// Set the secret key to the previous secret key
 	out, err := tester.RunInteractiveShellRelaxed(t, ` export HISHTORY_SKIP_INIT_IMPORT=1
@@ -206,7 +204,7 @@ yes | hishtory init `+userSecret)
 	// Finally, test the export command
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v '/tmp/client install'`)
 	require.NotContains(t, out, "thisisnotrecorded", "hishtory export contains a command that should not have been recorded")
-	expectedOutputWithoutKey := "hishtory status\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\" # mycommand\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nyes | hishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\nhishtory reupload\n"
+	expectedOutputWithoutKey := "hishtory status\nhishtory query\nls /a\nls /bar\nls /foo\necho foo\necho bar\nhishtory disable\nhishtory enable\necho thisisrecorded\nhishtory query\nhishtory query foo\necho hello | grep complex | sed s/h/i/g; echo baz && echo \"fo 'o\" # mycommand\nhishtory query complex\nhishtory query\necho mynewcommand\nhishtory query\nyes | hishtory init %s\nhishtory query\necho mynewercommand\nhishtory query\nothercomputer\nhishtory query\nhishtory reupload\n"
 	expectedOutput := fmt.Sprintf(expectedOutputWithoutKey, userSecret)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -2625,3 +2623,4 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
+// TODO: Tests for deleting presaved entries while offline
