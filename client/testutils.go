@@ -260,7 +260,9 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 	fullCommand += "\n"
 	fullCommand += " tmux kill-session -t foo\n"
 	testutils.TestLog(t, "Running tmux command: "+fullCommand)
-	return strings.TrimSpace(captureConfig.tester.RunInteractiveShell(t, fullCommand))
+	out, err := captureConfig.tester.RunInteractiveShellRelaxed(t, fullCommand)
+	require.NoError(t, err)
+	return strings.TrimSpace(out)
 }
 
 func assertNoLeakedConnections(t testing.TB) {
