@@ -291,7 +291,7 @@ echo thisisrecorded`)
 	exitCodeMatcher := `0`
 	pipefailMatcher := `set -em?o pipefail`
 	line1Matcher := `Hostname` + tableDividerMatcher + `CWD` + tableDividerMatcher + `Timestamp` + tableDividerMatcher + `Runtime` + tableDividerMatcher + `Exit Code` + tableDividerMatcher + `Command\s*\n`
-	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + time.DateTime + tableDividerMatcher + `N/A` + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `hishtory query` + tableDividerMatcher + `\n`
+	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + `N/A` + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `hishtory query` + tableDividerMatcher + `\n`
 	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
 	line4Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
 	require.Regexp(t, regexp.MustCompile(line1Matcher), out)
@@ -399,7 +399,7 @@ hishtory disable`)
 
 	// Query based on before: and cwd:
 	out = hishtoryQuery(t, tester, `before:2125-07-02 cwd:/tmp`)
-	if strings.Count(out, "\n") != 3 {
+	if strings.Count(out, "\n") != 4 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 	out = hishtoryQuery(t, tester, `before:2125-07-02 cwd:tmp`)
@@ -1394,7 +1394,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	require.NoError(t, err)
-	if out != "This will permanently delete 2 entries, are you sure? [y/N] " {
+	if out != "This will permanently delete 1 entries, are you sure? [y/N] " {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
@@ -1959,7 +1959,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 	// Insert a few hishtory entries that we'll use for testing into an empty DB
 	db := hctx.GetDb(hctx.MakeContext())
-	require.NoError(t, db.Delete(&data.HistoryEntry{}).Commit().Error)
+	require.NoError(t, db.Where("true").Delete(&data.HistoryEntry{}).Commit().Error)
 	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
 	e1.CurrentWorkingDirectory = "/etc/"
 	e1.Hostname = "server"
