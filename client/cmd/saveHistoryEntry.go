@@ -260,7 +260,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 		// this function after a short delay. If it still is empty, then we assume we are in case #1.
 		if isRetry {
 			// Already retried, assume we're in case #1
-			hctx.GetLogger().Infof("failed to find presaved entry even with retry, skipping delete")
+			hctx.GetLogger().Infof("failed to find presaved entry matching cmd=%#v even with retry, skipping delete", entry.Command)
 			return nil
 		} else {
 			time.Sleep(500 * time.Millisecond)
