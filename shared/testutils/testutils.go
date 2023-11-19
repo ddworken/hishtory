@@ -271,6 +271,10 @@ func RunTestServer() func() {
 	go func() {
 		_ = cmd.Wait()
 	}()
+	expectedSuffix := "Listening on :8080\n"
+	if !strings.HasSuffix(stdout.String(), expectedSuffix) {
+		panic(fmt.Errorf("expected server stdout to end with %#v, but it doesn't: %#v", expectedSuffix, stdout.String()))
+	}
 	return func() {
 		err := cmd.Process.Kill()
 		if err != nil && err.Error() != "os: process already finished" {
