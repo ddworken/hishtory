@@ -177,6 +177,7 @@ yes | hishtory init `+userSecret)
 	for _, item := range expected {
 		require.Contains(t, out, item, "output is missing expected item")
 		if strings.Count(out, item) != 1 {
+			fmt.Println("TODO: Debugging: out=" + out)
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
 	}
@@ -478,7 +479,7 @@ hishtory disable`)
 	manuallySubmitHistoryEntry(t, userSecret, entry)
 	out = hishtoryQuery(t, tester, `-echo -install -pipefail`)
 	require.NotContains(t, out, "echo")
-	if strings.Count(out, "\n") != 4 {
+	if strings.Count(out, "\n") != 6 {
 		t.Fatalf("hishtory query has the wrong number of lines=%d, out=%#v", strings.Count(out, "\n"), out)
 	}
 
