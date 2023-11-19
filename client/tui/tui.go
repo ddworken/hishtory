@@ -38,6 +38,7 @@ var SELECTED_COMMAND string = ""
 // counters are used to ensure that we don't process the query results for 'ls' and then promptly overwrite
 // them with the results for 'l'.
 var LAST_DISPATCHED_QUERY_ID = 0
+var LAST_DISPATCHED_QUERY_TIMESTAMP time.Time
 var LAST_PROCESSED_QUERY_ID = -1
 
 var baseStyle = lipgloss.NewStyle().
@@ -286,6 +287,7 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		}
 		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_ID += 1
+		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
 		return func() tea.Msg {
 			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
 			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
@@ -408,26 +410,22 @@ func (m model) View() string {
 	if m.quitting {
 		return ""
 	}
-	loadingMessage := ""
+	additionalMessages := make([]string, 0)
 	if m.isLoading {
-		loadingMessage = fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View())
-	}
-	warning := ""
-	if loadingMessage != "" {
-		warning += "\n"
+		additionalMessages = append(additionalMessages, fmt.Sprintf("%s Loading hishtory entries from other devices...", m.spinner.View()))
 	}
 	if m.isOffline {
-		warning += "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale"
+		additionalMessages = append(additionalMessages, "Warning: failed to contact the hishtory backend (are you offline?), so some results may be stale")
 	}
 	if m.searchErr != nil {
-		if strings.TrimSpace(warning) != "" {
-			warning += "\n"
-		}
-		warning += fmt.Sprintf("Warning: failed to search: %v", m.searchErr)
+		additionalMessages = append(additionalMessages, fmt.Sprintf("Warning: failed to search: %v", m.searchErr))
 	}
-	warning += "\n"
+	if LAST_PROCESSED_QUERY_ID < LAST_DISPATCHED_QUERY_ID && time.Since(LAST_DISPATCHED_QUERY_TIMESTAMP) > time.Second {
+		additionalMessages = append(additionalMessages, fmt.Sprintf("%s Executing search query...", m.spinner.View()))
+	}
+	additionalMessagesStr := strings.Join(additionalMessages, "\n") + "\n"
 	helpView := m.help.View(keys)
-	return fmt.Sprintf("\n%s%s%s\nSearch Query: %s\n\n%s\n", loadingMessage, warning, m.banner, m.queryInput.View(), renderNullableTable(m)) + helpView
+	return fmt.Sprintf("\n%s%s\nSearch Query: %s\n\n%s\n", additionalMessagesStr, m.banner, m.queryInput.View(), renderNullableTable(m)) + helpView
 }
 
 func renderNullableTable(m model) string {
@@ -755,6 +753,7 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	go func() {
 		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_ID++
+		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
 		rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 		if err == nil || initialQuery == "" {
 			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
