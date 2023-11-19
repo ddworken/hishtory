@@ -579,7 +579,10 @@ func setup(userSecret string, isOffline bool) error {
 	if err != nil {
 		return err
 	}
-	db.Exec("DELETE FROM history_entries")
+	err = db.Exec("DELETE FROM history_entries").Error
+	if err != nil {
+		return fmt.Errorf("failed to reset local DB during setup: %w", err)
+	}
 
 	// Bootstrap from remote date
 	if config.IsOffline {
@@ -604,6 +607,7 @@ func setup(userSecret string, isOffline bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to load JSON response: %w", err)
 	}
+	hctx.GetLogger().Infof("Bootstrapping new device: Found %d entries", len(retrievedEntries))
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
 		if err != nil {
