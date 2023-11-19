@@ -154,6 +154,9 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	if err != nil {
 		return HistoryEntry{}, nil
 	}
+	if decryptedEntry.EntryId != "" && entry.EncryptedId != "" && decryptedEntry.EntryId != entry.EncryptedId {
+		return HistoryEntry{}, fmt.Errorf("rejecting encrypted history entry that contains mismatching IDs (outer=%s inner=%s)", entry.EncryptedId, decryptedEntry.EntryId)
+	}
 	return decryptedEntry, nil
 }
 
