@@ -294,26 +294,11 @@ echo thisisrecorded`)
 	line2Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + `N/A` + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `hishtory query` + tableDividerMatcher + `\n`
 	line3Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + pipefailMatcher + tableDividerMatcher + `\n`
 	line4Matcher := hostnameMatcher + tableDividerMatcher + pathMatcher + tableDividerMatcher + datetimeMatcher + tableDividerMatcher + runtimeMatcher + tableDividerMatcher + exitCodeMatcher + tableDividerMatcher + `echo thisisrecorded` + tableDividerMatcher + `\n`
-	match, err := regexp.MatchString(line3Matcher, out)
-	require.NoError(t, err)
-	if !match {
-		t.Fatalf("output is missing the row for `echo thisisrecorded`: %v", out)
-	}
-	match, err = regexp.MatchString(line1Matcher, out)
-	require.NoError(t, err)
-	if !match {
-		t.Fatalf("output is missing the headings: %v", out)
-	}
-	match, err = regexp.MatchString(line2Matcher, out)
-	require.NoError(t, err)
-	if !match {
-		t.Fatalf("output is missing the pipefail: %v", out)
-	}
-	match, err = regexp.MatchString(line1Matcher+line2Matcher+line3Matcher+line4Matcher, out)
-	require.NoError(t, err)
-	if !match {
-		t.Fatalf("output doesn't match the expected table: %v", out)
-	}
+	require.Regexp(t, regexp.MustCompile(line1Matcher), out)
+	require.Regexp(t, regexp.MustCompile(line2Matcher), out)
+	require.Regexp(t, regexp.MustCompile(line3Matcher), out)
+	require.Regexp(t, regexp.MustCompile(line4Matcher), out)
+	require.Regexp(t, regexp.MustCompile(line1Matcher+line2Matcher+line3Matcher+line4Matcher), out)
 
 	// Test querying for a specific command
 	out = hishtoryQuery(t, tester, "foo")
@@ -688,7 +673,7 @@ func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 		if strings.Count(out, "echo mycommand") != 1 {
 			t.Fatalf("hishtory query #%d has the wrong number of commands=%d, out=%#v", i, strings.Count(out, "echo mycommand"), out)
 		}
-		require.Contains(t, out, "hishtory query echo mycommand-")
+		require.Contains(t, out, "hishtory query mycommand-")
 	}
 }
 
@@ -700,7 +685,7 @@ func testRepeatedEnableDisable(t *testing.T, tester shellTester) {
 	// Run a command many times
 	for i := 0; i < 25; i++ {
 		tester.RunInteractiveShell(t, fmt.Sprintf(`echo mycommand-%d
-hishtory disable
+ hishtory disable
 echo shouldnotshowup
 sleep 0.5
 hishtory enable`, i))
@@ -1024,10 +1009,10 @@ echo other`)
 	// Restore the second copy and confirm it has the commands
 	restoreSecondInstallation()
 	out = hishtoryQuery(t, tester, "ech")
-	if strings.Count(out, "\n") != 5 {
+	if strings.Count(out, "\n") != 6 {
 		t.Fatalf("hishtory query has unexpected number of lines=%d: out=%#v", strings.Count(out, "\n"), out)
 	}
-	expected := []string{"echo hello", "echo other"}
+	expected := []string{"echo hello", "echo other", "hishtory query ech"}
 	for _, item := range expected {
 		require.Contains(t, out, item)
 		if strings.Count(out, item) != 1 {
@@ -1036,7 +1021,7 @@ echo other`)
 	}
 
 	// And check hishtory export too for good measure
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	out = tester.RunInteractiveShell(t, ` hishtory export | grep -v pipefail`)
 	expectedOutput = "echo hello\necho other\nhishtory query echo\nhishtory query echo\nhishtory query ech\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -1209,7 +1194,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 
 	// Check it shows up correctly
 	out = tester.RunInteractiveShell(t, "hishtory export echo")
-	if out != "echo foo\n" {
+	if out != "echo foo\nhishtory export echo\n" {
 		t.Fatalf("hishtory had unexpected output=%#v", out)
 	}
 }
@@ -1407,7 +1392,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Redact it without HISHTORY_REDACT_FORCE
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory redact hello`)
 	require.NoError(t, err)
-	if out != "This will permanently delete 2 entries, are you sure? [y/N] " {
+	if out != "This will permanently delete 1 entries, are you sure? [y/N] " {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
