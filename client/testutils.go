@@ -254,6 +254,7 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 	}
 	fullCommand += " tmux capture-pane -t foo -p"
 	if captureConfig.includeEscapeSequences {
+		// -e ensures that tmux runs the command in an environment that supports escape sequences. Used for rendering colors in the TUI.
 		fullCommand += "e"
 	}
 	fullCommand += "\n"
