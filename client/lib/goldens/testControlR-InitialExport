@@ -1,0 +1,5 @@
+ls ~/
+ls ~/foo/
+ls ~/bar/
+echo 'aaaaaa bbbb'
+echo 'bar' &
