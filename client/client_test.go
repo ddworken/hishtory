@@ -1970,15 +1970,17 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
 	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &")).Error)
 
-	// Check that they're there
+	// Check that they're there (and there aren't any other entries)
 	var historyEntries []*data.HistoryEntry
 	db.Model(&data.HistoryEntry{}).Find(&historyEntries)
 	if len(historyEntries) != 5 {
 		t.Fatalf("expected to find 6 history entries, actual found %d: %#v", len(historyEntries), historyEntries)
 	}
+	out := tester.RunInteractiveShell(t, `hishtory export`)
+	testutils.CompareGoldens(t, out, "testControlR-InitialExport")
 
 	// And check that the control-r binding brings up the search
-	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R"})
 	split := strings.Split(out, "\n\n\n")
 	out = strings.TrimSpace(split[len(split)-1])
 	testutils.CompareGoldens(t, out, "testControlR-Initial")
