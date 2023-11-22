@@ -94,9 +94,9 @@ func TestParam(t *testing.T) {
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester) })
-		t.Run("testControlR/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
+		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
+		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
 	}
-	t.Run("testControlR/offline/bash", func(t *testing.T) { testControlR(t, bashTester{}, "bash", Offline) })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 	t.Run("testTui/search/online", func(t *testing.T) { testTui_search(t, Online) })
 	t.Run("testTui/search/offline", func(t *testing.T) { testTui_search(t, Offline) })
@@ -1956,6 +1956,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Disable recording so that all our testing commands don't get recorded
 	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
+	_ = tester.RunInteractiveShell(t, `rm ~/.bash_history`)
 
 	// Insert a few hishtory entries that we'll use for testing into an empty DB
 	db := hctx.GetDb(hctx.MakeContext())
