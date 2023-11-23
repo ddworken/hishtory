@@ -220,7 +220,7 @@ func handleUpgradedFeatures() error {
 	}
 	if !strings.Contains(string(configContents), "enable_presaving") {
 		// Presaving is not yet configured, so enable it
-		config.HighlightMatches = true
+		config.EnablePresaving = true
 	}
 	if !strings.Contains(string(configContents), "ai_completion") {
 		// AI completion is not yet configured, disable it for upgrades since this is a new feature
