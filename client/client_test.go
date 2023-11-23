@@ -2626,3 +2626,4 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
 // TODO: Tests for deleting presaved entries while offline
+// TODO: Tests for disabling presaving
