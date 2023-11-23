@@ -590,7 +590,7 @@ func setup(userSecret string, isOffline bool) error {
 	}
 	ctx := hctx.MakeContext()
 	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
-	if os.Getenv("HISHTORY_TEST") != "" {
+	if isIntegrationTestDevice() {
 		registerPath += "&is_integration_test_device=true"
 	}
 	_, err = lib.ApiGet(ctx, registerPath)
@@ -617,6 +617,16 @@ func setup(userSecret string, isOffline bool) error {
 	}
 
 	return nil
+}
+
+func isIntegrationTestDevice() bool {
+	if os.Getenv("HISHTORY_TEST") != "" {
+		return true
+	}
+	if os.Getenv("GITHUB_ACTION_REPOSITORY") == "ddworken/hishtory" {
+		return true
+	}
+	return false
 }
 
 func init() {
