@@ -175,7 +175,6 @@ yes | hishtory init `+userSecret)
 	for _, item := range expected {
 		require.Contains(t, out, item, "output is missing expected item")
 		if strings.Count(out, item) != 1 {
-			fmt.Println("TODO: Debugging: out=" + out)
 			t.Fatalf("output has %#v in it multiple times! out=%#v", item, out)
 		}
 	}
