@@ -1956,7 +1956,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Disable recording so that all our testing commands don't get recorded
 	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
 	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
-	_ = tester.RunInteractiveShell(t, `rm ~/.bash_history`)
+	tester.RunInteractiveShell(t, ` HISHTORY_REDACT_FORCE=true hishtory redact set emo pipefail`)
 
 	// Insert a few hishtory entries that we'll use for testing into an empty DB
 	db := hctx.GetDb(hctx.MakeContext())
