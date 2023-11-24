@@ -94,6 +94,7 @@ func TestParam(t *testing.T) {
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester) })
+		t.Run("testPresavingDisabled/"+tester.ShellName(), func(t *testing.T) { testPresavingDisabled(t, tester) })
 		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
 	}
@@ -2153,6 +2154,30 @@ echo bar`)
 	require.Equal(t, `"Exit Code" Command`, strings.TrimSpace(tester.RunInteractiveShell(t, "hishtory config-get displayed-columns")))
 }
 
+func testPresavingDisabled(t *testing.T, tester shellTester) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Disable the presaving feature
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
+	tester.RunInteractiveShell(t, `hishtory config-set presaving false`)
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
+
+	// Start a command that will take a long time to execute in the background, so
+	// we can check that it wasn't recorded even though it never finished.
+	require.NoError(t, os.Chdir("/"))
+	require.NoError(t, tester.RunInteractiveShellBackground(t, `sleep 13371338`))
+	time.Sleep(time.Millisecond * 500)
+
+	// Test that it shows up in hishtory export
+	out := tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	expectedOutput := ""
+	if diff := cmp.Diff(expectedOutput, out); diff != "" {
+		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
+	}
+}
+
 func testPresaving(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
@@ -2626,4 +2651,3 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
 // TODO: Tests for deleting presaved entries while offline
-// TODO: Tests for disabling presaving
