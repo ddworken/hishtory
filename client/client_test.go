@@ -93,11 +93,12 @@ func TestParam(t *testing.T) {
 		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
-		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester) })
+		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester, tester.ShellName()) })
 		t.Run("testPresavingDisabled/"+tester.ShellName(), func(t *testing.T) { testPresavingDisabled(t, tester) })
 		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
 	}
+	t.Run("testPresaving/fish", func(t *testing.T) { testPresaving(t, zshTester{}, "fish") })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 	t.Run("testTui/search/online", func(t *testing.T) { testTui_search(t, Online) })
 	t.Run("testTui/search/offline", func(t *testing.T) { testTui_search(t, Offline) })
@@ -2178,7 +2179,7 @@ func testPresavingDisabled(t *testing.T, tester shellTester) {
 	}
 }
 
-func testPresaving(t *testing.T, tester shellTester) {
+func testPresaving(t *testing.T, tester shellTester, shellName string) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -2192,7 +2193,16 @@ func testPresaving(t *testing.T, tester shellTester) {
 	// Start a command that will take a long time to execute in the background, so
 	// we can check that it was recorded even though it never finished.
 	require.NoError(t, os.Chdir("/"))
-	require.NoError(t, tester.RunInteractiveShellBackground(t, `sleep 13371337`))
+	if tester.ShellName() == shellName {
+		require.NoError(t, tester.RunInteractiveShellBackground(t, `sleep 13371337`))
+	} else {
+		tmuxCommandToRunInBackground := buildTmuxInputCommands(t, TmuxCaptureConfig{
+			tester:              tester,
+			overriddenShellName: shellName,
+			commands:            []string{`sleep SPACE 13371337 ENTER`},
+		})
+		tester.RunInteractiveShell(t, tmuxCommandToRunInBackground)
+	}
 	time.Sleep(time.Millisecond * 500)
 
 	// Test that it shows up in hishtory export

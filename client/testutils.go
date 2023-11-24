@@ -197,8 +197,7 @@ type TmuxCaptureConfig struct {
 	includeEscapeSequences bool
 }
 
-func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig) string {
-	require.NotNil(t, captureConfig.tester)
+func buildTmuxInputCommands(t testing.TB, captureConfig TmuxCaptureConfig) string {
 	if captureConfig.overriddenShellName == "" {
 		captureConfig.overriddenShellName = captureConfig.tester.ShellName()
 	}
@@ -252,6 +251,13 @@ func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig)
 	if testutils.IsGithubAction() {
 		fullCommand += " sleep 2.5\n"
 	}
+	return fullCommand
+}
+
+func captureTerminalOutputComplex(t testing.TB, captureConfig TmuxCaptureConfig) string {
+	require.NotNil(t, captureConfig.tester)
+	fullCommand := ""
+	fullCommand += buildTmuxInputCommands(t, captureConfig)
 	fullCommand += " tmux capture-pane -t foo -p"
 	if captureConfig.includeEscapeSequences {
 		// -e ensures that tmux runs the command in an environment that supports escape sequences. Used for rendering colors in the TUI.
