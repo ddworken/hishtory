@@ -94,6 +94,7 @@ func TestParam(t *testing.T) {
 		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
 		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
 		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester, tester.ShellName()) })
+		t.Run("testPresavingOffline/"+tester.ShellName(), func(t *testing.T) { testPresavingOffline(t, tester) })
 		t.Run("testPresavingDisabled/"+tester.ShellName(), func(t *testing.T) { testPresavingDisabled(t, tester) })
 		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
@@ -2179,6 +2180,48 @@ func testPresavingDisabled(t *testing.T, tester shellTester) {
 	}
 }
 
+func testPresavingOffline(t *testing.T, tester shellTester) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
+	userSecret := installHishtory(t, tester, "")
+
+	// Enable the presaving feature
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
+	tester.RunInteractiveShell(t, `hishtory config-set presaving true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
+
+	// Simulate a network error when presaving
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
+	require.NoError(t, os.Chdir("/"))
+	require.NoError(t, tester.RunInteractiveShellBackground(t, `sleep 13371336`))
+
+	// Check the exported data locally
+	tester.RunInteractiveShell(t, ` hishtory config-set displayed-columns CWD Runtime Command`)
+	out := tester.RunInteractiveShell(t, ` hishtory query sleep -tquery -query`)
+	testutils.CompareGoldens(t, out, "testPresavingOffline-query-present")
+
+	// And check it on another device where it isn't yet available
+	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "device1")
+	installHishtory(t, tester, userSecret)
+	tester.RunInteractiveShell(t, ` hishtory config-set displayed-columns CWD Runtime Command`)
+	out = tester.RunInteractiveShell(t, ` hishtory query sleep -tquery -query`)
+	testutils.CompareGoldens(t, out, "testPresavingOffline-query-missing")
+
+	// Then go back to the first device and restore the internet connection so that it uploads the presaved entry
+	restoreDevice2 := testutils.BackupAndRestoreWithId(t, "device2")
+	restoreDevice1()
+	tester.RunInteractiveShell(t, `echo any_command_to_trigger_reupload`)
+	out = tester.RunInteractiveShell(t, ` hishtory query sleep -tquery -query`)
+	testutils.CompareGoldens(t, out, "testPresavingOffline-query-present")
+
+	// And check that it is now present on the second device
+	restoreDevice2()
+	out = tester.RunInteractiveShell(t, ` hishtory query sleep -tquery -query`)
+	testutils.CompareGoldens(t, out, "testPresavingOffline-query-present")
+}
+
 func testPresaving(t *testing.T, tester shellTester, shellName string) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
@@ -2660,4 +2703,3 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
-// TODO: Tests for deleting presaved entries while offline
