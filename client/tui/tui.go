@@ -537,7 +537,7 @@ func makeTableColumns(ctx context.Context, columnNames []string, rows []table.Ro
 
 	// Calculate the minimum amount of space that we need for each column for the current actual search
 	columnWidths := calculateColumnWidths(rows, len(columnNames))
-	totalWidth := 20
+	totalWidth := (len(columnWidths) + 1) * 2 // The amount of space needed for the table padding
 	for i, name := range columnNames {
 		columnWidths[i] = max(columnWidths[i], len(name))
 		totalWidth += columnWidths[i]
@@ -581,8 +581,8 @@ func makeTableColumns(ctx context.Context, columnNames []string, rows []table.Ro
 				largestColumnSize = columnWidths[i]
 			}
 		}
-		columnWidths[largestColumnIdx] -= 2
-		totalWidth -= 2
+		columnWidths[largestColumnIdx] -= 1
+		totalWidth -= 1
 	}
 
 	// And finally, create some actual columns!
