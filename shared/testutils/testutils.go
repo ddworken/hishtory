@@ -370,7 +370,7 @@ func CompareGoldens(t testing.TB, out, goldenName string) {
 		}
 	}
 	if diff := cmp.Diff(string(expected), out); diff != "" {
-		if err := os.Mkdir("/tmp/test-goldens", os.ModePerm); err != nil {
+		if err := os.Mkdir("/tmp/test-goldens", os.ModePerm); err != nil && !os.IsExist(err) {
 			log.Fatal(err)
 		}
 		require.NoError(t, os.WriteFile(path.Join("/tmp/test-goldens", goldenName), []byte(out), 0644))
