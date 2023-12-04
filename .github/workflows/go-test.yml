@@ -85,13 +85,13 @@ jobs:
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-results-{{ matrix.os }}.json
+        name: test-results-${{ matrix.os }}.json
         path: /tmp/testrun.json
     - name: Upload failed test goldens
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-goldens-{{ matrix.os }}
+        name: test-goldens-${{ matrix.os }}
         path: /tmp/test-goldens/
 
     # - name: Setup tmate session
