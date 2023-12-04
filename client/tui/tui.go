@@ -425,12 +425,32 @@ func (m model) View() string {
 	}
 	additionalMessagesStr := strings.Join(additionalMessages, "\n") + "\n"
 	helpView := m.help.View(keys)
-	return fmt.Sprintf("\n%s%s\nSearch Query: %s\n\n%s\n", additionalMessagesStr, m.banner, m.queryInput.View(), renderNullableTable(m)) + helpView
+	additionalSpacing := "\n"
+	if isCompactHeightMode() {
+		additionalSpacing = ""
+	}
+	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n\n%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), renderNullableTable(m, helpView)) + helpView
 }
 
-func renderNullableTable(m model) string {
+func isCompactHeightMode() bool {
+	_, height, err := getTerminalSize()
+	if err != nil {
+		hctx.GetLogger().Infof("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
+		return false
+	}
+	return height < 25
+}
+
+func renderNullableTable(m model, helpText string) string {
 	if m.table == nil {
 		return strings.Repeat("\n", TABLE_HEIGHT+3)
+	}
+	helpTextLen := strings.Count(helpText, "\n")
+	if isCompactHeightMode() && helpTextLen > 1 {
+		// If the help text is expanded, and this is a small window, then we truncate the table so that the help text displays on top of it
+		lines := strings.Split(baseStyle.Render(m.table.View()), "\n")
+		truncated := lines[:len(lines)-helpTextLen]
+		return strings.Join(truncated, "\n")
 	}
 	return baseStyle.Render(m.table.View())
 }
@@ -632,7 +652,11 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 	if err != nil {
 		return table.Model{}, err
 	}
-	tableHeight := min(TABLE_HEIGHT, terminalHeight-12)
+	tuiSize := 12
+	if isCompactHeightMode() {
+		tuiSize -= 2
+	}
+	tableHeight := min(TABLE_HEIGHT, terminalHeight-tuiSize)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
