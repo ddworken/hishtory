@@ -498,13 +498,20 @@ func getRows(ctx context.Context, columnNames []string, query string, numEntries
 	}
 	var rows []table.Row
 	var filteredData []*data.HistoryEntry
-	lastCommand := ""
+	var seenCommands = make(map[string]bool)
+
 	for i := 0; i < numEntries; i++ {
 		if i < len(searchResults) {
 			entry := searchResults[i]
-			if strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
-				continue
+
+			if config.FilterDuplicateCommands && entry != nil {
+				cmd := strings.TrimSpace(entry.Command)
+				if seenCommands[cmd] {
+					continue
+				}
+				seenCommands[cmd] = true
 			}
+
 			entry.Command = strings.ReplaceAll(entry.Command, "\n", "\\n")
 			row, err := lib.BuildTableRow(ctx, columnNames, *entry)
 			if err != nil {
@@ -512,7 +519,6 @@ func getRows(ctx context.Context, columnNames []string, query string, numEntries
 			}
 			rows = append(rows, row)
 			filteredData = append(filteredData, entry)
-			lastCommand = entry.Command
 		} else {
 			rows = append(rows, table.Row{})
 		}

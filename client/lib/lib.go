@@ -157,19 +157,25 @@ func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResult
 	tbl := table.New(columns...)
 	tbl.WithHeaderFormatter(headerFmt)
 
-	lastCommand := ""
 	numRows := 0
+
+	var seenCommands = make(map[string]bool)
+
 	for _, entry := range results {
-		if entry != nil && strings.TrimSpace(entry.Command) == strings.TrimSpace(lastCommand) && config.FilterDuplicateCommands {
-			continue
+		if config.FilterDuplicateCommands && entry != nil {
+			cmd := strings.TrimSpace(entry.Command)
+			if seenCommands[cmd] {
+				continue
+			}
+			seenCommands[cmd] = true
 		}
+
 		row, err := BuildTableRow(ctx, config.DisplayedColumns, *entry)
 		if err != nil {
 			return err
 		}
 		tbl.AddRow(stringArrayToAnyArray(row)...)
 		numRows += 1
-		lastCommand = entry.Command
 		if numRows >= numResults {
 			break
 		}
