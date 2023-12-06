@@ -1654,6 +1654,19 @@ func testTui_resize(t *testing.T) {
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-TinyTerminalHelp")
 
+	// Check the output when the size is extra tiny
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 11, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+	})
+	testutils.CompareGoldens(t, out, "TestTui-TiniestTerminal")
+
+	// Check the output when the size is tiny and the user tries to open the help page, which doesn't work
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 11, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+		{Keys: "C-h"},
+	})
+	testutils.CompareGoldens(t, out, "TestTui-TiniestTerminal")
+
 	// Check that it resizes after the terminal size is adjusted
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
 	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
