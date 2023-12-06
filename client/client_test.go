@@ -2499,6 +2499,8 @@ echo foo`)
 	require.Contains(t, out, "\n")
 	out = strings.Split(out, "\n")[1]
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
+
+	// TODO: Add a test for #139
 }
 
 func TestSetConfigNoCorruption(t *testing.T) {
