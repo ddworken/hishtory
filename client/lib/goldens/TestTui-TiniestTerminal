@@ -6,11 +6,4 @@ Search Query: > ls
 │ localhost    /tmp/    Oct 17 2022 21:43:16 PDT    3s       2          ls ~/                │
 │                                                                                            │
 │                                                                                            │
-│                                                                                            │
-│                                                                                            │
-│                                                                                            │
-│                                                                                            │
-│                                                                                            │
-│                                                                                            │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
-hiSHtory: Search your shell history  • ctrl+h help

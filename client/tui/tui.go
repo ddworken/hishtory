@@ -424,12 +424,27 @@ func (m model) View() string {
 		additionalMessages = append(additionalMessages, fmt.Sprintf("%s Executing search query...", m.spinner.View()))
 	}
 	additionalMessagesStr := strings.Join(additionalMessages, "\n") + "\n"
+	if isExtraCompactHeightMode() {
+		additionalMessagesStr = "\n"
+	}
 	helpView := m.help.View(keys)
+	if isExtraCompactHeightMode() {
+		helpView = ""
+	}
 	additionalSpacing := "\n"
 	if isCompactHeightMode() {
 		additionalSpacing = ""
 	}
-	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n\n%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), renderNullableTable(m, helpView)) + helpView
+	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView)) + helpView
+}
+
+func isExtraCompactHeightMode() bool {
+	_, height, err := getTerminalSize()
+	if err != nil {
+		hctx.GetLogger().Infof("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
+		return false
+	}
+	return height < 15
 }
 
 func isCompactHeightMode() bool {
@@ -661,6 +676,9 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 	tuiSize := 12
 	if isCompactHeightMode() {
 		tuiSize -= 2
+	}
+	if isExtraCompactHeightMode() {
+		tuiSize -= 3
 	}
 	tableHeight := min(TABLE_HEIGHT, terminalHeight-tuiSize)
 	t := table.New(
