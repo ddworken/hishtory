@@ -19,7 +19,7 @@ function _hishtory_precmd() {
     # Runs after the command is executed in order to render the prompt
     # $? contains the exit code 
     _hishtory_exit_code=$?
-    if [ -n "$_hishtory_first_prompt" ]; then
+    if [ -n "${_hishtory_first_prompt:-}" ]; then
         unset _hishtory_first_prompt
         return
     fi
