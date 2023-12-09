@@ -285,8 +285,8 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		if m.runQuery != nil {
 			query = *m.runQuery
 		}
+		LAST_DISPATCHED_QUERY_ID++
 		queryId := LAST_DISPATCHED_QUERY_ID
-		LAST_DISPATCHED_QUERY_ID += 1
 		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
 		return func() tea.Msg {
 			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
@@ -799,8 +799,8 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
 	go func() {
-		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_ID++
+		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
 		rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
 		if err == nil || initialQuery == "" {
