@@ -345,3 +345,15 @@ func (s *Server) testOnlyOverrideAiSuggestions(w http.ResponseWriter, r *http.Re
 func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
+
+func (s *Server) apiUninstallHandler(w http.ResponseWriter, r *http.Request) {
+	userId := getRequiredQueryParam(r, "user_id")
+	deviceId := getRequiredQueryParam(r, "device_id")
+	numDeleted, err := s.db.UninstallDevice(r.Context(), userId, deviceId)
+	if err != nil {
+		panic(fmt.Errorf("failed to UninstallDevice(user_id=%s, device_id=%s): %w", userId, deviceId, err))
+	}
+	fmt.Printf("apiUninstallHandler: Deleted %d items from the DB\n", numDeleted)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusOK)
+}

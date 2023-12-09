@@ -21,6 +21,7 @@ type EncHistoryEntry struct {
 	ReadCount   int    `json:"read_count"`
 }
 
+// TODO: Move this struct to the backend directory
 type Device struct {
 	UserId   string `json:"user_id"`
 	DeviceId string `json:"device_id"`
@@ -32,6 +33,8 @@ type Device struct {
 	RegistrationDate time.Time `json:"registration_date"`
 	// Test devices, that should be aggressively cleaned from the DB
 	IsIntegrationTestDevice bool `json:"is_integration_test_device"`
+	// Whether this device was uninstalled
+	UninstallDate time.Time `json:"uninstall_date"`
 }
 
 // Represents a request to get all history entries from a given device. Used as part of bootstrapping
