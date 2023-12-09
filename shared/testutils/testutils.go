@@ -362,6 +362,7 @@ func CompareGoldens(t testing.TB, out, goldenName string) {
 	out = normalizeHostnames(out)
 	goldenPath := path.Join(initialWd, "client/lib/goldens/", goldenName)
 	expected, err := os.ReadFile(goldenPath)
+	expected = []byte(normalizeHostnames(string(expected)))
 	if err != nil {
 		if os.IsNotExist(err) {
 			expected = []byte("ERR_FILE_NOT_FOUND:" + goldenPath)
