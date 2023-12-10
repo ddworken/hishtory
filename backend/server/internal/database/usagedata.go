@@ -4,12 +4,21 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/ddworken/hishtory/shared"
 )
 
-func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId string) ([]shared.UsageData, error) {
-	var usageData []shared.UsageData
+type UsageData struct {
+	UserId            string    `json:"user_id" gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
+	DeviceId          string    `json:"device_id"  gorm:"not null; uniqueIndex:usageDataUniqueIndex"`
+	LastUsed          time.Time `json:"last_used"`
+	LastIp            string    `json:"last_ip"`
+	NumEntriesHandled int       `json:"num_entries_handled"`
+	LastQueried       time.Time `json:"last_queried"`
+	NumQueries        int       `json:"num_queries"`
+	Version           string    `json:"version"`
+}
+
+func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId string) ([]UsageData, error) {
+	var usageData []UsageData
 
 	tx := db.DB.WithContext(ctx).Where("user_id = ? AND device_id = ?", userId, deviceId).Find(&usageData)
 	if tx.Error != nil {
@@ -23,7 +32,7 @@ func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId
 	return usageData, nil
 }
 
-func (db *DB) CreateUsageData(ctx context.Context, usageData *shared.UsageData) error {
+func (db *DB) CreateUsageData(ctx context.Context, usageData *UsageData) error {
 	tx := db.DB.WithContext(ctx).Create(usageData)
 	if tx.Error != nil {
 		return fmt.Errorf("db.WithContext.Create: %w", tx.Error)
@@ -34,7 +43,7 @@ func (db *DB) CreateUsageData(ctx context.Context, usageData *shared.UsageData) 
 
 // UpdateUsageData updates the entry for a given userID/deviceID pair with the lastUsed and lastIP values
 func (db *DB) UpdateUsageData(ctx context.Context, userId, deviceId string, lastUsed time.Time, lastIP string) error {
-	tx := db.DB.WithContext(ctx).Model(&shared.UsageData{}).
+	tx := db.DB.WithContext(ctx).Model(&UsageData{}).
 		Where("user_id = ? AND device_id = ?", userId, deviceId).
 		Update("last_used", lastUsed).
 		Update("last_ip", lastIP)
@@ -141,7 +150,7 @@ func (db *DB) UsageDataTotal(ctx context.Context) (int64, error) {
 	}
 	nep := numEntriesProcessed{}
 
-	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Select("SUM(num_entries_handled) as total").Find(&nep)
+	tx := db.WithContext(ctx).Model(&UsageData{}).Select("SUM(num_entries_handled) as total").Find(&nep)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
@@ -151,7 +160,7 @@ func (db *DB) UsageDataTotal(ctx context.Context) (int64, error) {
 
 func (db *DB) CountActiveInstalls(ctx context.Context, since time.Duration) (int64, error) {
 	var activeInstalls int64
-	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_used > ?", time.Now().Add(-since)).Count(&activeInstalls)
+	tx := db.WithContext(ctx).Model(&UsageData{}).Where("last_used > ?", time.Now().Add(-since)).Count(&activeInstalls)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
@@ -161,7 +170,7 @@ func (db *DB) CountActiveInstalls(ctx context.Context, since time.Duration) (int
 
 func (db *DB) CountQueryUsers(ctx context.Context, since time.Duration) (int64, error) {
 	var activeQueryUsers int64
-	tx := db.WithContext(ctx).Model(&shared.UsageData{}).Where("last_queried > ?", time.Now().Add(-since)).Count(&activeQueryUsers)
+	tx := db.WithContext(ctx).Model(&UsageData{}).Where("last_queried > ?", time.Now().Add(-since)).Count(&activeQueryUsers)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
 	}

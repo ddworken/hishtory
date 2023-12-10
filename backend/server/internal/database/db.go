@@ -47,8 +47,8 @@ func OpenPostgres(dsn string, config *gorm.Config) (*DB, error) {
 func (db *DB) AddDatabaseTables() error {
 	models := []any{
 		&shared.EncHistoryEntry{},
-		&shared.Device{},
-		&shared.UsageData{},
+		&Device{},
+		&UsageData{},
 		&shared.DumpRequest{},
 		&shared.DeletionRequest{},
 		&shared.Feedback{},
@@ -216,7 +216,7 @@ func (db *DB) UninstallDevice(ctx context.Context, userId, deviceId string) (int
 		return 0, fmt.Errorf("UninstallDevice: failed to delete dump requests: %w", r3.Error)
 	}
 	// Lastly, update the flag so that we know this device has been deleted
-	r := db.WithContext(ctx).Model(&shared.Device{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("uninstall_date", time.Now().UTC())
+	r := db.WithContext(ctx).Model(&Device{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("uninstall_date", time.Now().UTC())
 	if r.Error != nil {
 		return 0, fmt.Errorf("UnisntallDevice: failed to update uninstall_date: %w", r.Error)
 	}

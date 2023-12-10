@@ -90,8 +90,8 @@ func OpenDB() (*database.DB, error) {
 			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 	}
-	fmt.Println("AutoMigrating DB tables")
 	if !isProductionEnvironment() {
+		fmt.Println("AutoMigrating DB tables")
 		err := db.AddDatabaseTables()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
