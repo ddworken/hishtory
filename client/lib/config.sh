@@ -7,7 +7,7 @@ __hishtory_bash_config_sourced=`date`
 
 # Implementation of running before/after every command based on https://jichu4n.com/posts/debug-trap-and-prompt_command-in-bash/
 function __hishtory_precommand() {
-  if [ -z "$HISHTORY_AT_PROMPT" ]; then
+  if [ -z "${HISHTORY_AT_PROMPT:-}" ]; then
     return
   fi
   unset HISHTORY_AT_PROMPT
@@ -27,7 +27,7 @@ function __hishtory_postcommand() {
   EXIT_CODE=$?
   HISHTORY_AT_PROMPT=1
 
-  if [ -n "$HISHTORY_FIRST_PROMPT" ]; then
+  if [ -n "${HISHTORY_FIRST_PROMPT:-}" ]; then
     unset HISHTORY_FIRST_PROMPT
     return
   fi
