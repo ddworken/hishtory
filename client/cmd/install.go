@@ -119,6 +119,12 @@ var uninstallCmd = &cobra.Command{
 		lib.CheckFatalError(err)
 		_, _ = lib.ApiPost(ctx, "/api/v1/feedback", "application/json", reqBody)
 		lib.CheckFatalError(uninstall(ctx))
+		_, err = lib.ApiPost(ctx, "/api/v1/uninstall?user_id="+data.UserId(hctx.GetConf(ctx).UserSecret)+"&device_id="+hctx.GetConf(ctx).DeviceId, "application/json", []byte{})
+		if err == nil {
+			fmt.Println("Successfully uninstalled hishtory, please restart your terminal...")
+		} else {
+			fmt.Printf("Uninstall completed, but received server error: %v", err)
+		}
 	},
 }
 
@@ -529,7 +535,6 @@ func uninstall(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Successfully uninstalled hishtory, please restart your terminal...")
 	return nil
 }
 

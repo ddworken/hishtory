@@ -112,6 +112,7 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	mux.Handle("/api/v1/add-deletion-request", middlewares(http.HandlerFunc(s.addDeletionRequestHandler)))
 	mux.Handle("/api/v1/slsa-status", middlewares(http.HandlerFunc(s.slsaStatusHandler)))
 	mux.Handle("/api/v1/feedback", middlewares(http.HandlerFunc(s.feedbackHandler)))
+	mux.Handle("/api/v1/uninstall", middlewares(http.HandlerFunc(s.apiUninstallHandler)))
 	mux.Handle("/api/v1/ai-suggest", middlewares(http.HandlerFunc(s.aiSuggestionHandler)))
 	mux.Handle("/api/v1/ping", middlewares(http.HandlerFunc(s.pingHandler)))
 	mux.Handle("/healthcheck", middlewares(http.HandlerFunc(s.healthCheckHandler)))

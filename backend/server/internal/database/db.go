@@ -197,6 +197,32 @@ func (db *DB) ApplyDeletionRequestsToBackend(ctx context.Context, requests []*sh
 	return db.DeleteMessagesFromBackend(ctx, userId, deletedMessages)
 }
 
+func (db *DB) UninstallDevice(ctx context.Context, userId, deviceId string) (int64, error) {
+	// Note that this is deleting entries that are destined to be *read* by this device. If there are other devices on this account,
+	// those queues are unaffected.
+	r1 := db.WithContext(ctx).Where("user_id = ? AND device_id = ?", userId, deviceId).Delete(&shared.EncHistoryEntry{})
+	if r1.Error != nil {
+		return 0, fmt.Errorf("UninstallDevice: failed to delete entries: %w", r1.Error)
+	}
+	// Note that this is deleting deletion requests that were destined to be processed by this device. So if this device deleted anything,
+	// those requests are still pending.
+	r2 := db.WithContext(ctx).Where("user_id = ? AND destination_device_id = ?", userId, deviceId).Delete(&shared.DeletionRequest{})
+	if r2.Error != nil {
+		return 0, fmt.Errorf("UninstallDevice: failed to delete deletion requests: %w", r2.Error)
+	}
+	// Similarly, note that this is deleting dump requests from this device so that other devices won't respond to these.
+	r3 := db.WithContext(ctx).Where("user_id = ? AND requesting_device_id = ?", userId, deviceId).Delete(&shared.DumpRequest{})
+	if r3.Error != nil {
+		return 0, fmt.Errorf("UninstallDevice: failed to delete dump requests: %w", r3.Error)
+	}
+	// Lastly, update the flag so that we know this device has been deleted
+	r := db.WithContext(ctx).Model(&shared.Device{}).Where("user_id = ? AND device_id = ?", userId, deviceId).Update("uninstall_date", time.Now().UTC())
+	if r.Error != nil {
+		return 0, fmt.Errorf("UnisntallDevice: failed to update uninstall_date: %w", r.Error)
+	}
+	return r1.RowsAffected + r2.RowsAffected + r3.RowsAffected, nil
+}
+
 func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, deletedMessages []shared.MessageIdentifier) (int64, error) {
 	tx := db.WithContext(ctx).Where("false")
 	for _, message := range deletedMessages {
@@ -219,8 +245,8 @@ func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, dele
 		}
 	}
 	result := tx.Delete(&shared.EncHistoryEntry{})
-	if tx.Error != nil {
-		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
+	if result.Error != nil {
+		return 0, fmt.Errorf("result.Error: %w", result.Error)
 	}
 	return result.RowsAffected, nil
 }
