@@ -158,7 +158,7 @@ func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr
 	if !s.trackUsageData {
 		return nil
 	}
-	var usageData []shared.UsageData
+	var usageData []database.UsageData
 	usageData, err := s.db.UsageDataFindByUserAndDevice(ctx, userId, deviceId)
 	if err != nil && !strings.Contains(err.Error(), "record not found") {
 		return fmt.Errorf("db.UsageDataFindByUserAndDevice: %w", err)
@@ -166,7 +166,7 @@ func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr
 	if len(usageData) == 0 {
 		err := s.db.CreateUsageData(
 			ctx,
-			&shared.UsageData{
+			&database.UsageData{
 				UserId:            userId,
 				DeviceId:          deviceId,
 				LastUsed:          time.Now(),

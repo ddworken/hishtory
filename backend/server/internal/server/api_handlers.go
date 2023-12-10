@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ddworken/hishtory/backend/server/internal/database"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/ai"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -216,7 +217,7 @@ func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	existingDevicesCount, err := s.db.CountDevicesForUser(r.Context(), userId)
 	checkGormError(err)
 	fmt.Printf("apiRegisterHandler: existingDevicesCount=%d\n", existingDevicesCount)
-	if err := s.db.CreateDevice(r.Context(), &shared.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now(), IsIntegrationTestDevice: isIntegrationTestDevice}); err != nil {
+	if err := s.db.CreateDevice(r.Context(), &database.Device{UserId: userId, DeviceId: deviceId, RegistrationIp: getRemoteAddr(r), RegistrationDate: time.Now(), IsIntegrationTestDevice: isIntegrationTestDevice}); err != nil {
 		checkGormError(err)
 	}
 

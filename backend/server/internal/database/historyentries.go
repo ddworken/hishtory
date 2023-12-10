@@ -52,7 +52,7 @@ func (db *DB) AddHistoryEntries(ctx context.Context, entries ...*shared.EncHisto
 	})
 }
 
-func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, devices []*shared.Device, entries []*shared.EncHistoryEntry) error {
+func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, devices []*Device, entries []*shared.EncHistoryEntry) error {
 	chunkSize := 1000
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, device := range devices {

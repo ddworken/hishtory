@@ -21,22 +21,6 @@ type EncHistoryEntry struct {
 	ReadCount   int    `json:"read_count"`
 }
 
-// TODO: Move this struct to the backend directory
-type Device struct {
-	UserId   string `json:"user_id"`
-	DeviceId string `json:"device_id"`
-	// The IP address that was used to register the device. Recorded so
-	// that I can count how many people are using hishtory and roughly
-	// from where. If you would like this deleted, please email me at
-	// david@daviddworken.com and I can clear it from your device entries.
-	RegistrationIp   string    `json:"registration_ip"`
-	RegistrationDate time.Time `json:"registration_date"`
-	// Test devices, that should be aggressively cleaned from the DB
-	IsIntegrationTestDevice bool `json:"is_integration_test_device"`
-	// Whether this device was uninstalled
-	UninstallDate time.Time `json:"uninstall_date"`
-}
-
 // Represents a request to get all history entries from a given device. Used as part of bootstrapping
 // a new device.
 type DumpRequest struct {
