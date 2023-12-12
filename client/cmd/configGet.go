@@ -102,7 +102,6 @@ var getDisplayedColumnsCmd = &cobra.Command{
 var getTimestampFormatCmd = &cobra.Command{
 	Use:   "timestamp-format",
 	Short: "The go format string to use for formatting the timestamp",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
