@@ -257,7 +257,7 @@ func TestContainsUnescaped(t *testing.T) {
 	for _, tc := range testcases {
 		actual := containsUnescaped(tc.input, tc.token)
 		if !reflect.DeepEqual(actual, tc.expected) {
-			t.Fatalf("containsUnescaped failure for containsUnescaped(%#v, %#v), actual=%#v", tc.input, tc.token, actual)
+			t.Fatalf("failure for containsUnescaped(%#v, %#v), actual=%#v", tc.input, tc.token, actual)
 		}
 	}
 }
@@ -274,16 +274,24 @@ func TestSplitEscaped(t *testing.T) {
 		{"foo bar baz", ' ', 3, []string{"foo", "bar", "baz"}},
 		{"foo bar baz", ' ', 1, []string{"foo bar baz"}},
 		{"foo bar baz", ' ', -1, []string{"foo", "bar", "baz"}},
-		{"foo\\ bar baz", ' ', -1, []string{"foo\\ bar", "baz"}},
-		{"foo\\bar baz", ' ', -1, []string{"foo\\bar", "baz"}},
-		{"foo\\bar baz foob", ' ', 2, []string{"foo\\bar", "baz foob"}},
-		{"foo\\ bar\\ baz", ' ', -1, []string{"foo\\ bar\\ baz"}},
-		{"foo\\ bar\\  baz", ' ', -1, []string{"foo\\ bar\\ ", "baz"}},
+		{"foo\\ bar baz", ' ', -1, []string{"foo bar", "baz"}},
+		{"foo\\bar baz", ' ', -1, []string{"foobar", "baz"}},
+		{"foo\\bar baz foob", ' ', 2, []string{"foobar", "baz foob"}},
+		{"foo\\ bar\\ baz", ' ', -1, []string{"foo bar baz"}},
+		{"foo\\ bar\\  baz", ' ', -1, []string{"foo bar ", "baz"}},
+		{"\"foo bar\"", ' ', -1, []string{"foo bar"}},
+		{"\"foo bar\" \"   \"", ' ', -1, []string{"foo bar", "   "}},
+		{"\"foo bar baz\" and", ' ', -1, []string{"foo bar baz", "and"}},
+		{"\"foo bar baz\" and", ' ', -1, []string{"foo bar baz", "and"}},
+		{"\"foo bar baz", ' ', -1, []string{"foo bar baz"}},
+		{"\"foo bar baz\\\"\"", ' ', -1, []string{"foo bar baz\""}},
+		{"cwd:\"foo bar :baz\\\"\"", ':', -1, []string{"cwd", "foo bar :baz\""}},
+		{"cwd:\"foo bar :baz\\\"\"", ' ', -1, []string{"cwd:foo bar :baz\""}},
 	}
 	for _, tc := range testcases {
 		actual := splitEscaped(tc.input, tc.char, tc.limit)
 		if !reflect.DeepEqual(actual, tc.expected) {
-			t.Fatalf("containsUnescaped failure for splitEscaped(%#v, %#v, %#v), actual=%#v", tc.input, string(tc.char), tc.limit, actual)
+			t.Fatalf("failure for splitEscaped(%#v, %#v, %#v), actual=%#v", tc.input, string(tc.char), tc.limit, actual)
 		}
 	}
 }

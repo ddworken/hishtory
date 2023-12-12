@@ -38,7 +38,7 @@ Both support the same query format, see the below annotated queries:
 |---|---|
 | `psql` | Find all commands containing `psql` |
 | `psql db.example.com` | Find all commands containing `psql` and `db.example.com` |
-| `docker hostname:my-server` | Find all commands containing `docker` that were run on the computer with hostname `my-server` |
+| `"docker run" hostname:my-server` | Find all commands containing `docker run` that were run on the computer with hostname `my-server` |
 | `nano user:root` | Find all commands containing `nano` that were run as `root` |
 | `exit_code:127` | Find all commands that exited with code `127` |
 | `service before:2022-02-01` | Find all commands containing `service` run before February 1st 2022 |
@@ -73,7 +73,6 @@ If you would like to:
 * Run this with your own OpenAI API key (thereby ensuring that your queries do not pass through the centrally hosted hiSHtory server), you can run `export OPENAI_API_KEY='...'`
 
 </details>
-
 
 <details>
 <summary>TUI key bindings</summary>
