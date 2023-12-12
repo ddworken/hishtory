@@ -1864,6 +1864,35 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 	})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-InvalidSearchBecomesValid")
+
+	// Record a couple commands that we can use to test for supporting quoted searches
+	db := hctx.GetDb(hctx.MakeContext())
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("for i in 1")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("for i in 2")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("i for in")).Error)
+	out = tester.RunInteractiveShell(t, `hishtory export`)
+	testutils.CompareGoldens(t, out, "TestTui-ExportWithAdditionalEntries")
+
+	// Check the behavior when it is unquoted and fuzzy
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"for SPACE i SPACE in",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchUnquoted")
+
+	// Check the behavior when it is quoted and exact
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'\"'for SPACE i SPACE in'\"'",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchQuoted")
+
+	// Check the behavior when it is backslashed
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"for\\\\ SPACE i\\\\ SPACE in",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchBackslash")
 }
 
 func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
