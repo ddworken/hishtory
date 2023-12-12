@@ -2389,6 +2389,9 @@ func TestTimestampFormat(t *testing.T) {
 	entry2.ExitCode = 3
 	manuallySubmitHistoryEntry(t, userSecret, entry2)
 
+	// Check the init the timestamp format
+	require.Equal(t, "Jan 2 2006 15:04:05 MST", strings.TrimSpace(tester.RunInteractiveShell(t, ` hishtory config-get timestamp-format`)))
+
 	// Set a custom timestamp format
 	tester.RunInteractiveShell(t, ` hishtory config-set timestamp-format '2006/Jan/2 15:04'`)
 
@@ -2478,6 +2481,9 @@ func TestRemoveDuplicateRows(t *testing.T) {
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
+
+	// Check the default
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, ` hishtory config-get filter-duplicate-commands`)))
 
 	// Record a few commands and check that they get recorded and all are displayed in a table
 	tester.RunInteractiveShell(t, `echo foo
