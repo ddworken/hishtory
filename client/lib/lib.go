@@ -991,6 +991,12 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 			token = token[:0]
 			splits++
 		} else if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
+			if runeQuery[i+1] == '-' || runeQuery[i+1] == ':' || runeQuery[i+1] == '\\' {
+				// Note that we need to keep the backslash before the dash to support searches like `ls \-Slah`.
+				// And we need it before the colon so that we can search for things like `foo\:bar`
+				// And we need it before the backslash so that we can search for literal backslashes.
+				token = append(token, runeQuery[i])
+			}
 			i++
 			token = append(token, runeQuery[i])
 		} else if runeQuery[i] == '"' {

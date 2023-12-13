@@ -287,6 +287,12 @@ func TestSplitEscaped(t *testing.T) {
 		{"\"foo bar baz\\\"\"", ' ', -1, []string{"foo bar baz\""}},
 		{"cwd:\"foo bar :baz\\\"\"", ':', -1, []string{"cwd", "foo bar :baz\""}},
 		{"cwd:\"foo bar :baz\\\"\"", ' ', -1, []string{"cwd:foo bar :baz\""}},
+		{"ls \\-foo", ' ', -1, []string{"ls", "\\-foo"}},
+		{"ls \\-foo \\a \\\\", ' ', -1, []string{"ls", "\\-foo", "a", "\\\\"}},
+		{"foo:bar", ':', -1, []string{"foo", "bar"}},
+		{"foo:bar", ' ', -1, []string{"foo:bar"}},
+		{"foo\\:bar", ':', -1, []string{"foo\\:bar"}},
+		{"foo\\:bar", ' ', -1, []string{"foo\\:bar"}},
 	}
 	for _, tc := range testcases {
 		actual := splitEscaped(tc.input, tc.char, tc.limit)
