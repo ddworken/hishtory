@@ -41,10 +41,6 @@ var LAST_DISPATCHED_QUERY_ID = 0
 var LAST_DISPATCHED_QUERY_TIMESTAMP time.Time
 var LAST_PROCESSED_QUERY_ID = -1
 
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
-
 type keyMap struct {
 	Up                      key.Binding
 	Down                    key.Binding
@@ -456,11 +452,18 @@ func isCompactHeightMode() bool {
 	return height < 25
 }
 
+func getBaseStyle(config hctx.ClientConfig) lipgloss.Style {
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color(config.ColorScheme.BorderColor))
+}
+
 func renderNullableTable(m model, helpText string) string {
 	if m.table == nil {
 		return strings.Repeat("\n", TABLE_HEIGHT+3)
 	}
 	helpTextLen := strings.Count(helpText, "\n")
+	baseStyle := getBaseStyle(*hctx.GetConf(m.ctx))
 	if isCompactHeightMode() && helpTextLen > 1 {
 		// If the help text is expanded, and this is a small window, then we truncate the table so that the help text displays on top of it
 		lines := strings.Split(baseStyle.Render(m.table.View()), "\n")
@@ -692,12 +695,12 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
+		BorderForeground(lipgloss.Color(config.ColorScheme.BorderColor)).
 		BorderBottom(true).
 		Bold(false)
 	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
+		Foreground(lipgloss.Color(config.ColorScheme.SelectedText)).
+		Background(lipgloss.Color(config.ColorScheme.SelectedBackground)).
 		Bold(false)
 	if config.HighlightMatches {
 		MATCH_NOTHING_REGEXP := regexp.MustCompile("a^")

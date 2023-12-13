@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -146,6 +147,60 @@ var setTimestampFormatCmd = &cobra.Command{
 	},
 }
 
+var setColorSchemeCmd = &cobra.Command{
+	Use:   "color-scheme",
+	Short: "Set a custom color scheme",
+	Run: func(cmd *cobra.Command, args []string) {
+		lib.CheckFatalError(cmd.Help())
+	},
+}
+
+var setColorSchemeSelectedText = &cobra.Command{
+	Use:   "selected-text",
+	Short: "Set the color of the selected text to the given hexadecimal color",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		lib.CheckFatalError(validateColor(args[0]))
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ColorScheme.SelectedText = args[0]
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
+var setColorSchemeSelectedBackground = &cobra.Command{
+	Use:   "selected-background",
+	Short: "Set the background color of the selected row to the given hexadecimal color",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		lib.CheckFatalError(validateColor(args[0]))
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ColorScheme.SelectedBackground = args[0]
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
+var setColorSchemeBorderColor = &cobra.Command{
+	Use:   "border-color",
+	Short: "Set the color of the table borders",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		lib.CheckFatalError(validateColor(args[0]))
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ColorScheme.BorderColor = args[0]
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
+func validateColor(color string) error {
+	if !strings.HasPrefix(color, "#") || len(color) != 7 {
+		return fmt.Errorf("color %q is invalid, it should be a hexadecimal color like #663399", color)
+	}
+	return nil
+}
+
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
@@ -156,4 +211,8 @@ func init() {
 	configSetCmd.AddCommand(setHighlightMatchesCmd)
 	configSetCmd.AddCommand(setEnableAiCompletionCmd)
 	configSetCmd.AddCommand(setPresavingCmd)
+	configSetCmd.AddCommand(setColorSchemeCmd)
+	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
+	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
+	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)
 }

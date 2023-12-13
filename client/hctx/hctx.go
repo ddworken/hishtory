@@ -201,6 +201,14 @@ type ClientConfig struct {
 	AiCompletion bool `json:"ai_completion"`
 	// Whether to enable presaving
 	EnablePresaving bool `json:"enable_presaving"`
+	// The current color scheme for the TUI
+	ColorScheme ColorScheme `json:"color_scheme"`
+}
+
+type ColorScheme struct {
+	SelectedText       string
+	SelectedBackground string
+	BorderColor        string
 }
 
 type CustomColumnDefinition struct {
@@ -244,6 +252,15 @@ func GetConfig() (ClientConfig, error) {
 	}
 	if config.TimestampFormat == "" {
 		config.TimestampFormat = "Jan 2 2006 15:04:05 MST"
+	}
+	if config.ColorScheme.SelectedBackground == "" {
+		config.ColorScheme.SelectedBackground = "#3300ff"
+	}
+	if config.ColorScheme.SelectedText == "" {
+		config.ColorScheme.SelectedText = "#ffff99"
+	}
+	if config.ColorScheme.BorderColor == "" {
+		config.ColorScheme.BorderColor = "#585858"
 	}
 	return config, nil
 }
