@@ -978,19 +978,29 @@ func tokenize(query string) []string {
 	return splitEscaped(query, ' ', -1)
 }
 
+// TODO: Maybe add support for searching for the backslash character itself?
 func splitEscaped(query string, separator rune, maxSplit int) []string {
 	var token []rune
 	var tokens []string
 	splits := 1
 	runeQuery := []rune(query)
+	isInQuotedString := false
 	for i := 0; i < len(runeQuery); i++ {
-		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator {
+		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator && !isInQuotedString {
 			tokens = append(tokens, string(token))
 			token = token[:0]
 			splits++
 		} else if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
-			token = append(token, runeQuery[i], runeQuery[i+1])
+			if runeQuery[i+1] == '-' || runeQuery[i+1] == ':' || runeQuery[i+1] == '\\' {
+				// Note that we need to keep the backslash before the dash to support searches like `ls \-Slah`.
+				// And we need it before the colon so that we can search for things like `foo\:bar`
+				// And we need it before the backslash so that we can search for literal backslashes.
+				token = append(token, runeQuery[i])
+			}
 			i++
+			token = append(token, runeQuery[i])
+		} else if runeQuery[i] == '"' {
+			isInQuotedString = !isInQuotedString
 		} else {
 			token = append(token, runeQuery[i])
 		}
