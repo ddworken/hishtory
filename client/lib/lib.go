@@ -984,9 +984,10 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 	var tokens []string
 	splits := 1
 	runeQuery := []rune(query)
-	isInQuotedString := false
+	isInDoubleQuotedString := false
+	isInSingleQuotedString := false
 	for i := 0; i < len(runeQuery); i++ {
-		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator && !isInQuotedString {
+		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator && !isInSingleQuotedString && !isInDoubleQuotedString {
 			tokens = append(tokens, string(token))
 			token = token[:0]
 			splits++
@@ -999,14 +1000,33 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 			}
 			i++
 			token = append(token, runeQuery[i])
-		} else if runeQuery[i] == '"' {
-			isInQuotedString = !isInQuotedString
+		} else if runeQuery[i] == '"' && !isInSingleQuotedString && !heuristicIgnoreUnclosedQuote(isInDoubleQuotedString, '"', runeQuery, i) {
+			isInDoubleQuotedString = !isInDoubleQuotedString
+		} else if runeQuery[i] == '\'' && !isInDoubleQuotedString && !heuristicIgnoreUnclosedQuote(isInSingleQuotedString, '\'', runeQuery, i) {
+			isInSingleQuotedString = !isInSingleQuotedString
 		} else {
 			token = append(token, runeQuery[i])
 		}
 	}
 	tokens = append(tokens, string(token))
 	return tokens
+}
+
+func heuristicIgnoreUnclosedQuote(isCurrentlyInQuotedString bool, quoteType rune, query []rune, idx int) bool {
+	if isCurrentlyInQuotedString {
+		// We're already in a quoted string, so the heuristic doesn't apply
+		return false
+	}
+	idx++
+	for idx < len(query) {
+		if query[idx] == quoteType {
+			// There is a close quote, so the heuristic doesn't apply
+			return false
+		}
+		idx++
+	}
+	// There is no unclosed quote, so we apply the heuristic and ignore the single quote
+	return true
 }
 
 func containsUnescaped(query string, token string) bool {

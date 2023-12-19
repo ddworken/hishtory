@@ -269,24 +269,49 @@ func TestSplitEscaped(t *testing.T) {
 		limit    int
 		expected []string
 	}{
+		// Basic tests
 		{"foo bar", ' ', 2, []string{"foo", "bar"}},
 		{"foo bar baz", ' ', 2, []string{"foo", "bar baz"}},
 		{"foo bar baz", ' ', 3, []string{"foo", "bar", "baz"}},
 		{"foo bar baz", ' ', 1, []string{"foo bar baz"}},
 		{"foo bar baz", ' ', -1, []string{"foo", "bar", "baz"}},
+		// Tests for escaping
 		{"foo\\ bar baz", ' ', -1, []string{"foo bar", "baz"}},
 		{"foo\\bar baz", ' ', -1, []string{"foobar", "baz"}},
 		{"foo\\bar baz foob", ' ', 2, []string{"foobar", "baz foob"}},
 		{"foo\\ bar\\ baz", ' ', -1, []string{"foo bar baz"}},
 		{"foo\\ bar\\  baz", ' ', -1, []string{"foo bar ", "baz"}},
+		// Tests for single quotes
+		{"'foo bar'", ' ', -1, []string{"foo bar"}},
+		{"'foo bar' '   '", ' ', -1, []string{"foo bar", "   "}},
+		{"'foo bar baz' and", ' ', -1, []string{"foo bar baz", "and"}},
+		{"'foo bar baz", ' ', -1, []string{"'foo", "bar", "baz"}},
+		{"'foo bar baz\\''", ' ', -1, []string{"foo bar baz'"}},
+		{"cwd:'foo bar :baz\\''", ':', -1, []string{"cwd", "foo bar :baz'"}},
+		{"cwd:'foo bar :baz\\''", ' ', -1, []string{"cwd:foo bar :baz'"}},
+		// Tests for double quotes
 		{"\"foo bar\"", ' ', -1, []string{"foo bar"}},
 		{"\"foo bar\" \"   \"", ' ', -1, []string{"foo bar", "   "}},
 		{"\"foo bar baz\" and", ' ', -1, []string{"foo bar baz", "and"}},
-		{"\"foo bar baz\" and", ' ', -1, []string{"foo bar baz", "and"}},
-		{"\"foo bar baz", ' ', -1, []string{"foo bar baz"}},
+		{"\"foo bar baz", ' ', -1, []string{"\"foo", "bar", "baz"}},
 		{"\"foo bar baz\\\"\"", ' ', -1, []string{"foo bar baz\""}},
 		{"cwd:\"foo bar :baz\\\"\"", ':', -1, []string{"cwd", "foo bar :baz\""}},
 		{"cwd:\"foo bar :baz\\\"\"", ' ', -1, []string{"cwd:foo bar :baz\""}},
+		// Tests for complex quotes
+		{"\"foo'bar\"", ' ', -1, []string{"foo'bar"}},
+		{"'foo\"bar'", ' ', -1, []string{"foo\"bar"}},
+		{"\"foo'bar", ' ', -1, []string{"\"foo'bar"}},
+		{"'foo\"bar", ' ', -1, []string{"'foo\"bar"}},
+		{"\"foo'\\\"bar\"", ' ', -1, []string{"foo'\"bar"}},
+		{"'foo\"\\'bar'", ' ', -1, []string{"foo\"'bar"}},
+		{"''", ' ', -1, []string{""}},
+		{"\"\"", ' ', -1, []string{""}},
+		{"\\\"", ' ', -1, []string{"\""}},
+		{"\\'", ' ', -1, []string{"'"}},
+		// Tests the behavior of quotes with
+		{"it's", ' ', -1, []string{"it's"}},
+		{"'foo bar", ' ', -1, []string{"'foo", "bar"}},
+		// Tests for various complex/interesting escaping
 		{"ls \\-foo", ' ', -1, []string{"ls", "\\-foo"}},
 		{"ls \\-foo \\a \\\\", ' ', -1, []string{"ls", "\\-foo", "a", "\\\\"}},
 		{"foo:bar", ':', -1, []string{"foo", "bar"}},
