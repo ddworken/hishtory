@@ -11,6 +11,7 @@ import (
 
 var configDeleteCmd = &cobra.Command{
 	Use:     "config-delete",
+	Aliases: []string{"config-remove"},
 	Short:   "Delete a config option",
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
