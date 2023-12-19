@@ -126,9 +126,10 @@ var setHighlightMatchesCmd = &cobra.Command{
 }
 
 var setDisplayedColumnsCmd = &cobra.Command{
-	Use:   "displayed-columns",
-	Short: "The list of columns that hishtory displays",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "displayed-columns",
+	Aliases: []string{"displayed-column"},
+	Short:   "The list of columns that hishtory displays",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)

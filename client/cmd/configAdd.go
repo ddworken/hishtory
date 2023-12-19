@@ -21,9 +21,10 @@ var configAddCmd = &cobra.Command{
 }
 
 var addCustomColumnsCmd = &cobra.Command{
-	Use:   "custom-columns",
-	Short: "Add a custom column",
-	Args:  cobra.ExactArgs(2),
+	Use:     "custom-columns",
+	Aliases: []string{"custom-column"},
+	Short:   "Add a custom column",
+	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		columnName := args[0]
 		command := args[1]
@@ -43,9 +44,10 @@ var addCustomColumnsCmd = &cobra.Command{
 }
 
 var addDisplayedColumnsCmd = &cobra.Command{
-	Use:   "displayed-columns",
-	Short: "Add a column to be displayed",
-	Args:  cobra.ExactArgs(1),
+	Use:     "displayed-columns",
+	Aliases: []string{"displayed-column"},
+	Short:   "Add a column to be displayed",
+	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)

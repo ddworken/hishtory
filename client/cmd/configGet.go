@@ -85,8 +85,9 @@ var getBetaModeCmd = &cobra.Command{
 }
 
 var getDisplayedColumnsCmd = &cobra.Command{
-	Use:   "displayed-columns",
-	Short: "The list of columns that hishtory displays",
+	Use:     "displayed-columns",
+	Aliases: []string{"displayed-column"},
+	Short:   "The list of columns that hishtory displays",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
@@ -112,8 +113,9 @@ var getTimestampFormatCmd = &cobra.Command{
 }
 
 var getCustomColumnsCmd = &cobra.Command{
-	Use:   "custom-columns",
-	Short: "The list of custom columns that hishtory is tracking",
+	Use:     "custom-columns",
+	Aliases: []string{"custom-column"},
+	Short:   "The list of custom columns that hishtory is tracking",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)

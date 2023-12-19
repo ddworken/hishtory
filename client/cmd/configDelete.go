@@ -20,9 +20,10 @@ var configDeleteCmd = &cobra.Command{
 }
 
 var deleteCustomColumnsCmd = &cobra.Command{
-	Use:   "custom-columns",
-	Short: "Delete a custom column",
-	Args:  cobra.ExactArgs(1),
+	Use:     "custom-columns",
+	Aliases: []string{"custom-column"},
+	Short:   "Delete a custom column",
+	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
@@ -56,9 +57,10 @@ var deleteCustomColumnsCmd = &cobra.Command{
 	},
 }
 var deleteDisplayedColumnCommand = &cobra.Command{
-	Use:   "displayed-columns",
-	Short: "Delete a displayed column",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "displayed-columns",
+	Aliases: []string{"displayed-column"},
+	Short:   "Delete a displayed column",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
