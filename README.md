@@ -27,10 +27,7 @@ Now if you press `Control+R` on first computer, you can automatically see the co
 
 ### Querying
 
-There are two ways to interact with hiSHtory. 
-
-1. Via pressing `Control+R` in your terminal. Search for a command, select it via `Enter`, and then have it ready to execute in your terminal's buffer. 
-2. Via `hishtory query` if you just want to explore your shell history. 
+You can then query hiSHtory by pressing `Control+R` in your terminal. Search for a command, select it via `Enter`, and then have it ready to execute in your terminal's buffer. Or just hit `Escape` if you don't want to execute it after all. 
 
 Both support the same query format, see the below annotated queries:
 
@@ -116,9 +113,16 @@ hishtory config-add displayed-columns git_remote
 </details>
 
 <details>
+<summary>Custom Color Scheme</summary>
+
+You can customize hishtory's color scheme for the TUI. Run `hishtory config-set color-scheme` to see information on what is customizable and how to do so.
+
+</details>
+
+<details>
 <summary>Disabling Control+R integration</summary>
 
-If you'd like to disable the Control+R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. 
+If you'd like to disable the Control+R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. If you do this, you can then manually query hiSHtory by running `hishtory query <YOUR QUERY HERE>`.
 
 </details>
 
