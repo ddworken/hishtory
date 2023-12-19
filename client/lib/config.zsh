@@ -40,3 +40,5 @@ _hishtory_bind_control_r() {
 }
 
 [ "$(hishtory config-get enable-control-r)" = true ] && _hishtory_bind_control_r
+
+source <(hishtory completion zsh); compdef _hishtory hishtory

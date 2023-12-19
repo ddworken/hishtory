@@ -51,3 +51,5 @@ __hishtory_bind_control_r() {
 }
 
 [ "$(hishtory config-get enable-control-r)" = true ] && __hishtory_bind_control_r
+
+source <(hishtory completion bash)
