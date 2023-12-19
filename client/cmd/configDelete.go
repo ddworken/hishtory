@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"os"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -14,6 +15,7 @@ var configDeleteCmd = &cobra.Command{
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(cmd.Help())
+		os.Exit(1)
 	},
 }
 

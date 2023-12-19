@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -17,6 +18,7 @@ var configGetCmd = &cobra.Command{
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(cmd.Help())
+		os.Exit(1)
 	},
 }
 
@@ -121,6 +123,18 @@ var getCustomColumnsCmd = &cobra.Command{
 	},
 }
 
+var getColorScheme = &cobra.Command{
+	Use:   "color-scheme",
+	Short: "Get the currently configured color scheme for selected text in the TUI",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println("selected-text: " + config.ColorScheme.SelectedText)
+		fmt.Println("selected-background: " + config.ColorScheme.SelectedBackground)
+		fmt.Println("border-color: " + config.ColorScheme.BorderColor)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configGetCmd)
 	configGetCmd.AddCommand(getEnableControlRCmd)
@@ -132,4 +146,5 @@ func init() {
 	configGetCmd.AddCommand(getHighlightMatchesCmd)
 	configGetCmd.AddCommand(getEnableAiCompletion)
 	configGetCmd.AddCommand(getPresavingCmd)
+	configGetCmd.AddCommand(getColorScheme)
 }

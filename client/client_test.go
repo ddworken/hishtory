@@ -1761,6 +1761,15 @@ func testTui_color(t *testing.T) {
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
+
+	// And one more time with customized colors
+	testutils.CompareGoldens(t, tester.RunInteractiveShell(t, ` hishtory config-get color-scheme`), "TestTui-DefaultColorScheme")
+	tester.RunInteractiveShell(t, ` hishtory config-set color-scheme selected-text #45f542`)
+	tester.RunInteractiveShell(t, ` hishtory config-set color-scheme selected-background #4842f5`)
+	tester.RunInteractiveShell(t, ` hishtory config-set color-scheme border-color #f54272`)
+	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-CustomColorScheme")
 }
 
 func testTui_delete(t *testing.T) {
