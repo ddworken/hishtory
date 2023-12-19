@@ -4,3 +4,4 @@ backend/server/server
 postgres-data/
 server
 !backend/server
+.DS_Store
