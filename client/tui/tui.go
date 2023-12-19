@@ -799,6 +799,15 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 
 func TuiQuery(ctx context.Context, initialQuery string) error {
 	if hctx.GetConf(ctx).ColorScheme == hctx.GetDefaultColorScheme() {
+		// Set termenv.ANSI for the default color scheme, so that we preserve
+		// the true default color scheme of hishtory which was initially
+		// configured with termenv.ANSI (even though we want to support
+		// full colors) for custom color schemes.
+		lipgloss.SetColorProfile(termenv.ANSI)
+	} else if os.Getenv("HISHTORY_TEST") != "" {
+		// We also set termenv.ANSI for tests so as to ensure that all our
+		// test environments behave the same (by default, github actions
+		// ubuntu and macos have different termenv support).
 		lipgloss.SetColorProfile(termenv.ANSI)
 	}
 	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
