@@ -237,6 +237,14 @@ func GetConfigContents() ([]byte, error) {
 	return dat, nil
 }
 
+func GetDefaultColorScheme() ColorScheme {
+	return ColorScheme{
+		SelectedBackground: "#3300ff",
+		SelectedText:       "#ffff99",
+		BorderColor:        "#585858",
+	}
+}
+
 func GetConfig() (ClientConfig, error) {
 	data, err := GetConfigContents()
 	if err != nil {
@@ -254,13 +262,13 @@ func GetConfig() (ClientConfig, error) {
 		config.TimestampFormat = "Jan 2 2006 15:04:05 MST"
 	}
 	if config.ColorScheme.SelectedBackground == "" {
-		config.ColorScheme.SelectedBackground = "#3300ff"
+		config.ColorScheme.SelectedBackground = GetDefaultColorScheme().SelectedBackground
 	}
 	if config.ColorScheme.SelectedText == "" {
-		config.ColorScheme.SelectedText = "#ffff99"
+		config.ColorScheme.SelectedText = GetDefaultColorScheme().SelectedText
 	}
 	if config.ColorScheme.BorderColor == "" {
-		config.ColorScheme.BorderColor = "#585858"
+		config.ColorScheme.BorderColor = GetDefaultColorScheme().BorderColor
 	}
 	return config, nil
 }

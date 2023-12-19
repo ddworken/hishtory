@@ -798,7 +798,9 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 }
 
 func TuiQuery(ctx context.Context, initialQuery string) error {
-	lipgloss.SetColorProfile(termenv.ANSI)
+	if hctx.GetConf(ctx).ColorScheme == hctx.GetDefaultColorScheme() {
+		lipgloss.SetColorProfile(termenv.ANSI)
+	}
 	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
 	go func() {

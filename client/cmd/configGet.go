@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -17,6 +18,7 @@ var configGetCmd = &cobra.Command{
 	GroupID: GROUP_ID_CONFIG,
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(cmd.Help())
+		os.Exit(1)
 	},
 }
 
