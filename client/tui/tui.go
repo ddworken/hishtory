@@ -716,6 +716,7 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 				if err != nil {
 					// Failed to compile the regex for highlighting matches, this should never happen. In this
 					// case, just use a regexp that matches nothing to ensure that the TUI doesn't crash.
+					hctx.GetLogger().Infof("Failed to compile regex %#v for query %#v, disabling highlighting of matches", queryRegex, CURRENT_QUERY_FOR_HIGHLIGHTING)
 					re = MATCH_NOTHING_REGEXP
 				} else {
 					re = r
@@ -756,11 +757,13 @@ func makeTable(ctx context.Context, rows []table.Row) (table.Model, error) {
 				matchStartIdx := match[0]
 				matchEndIdx := match[1]
 				beforeMatch := value[lastIncludedIdx:matchStartIdx]
-				if beforeMatch != "" {
-					ret += renderChunk(beforeMatch, false, lastIncludedIdx == 0, false)
-				}
 				match := value[matchStartIdx:matchEndIdx]
-				ret += renderChunk(match, true, matchStartIdx == 0, matchEndIdx == len(value))
+				if beforeMatch != "" {
+					ret += renderChunk(beforeMatch, false, lastIncludedIdx == 0, lastIncludedIdx+1 == len(value))
+				}
+				if match != "" {
+					ret += renderChunk(match, true, matchStartIdx == 0, matchEndIdx == len(value))
+				}
 				lastIncludedIdx = matchEndIdx
 			}
 			if lastIncludedIdx != len(value) {
