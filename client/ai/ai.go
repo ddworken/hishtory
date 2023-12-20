@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"time"
 
@@ -37,6 +38,15 @@ func GetAiSuggestions(ctx context.Context, query string, numberCompletions int) 
 func getOsName() string {
 	switch runtime.GOOS {
 	case "linux":
+		if _, err := exec.LookPath("apt-get"); err == nil {
+			return "Ubuntu Linux"
+		}
+		if _, err := exec.LookPath("dnf"); err == nil {
+			return "Fedora Linux"
+		}
+		if _, err := exec.LookPath("pacman"); err == nil {
+			return "Arch Linux"
+		}
 		return "Linux"
 	case "darwin":
 		return "MacOS"
