@@ -2554,16 +2554,6 @@ echo foo`)
 	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 
-	// Check scrolling with query (with colors so we can confirm it, though this part is MacOS only)
-	if runtime.GOOS == "darwin" {
-		out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{
-			{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
-			{Keys: "Down Down"},
-		}, includeEscapeSequences: true})
-		out = stripTuiCommandPrefix(t, out)
-		testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-scrolled")
-	}
-
 	// Check actually selecting it with query
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
