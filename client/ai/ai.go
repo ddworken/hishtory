@@ -46,6 +46,7 @@ func getOsName() string {
 }
 
 func getShellName() string {
+	// TODO: Wire the real shell name in here
 	return "bash"
 }
 
