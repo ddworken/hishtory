@@ -27,6 +27,7 @@ const (
 )
 
 var initialWd string
+var usedGoldens map[string]bool
 
 func init() {
 	initialWd = getInitialWd()
@@ -358,9 +359,27 @@ func persistLog() {
 	checkError(err)
 }
 
+func AssertAllGoldensUsed() {
+	if os.Getenv("HISHTORY_FILTERED_TEST") != "" {
+		return
+	}
+	goldensDir := path.Join(initialWd, "client/testdata/")
+	files, err := os.ReadDir(goldensDir)
+	if err != nil {
+		panic(fmt.Errorf("failed to list files in %s: %w", goldensDir, err))
+	}
+	for _, f := range files {
+		_, present := usedGoldens[path.Base(f.Name())]
+		if !present && !strings.Contains(f.Name(), "unittestTable-truncatedTable") {
+			panic(fmt.Errorf("golden file %v was never used", path.Base(f.Name())))
+		}
+	}
+}
+
 func CompareGoldens(t testing.TB, out, goldenName string) {
+	usedGoldens[goldenName] = true
 	out = normalizeHostnames(out)
-	goldenPath := path.Join(initialWd, "client/lib/goldens/", goldenName)
+	goldenPath := path.Join(initialWd, "client/testdata/", goldenName)
 	expected, err := os.ReadFile(goldenPath)
 	expected = []byte(normalizeHostnames(string(expected)))
 	if err != nil {
