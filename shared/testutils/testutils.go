@@ -31,6 +31,7 @@ var usedGoldens map[string]bool
 
 func init() {
 	initialWd = getInitialWd()
+	usedGoldens = make(map[string]bool)
 }
 
 func getInitialWd() string {
