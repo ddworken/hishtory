@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -28,9 +29,24 @@ func GetAiSuggestions(ctx context.Context, query string, numberCompletions int) 
 	if os.Getenv("OPENAI_API_KEY") == "" {
 		return GetAiSuggestionsViaHishtoryApi(ctx, query, numberCompletions)
 	} else {
-		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(query, numberCompletions)
+		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(query, getShellName(), getOsName(), numberCompletions)
 		return suggestions, err
 	}
+}
+
+func getOsName() string {
+	switch runtime.GOOS {
+	case "linux":
+		return "Linux"
+	case "darwin":
+		return "MacOS"
+	default:
+		return runtime.GOOS
+	}
+}
+
+func getShellName() string {
+	return "bash"
 }
 
 func GetAiSuggestionsViaHishtoryApi(ctx context.Context, query string, numberCompletions int) ([]string, error) {
@@ -40,6 +56,8 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, query string, numberCom
 		UserId:            data.UserId(hctx.GetConf(ctx).UserSecret),
 		Query:             query,
 		NumberCompletions: numberCompletions,
+		OsName:            getOsName(),
+		ShellName:         getShellName(),
 	}
 	reqData, err := json.Marshal(req)
 	if err != nil {
