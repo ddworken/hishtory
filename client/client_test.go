@@ -1760,7 +1760,7 @@ func testTui_color(t *testing.T) {
 	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get highlight-matches`)))
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-BetaMode")
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-Highlight")
 
 	// And one more time with customized colors
 	testutils.CompareGoldens(t, tester.RunInteractiveShell(t, ` hishtory config-get color-scheme`), "TestTui-DefaultColorScheme")
