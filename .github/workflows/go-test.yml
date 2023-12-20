@@ -93,6 +93,12 @@ jobs:
       with:
         name: test-goldens-${{ matrix.os }}
         path: /tmp/test-goldens/
+    - name: Upload test log
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: testlog.txt
+        path: /tmp/test.log
 
     # - name: Setup tmate session
     #   if: ${{ failure() }}
