@@ -2540,13 +2540,31 @@ echo foo`)
 
 	// And change the config to filter out duplicate rows
 	tester.RunInteractiveShell(t, `hishtory config-set filter-duplicate-commands true`)
+
+	// Check export
 	out = tester.RunInteractiveShell(t, `hishtory export -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-export")
+
+	// Check query
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
+
+	// Check tquery
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
 	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
+
+	// Check scrolling with query (with colors so we can confirm it, though this part is MacOS only)
+	if runtime.GOOS == "darwin" {
+		out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{
+			{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
+			{Keys: "Down Down"},
+		}, includeEscapeSequences: true})
+		out = stripTuiCommandPrefix(t, out)
+		testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-scrolled")
+	}
+
+	// Check actually selecting it with query
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
 		{Keys: "Down Down"},
@@ -2554,6 +2572,7 @@ echo foo`)
 	})
 	out = stripTuiCommandPrefix(t, out)
 	require.Contains(t, out, "\n")
+	fmt.Printf("TODO: Debug: out=%#v", out)
 	out = strings.Split(out, "\n")[1]
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
 }
