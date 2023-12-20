@@ -51,11 +51,17 @@ type TestOnlyOverrideAiSuggestionRequest struct {
 
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
-func GetAiSuggestionsViaOpenAiApi(query string, numberCompletions int) ([]string, OpenAiUsage, error) {
+func GetAiSuggestionsViaOpenAiApi(query, shellName, osName string, numberCompletions int) ([]string, OpenAiUsage, error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
 	}
 	hctx.GetLogger().Infof("Running OpenAI query for %#v", query)
+	if osName == "" {
+		osName = "Linux"
+	}
+	if shellName == "" {
+		shellName = "bash"
+	}
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		return nil, OpenAiUsage{}, fmt.Errorf("OPENAI_API_KEY environment variable is not set")
@@ -65,7 +71,10 @@ func GetAiSuggestionsViaOpenAiApi(query string, numberCompletions int) ([]string
 		Model:             "gpt-3.5-turbo",
 		NumberCompletions: numberCompletions,
 		Messages: []openAiMessage{
-			{Role: "system", Content: "You are an expert programmer that loves to help people with writing shell commands. You always reply with just a shell command and no additional context, information, or formatting. Your replies will be directly executed in bash, so ensure that they are correct and do not contain anything other than a bash command."},
+			{Role: "system", Content: "You are an expert programmer that loves to help people with writing shell commands. " +
+				"You always reply with just a shell command and no additional context, information, or formatting. " +
+				"Your replies will be directly executed in " + shellName + " on " + osName +
+				", so ensure that they are correct and do not contain anything other than a shell command."},
 			{Role: "user", Content: query},
 		},
 	}
@@ -111,6 +120,8 @@ type AiSuggestionRequest struct {
 	UserId            string `json:"user_id"`
 	Query             string `json:"query"`
 	NumberCompletions int    `json:"number_completions"`
+	ShellName         string `json:"shell_name"`
+	OsName            string `json:"os_name"`
 }
 
 type AiSuggestionResponse struct {

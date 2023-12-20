@@ -13,7 +13,7 @@ func TestLiveOpenAiApi(t *testing.T) {
 	if os.Getenv("OPENAI_API_KEY") == "" {
 		t.Skip("Skipping test since OPENAI_API_KEY is not set")
 	}
-	results, _, err := GetAiSuggestionsViaOpenAiApi("list files in the current directory", 3)
+	results, _, err := GetAiSuggestionsViaOpenAiApi("list files in the current directory", "MacOS", "Linux", 3)
 	require.NoError(t, err)
 	resultsContainsLs := false
 	for _, result := range results {
