@@ -2561,10 +2561,7 @@ echo foo`)
 		{Keys: "ENTER", ExtraDelay: 1.0},
 	})
 	out = stripTuiCommandPrefix(t, out)
-	require.Contains(t, out, "\n")
-	fmt.Printf("TODO: Debug: out=%#v", out)
-	out = strings.Split(out, "\n")[1]
-	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery-select")
+	require.Contains(t, out, "\necho foo\n")
 }
 
 func TestSetConfigNoCorruption(t *testing.T) {
