@@ -2562,6 +2562,8 @@ echo foo`)
 	})
 	out = stripTuiCommandPrefix(t, out)
 	require.Contains(t, out, "\necho foo\n")
+	require.NotContains(t, out, "echo baz")
+	require.NotContains(t, out, "config-set")
 }
 
 func TestSetConfigNoCorruption(t *testing.T) {
