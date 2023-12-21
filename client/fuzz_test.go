@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ var tmp int = 0
 var runCounter *int = &tmp
 
 func fuzzTest(t *testing.T, tester shellTester, input string) {
+	testutils.TestLog(t, fmt.Sprintf("Starting fuzz test for input=%#v", input))
 	*runCounter += 1
 	// Parse the input
 	if len(input) > 1_000 {
@@ -76,6 +78,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 
 	// Run the commands
 	for _, op := range ops {
+		testutils.TestLog(t, fmt.Sprintf("Running op=%#v", op))
 		// Run the command
 		switchToDevice(&devices, op.device)
 		if op.cmd != "" {
@@ -117,6 +120,7 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 		if diff := cmp.Diff(expectedOutput, out); diff != "" {
 			t.Fatalf("hishtory export mismatch for input=%#v key=%s (-expected +got):\n%s\nout=%#v", input, op.device.key, diff, out)
 		}
+		testutils.TestLog(t, fmt.Sprintf("Finished running op=%#v", op))
 	}
 
 	// Check that hishtory export has the expected results
@@ -129,6 +133,8 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 			t.Fatalf("hishtory export mismatch for key=%s (-expected +got):\n%s\nout=%#v", op.device.key, diff, out)
 		}
 	}
+
+	testutils.TestLog(t, fmt.Sprintf("Finished fuzz test for input=%#v", input))
 }
 
 func FuzzTestMultipleUsers(f *testing.F) {
