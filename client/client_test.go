@@ -98,8 +98,9 @@ func TestParam(t *testing.T) {
 		t.Run("testPresavingDisabled/"+tester.ShellName(), func(t *testing.T) { testPresavingDisabled(t, tester) })
 		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
-		t.Run("testTabCompletion/"+tester.ShellName(), func(t *testing.T) { testTabCompletion(t, tester) })
+		t.Run("testTabCompletion/"+tester.ShellName(), func(t *testing.T) { testTabCompletion(t, tester, tester.ShellName()) })
 	}
+	t.Run("testTabCompletion/fish", func(t *testing.T) { testTabCompletion(t, zshTester{}, "fish") })
 	t.Run("testPresaving/fish", func(t *testing.T) { testPresaving(t, zshTester{}, "fish") })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
 	t.Run("testTui/search/online", func(t *testing.T) { testTui_search(t, Online) })
@@ -2371,20 +2372,25 @@ func testPresaving(t *testing.T, tester shellTester, shellName string) {
 	}
 }
 
-func testTabCompletion(t *testing.T, tester shellTester) {
+func testTabCompletion(t *testing.T, tester shellTester, shellName string) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
 	// Check that tab completions work to complete a command
-	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE config-g Tab"})
+	out := captureTerminalOutputWithShellName(t, tester, shellName, []string{"hishtory SPACE config-g Tab"})
 	expected := "hishtory config-get"
 	require.True(t, strings.HasSuffix(out, expected), fmt.Sprintf("Expected out=%#v to end with %#v", out, expected))
 
 	// Check that tab completions work to view suggestions
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE config- Tab"})
-	out = strings.Join(strings.Split(out, "\n")[1:], "\n")
-	testutils.CompareGoldens(t, out, "testTabCompletion-suggestions")
+	out = captureTerminalOutputWithShellName(t, tester, shellName, []string{"hishtory SPACE config- Tab"})
+	testutils.TestLog(t, "testTabCompletion: Pre-stripping: "+out)
+	if shellName == "fish" {
+		out = strings.Join(strings.Split(out, "\n")[3:], "\n")
+	} else {
+		out = strings.Join(strings.Split(out, "\n")[1:], "\n")
+	}
+	testutils.CompareGoldens(t, out, "testTabCompletion-suggestions-"+shellName)
 }
 
 func testUninstall(t *testing.T, tester shellTester) {
