@@ -41,4 +41,11 @@ _hishtory_bind_control_r() {
 
 [ "$(hishtory config-get enable-control-r)" = true ] && _hishtory_bind_control_r
 
-source <(hishtory completion zsh); compdef _hishtory hishtory
+# If running in a test environment, force loading of compinit so that shell completions work.
+# Otherwise, we respect the user's choice and only run compdef if the user has loaded compinit.
+if [ -n "${HISHTORY_TEST:-}" ]; then
+    autoload -Uz compinit
+    compinit
+fi
+
+source <(hishtory completion zsh); which compdef 2>&1 >/dev/null && compdef _hishtory hishtory

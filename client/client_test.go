@@ -98,6 +98,7 @@ func TestParam(t *testing.T) {
 		t.Run("testPresavingDisabled/"+tester.ShellName(), func(t *testing.T) { testPresavingDisabled(t, tester) })
 		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
 		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
+		t.Run("testTabCompletion/"+tester.ShellName(), func(t *testing.T) { testTabCompletion(t, tester) })
 	}
 	t.Run("testPresaving/fish", func(t *testing.T) { testPresaving(t, zshTester{}, "fish") })
 	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
@@ -2368,6 +2369,22 @@ func testPresaving(t *testing.T, tester shellTester, shellName string) {
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
+}
+
+func testTabCompletion(t *testing.T, tester shellTester) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Check that tab completions work to complete a command
+	out := captureTerminalOutput(t, tester, []string{"hishtory SPACE config-g Tab"})
+	expected := "hishtory config-get"
+	require.True(t, strings.HasSuffix(out, expected), fmt.Sprintf("Expected out=%#v to end with %#v", out, expected))
+
+	// Check that tab completions work to view suggestions
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE config- Tab"})
+	out = strings.Join(strings.Split(out, "\n")[1:], "\n")
+	testutils.CompareGoldens(t, out, "testTabCompletion-suggestions")
 }
 
 func testUninstall(t *testing.T, tester shellTester) {
