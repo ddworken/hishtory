@@ -47,18 +47,20 @@ def validate_macos_signature(filename: str) -> None:
     assert "Authority=Apple Root CA" in out 
     assert "TeamIdentifier=QUXLNCT7FA" in out 
 
-def validate_hishtory_status(filename: str) -> None:
+def validate_hishtory_status(filename: str, deep_validation: bool) -> None:
     assert os.path.exists(filename)
     subprocess.check_output(['chmod', "+x", filename])
     status = subprocess.check_output([filename, "status", "-v"]).decode('utf-8')
-    git_hash = os.environ['GITHUB_SHA']
-    assert git_hash, git_hash
-    assert f"Commit Hash: {git_hash}" in status, status 
-    assert os.path.exists('VERSION')
-    with open('VERSION') as f:
-        version = "v0." + f.read().strip()
-    assert f"hiSHtory: {version}" in status, status
-
+    if deep_validation:
+        git_hash = os.environ['GITHUB_SHA']
+        assert git_hash, git_hash
+        assert f"Commit Hash: {git_hash}" in status, status 
+        assert os.path.exists('VERSION')
+        with open('VERSION') as f:
+            version = "v0." + f.read().strip()
+        assert f"hiSHtory: {version}" in status, status
+    else:
+        assert "hiSHtory: " in status, status
 
 def main() -> None:
     print("Starting validation of MacOS signatures")
@@ -68,9 +70,9 @@ def main() -> None:
     print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory")
     validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
-    # TODO: Run validation using hishtory built at HEAD too
     print("Validating other metadata")
-    validate_hishtory_status("./hishtory-darwin-amd64")
+    validate_hishtory_status("./hishtory-darwin-amd64", True)
+    validate_hishtory_status("~/.hishtory/hishtory", False)
 
 if __name__ == '__main__':
     main()
