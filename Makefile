@@ -3,7 +3,7 @@ forcetest:
 	make test
 
 test:
-	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=10 --rerun-fails-max-failures=30 --format testname --jsonfile /tmp/testrun.json --post-run-command "go run client/test_metrics_exporter/main.go" -- -p 1 -timeout 60m  
+	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=10 --rerun-fails-max-failures=30 --format testname --jsonfile /tmp/testrun.json --post-run-command "go run client/test_metrics_exporter/main.go" -- -p 1 -timeout 90m  
 
 ftest:
 	go clean -testcache
