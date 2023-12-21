@@ -68,13 +68,7 @@ jobs:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-
-          # Once https://github.com/gotestyourself/gotestsum/pull/377 is merged, update this to pull from main rather than my fork
-          cd ../
-          git clone https://github.com/ddworken/gotestsum.git
-          cd gotestsum
-          go install .
-          cd ../hishtory
+          go install gotest.tools/gotestsum@bc98120
           make test
     - name: Extra Delay
       run: |
