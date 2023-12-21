@@ -113,7 +113,7 @@ func withPanicGuard(s *statsd.Client) Middleware {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if r := recover(); r != nil {
-					fmt.Printf("caught panic: %s\n", r)
+					fmt.Printf("caught panic %s\n", r)
 					if s != nil {
 						s.Incr("hishtory.error", []string{"handler:" + getFunctionName(h)}, 1.0)
 					}
