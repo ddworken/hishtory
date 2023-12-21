@@ -2806,4 +2806,3 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
-// TODO: Maybe tests for shell completions? E.g. typing in `hishtory config-a<TAB>`
