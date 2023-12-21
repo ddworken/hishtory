@@ -72,7 +72,7 @@ def main() -> None:
     validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
     print("Validating other metadata")
     validate_hishtory_status("./hishtory-darwin-amd64", True)
-    validate_hishtory_status("~/.hishtory/hishtory", False)
+    validate_hishtory_status(os.path.expanduser("~/.hishtory/hishtory"), False)
 
 if __name__ == '__main__':
     main()
