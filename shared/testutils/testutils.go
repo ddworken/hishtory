@@ -375,6 +375,7 @@ func AssertAllGoldensUsed() {
 			panic(fmt.Errorf("golden file %v was never used", path.Base(f.Name())))
 		}
 	}
+	fmt.Println("Validated that all goldens in testdata/ were referenced!")
 }
 
 func CompareGoldens(t testing.TB, out, goldenName string) {
