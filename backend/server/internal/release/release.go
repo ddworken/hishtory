@@ -99,14 +99,7 @@ func assertValidUpdate(updateInfo shared.UpdateInfo) error {
 		updateInfo.DarwinArm64Url,
 		updateInfo.DarwinArm64UnsignedUrl,
 		updateInfo.DarwinArm64AttestationUrl,
-	}
-	// TODO: Delete this version checking logic once v0.251 has been released
-	pv, err := shared.ParseVersionString(updateInfo.Version)
-	if err != nil {
-		return fmt.Errorf("failed to parse version string: %w", err)
-	}
-	if pv.GreaterThan(shared.ParsedVersion{MajorVersion: 0, MinorVersion: 246}) {
-		urls = append(urls, fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-release-validation-completed", updateInfo.Version))
+		fmt.Sprintf("https://github.com/ddworken/hishtory/releases/download/%s/hishtory-release-validation-completed", updateInfo.Version),
 	}
 	for _, url := range urls {
 		resp, err := http.Get(url)
