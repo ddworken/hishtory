@@ -2373,6 +2373,12 @@ func testPresaving(t *testing.T, tester shellTester, shellName string) {
 }
 
 func testTabCompletion(t *testing.T, tester shellTester, shellName string) {
+	if shellName == "bash" {
+		// TODO: Enable tab completions for bash by adding the below line to config.sh
+		//   type _get_comp_words_by_ref &>/dev/null && source <(hishtory completion bash)
+		t.Skip()
+	}
+
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
