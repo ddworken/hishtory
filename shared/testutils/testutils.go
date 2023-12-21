@@ -335,7 +335,7 @@ func TestLog(t testing.TB, line string) {
 		require.NoError(t, err)
 	}
 	defer f.Close()
-	_, err = f.WriteString(line + "\n")
+	_, err = f.WriteString(time.Now().UTC().Format(time.RFC3339) + ": " + line + "\n")
 	if err != nil {
 		require.NoError(t, err)
 	}
