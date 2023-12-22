@@ -1,7 +1,7 @@
-david@Davids-MacBook-Air hishtory % echo foo
+ghaction-runner-hostname% echo foo
 foo
-david@Davids-MacBook-Air hishtory % hishtory
+ghaction-runner-hostname% hishtory
 zsh: command not found: hishtory
-david@Davids-MacBook-Air hishtory % echo bar
+ghaction-runner-hostname% echo bar
 bar
-david@Davids-MacBook-Air hishtory %
+ghaction-runner-hostname%

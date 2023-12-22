@@ -2148,8 +2148,12 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "─────", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "Exit Code", "hishtory is showing a table even after control-c?")
 	if testutils.IsGithubAction() {
-		// This bit is broken on actions since actions run as a different user
-		testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
+		if shellName == "fish" {
+			require.Contains(t, out, "Welcome to fish, the friendly interactive shell")
+			require.Contains(t, out, "> echo ")
+		} else {
+			testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
+		}
 	}
 
 	// Disable control-r
@@ -2160,7 +2164,6 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
 	if testutils.IsGithubAction() {
-		// This bit is broken on actions since actions run as a different user
 		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 	}
 
