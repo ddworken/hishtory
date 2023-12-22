@@ -91,7 +91,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: testlog.txt
+        name: testlog-${{ matrix.os }}.txt
         path: /tmp/test.log
 
     # - name: Setup tmate session
