@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -360,6 +361,13 @@ func persistLog() {
 	checkError(err)
 }
 
+var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-bash", "testControlR-ControlC-fish",
+	"testControlR-ControlC-zsh", "testControlR-SelectMultiline-bash", "testControlR-SelectMultiline-fish",
+	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
+	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
+	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
+	"testUninstall-post-uninstall-zsh"}
+
 func AssertAllGoldensUsed() {
 	if os.Getenv("HISHTORY_FILTERED_TEST") != "" {
 		return
@@ -370,9 +378,10 @@ func AssertAllGoldensUsed() {
 		panic(fmt.Errorf("failed to list files in %s: %w", goldensDir, err))
 	}
 	for _, f := range files {
-		_, present := usedGoldens[path.Base(f.Name())]
-		if !present && !strings.Contains(f.Name(), "unittestTable-truncatedTable") && !strings.Contains(f.Name(), "TestTui-ColoredOutput") {
-			err = fmt.Errorf("golden file %v was never used", path.Base(f.Name()))
+		goldenName := path.Base(f.Name())
+		_, present := usedGoldens[goldenName]
+		if !present && !slices.Contains(UNUSED_GOLDENS, goldenName) {
+			err = fmt.Errorf("golden file %v was never used", goldenName)
 			fmt.Println(err)
 			// TODO: Add a panic(err) here too
 		}
