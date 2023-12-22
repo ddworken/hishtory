@@ -1050,7 +1050,15 @@ func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.RemoveAll(path.Join(homedir, altHishtoryPath)))
 
-	testInstallViaPythonScriptChild(t, bashTester{})
+	testInstallViaPythonScriptChild(t, zshTester{})
+}
+
+func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.BackupAndRestoreEnv("HISHTORY_OFFLINE")()
+	os.Setenv("HISHTORY_OFFLINE", "1")
+
+	testInstallViaPythonScriptChild(t, zshTester{})
 }
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
