@@ -594,7 +594,7 @@ func setup(userSecret string, isOffline bool) error {
 		return fmt.Errorf("failed to reset local DB during setup: %w", err)
 	}
 
-	// Bootstrap from remote date
+	// Bootstrap from remote data
 	if config.IsOffline {
 		return nil
 	}
