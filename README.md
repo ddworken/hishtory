@@ -61,7 +61,7 @@ To update `hishtory` to the latest version, just run `hishtory update` to secure
 
 <details>
 <summary>AI Shell Assistance</summary><blockquote>
-If you are ever trying to figure out a bash command and searching your history isn't working, you can query ChatGPT by prefixing your query with `?`. For example, press `Control+R` and then type in `? list all files larger than 1MB`:
+If you are ever trying to figure out a shell command and searching your history isn't working, you can query ChatGPT by prefixing your query with `?`. For example, press `Control+R` and then type in `? list all files larger than 1MB`:
 
 ![demo showing ChatGPT suggesting the right command](https://raw.githubusercontent.com/ddworken/hishtory/master/backend/web/landing/www/img/aidemo.png)
 
