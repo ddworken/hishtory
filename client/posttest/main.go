@@ -24,7 +24,10 @@ var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-ba
 	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
 	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
 	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
-	"testUninstall-post-uninstall-zsh"}
+	"testUninstall-post-uninstall-zsh", "unittestTable-truncatedTable", "unittestTable-truncatedTable-right1",
+	"unittestTable-truncatedTable-right2", "unittestTable-truncatedTable-right3", "TestTui-ColoredOutput",
+	"TestTui-ColoredOutputWithCustomColorScheme", "TestTui-ColoredOutputWithSearch", "TestTui-ColoredOutputWithSearch-Highlight",
+	"TestTui-DefaultColorScheme"}
 
 func main() {
 	checkGoldensUsed()
