@@ -60,7 +60,7 @@ To update `hishtory` to the latest version, just run `hishtory update` to secure
 ### Advanced Features
 
 <details>
-<summary>AI Shell Assistance</summary>
+<summary>AI Shell Assistance</summary><blockquote>
 If you are ever trying to figure out a bash command and searching your history isn't working, you can query ChatGPT by prefixing your query with `?`. For example, press `Control+R` and then type in `? list all files larger than 1MB`:
 
 ![demo showing ChatGPT suggesting the right command](https://raw.githubusercontent.com/ddworken/hishtory/master/backend/web/landing/www/img/aidemo.png)
@@ -69,10 +69,10 @@ If you would like to:
 * Disable this, you can run `hishtory config-set ai-completion false`
 * Run this with your own OpenAI API key (thereby ensuring that your queries do not pass through the centrally hosted hiSHtory server), you can run `export OPENAI_API_KEY='...'`
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>TUI key bindings</summary>
+<summary>TUI key bindings</summary><blockquote>
 The TUI (opened via `Control+R`) supports a number of key bindings:
 
 | Key                | Result                                                         |
@@ -85,10 +85,10 @@ The TUI (opened via `Control+R`) supports a number of key bindings:
 
 Press `Control+H` to view a help page documenting these.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Changing the displayed columns</summary>
+<summary>Changing the displayed columns</summary><blockquote>
 
 You can customize the columns that are displayed via `hishtory config-set displayed-columns`. For example, to display only the cwd and command:
 
@@ -98,10 +98,10 @@ hishtory config-set displayed-columns CWD Command
 
 The list of supported columns are: `Hostname`, `CWD`, `Timestamp`, `Runtime`, `ExitCode`, `Command`, and `User`.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Custom Columns</summary>
+<summary>Custom Columns</summary><blockquote>
 
 You can create custom column definitions that are populated from arbitrary commands. For example, if you want to create a new column named `git_remote` that contains the git remote if the cwd is in a git directory, you can run:
 
@@ -110,24 +110,24 @@ hishtory config-add custom-columns git_remote '(git remote -v 2>/dev/null | grep
 hishtory config-add displayed-columns git_remote
 ```
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Custom Color Scheme</summary>
+<summary>Custom Color Scheme</summary><blockquote>
 
 You can customize hishtory's color scheme for the TUI. Run `hishtory config-set color-scheme` to see information on what is customizable and how to do so.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Disabling Control+R integration</summary>
+<summary>Disabling Control+R integration</summary><blockquote>
 
 If you'd like to disable the Control+R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. If you do this, you can then manually query hiSHtory by running `hishtory query <YOUR QUERY HERE>`.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Filtering duplicate entries</summary>
+<summary>Filtering duplicate entries</summary><blockquote>
 
 By default, hishtory query will show all results even if this includes duplicate history entries. This helps you keep track of how many times you've run a command and in what contexts. If you'd rather disable this so that hiSHtory won't show duplicate entries, you can run:
 
@@ -135,19 +135,19 @@ By default, hishtory query will show all results even if this includes duplicate
 hishtory config-set filter-duplicate-commands true
 ```
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Offline Install Without Syncing</summary>
+<summary>Offline Install Without Syncing</summary><blockquote>
 
 If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode. 
 
 Download the latest binary from [Github Releases](https://github.com/ddworken/hishtory/releases), and then run `./hishtory-binary install --offline` to install hiSHtory in a fully offline mode. This disables syncing and it is not possible to re-enable syncing after doing this.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Self-Hosting</summary>
+<summary>Self-Hosting</summary><blockquote>
 
 By default, hiSHtory relies on a backend for syncing. All data is end-to-end encrypted, so the backend can't view your history. 
 
@@ -162,44 +162,44 @@ A few configuration options:
 * If you want to use a SQLite backend, you can do so by setting the `HISHTORY_SQLITE_DB` environment variable to point to a file. It will then create a SQLite DB at the given location.
 * If you want to limit the number of users that your server allows (e.g. because you only intend to use the server for yourself), you can set the environment variable `HISHTORY_MAX_NUM_USERS=1` (or to whatever value you wish for the limit to be). Leave it unset to allow registrations with no cap.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Importing existing history</summary>
+<summary>Importing existing history</summary><blockquote>
 
 hiSHtory imports your existing shell history by default. If for some reason this didn't work (e.g. you had your shell history in a non-standard file), you can import it by piping it into `hishtory import` (e.g. `cat ~/.my_history | hishtory import`).
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Custom timestamp formats</summary>
+<summary>Custom timestamp formats</summary><blockquote>
 
 You can configure a custom timestamp format for hiSHtory via `hishtory config-set timestamp-format '2006/Jan/2 15:04'`. The timestamp format string should be in [the format used by Go's `time.Format(...)`](https://pkg.go.dev/time#Time.Format). 
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Customizing the install folder</summary>
+<summary>Customizing the install folder</summary><blockquote>
 
 By default, hiSHtory is installed in `~/.hishtory/`. If you want to customize this, you can do so by setting the `HISHTORY_PATH` environment variable to a path relative to your home directory (e.g. `export HISHTORY_PATH=.config/hishtory`). This must be set both when you install hiSHtory and when you use hiSHtory, so it is recommend to set it in your `.bashrc`/`.zshrc`/`.fishrc` before installing hiSHtory. 
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Viewing debug logs</summary>
+<summary>Viewing debug logs</summary><blockquote>
 
 Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues, these may contain useful information.
 
-</details>
+</blockquote></details>
 
 <details>
-<summary>Uninstalling</summary>
+<summary>Uninstalling</summary><blockquote>
 
 If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
 
 Note that if you're experiencing any issues with hiSHtory, try running `hishtory update` first! Performance and reliability is always improving, and we highly value [your feedback](https://github.com/ddworken/hishtory/issues).
 
-</details>
+</blockquote></details>
 
 ## Design
 
