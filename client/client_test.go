@@ -1057,13 +1057,23 @@ func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_OFFLINE")()
 	os.Setenv("HISHTORY_OFFLINE", "1")
+	tester := zshTester{}
 
-	testInstallViaPythonScriptChild(t, zshTester{})
+	// Check that installing works
+	testInstallViaPythonScriptChild(t, tester)
+
+	// And check that it installed in offline mode
+	out := tester.RunInteractiveShell(t, `hishtory status`)
+	require.Contains(t, out, "\nSync Mode: Disabled\n")
 }
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 	testInstallViaPythonScriptChild(t, tester)
+
+	// And check that it installed in online mode
+	out := tester.RunInteractiveShell(t, `hishtory status`)
+	require.Contains(t, out, "\nSync Mode: Enabled\n")
 }
 
 func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
