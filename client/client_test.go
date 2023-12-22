@@ -1063,7 +1063,7 @@ func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 	testInstallViaPythonScriptChild(t, tester)
 
 	// And check that it installed in offline mode
-	out := tester.RunInteractiveShell(t, `hishtory status`)
+	out := tester.RunInteractiveShell(t, `hishtory status -v`)
 	require.Contains(t, out, "\nSync Mode: Disabled\n")
 }
 
@@ -1072,7 +1072,7 @@ func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	testInstallViaPythonScriptChild(t, tester)
 
 	// And check that it installed in online mode
-	out := tester.RunInteractiveShell(t, `hishtory status`)
+	out := tester.RunInteractiveShell(t, `hishtory status -v`)
 	require.Contains(t, out, "\nSync Mode: Enabled\n")
 }
 
