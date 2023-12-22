@@ -361,8 +361,8 @@ func stripShellPrefix(out string) string {
 func stripRequiredPrefix(t *testing.T, out, prefix string) string {
 	require.Contains(t, out, prefix)
 	return strings.TrimSpace(strings.Split(out, prefix)[1])
-
 }
+
 func stripTuiCommandPrefix(t *testing.T, out string) string {
 	return stripRequiredPrefix(t, out, "hishtory tquery")
 }

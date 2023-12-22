@@ -1858,7 +1858,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		{Keys: "hishtory SPACE tquery SPACE foo: ENTER", ExtraDelay: 1.5},
 		{Keys: "ls", ExtraDelay: 1.0},
 	})
-	out = stripTuiCommandPrefix(t, out)
+	out = stripRequiredPrefix(t, out, "hishtory tquery foo:")
 	testutils.CompareGoldens(t, out, "TestTui-InitialInvalidSearch")
 
 	// Check the output when the search is invalid
