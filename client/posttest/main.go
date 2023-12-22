@@ -2,10 +2,14 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"runtime"
+	"slices"
+	"strings"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"gotest.tools/gotestsum/testjson"
@@ -15,7 +19,58 @@ var GLOBAL_STATSD *statsd.Client = nil
 
 var NUM_TEST_RETRIES map[string]int
 
+var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-bash", "testControlR-ControlC-fish",
+	"testControlR-ControlC-zsh", "testControlR-SelectMultiline-bash", "testControlR-SelectMultiline-fish",
+	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
+	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
+	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
+	"testUninstall-post-uninstall-zsh"}
+
 func main() {
+	checkGoldensUsed()
+	exportMetrics()
+}
+
+func checkGoldensUsed() {
+	if os.Getenv("HISHTORY_FILTERED_TEST") != "" {
+		return
+	}
+	// Read the goldens that were used
+	usedGoldens := make([]string, 0)
+	usedGoldensFile, err := os.Open("/tmp/goldens-used.txt")
+	if err != nil {
+		log.Fatalf("failed to open /tmp/goldens-used.txt: %v", err)
+	}
+	defer usedGoldensFile.Close()
+	scanner := bufio.NewScanner(usedGoldensFile)
+	for scanner.Scan() {
+		usedGoldens = append(usedGoldens, strings.TrimSpace(scanner.Text()))
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("failed to read lines from /tmp/goldens-used.txt: %v", err)
+	}
+
+	// List all the goldens that exist
+	goldensDir := "client/testdata/"
+	files, err := os.ReadDir(goldensDir)
+	if err != nil {
+		panic(fmt.Errorf("failed to list files in %s: %w", goldensDir, err))
+	}
+
+	// And check for mismatches
+	for _, f := range files {
+		goldenName := path.Base(f.Name())
+		if !slices.Contains(usedGoldens, goldenName) && !slices.Contains(UNUSED_GOLDENS, goldenName) {
+			err = fmt.Errorf("golden file %v was never used", goldenName)
+			fmt.Println(err)
+			// TODO: Add a panic(err) here too
+		}
+	}
+	fmt.Println("Validated that all goldens in testdata/ were referenced!")
+
+}
+
+func exportMetrics() {
 	// Configure Datadog
 	if _, has_dd_api_key := os.LookupEnv("DD_API_KEY"); has_dd_api_key {
 		ddStats, err := statsd.New("localhost:8125")

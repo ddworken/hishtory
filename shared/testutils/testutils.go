@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -28,11 +27,9 @@ const (
 )
 
 var initialWd string
-var usedGoldens map[string]bool
 
 func init() {
 	initialWd = getInitialWd()
-	usedGoldens = make(map[string]bool)
 }
 
 func getInitialWd() string {
@@ -361,36 +358,20 @@ func persistLog() {
 	checkError(err)
 }
 
-var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-bash", "testControlR-ControlC-fish",
-	"testControlR-ControlC-zsh", "testControlR-SelectMultiline-bash", "testControlR-SelectMultiline-fish",
-	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
-	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
-	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
-	"testUninstall-post-uninstall-zsh"}
-
-func AssertAllGoldensUsed() {
-	if os.Getenv("HISHTORY_FILTERED_TEST") != "" {
-		return
-	}
-	goldensDir := path.Join(initialWd, "client/testdata/")
-	files, err := os.ReadDir(goldensDir)
+func recordUsingGolden(t testing.TB, goldenName string) {
+	f, err := os.OpenFile("/tmp/goldens-used.txt",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(fmt.Errorf("failed to list files in %s: %w", goldensDir, err))
+		t.Fatalf("failed to open file to record using golden: %v", err)
 	}
-	for _, f := range files {
-		goldenName := path.Base(f.Name())
-		_, present := usedGoldens[goldenName]
-		if !present && !slices.Contains(UNUSED_GOLDENS, goldenName) {
-			err = fmt.Errorf("golden file %v was never used", goldenName)
-			fmt.Println(err)
-			// TODO: Add a panic(err) here too
-		}
+	defer f.Close()
+	if _, err := f.WriteString(goldenName + "\n"); err != nil {
+		t.Fatalf("failed to append to file to record using golden: %v", err)
 	}
-	fmt.Println("Validated that all goldens in testdata/ were referenced!")
 }
 
 func CompareGoldens(t testing.TB, out, goldenName string) {
-	usedGoldens[goldenName] = true
+	recordUsingGolden(t, goldenName)
 	out = normalizeHostnames(out)
 	goldenPath := path.Join(initialWd, "client/testdata/", goldenName)
 	expected, err := os.ReadFile(goldenPath)

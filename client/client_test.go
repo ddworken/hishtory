@@ -53,9 +53,6 @@ func TestMain(m *testing.M) {
 
 	// Start the tests
 	m.Run()
-
-	// Teardown
-	testutils.AssertAllGoldensUsed()
 }
 
 var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
