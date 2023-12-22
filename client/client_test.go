@@ -1940,7 +1940,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 		"Escape",
 	})
 	require.NotContains(t, out, "Search Query:")
-	if !testutils.IsGithubAction() {
+	if testutils.IsGithubAction() {
 		testutils.CompareGoldens(t, out, "TestTui-Exit")
 	}
 
@@ -2147,7 +2147,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "Search Query", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "─────", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "Exit Code", "hishtory is showing a table even after control-c?")
-	if !testutils.IsGithubAction() {
+	if testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
 		testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
 	}
@@ -2159,7 +2159,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "Search Query", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
-	if !testutils.IsGithubAction() {
+	if testutils.IsGithubAction() {
 		// This bit is broken on actions since actions run as a different user
 		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
 	}
@@ -2186,7 +2186,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Check that we can select it correctly
 	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"}))
 	require.Contains(t, out, "-Slah", "out has unexpected output missing the selected row")
-	if !testutils.IsGithubAction() {
+	if testutils.IsGithubAction() {
 		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
 	}
 
@@ -2441,7 +2441,7 @@ echo bar`)
 	testutils.CompareGoldens(t, out, "testUninstall-post-uninstall")
 
 	// And check again, but in a way that shows the full terminal output
-	if !testutils.IsGithubAction() {
+	if testutils.IsGithubAction() {
 		out = captureTerminalOutput(t, tester, []string{
 			"echo SPACE foo ENTER",
 			"hishtory ENTER",
