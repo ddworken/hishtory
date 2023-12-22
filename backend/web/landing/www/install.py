@@ -38,7 +38,10 @@ if os.path.exists(tmpFilePath):
 with open(tmpFilePath, 'wb') as f:
     f.write(hishtory_binary)
 os.system('chmod +x ' + tmpFilePath)
-exitCode = os.system(tmpFilePath + ' install')
+cmd = tmpFilePath + ' install'
+if os.environ.get('HISHTORY_OFFLINE'):
+    cmd += " --offline"
+exitCode = os.system(cmd)
 if exitCode != 0:
     raise Exception("failed to install downloaded hishtory client via `" + tmpFilePath +" install` (is that directory mounted noexec? Consider setting an alternate directory via the TMPDIR environment variable)!")
 print('Succesfully installed hishtory! Open a new terminal, try running a command, and then running `hishtory query`.')

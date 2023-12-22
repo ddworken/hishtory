@@ -142,9 +142,13 @@ hishtory config-set filter-duplicate-commands true
 <details>
 <summary>Offline Install Without Syncing</summary><blockquote>
 
-If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode. 
+If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode:
 
-Download the latest binary from [Github Releases](https://github.com/ddworken/hishtory/releases), and then run `./hishtory-binary install --offline` to install hiSHtory in a fully offline mode. This disables syncing and it is not possible to re-enable syncing after doing this.
+```
+curl https://hishtory.dev/install.py | HISHTORY_OFFLINE=true python3 -
+```
+
+This disables syncing and it is not possible to re-enable syncing after doing this.
 
 </blockquote></details>
 
