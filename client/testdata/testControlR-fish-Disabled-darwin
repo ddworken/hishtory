@@ -1,0 +1,6 @@
+Welcome to fish, the friendly interactive shell
+Type help for instructions on how to use fish
+runner@ghaction-runner-hostname ~/w/h/hishtory ((eacb8793))> echo 'aaaaaa bbbb'
+search:
+► echo 'aaaaaa bbbb'  ► set -emo pipefail                                            ► hishtory config-set enable-control-r true  ► /tmp/client install
+► hishtory export     ► HISHTORY_REDACT_FORCE=true hishtory redact set emo pipefail  ► hishtory disable

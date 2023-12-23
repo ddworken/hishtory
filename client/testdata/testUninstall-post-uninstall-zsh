@@ -1,7 +1,0 @@
-ghaction-runner-hostname% echo foo
-foo
-ghaction-runner-hostname% hishtory
-zsh: command not found: hishtory
-ghaction-runner-hostname% echo bar
-bar
-ghaction-runner-hostname%

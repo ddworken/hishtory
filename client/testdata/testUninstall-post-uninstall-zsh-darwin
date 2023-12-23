@@ -1,0 +1,7 @@
+runner@ghaction-runner-hostname hishtory % echo foo
+foo
+runner@ghaction-runner-hostname hishtory % hishtory
+zsh: command not found: hishtory
+runner@ghaction-runner-hostname hishtory % echo bar
+bar
+runner@ghaction-runner-hostname hishtory %

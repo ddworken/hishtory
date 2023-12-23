@@ -1,8 +1,0 @@
-runner@ghaction-runner-hostname:~/work/hishtory/hishtory$  source /home/runner/.bashrc
-runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ echo foo
-foo
-runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ hishtory
-hishtory: command not found
-runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ echo bar
-bar
-runner@ghaction-runner-hostname:~/work/hishtory/hishtory$
