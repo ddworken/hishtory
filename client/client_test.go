@@ -1941,7 +1941,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 	})
 	require.NotContains(t, out, "Search Query:")
 	if testutils.IsGithubAction() {
-		testutils.CompareGoldens(t, out, "TestTui-Exit")
+		testutils.CompareGoldens(t, out, "TestTui-Exit-"+runtime.GOOS)
 	}
 
 	// Test opening the help page
@@ -2152,7 +2152,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 			require.Contains(t, out, "Welcome to fish, the friendly interactive shell")
 			require.Contains(t, out, "> echo ")
 		} else {
-			testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
+			testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName+"-"+runtime.GOOS)
 		}
 	}
 
@@ -2164,7 +2164,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
 	if testutils.IsGithubAction() {
-		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
+		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled-"+runtime.GOOS)
 	}
 
 	// Re-enable control-r
@@ -2450,7 +2450,7 @@ echo bar`)
 			"hishtory ENTER",
 			"echo SPACE bar ENTER",
 		})
-		testutils.CompareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName())
+		testutils.CompareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName()+"-"+runtime.GOOS)
 	}
 }
 
