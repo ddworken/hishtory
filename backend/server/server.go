@@ -211,7 +211,11 @@ func main() {
 
 	go runBackgroundJobs(context.Background(), srv, db, stats)
 
-	if err := srv.Run(context.Background(), ":8080"); err != nil {
+	port := os.Getenv("HISHTORY_SERVER_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if err := srv.Run(context.Background(), ":"+port); err != nil {
 		panic(err)
 	}
 }
