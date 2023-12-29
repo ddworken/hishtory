@@ -812,6 +812,24 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 		// test environments behave the same (by default, github actions
 		// ubuntu and macos have different termenv support).
 		lipgloss.SetColorProfile(termenv.ANSI)
+	} else {
+		// When the shell launches control-R it isn't hooked up to the main TTY,
+		// which means that termenv isn't able to accurately detect color support
+		// in the current terminal. This means we have to guess the right option,
+		// where we risk either:
+		//   * Choosing too high of a color support, and breaking hishtory colors
+		//     in certain terminals
+		//   * Choosing too low of a color support, and ending up with truncating
+		//     customized colors
+		//
+		// This is a tough situation with no right answer (as far as I can tell).
+		// The default terminal app on MacOS only supports termenv.ANSI256 (8 bit
+		// colors), which means we likely shouldn't default to TrueColor. From
+		// my own digging, I can't find any modern terminals that don't support
+		// termenv.ANSI256, so it seems like a reasonable default here.
+		//
+		// TODO: In the long term, we may want to make this configurable.
+		lipgloss.SetColorProfile(termenv.ANSI256)
 	}
 	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
