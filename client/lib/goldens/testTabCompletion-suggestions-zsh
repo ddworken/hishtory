@@ -1,4 +1,0 @@
-config-add     -- Add a config option
-config-delete  -- Delete a config option
-config-get     -- Get the value of a config option
-config-set     -- Set the value of a config option
