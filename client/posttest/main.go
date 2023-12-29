@@ -63,7 +63,16 @@ func checkGoldensUsed() {
 	// And check for mismatches
 	for _, f := range files {
 		goldenName := path.Base(f.Name())
-		if !slices.Contains(usedGoldens, goldenName) && !slices.Contains(UNUSED_GOLDENS, goldenName) {
+		if !slices.Contains(usedGoldens, goldenName) {
+			if slices.Contains(UNUSED_GOLDENS, goldenName) {
+				// It is allowlisted to not be used
+				continue
+			}
+			if (runtime.GOOS == "darwin" && strings.Contains(goldenName, "-linux")) ||
+				(runtime.GOOS == "linux" && strings.Contains(goldenName, "-darwin")) {
+				// It is for another OS
+				continue
+			}
 			err = fmt.Errorf("golden file %v was never used", goldenName)
 			fmt.Println(err)
 			log.Fatalf("%v", err)
