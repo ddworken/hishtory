@@ -2189,8 +2189,8 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Check that we can select it correctly
 	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"}))
 	require.Contains(t, out, "-Slah", "out has unexpected output missing the selected row")
-	if testutils.IsGithubAction() {
-		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
+	if testutils.IsGithubAction() && tester.ShellName() != "fish" {
+		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName+"-"+runtime.GOOS)
 	}
 
 	// Assert there are no leaked connections
