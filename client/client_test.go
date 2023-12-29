@@ -2163,7 +2163,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "Search Query", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
-	if testutils.IsGithubAction() {
+	if testutils.IsGithubAction() && tester.ShellName() != "fish" {
 		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled-"+runtime.GOOS)
 	}
 

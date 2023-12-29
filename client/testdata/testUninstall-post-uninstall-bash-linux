@@ -1,8 +1,8 @@
-bash-5.2$  source /Users/runner/.bashrc
-bash-5.2$ echo foo
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$  source /home/runner/.bashrc
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ echo foo
 foo
-bash-5.2$ hishtory
-bash: hishtory: command not found
-bash-5.2$ echo bar
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ hishtory
+hishtory: command not found
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ echo bar
 bar
-bash-5.2$
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$
