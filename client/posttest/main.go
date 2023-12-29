@@ -69,6 +69,14 @@ func checkGoldensUsed() {
 			log.Fatalf("%v", err)
 		}
 	}
+
+	// And print out anything that is in UNUSED_GOLDENS that was actually used, so we
+	// can manually trim UNUSED_GOLDENS
+	for _, g := range UNUSED_GOLDENS {
+		if slices.Contains(usedGoldens, g) {
+			fmt.Printf("Golden %s is in UNUSED_GOLDENS, but was actually used\n", g)
+		}
+	}
 	fmt.Println("Validated that all goldens in testdata/ were referenced!")
 
 }
