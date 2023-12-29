@@ -85,7 +85,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-goldens-${{ matrix.os }}
+        name: test-goldens-${{ matrix.os }}.zip
         path: /tmp/test-goldens/
     - name: Upload test log
       uses: actions/upload-artifact@v3
