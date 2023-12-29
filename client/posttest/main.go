@@ -61,6 +61,7 @@ func checkGoldensUsed() {
 	}
 
 	// And check for mismatches
+	var unusedGoldenErr error = nil
 	for _, f := range files {
 		goldenName := path.Base(f.Name())
 		if !slices.Contains(usedGoldens, goldenName) {
@@ -73,10 +74,12 @@ func checkGoldensUsed() {
 				// It is for another OS
 				continue
 			}
-			err = fmt.Errorf("golden file %v was never used", goldenName)
-			fmt.Println(err)
-			log.Fatalf("%v", err)
+			unusedGoldenErr = fmt.Errorf("golden file %v was never used", goldenName)
+			fmt.Println(unusedGoldenErr)
 		}
+	}
+	if unusedGoldenErr != nil {
+		log.Fatalf("%v", unusedGoldenErr)
 	}
 
 	// And print out anything that is in UNUSED_GOLDENS that was actually used, so we
