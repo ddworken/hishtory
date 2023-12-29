@@ -1,4 +1,4 @@
-bash-5.2$  source /Users/david/.bashrc
+bash-5.2$  source /Users/runner/.bashrc
 bash-5.2$ echo foo
 foo
 bash-5.2$ hishtory

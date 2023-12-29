@@ -1,0 +1,2 @@
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$  source /home/runner/.bashrc
+runner@ghaction-runner-hostname:~/work/hishtory/hishtory$ ls -Slah /

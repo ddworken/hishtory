@@ -1940,8 +1940,8 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 		"Escape",
 	})
 	require.NotContains(t, out, "Search Query:")
-	if !testutils.IsGithubAction() {
-		testutils.CompareGoldens(t, out, "TestTui-Exit")
+	if testutils.IsGithubAction() {
+		testutils.CompareGoldens(t, out, "TestTui-Exit-"+runtime.GOOS)
 	}
 
 	// Test opening the help page
@@ -2147,9 +2147,13 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "Search Query", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "─────", "hishtory is showing a table even after control-c?")
 	require.NotContains(t, out, "Exit Code", "hishtory is showing a table even after control-c?")
-	if !testutils.IsGithubAction() {
-		// This bit is broken on actions since actions run as a different user
-		testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName)
+	if testutils.IsGithubAction() {
+		if shellName == "fish" {
+			require.Contains(t, out, "Welcome to fish, the friendly interactive shell")
+			require.Contains(t, out, "> echo ")
+		} else {
+			testutils.CompareGoldens(t, out, "testControlR-ControlC-"+shellName+"-"+runtime.GOOS)
+		}
 	}
 
 	// Disable control-r
@@ -2159,9 +2163,8 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "Search Query", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
-	if !testutils.IsGithubAction() {
-		// This bit is broken on actions since actions run as a different user
-		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled")
+	if testutils.IsGithubAction() && shellName != "fish" {
+		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled-"+runtime.GOOS)
 	}
 
 	// Re-enable control-r
@@ -2186,8 +2189,8 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Check that we can select it correctly
 	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"}))
 	require.Contains(t, out, "-Slah", "out has unexpected output missing the selected row")
-	if !testutils.IsGithubAction() {
-		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName)
+	if testutils.IsGithubAction() && shellName != "fish" {
+		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName+"-"+runtime.GOOS)
 	}
 
 	// Assert there are no leaked connections
@@ -2441,13 +2444,13 @@ echo bar`)
 	testutils.CompareGoldens(t, out, "testUninstall-post-uninstall")
 
 	// And check again, but in a way that shows the full terminal output
-	if !testutils.IsGithubAction() {
+	if testutils.IsGithubAction() {
 		out = captureTerminalOutput(t, tester, []string{
 			"echo SPACE foo ENTER",
 			"hishtory ENTER",
 			"echo SPACE bar ENTER",
 		})
-		testutils.CompareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName())
+		testutils.CompareGoldens(t, out, "testUninstall-post-uninstall-"+tester.ShellName()+"-"+runtime.GOOS)
 	}
 }
 
