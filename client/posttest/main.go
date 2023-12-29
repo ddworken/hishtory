@@ -30,8 +30,8 @@ var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-ba
 	"TestTui-DefaultColorScheme"}
 
 func main() {
-	checkGoldensUsed()
 	exportMetrics()
+	checkGoldensUsed()
 }
 
 func checkGoldensUsed() {
@@ -66,7 +66,7 @@ func checkGoldensUsed() {
 		if !slices.Contains(usedGoldens, goldenName) && !slices.Contains(UNUSED_GOLDENS, goldenName) {
 			err = fmt.Errorf("golden file %v was never used", goldenName)
 			fmt.Println(err)
-			// TODO: Add a panic(err) here too
+			log.Fatalf("%v", err)
 		}
 	}
 	fmt.Println("Validated that all goldens in testdata/ were referenced!")
