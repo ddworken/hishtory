@@ -2163,7 +2163,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	require.NotContains(t, out, "Search Query", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "─────", "hishtory overrode control-r even when this was disabled?")
 	require.NotContains(t, out, "Exit Code", "hishtory overrode control-r even when this was disabled?")
-	if testutils.IsGithubAction() && tester.ShellName() != "fish" {
+	if testutils.IsGithubAction() && shellName != "fish" {
 		testutils.CompareGoldens(t, out, "testControlR-"+shellName+"-Disabled-"+runtime.GOOS)
 	}
 
@@ -2189,7 +2189,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 	// Check that we can select it correctly
 	out = stripShellPrefix(captureTerminalOutputWithShellName(t, tester, shellName, []string{"C-R", "Slah", "Enter"}))
 	require.Contains(t, out, "-Slah", "out has unexpected output missing the selected row")
-	if testutils.IsGithubAction() && tester.ShellName() != "fish" {
+	if testutils.IsGithubAction() && shellName != "fish" {
 		testutils.CompareGoldens(t, out, "testControlR-SelectMultiline-"+shellName+"-"+runtime.GOOS)
 	}
 
