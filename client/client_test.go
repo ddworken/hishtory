@@ -113,6 +113,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/color", testTui_color)
 	t.Run("testTui/errors", testTui_errors)
 	t.Run("testTui/ai", testTui_ai)
+	t.Run("testTui/defaultFilter", testTui_defaultFilter)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1750,6 +1751,32 @@ func testTui_scroll(t *testing.T) {
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
+}
+
+func testTui_defaultFilter(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, userSecret, _ := setupTestTui(t, Online)
+	db := hctx.GetDb(hctx.MakeContext())
+	e1 := testutils.MakeFakeHistoryEntry("exit 0")
+	e1.ExitCode = 0
+	require.NoError(t, db.Create(e1).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e1)
+	e2 := testutils.MakeFakeHistoryEntry("exit 1")
+	e2.ExitCode = 1
+	require.NoError(t, db.Create(e2).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e2)
+
+	// Configure a default filter
+	require.Equal(t, "\"\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+	tester.RunInteractiveShell(t, `hishtory config-set default-filter "exit_code:0"`)
+	require.Equal(t, "\"exit_code:0\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+
+	// Run a search query
+	out := stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-Enabled")
 }
 
 func testTui_color(t *testing.T) {
