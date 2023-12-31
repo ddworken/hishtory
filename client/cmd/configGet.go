@@ -41,6 +41,15 @@ var getHighlightMatchesCmd = &cobra.Command{
 		fmt.Println(config.HighlightMatches)
 	},
 }
+var getDefaultFilterCmd = &cobra.Command{
+	Use:   "default-filter",
+	Short: "The default filter that is applied to all search queries",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Printf("%#v", config.DefaultFilter)
+	},
+}
 
 var getFilterDuplicateCommandsCmd = &cobra.Command{
 	Use:   "filter-duplicate-commands",
@@ -149,4 +158,5 @@ func init() {
 	configGetCmd.AddCommand(getEnableAiCompletion)
 	configGetCmd.AddCommand(getPresavingCmd)
 	configGetCmd.AddCommand(getColorScheme)
+	configGetCmd.AddCommand(getDefaultFilterCmd)
 }
