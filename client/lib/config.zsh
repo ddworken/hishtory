@@ -4,6 +4,10 @@ add-zsh-hook precmd _hishtory_precmd
 
 _hishtory_first_prompt=1
 
+# For detecting color rendering support for this terminal, see #134
+hishtory getColorSupport
+export _hishtory_tui_color=$?
+
 function _hishtory_add() {
     # Runs after <ENTER>, but before the command is executed
     # $1 contains the command that was run 

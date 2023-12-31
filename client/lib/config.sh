@@ -5,6 +5,10 @@
 if [ -n "$__hishtory_bash_config_sourced" ]; then return; fi
 __hishtory_bash_config_sourced=`date`
 
+# For detecting color rendering support for this terminal, see #134
+hishtory getColorSupport
+export _hishtory_tui_color=$?
+
 # Implementation of running before/after every command based on https://jichu4n.com/posts/debug-trap-and-prompt_command-in-bash/
 function __hishtory_precommand() {
   if [ -z "${HISHTORY_AT_PROMPT:-}" ]; then

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -800,37 +801,67 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	return lib.SendDeletionRequest(ctx, dr)
 }
 
-func TuiQuery(ctx context.Context, initialQuery string) error {
+func configureColorProfile(ctx context.Context) {
 	if hctx.GetConf(ctx).ColorScheme == hctx.GetDefaultColorScheme() {
 		// Set termenv.ANSI for the default color scheme, so that we preserve
 		// the true default color scheme of hishtory which was initially
 		// configured with termenv.ANSI (even though we want to support
 		// full colors) for custom color schemes.
 		lipgloss.SetColorProfile(termenv.ANSI)
-	} else if os.Getenv("HISHTORY_TEST") != "" {
+		return
+	}
+	if os.Getenv("HISHTORY_TEST") != "" {
 		// We also set termenv.ANSI for tests so as to ensure that all our
 		// test environments behave the same (by default, github actions
 		// ubuntu and macos have different termenv support).
 		lipgloss.SetColorProfile(termenv.ANSI)
-	} else {
-		// When the shell launches control-R it isn't hooked up to the main TTY,
-		// which means that termenv isn't able to accurately detect color support
-		// in the current terminal. This means we have to guess the right option,
-		// where we risk either:
-		//   * Choosing too high of a color support, and breaking hishtory colors
-		//     in certain terminals
-		//   * Choosing too low of a color support, and ending up with truncating
-		//     customized colors
-		//
-		// This is a tough situation with no right answer (as far as I can tell).
-		// The default terminal app on MacOS only supports termenv.ANSI256 (8 bit
-		// colors), which means we likely shouldn't default to TrueColor. From
-		// my own digging, I can't find any modern terminals that don't support
-		// termenv.ANSI256, so it seems like a reasonable default here.
-		//
-		// TODO: In the long term, we may want to make this configurable.
+		return
+	}
+	// When the shell launches control-R it isn't hooked up to the main TTY,
+	// which means that termenv isn't able to accurately detect color support
+	// in the current terminal. We set the environment variable _hishtory_tui_color
+	// to an int representing the termenv. If it is unset or set to 0, then we don't
+	// know the current color support, and we have to guess it. This means we
+	// risk either:
+	//   * Choosing too high of a color support, and breaking hishtory colors
+	//     in certain terminals
+	//   * Choosing too low of a color support, and ending up with truncating
+	//     customized colors
+	//
+	// The default terminal app on MacOS only supports termenv.ANSI256 (8 bit
+	// colors), which means we likely shouldn't default to TrueColor. From
+	// my own digging, I can't find any modern terminals that don't support
+	// termenv.ANSI256, so it seems like a reasonable default here.
+	colorProfileStr := os.Getenv("_hishtory_tui_color")
+	if colorProfileStr == "" {
+		// Fall back to the default
+		lipgloss.SetColorProfile(termenv.ANSI256)
+		return
+	}
+	colorProfileInt, err := strconv.Atoi(colorProfileStr)
+	if err != nil {
+		colorProfileInt = 0
+	}
+	// The int mappings for this are defined in query.go
+	switch colorProfileInt {
+	case 1:
+		lipgloss.SetColorProfile(termenv.TrueColor)
+	case 2:
+		lipgloss.SetColorProfile(termenv.ANSI256)
+	case 3:
+		lipgloss.SetColorProfile(termenv.ANSI)
+	case 4:
+		lipgloss.SetColorProfile(termenv.Ascii)
+	default:
+		fallthrough
+	case 0:
+		// Unknown, so fall back to the default
 		lipgloss.SetColorProfile(termenv.ANSI256)
 	}
+}
+
+func TuiQuery(ctx context.Context, initialQuery string) error {
+	configureColorProfile(ctx)
 	p := tea.NewProgram(initialModel(ctx, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
 	go func() {

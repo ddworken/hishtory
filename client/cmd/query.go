@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/tui"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 )
 
@@ -59,6 +61,27 @@ var exportCmd = &cobra.Command{
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		export(ctx, strings.Join(args, " "))
+	},
+}
+
+var getColorSupportCmd = &cobra.Command{
+	Use:     "getColorSupport",
+	Hidden:  true,
+	Short:   "[Internal-only] Get the supported color format (returned as an exit code)",
+	GroupID: GROUP_ID_QUERYING,
+	Run: func(cmd *cobra.Command, args []string) {
+		switch termenv.ColorProfile() {
+		case termenv.TrueColor:
+			os.Exit(1)
+		case termenv.ANSI256:
+			os.Exit(2)
+		case termenv.ANSI:
+			os.Exit(3)
+		case termenv.Ascii:
+			os.Exit(4)
+		default:
+			os.Exit(0)
+		}
 	},
 }
 
@@ -147,4 +170,5 @@ func init() {
 	rootCmd.AddCommand(tqueryCmd)
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(updateLocalDbFromRemoteCmd)
+	rootCmd.AddCommand(getColorSupportCmd)
 }
