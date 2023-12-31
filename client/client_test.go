@@ -1790,6 +1790,14 @@ func testTui_color(t *testing.T) {
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithCustomColorScheme")
+
+	// And one more time with a default filter
+	require.Equal(t, "\"\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+	tester.RunInteractiveShell(t, `hishtory config-set default-filter "exit_code:0"`)
+	require.Equal(t, "\"exit_code:0\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithDefaultFilter")
 }
 
 func testTui_delete(t *testing.T) {
