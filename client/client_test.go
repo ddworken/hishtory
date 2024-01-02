@@ -1772,11 +1772,32 @@ func testTui_defaultFilter(t *testing.T) {
 	tester.RunInteractiveShell(t, `hishtory config-set default-filter "exit_code:0"`)
 	require.Equal(t, "\"exit_code:0\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
 
-	// Run a search query
+	// Run a search query with no additional query
 	out := stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-Enabled")
+
+	// Run a search query with an additional query
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"exit",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-EnabledAdditionalQuery")
+
+	// Run a search query and delete the default filter
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"BSpace",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-Deleted")
+
+	// Run a search query, type something, and then delete the default filter
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"exit Left Left Left Left BSpace",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-DeletedWithText")
 }
 
 func testTui_color(t *testing.T) {
