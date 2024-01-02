@@ -1922,6 +1922,8 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		"for\\\\ SPACE i\\\\ SPACE in",
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-SearchBackslash")
+
+	// TODO: Add a test for the behavior when quoting something containing a colon
 }
 
 func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
