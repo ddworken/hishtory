@@ -1923,7 +1923,27 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-SearchBackslash")
 
-	// TODO: Add a test for the behavior when quoting something containing a colon
+	// Add another entry for testing quoting a colon
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("foo:bar")).Error)
+	out = tester.RunInteractiveShell(t, `hishtory export`)
+	testutils.CompareGoldens(t, out, "TestTui-ExportWithEvenMoreEntries")
+
+	// And check that we can quote colons
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"foo:bar",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchColonError")
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"foo\\\\:bar",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchColonEscaped")
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'\"'foo:bar'\"'",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchColonDoubleQuoted")
 }
 
 func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
