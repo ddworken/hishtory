@@ -1005,6 +1005,9 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 		} else if runeQuery[i] == '\'' && !isInDoubleQuotedString && !heuristicIgnoreUnclosedQuote(isInSingleQuotedString, '\'', runeQuery, i) {
 			isInSingleQuotedString = !isInSingleQuotedString
 		} else {
+			if (isInSingleQuotedString || isInDoubleQuotedString) && separator == ' ' && runeQuery[i] == ':' {
+				token = append(token, '\\')
+			}
 			token = append(token, runeQuery[i])
 		}
 	}

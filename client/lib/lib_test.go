@@ -288,7 +288,7 @@ func TestSplitEscaped(t *testing.T) {
 		{"'foo bar baz", ' ', -1, []string{"'foo", "bar", "baz"}},
 		{"'foo bar baz\\''", ' ', -1, []string{"foo bar baz'"}},
 		{"cwd:'foo bar :baz\\''", ':', -1, []string{"cwd", "foo bar :baz'"}},
-		{"cwd:'foo bar :baz\\''", ' ', -1, []string{"cwd:foo bar :baz'"}},
+		{"cwd:'foo bar :baz\\''", ' ', -1, []string{"cwd:foo bar \\:baz'"}},
 		// Tests for double quotes
 		{"\"foo bar\"", ' ', -1, []string{"foo bar"}},
 		{"\"foo bar\" \"   \"", ' ', -1, []string{"foo bar", "   "}},
@@ -296,7 +296,7 @@ func TestSplitEscaped(t *testing.T) {
 		{"\"foo bar baz", ' ', -1, []string{"\"foo", "bar", "baz"}},
 		{"\"foo bar baz\\\"\"", ' ', -1, []string{"foo bar baz\""}},
 		{"cwd:\"foo bar :baz\\\"\"", ':', -1, []string{"cwd", "foo bar :baz\""}},
-		{"cwd:\"foo bar :baz\\\"\"", ' ', -1, []string{"cwd:foo bar :baz\""}},
+		{"cwd:\"foo bar :baz\\\"\"", ' ', -1, []string{"cwd:foo bar \\:baz\""}},
 		// Tests for complex quotes
 		{"\"foo'bar\"", ' ', -1, []string{"foo'bar"}},
 		{"'foo\"bar'", ' ', -1, []string{"foo\"bar"}},
@@ -318,6 +318,10 @@ func TestSplitEscaped(t *testing.T) {
 		{"foo:bar", ' ', -1, []string{"foo:bar"}},
 		{"foo\\:bar", ':', -1, []string{"foo\\:bar"}},
 		{"foo\\:bar", ' ', -1, []string{"foo\\:bar"}},
+		// Tests for quoting colons
+		{"foo:bar", ' ', -1, []string{"foo:bar"}},
+		{"'foo:bar'", ' ', -1, []string{"foo\\:bar"}},
+		{"\"foo:bar\"", ' ', -1, []string{"foo\\:bar"}},
 	}
 	for _, tc := range testcases {
 		actual := splitEscaped(tc.input, tc.char, tc.limit)
