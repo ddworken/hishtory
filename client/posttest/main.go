@@ -24,9 +24,9 @@ var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-ba
 	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
 	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
 	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
-	"testUninstall-post-uninstall-zsh",  "TestTui-ColoredOutput",
+	"testUninstall-post-uninstall-zsh", "TestTui-ColoredOutput",
 	"TestTui-ColoredOutputWithCustomColorScheme", "TestTui-ColoredOutputWithSearch", "TestTui-ColoredOutputWithSearch-Highlight",
-	"TestTui-DefaultColorScheme"}
+	"TestTui-DefaultColorScheme", "TestTui-ColoredOutputWithDefaultFilter"}
 
 func main() {
 	exportMetrics()

@@ -203,6 +203,8 @@ type ClientConfig struct {
 	EnablePresaving bool `json:"enable_presaving"`
 	// The current color scheme for the TUI
 	ColorScheme ColorScheme `json:"color_scheme"`
+	// A default filter that will be applied to all search queries
+	DefaultFilter string `json:"default_filter"`
 }
 
 type ColorScheme struct {

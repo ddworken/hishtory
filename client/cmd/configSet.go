@@ -73,6 +73,18 @@ var setBetaModeCommand = &cobra.Command{
 	},
 }
 
+var setDefaultFilterCommand = &cobra.Command{
+	Use:   "default-filter",
+	Short: "Add a default filter that will be applied to all search queries (e.g. `exit_code:0` to filter to only commands that executed successfully)",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.DefaultFilter = args[0]
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setEnableAiCompletionCmd = &cobra.Command{
 	Use:       "ai-completion",
 	Short:     "Enable AI completion for searches starting with '?'",
@@ -216,6 +228,7 @@ func init() {
 	configSetCmd.AddCommand(setEnableAiCompletionCmd)
 	configSetCmd.AddCommand(setPresavingCmd)
 	configSetCmd.AddCommand(setColorSchemeCmd)
+	configSetCmd.AddCommand(setDefaultFilterCommand)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)

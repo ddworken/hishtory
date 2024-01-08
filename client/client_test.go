@@ -113,6 +113,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/color", testTui_color)
 	t.Run("testTui/errors", testTui_errors)
 	t.Run("testTui/ai", testTui_ai)
+	t.Run("testTui/defaultFilter", testTui_defaultFilter)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1752,6 +1753,53 @@ func testTui_scroll(t *testing.T) {
 	assertNoLeakedConnections(t)
 }
 
+func testTui_defaultFilter(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, userSecret, _ := setupTestTui(t, Online)
+	db := hctx.GetDb(hctx.MakeContext())
+	e1 := testutils.MakeFakeHistoryEntry("exit 0")
+	e1.ExitCode = 0
+	require.NoError(t, db.Create(e1).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e1)
+	e2 := testutils.MakeFakeHistoryEntry("exit 1")
+	e2.ExitCode = 1
+	require.NoError(t, db.Create(e2).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e2)
+
+	// Configure a default filter
+	require.Equal(t, "\"\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+	tester.RunInteractiveShell(t, `hishtory config-set default-filter "exit_code:0"`)
+	require.Equal(t, "\"exit_code:0\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+
+	// Run a search query with no additional query
+	out := stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-Enabled")
+
+	// Run a search query with an additional query
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"exit",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-EnabledAdditionalQuery")
+
+	// Run a search query and delete the default filter
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"BSpace",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-Deleted")
+
+	// Run a search query, type something, and then delete the default filter
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"exit Left Left Left Left Left BSpace BSpace",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-DeletedWithText")
+}
+
 func testTui_color(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		// For some reason, this test fails on linux. Since this test isn't critical and is expected to be
@@ -1790,6 +1838,14 @@ func testTui_color(t *testing.T) {
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithCustomColorScheme")
+
+	// And one more time with a default filter
+	require.Equal(t, "\"\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+	tester.RunInteractiveShell(t, `hishtory config-set default-filter "exit_code:0"`)
+	require.Equal(t, "\"exit_code:0\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
+	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithDefaultFilter")
 }
 
 func testTui_delete(t *testing.T) {

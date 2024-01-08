@@ -210,7 +210,14 @@ func initialModel(ctx context.Context, initialQuery string) model {
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	queryInput := textinput.New()
-	queryInput.Placeholder = "ls"
+	defaultFilter := hctx.GetConf(ctx).DefaultFilter
+	if defaultFilter != "" {
+		queryInput.Prompt = "[" + defaultFilter + "] "
+	}
+	queryInput.PromptStyle = queryInput.PlaceholderStyle
+	if defaultFilter == "" {
+		queryInput.Placeholder = "ls"
+	}
 	queryInput.Focus()
 	queryInput.CharLimit = 200
 	width, _, err := getTerminalSize()
@@ -286,7 +293,13 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
 		return func() tea.Msg {
-			rows, entries, searchErr := getRows(m.ctx, hctx.GetConf(m.ctx).DisplayedColumns, query, PADDED_NUM_ENTRIES)
+			conf := hctx.GetConf(m.ctx)
+			defaultFilter := conf.DefaultFilter
+			if m.queryInput.Prompt == "" {
+				// The default filter was cleared for this session, so don't apply it
+				defaultFilter = ""
+			}
+			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, defaultFilter, query, PADDED_NUM_ENTRIES)
 			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
 		}
 	}
@@ -335,12 +348,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				pendingCommands = tea.Batch(pendingCommands, cmd1)
 			}
+			forceUpdateTable := false
+			if msg.String() == "backspace" && (m.queryInput.Value() == "" || m.queryInput.Position() == 0) {
+				// Handle deleting the default filter just for this TUI instance
+				m.queryInput.Prompt = ""
+				forceUpdateTable = true
+			}
 			i, cmd2 := m.queryInput.Update(msg)
 			m.queryInput = i
 			searchQuery := m.queryInput.Value()
 			m.runQuery = &searchQuery
 			CURRENT_QUERY_FOR_HIGHLIGHTING = searchQuery
-			cmd3 := runQueryAndUpdateTable(m, false, false)
+			cmd3 := runQueryAndUpdateTable(m, forceUpdateTable, false)
 			preventTableOverscrolling(m)
 			return m, tea.Batch(pendingCommands, cmd2, cmd3)
 		}
@@ -505,13 +524,13 @@ func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, query s
 	return rows, entries, nil
 }
 
-func getRows(ctx context.Context, columnNames []string, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
+func getRows(ctx context.Context, columnNames []string, defaultFilter, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if config.AiCompletion && !config.IsOffline && strings.HasPrefix(query, "?") && len(query) > 1 {
 		return getRowsFromAiSuggestions(ctx, columnNames, query)
 	}
-	searchResults, err := lib.Search(ctx, db, query, numEntries)
+	searchResults, err := lib.Search(ctx, db, defaultFilter+" "+query, numEntries)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -564,7 +583,7 @@ var bigQueryResults []table.Row
 func makeTableColumns(ctx context.Context, columnNames []string, rows []table.Row) ([]table.Column, error) {
 	// Handle an initial query with no results
 	if len(rows) == 0 || len(rows[0]) == 0 {
-		allRows, _, err := getRows(ctx, columnNames, "", 25)
+		allRows, _, err := getRows(ctx, columnNames, hctx.GetConf(ctx).DefaultFilter, "", 25)
 		if err != nil {
 			return nil, err
 		}
@@ -590,7 +609,7 @@ func makeTableColumns(ctx context.Context, columnNames []string, rows []table.Ro
 
 	// Calculate the maximum column width that is useful for each column if we search for the empty string
 	if bigQueryResults == nil {
-		bigRows, _, err := getRows(ctx, columnNames, "", 1000)
+		bigRows, _, err := getRows(ctx, columnNames, "", "", 1000)
 		if err != nil {
 			return nil, err
 		}
@@ -868,13 +887,14 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 		LAST_DISPATCHED_QUERY_ID++
 		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
-		rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, initialQuery, PADDED_NUM_ENTRIES)
+		conf := hctx.GetConf(ctx)
+		rows, entries, err := getRows(ctx, conf.DisplayedColumns, conf.DefaultFilter, initialQuery, PADDED_NUM_ENTRIES)
 		if err == nil || initialQuery == "" {
 			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
 		} else {
 			// initialQuery is likely invalid in some way, let's just drop it
 			emptyQuery := ""
-			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, emptyQuery, PADDED_NUM_ENTRIES)
+			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, conf.DefaultFilter, emptyQuery, PADDED_NUM_ENTRIES)
 			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
 		}
 	}()
