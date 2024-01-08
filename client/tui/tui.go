@@ -530,7 +530,6 @@ func getRows(ctx context.Context, columnNames []string, defaultFilter, query str
 	if config.AiCompletion && !config.IsOffline && strings.HasPrefix(query, "?") && len(query) > 1 {
 		return getRowsFromAiSuggestions(ctx, columnNames, query)
 	}
-	hctx.GetLogger().Infof("DEBUG: defaultFilter=%#v", defaultFilter)
 	searchResults, err := lib.Search(ctx, db, defaultFilter+" "+query, numEntries)
 	if err != nil {
 		return nil, nil, err
