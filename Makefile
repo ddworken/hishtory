@@ -1,6 +1,9 @@
 help:				## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
 
+local-install:			## Build and install hishtory locally from the current directory
+	go build; ./hishtory install
+
 forcetest:			## Force running all tests without a test cache
 	go clean -testcache
 	make test
