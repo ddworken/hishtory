@@ -232,6 +232,7 @@ If you're making code contributions, check out `make help` for some information 
 * Write some tests for your change. Unit tests are great, but we also have a large number of integration tests in `client_test.go`
     * Note that the hishtory tests are quite thorough, so running them locally is quite time consuming (and some of them only work on Github Actions). Instead, I recommend using `make ftest` (see `make help` for information on this) to run the specific tests that you're adding/changing.
 * Open a PR on Github! Once you open the PR, I'll take a look and will trigger Github Actions to run all the tests which will ensure that your change doesn't lead to any reggressions.
+* [Optional] If you want to switch back to the latest released version (rather than your local change), run `hishtory update`
 * Merge the PR! :tada:
 
 ## Security
