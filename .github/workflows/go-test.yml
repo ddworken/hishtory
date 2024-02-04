@@ -35,7 +35,7 @@ jobs:
           # Set a consistent hostname so we can run tests that depend on it
           sudo hostname ghaction-runner-hostname  
     - name: MacOS Setup
-      if: ${{ matrix.os == 'macos-latest'}}
+      if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-14' }}
       run: |
 
           # Install our dependencies
@@ -44,7 +44,7 @@ jobs:
           # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname
     - name: MacOS Docker Setup
-      if: ${{ matrix.os == 'macos-latest'}}
+      if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-14'}}
       continue-on-error: true
       run: |
           # Install docker so it can be used for datadog
