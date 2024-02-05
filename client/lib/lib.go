@@ -27,9 +27,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/araddon/dateparse"
-	"github.com/fatih/color"
 	"github.com/google/uuid"
-	"github.com/rodaine/table"
 	"github.com/schollz/progressbar/v3"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -136,53 +134,6 @@ func MakeRegexFromQuery(query string) string {
 		}
 	}
 	return r
-}
-
-func stringArrayToAnyArray(arr []string) []any {
-	ret := make([]any, 0)
-	for _, item := range arr {
-		ret = append(ret, item)
-	}
-	return ret
-}
-
-func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResults int) error {
-	config := hctx.GetConf(ctx)
-	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
-
-	columns := make([]any, 0)
-	for _, c := range config.DisplayedColumns {
-		columns = append(columns, c)
-	}
-	tbl := table.New(columns...)
-	tbl.WithHeaderFormatter(headerFmt)
-
-	numRows := 0
-
-	var seenCommands = make(map[string]bool)
-
-	for _, entry := range results {
-		if config.FilterDuplicateCommands && entry != nil {
-			cmd := strings.TrimSpace(entry.Command)
-			if seenCommands[cmd] {
-				continue
-			}
-			seenCommands[cmd] = true
-		}
-
-		row, err := BuildTableRow(ctx, config.DisplayedColumns, *entry, func(s string) string { return s })
-		if err != nil {
-			return err
-		}
-		tbl.AddRow(stringArrayToAnyArray(row)...)
-		numRows += 1
-		if numRows >= numResults {
-			break
-		}
-	}
-
-	tbl.Print()
-	return nil
 }
 
 func CheckFatalError(err error) {
