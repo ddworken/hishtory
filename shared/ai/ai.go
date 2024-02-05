@@ -103,7 +103,7 @@ func GetAiSuggestionsViaOpenAiApi(query, shellName, osName string, numberComplet
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to parse OpenAI API response=%#v: %w", bodyText, err)
 	}
 	if len(apiResp.Choices) == 0 {
-		return nil, OpenAiUsage{}, fmt.Errorf("OpenAI API returned zero choices, resp=%#v", apiResp)
+		return nil, OpenAiUsage{}, fmt.Errorf("OpenAI API returned zero choices, parsed resp=%#v, resp body=%#v", apiResp, bodyText)
 	}
 	ret := make([]string, 0)
 	for _, item := range apiResp.Choices {
