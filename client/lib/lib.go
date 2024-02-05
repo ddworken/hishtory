@@ -85,7 +85,7 @@ func getCustomColumnValue(ctx context.Context, header string, entry data.History
 	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
 }
 
-func BuildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry) ([]string, error) {
+func BuildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry, commandRenderer func(string) string) ([]string, error) {
 	row := make([]string, 0)
 	for _, header := range columnNames {
 		switch header {
@@ -109,7 +109,7 @@ func BuildTableRow(ctx context.Context, columnNames []string, entry data.History
 		case "Exit Code", "Exit_Code", "ExitCode", "exitcode":
 			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
 		case "Command", "command":
-			row = append(row, entry.Command)
+			row = append(row, commandRenderer(entry.Command))
 		case "User", "user":
 			row = append(row, entry.LocalUsername)
 		default:
@@ -170,7 +170,7 @@ func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResult
 			seenCommands[cmd] = true
 		}
 
-		row, err := BuildTableRow(ctx, config.DisplayedColumns, *entry)
+		row, err := BuildTableRow(ctx, config.DisplayedColumns, *entry, func(s string) string { return s })
 		if err != nil {
 			return err
 		}
