@@ -122,3 +122,20 @@ func Chunks[k any](slice []k, chunkSize int) [][]k {
 	}
 	return chunks
 }
+
+type Seq1[K any] func(yield func(K) bool) bool
+
+func ChunksIter[k any](slice []k, chunkSize int) Seq1[[]k] {
+	return func(yield func([]k) bool) bool {
+		for i := 0; i < len(slice); i += chunkSize {
+			end := i + chunkSize
+			if end > len(slice) {
+				end = len(slice)
+			}
+			if !yield(slice[i:end]) {
+				return false
+			}
+		}
+		return true
+	}
+}

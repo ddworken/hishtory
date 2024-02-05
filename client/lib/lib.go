@@ -246,6 +246,7 @@ func countLinesInFiles(filenames ...string) (int, error) {
 		if err != nil {
 			return 0, err
 		}
+		hctx.GetLogger().Infof("Importing history entries, file=%#v contains %d lines", f, l)
 		total += l
 	}
 	return total, nil
@@ -680,7 +681,7 @@ func Reupload(ctx context.Context) error {
 		defer bar.Finish()
 	}
 	chunkSize := 500
-	chunks := shared.Chunks(entries, chunkSize)
+	chunks := shared.ChunksIter(entries, chunkSize)
 	return shared.ForEach(chunks, 10, func(chunk []*data.HistoryEntry) error {
 		jsonValue, err := EncryptAndMarshal(config, chunk)
 		if err != nil {

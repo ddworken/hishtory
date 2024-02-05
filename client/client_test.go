@@ -2829,11 +2829,24 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 func createSyntheticImportEntries(t testing.TB, numSyntheticEntries int) {
 	homedir, err := os.UserHomeDir()
 	require.NoError(t, err)
-	f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	filenames := []string{".bash_history", ".zsh_history", ".zhistory"}
+	numFiles := len(filenames) + 1 // The +1 accounts for the fish history file
+	for _, filename := range filenames {
+		f, err := os.OpenFile(path.Join(homedir, filename), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		require.NoError(t, err)
+		defer f.Close()
+		for i := 1; i <= numSyntheticEntries/numFiles; i++ {
+			_, err := f.WriteString(fmt.Sprintf("echo command-%s-%d\n", filename, i))
+			require.NoError(t, err)
+		}
+		require.NoError(t, f.Close())
+	}
+	// Write the file for fish too, in the special fish format
+	f, err := os.OpenFile(path.Join(homedir, ".local/share/fish/fish_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	require.NoError(t, err)
 	defer f.Close()
-	for i := 1; i <= numSyntheticEntries; i++ {
-		_, err := f.WriteString(fmt.Sprintf("echo command-%d\n", i))
+	for i := 1; i <= numSyntheticEntries/numFiles; i++ {
+		_, err := f.WriteString(fmt.Sprintf("- cmd: echo command-fish-%d\n", i))
 		require.NoError(t, err)
 	}
 	require.NoError(t, f.Close())
@@ -2868,32 +2881,6 @@ func TestImportHistory(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestImportHistory-export")
 }
 
-func BenchmarkImport(b *testing.B) {
-	b.StopTimer()
-	// Setup
-	tester := bashTester{}
-	defer testutils.BackupAndRestore(b)()
-
-	// Benchmark it
-	for n := 0; n < b.N; n++ {
-		// Setup
-		testutils.ResetLocalState(b)
-		installHishtory(b, tester, "")
-
-		// Create a large history in bash that we will pre-import
-		numSyntheticEntries := 100_000
-		createSyntheticImportEntries(b, numSyntheticEntries)
-
-		// Benchmarked code:
-		b.StartTimer()
-		ctx := hctx.MakeContext()
-		numImported, err := lib.ImportHistory(ctx, false, true)
-		require.NoError(b, err)
-		require.GreaterOrEqual(b, numImported, numSyntheticEntries)
-		b.StopTimer()
-	}
-}
-
 func TestAugmentedIsOfflineError(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, zshTester{}, "")
@@ -2908,6 +2895,32 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
 	require.False(t, lib.CanReachHishtoryServer(ctx))
 	require.True(t, lib.IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
+}
+
+func BenchmarkImport(b *testing.B) {
+	b.StopTimer()
+	// Setup
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(b)()
+
+	// Benchmark it
+	for n := 0; n < b.N; n++ {
+		// Setup
+		testutils.ResetLocalState(b)
+		installHishtory(b, tester, "")
+
+		// Create a large history in bash that we will pre-import
+		numSyntheticEntries := 1_000_000
+		createSyntheticImportEntries(b, numSyntheticEntries)
+
+		// Benchmarked code:
+		b.StartTimer()
+		ctx := hctx.MakeContext()
+		numImported, err := lib.ImportHistory(ctx, false, true)
+		require.NoError(b, err)
+		require.GreaterOrEqual(b, numImported, numSyntheticEntries)
+		b.StopTimer()
+	}
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
