@@ -246,7 +246,6 @@ func countLinesInFiles(filenames ...string) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		hctx.GetLogger().Infof("Importing history entries, file=%#v contains %d lines", f, l)
 		total += l
 	}
 	return total, nil
@@ -704,7 +703,7 @@ func Reupload(ctx context.Context) error {
 		// in a single request (since large individual requests are extremely slow). From benchmarking,
 		// it is apparent that this value seems to work quite well.
 		uploadChunkSize := 500
-		chunks := shared.ChunksIter(entries, uploadChunkSize)
+		chunks := shared.Chunks(entries, uploadChunkSize)
 		err = shared.ForEach(chunks, 10, func(chunk []*data.HistoryEntry) error {
 			jsonValue, err := EncryptAndMarshal(config, chunk)
 			if err != nil {

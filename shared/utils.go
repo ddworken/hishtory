@@ -2,12 +2,14 @@ package shared
 
 import "sync"
 
-func ForEach[T any](iter Seq1[T], numThreads int, fn func(T) error) error {
+func ForEach[T any](arr []T, numThreads int, fn func(T) error) error {
 	wg := &sync.WaitGroup{}
+	wg.Add(len(arr))
+
 	limiter := make(chan bool, numThreads)
+
 	var errors []error
-	iter(func(item T) bool {
-		wg.Add(1)
+	for _, item := range arr {
 		limiter <- true
 		go func(x T) {
 			defer wg.Done()
@@ -17,8 +19,11 @@ func ForEach[T any](iter Seq1[T], numThreads int, fn func(T) error) error {
 			}
 			<-limiter
 		}(item)
-		return true
-	})
+		if len(errors) > 0 {
+			return errors[0]
+		}
+	}
+
 	wg.Wait()
 	if len(errors) > 0 {
 		return errors[0]
