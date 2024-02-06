@@ -496,6 +496,7 @@ func renderNullableTable(m model, helpText string) string {
 func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, query string) ([]table.Row, []*data.HistoryEntry, error) {
 	suggestions, err := ai.DebouncedGetAiSuggestions(ctx, strings.TrimPrefix(query, "?"), 5)
 	if err != nil {
+		hctx.GetLogger().Infof("failed to get AI query suggestions: %v", err)
 		return nil, nil, fmt.Errorf("failed to get AI query suggestions: %w", err)
 	}
 	var rows []table.Row
