@@ -692,7 +692,7 @@ func Reupload(ctx context.Context) error {
 			return fmt.Errorf("failed to reupload due to failed search: %w", err)
 		}
 		if len(entries) == 0 {
-			if currentOffset == 0 {
+			if currentOffset == 0 && numEntries != 0 {
 				return fmt.Errorf("found no entries for reuploading, something went wrong")
 			} else {
 				return nil
