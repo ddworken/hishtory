@@ -515,7 +515,7 @@ func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, query s
 			EntryId:                 "OpenAI",
 		}
 		entries = append(entries, &entry)
-		row, err := lib.BuildTableRow(ctx, columnNames, entry)
+		row, err := lib.BuildTableRow(ctx, columnNames, entry, func(s string) string { return s })
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %w", entry, err)
 		}
@@ -551,8 +551,7 @@ func getRows(ctx context.Context, columnNames []string, defaultFilter, query str
 				seenCommands[cmd] = true
 			}
 
-			entry.Command = strings.ReplaceAll(entry.Command, "\n", "\\n")
-			row, err := lib.BuildTableRow(ctx, columnNames, *entry)
+			row, err := lib.BuildTableRow(ctx, columnNames, *entry, commandEscaper)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to build row for entry=%#v: %w", entry, err)
 			}
@@ -563,6 +562,14 @@ func getRows(ctx context.Context, columnNames []string, defaultFilter, query str
 		}
 	}
 	return rows, filteredData, nil
+}
+
+func commandEscaper(cmd string) string {
+	if !strings.Contains(cmd, "\n") {
+		// No special escaping necessary
+		return cmd
+	}
+	return fmt.Sprintf("%#v", cmd)
 }
 
 func calculateColumnWidths(rows []table.Row, numColumns int) []int {
@@ -935,7 +942,7 @@ func TuiQuery(ctx context.Context, initialQuery string) error {
 		// Print out the initialQuery instead so that we don't clear the terminal
 		SELECTED_COMMAND = initialQuery
 	}
-	fmt.Printf("%s\n", strings.ReplaceAll(SELECTED_COMMAND, "\\n", "\n"))
+	fmt.Printf("%s\n", SELECTED_COMMAND)
 	return nil
 }
 
