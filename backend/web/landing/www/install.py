@@ -31,8 +31,20 @@ else:
 with urllib.request.urlopen(download_url) as response:
     hishtory_binary = response.read()
 
-tmpdir = os.environ.get('TMPDIR', '') or '/tmp/'
-tmpFilePath = tmpdir+'hishtory-client'
+def get_executable_tmpdir():
+    specified_dir = os.environ.get('TMPDIR', '') 
+    if specified_dir:
+        return specified_dir
+    try:
+        if hasattr(os, 'ST_NOEXEC'):
+            if os.statvfs("/tmp").f_flag & os.ST_NOEXEC:
+                # /tmp/ is mounted as NOEXEC, so fall back to the current working directory
+                return os.getcwd()
+    except:
+        pass
+    return "/tmp/"
+
+tmpFilePath = os.path.join(get_executable_tmpdir(), 'hishtory-client')
 if os.path.exists(tmpFilePath):
     os.remove(tmpFilePath)
 with open(tmpFilePath, 'wb') as f:
