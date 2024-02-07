@@ -7,10 +7,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/tui"
+	"github.com/fatih/color"
 	"github.com/muesli/termenv"
+	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 )
 
@@ -148,7 +151,54 @@ func query(ctx context.Context, query string) {
 	numResults := 25
 	data, err := lib.Search(ctx, db, query, numResults*5)
 	lib.CheckFatalError(err)
-	lib.CheckFatalError(lib.DisplayResults(ctx, data, numResults))
+	lib.CheckFatalError(DisplayResults(ctx, data, numResults))
+}
+
+func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResults int) error {
+	config := hctx.GetConf(ctx)
+	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
+
+	columns := make([]any, 0)
+	for _, c := range config.DisplayedColumns {
+		columns = append(columns, c)
+	}
+	tbl := table.New(columns...)
+	tbl.WithHeaderFormatter(headerFmt)
+
+	numRows := 0
+
+	var seenCommands = make(map[string]bool)
+
+	for _, entry := range results {
+		if config.FilterDuplicateCommands && entry != nil {
+			cmd := strings.TrimSpace(entry.Command)
+			if seenCommands[cmd] {
+				continue
+			}
+			seenCommands[cmd] = true
+		}
+
+		row, err := lib.BuildTableRow(ctx, config.DisplayedColumns, *entry, func(s string) string { return s })
+		if err != nil {
+			return err
+		}
+		tbl.AddRow(stringArrayToAnyArray(row)...)
+		numRows += 1
+		if numRows >= numResults {
+			break
+		}
+	}
+
+	tbl.Print()
+	return nil
+}
+
+func stringArrayToAnyArray(arr []string) []any {
+	ret := make([]any, 0)
+	for _, item := range arr {
+		ret = append(ret, item)
+	}
+	return ret
 }
 
 func displayBannerIfSet(ctx context.Context) error {
