@@ -97,6 +97,9 @@ func GetAiSuggestionsViaOpenAiApi(query, shellName, osName string, numberComplet
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to read OpenAI API response: %w", err)
 	}
+	if resp.StatusCode == 429 {
+		return nil, OpenAiUsage{}, fmt.Errorf("received 429 error code from OpenAI (is your API key valid?)")
+	}
 	var apiResp openAiResponse
 	err = json.Unmarshal(bodyText, &apiResp)
 	if err != nil {
