@@ -52,4 +52,4 @@ if [ -n "${HISHTORY_TEST:-}" ]; then
     compinit
 fi
 
-source <(hishtory completion zsh); which compdef >/dev/null 2>&1 && compdef _hishtory hishtory
+source <(hishtory completion zsh); which compdef >/dev/null 2>&1 && compdef _hishtory hishtory || true
