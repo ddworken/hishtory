@@ -1110,7 +1110,6 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 func TestInstallViaPythonScriptFromHead(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
-	testInstallViaPythonScriptChild(t, tester)
 
 	// Set up
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
