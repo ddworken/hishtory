@@ -1107,6 +1107,43 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	}
 }
 
+func TestInstallViaPythonScriptFromHead(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	testInstallViaPythonScriptChild(t, tester)
+
+	// Set up
+	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
+
+	// Install via the python script
+	out := tester.RunInteractiveShell(t, `cat backend/web/landing/www/install.py | python3 -`)
+	require.Contains(t, out, "Succesfully installed hishtory")
+	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
+	matches := r.FindStringSubmatch(out)
+	if len(matches) != 2 {
+		t.Fatalf("Failed to extract userSecret from output=%#v: matches=%#v", out, matches)
+	}
+	userSecret := matches[1]
+
+	// Test the status subcommand
+	downloadData, err := cmd.GetDownloadData(makeTestOnlyContextWithFakeConfig())
+	require.NoError(t, err)
+	out = tester.RunInteractiveShell(t, `hishtory status`)
+	expectedOut := fmt.Sprintf("hiSHtory: %s\nEnabled: true\nSecret Key: %s\nCommit Hash: ", downloadData.Version, userSecret)
+	require.Contains(t, out, expectedOut)
+
+	// And test that it recorded that command
+	time.Sleep(time.Second)
+	out = tester.RunInteractiveShell(t, `hishtory export -pipefail`)
+	if out != "hishtory status\n" {
+		t.Fatalf("unexpected output from hishtory export=%#v", out)
+	}
+
+	// And check that it installed in online mode
+	out = tester.RunInteractiveShell(t, `hishtory status -v`)
+	require.Contains(t, out, "\nSync Mode: Enabled\n")
+}
+
 func testExportWithQuery(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
