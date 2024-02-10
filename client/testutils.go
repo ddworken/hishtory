@@ -366,3 +366,17 @@ func stripRequiredPrefix(t *testing.T, out, prefix string) string {
 func stripTuiCommandPrefix(t *testing.T, out string) string {
 	return stripRequiredPrefix(t, out, "hishtory tquery")
 }
+
+func tagAsBasicTest(t *testing.T) {
+	s := os.Getenv("SPLIT_TESTS")
+	if s != "" && s != "BASIC" {
+		t.Skip()
+	}
+}
+
+func tagAsTuiTest(t *testing.T) {
+	s := os.Getenv("SPLIT_TESTS")
+	if s != "" && s != "TUI" {
+		t.Skip()
+	}
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -140,6 +141,10 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 func FuzzTestMultipleUsers(f *testing.F) {
 	if skipSlowTests() {
 		f.Skip("skipping slow tests")
+	}
+	s := os.Getenv("SPLIT_TESTS")
+	if s != "" && s != "BASIC" {
+		f.Skip()
 	}
 	defer testutils.RunTestServer()()
 	// Format:

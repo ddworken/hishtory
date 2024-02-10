@@ -121,6 +121,7 @@ func TestParam(t *testing.T) {
 
 func testIntegration(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Run the test
@@ -129,6 +130,7 @@ func testIntegration(t *testing.T, tester shellTester, onlineStatus OnlineStatus
 
 func testIntegrationWithNewDevice(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Run the test
@@ -238,6 +240,7 @@ func installWithOnlineStatus(t testing.TB, tester shellTester, onlineStatus Onli
 
 func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStatus) string {
 	// Test install
+	tagAsBasicTest(t)
 	userSecret := installWithOnlineStatus(t, tester, onlineStatus)
 	assertOnlineStatus(t, onlineStatus)
 
@@ -338,6 +341,7 @@ echo thisisrecorded`)
 
 func testAdvancedQuery(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory
@@ -561,18 +565,22 @@ func updateToHead(t *testing.T, tester shellTester) string {
 }
 
 func testUpdateFromHeadToRelease(t *testing.T, tester shellTester) {
+	tagAsBasicTest(t)
 	testGenericUpdate(t, tester, installFromHead, updateToRelease)
 }
 
 func testUpdateFromPrevToRelease(t *testing.T, tester shellTester) {
+	tagAsBasicTest(t)
 	testGenericUpdate(t, tester, installFromPrev, updateToRelease)
 }
 
 func testUpdateFromPrevToCurrent(t *testing.T, tester shellTester) {
+	tagAsBasicTest(t)
 	testGenericUpdate(t, tester, installFromPrev, updateToHead)
 }
 
 func testUpdateFromPrevToReleaseViaProd(t *testing.T, tester shellTester) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SERVER")()
 	os.Setenv("HISHTORY_SERVER", "https://api.hishtory.dev")
 	testGenericUpdate(t, tester, installFromPrev, updateToRelease)
@@ -622,6 +630,7 @@ func testGenericUpdate(t *testing.T, tester shellTester, installInitialVersion f
 
 func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
@@ -662,6 +671,7 @@ echo mycommand-3`)
 
 func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
@@ -687,6 +697,7 @@ func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 
 func testRepeatedEnableDisable(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -718,6 +729,7 @@ hishtory enable`, i))
 
 func testExcludeHiddenCommand(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -775,6 +787,7 @@ func waitForBackgroundSavesToComplete(t testing.TB) {
 
 func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -795,6 +808,7 @@ func testTimestampsAreReasonablyCorrect(t *testing.T, tester shellTester) {
 
 func testTableDisplayCwd(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -822,6 +836,7 @@ echo other`)
 
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Check that we can find the go binary
@@ -878,6 +893,7 @@ echo foo`)
 
 func testDisplayTable(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 
@@ -940,6 +956,7 @@ func testDisplayTable(t *testing.T, tester shellTester) {
 
 func testRequestAndReceiveDbDump(t *testing.T, tester shellTester) {
 	// Set up
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	secretKey := installHishtory(t, tester, "")
 
@@ -1038,6 +1055,7 @@ echo other`)
 }
 
 func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_PATH")()
 	altHishtoryPath := ".other-path"
@@ -1052,6 +1070,7 @@ func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 }
 
 func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_OFFLINE")()
 	os.Setenv("HISHTORY_OFFLINE", "1")
@@ -1108,6 +1127,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 }
 
 func TestInstallViaPythonScriptFromHead(t *testing.T) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -1145,6 +1165,7 @@ func TestInstallViaPythonScriptFromHead(t *testing.T) {
 
 func testExportWithQuery(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -1203,6 +1224,7 @@ sleep 1`)
 
 func testHelpCommand(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -1219,6 +1241,7 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 
 func TestStripBashTimePrefix(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -1264,6 +1287,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 
 func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Init an initial device
@@ -1314,6 +1338,7 @@ func testReuploadHistoryEntries(t *testing.T, tester shellTester) {
 
 func testHishtoryOffline(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Init an initial device
@@ -1365,6 +1390,7 @@ func testHishtoryOffline(t *testing.T, tester shellTester) {
 
 func testInitialHistoryImport(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SKIP_INIT_IMPORT")()
 	os.Setenv("HISHTORY_SKIP_INIT_IMPORT", "")
@@ -1399,6 +1425,7 @@ hishtory export `+randomCmdUuid[:5]+`
 
 func testLocalRedaction(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installWithOnlineStatus(t, tester, onlineStatus)
 	assertOnlineStatus(t, onlineStatus)
@@ -1467,6 +1494,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 func testRemoteRedaction(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory client 1
@@ -1522,6 +1550,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 func testConfigGetSet(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -1580,6 +1609,7 @@ func clearControlRSearchFromConfig(t testing.TB) {
 
 func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -1611,6 +1641,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 func TestFish(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -1686,6 +1717,7 @@ func setupTestTui(t testing.TB, onlineStatus OnlineStatus) (shellTester, string,
 
 func testTui_resize(t *testing.T) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t, Online)
 
@@ -1753,6 +1785,7 @@ func testTui_resize(t *testing.T) {
 
 func testTui_scroll(t *testing.T) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t, Online)
 
@@ -1791,6 +1824,7 @@ func testTui_scroll(t *testing.T) {
 
 func testTui_defaultFilter(t *testing.T) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t, Online)
 	db := hctx.GetDb(hctx.MakeContext())
@@ -1844,6 +1878,7 @@ func testTui_color(t *testing.T) {
 	}
 
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t, Online)
 	tester.RunInteractiveShell(t, ` hishtory config-set highlight-matches false`)
@@ -1886,6 +1921,7 @@ func testTui_color(t *testing.T) {
 
 func testTui_delete(t *testing.T) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t, Online)
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("echo 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'"))
@@ -1928,6 +1964,7 @@ func testTui_delete(t *testing.T) {
 
 func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t, onlineStatus)
 
@@ -2040,6 +2077,7 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 
 func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t, onlineStatus)
 
@@ -2097,6 +2135,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 
 func testTui_errors(t *testing.T) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t, Online)
 
@@ -2117,6 +2156,7 @@ func testTui_errors(t *testing.T) {
 
 func testTui_ai(t *testing.T) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("OPENAI_API_KEY")()
 	os.Setenv("OPENAI_API_KEY", "")
@@ -2151,6 +2191,7 @@ func testTui_ai(t *testing.T) {
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {
 	// Setup
+	tagAsTuiTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installWithOnlineStatus(t, tester, onlineStatus)
 	assertOnlineStatus(t, onlineStatus)
@@ -2313,6 +2354,7 @@ func testControlR(t *testing.T, tester shellTester, shellName string, onlineStat
 
 func testCustomColumns(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -2361,6 +2403,7 @@ echo bar`)
 
 func testPresavingDisabled(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -2385,6 +2428,7 @@ func testPresavingDisabled(t *testing.T, tester shellTester) {
 
 func testPresavingOffline(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
 	userSecret := installHishtory(t, tester, "")
@@ -2427,6 +2471,7 @@ func testPresavingOffline(t *testing.T, tester shellTester) {
 
 func testPresaving(t *testing.T, tester shellTester, shellName string) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
 	manuallySubmitHistoryEntry(t, userSecret, testutils.MakeFakeHistoryEntry("table_sizing aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
@@ -2515,6 +2560,7 @@ func testTabCompletion(t *testing.T, tester shellTester, shellName string) {
 	}
 
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -2536,6 +2582,7 @@ func testTabCompletion(t *testing.T, tester shellTester, shellName string) {
 
 func testUninstall(t *testing.T, tester shellTester) {
 	// Setup
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
 
@@ -2570,6 +2617,7 @@ echo bar`)
 
 func TestTimestampFormat(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -2607,6 +2655,7 @@ func TestTimestampFormat(t *testing.T) {
 
 func TestSortByConsistentTimezone(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2646,6 +2695,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 
 func TestZDotDir(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
@@ -2680,6 +2730,7 @@ func TestZDotDir(t *testing.T) {
 
 func TestRemoveDuplicateRows(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2732,6 +2783,7 @@ echo foo`)
 
 func TestSetConfigNoCorruption(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2766,6 +2818,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 // Test that the config retrieved from the context is a reference and there are no consistency issues with it getting out of sync
 func TestCtxConfigIsReference(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2791,6 +2844,7 @@ func TestCtxConfigIsReference(t *testing.T) {
 }
 
 func testMultipleUsers(t *testing.T, tester shellTester) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 
 	// Create all our devices
@@ -2877,6 +2931,7 @@ func createSyntheticImportEntries(t testing.TB, numSyntheticEntries int) {
 
 func TestImportHistory(t *testing.T) {
 	// Setup
+	tagAsBasicTest(t)
 	tester := bashTester{}
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -2931,6 +2986,7 @@ func BenchmarkImport(b *testing.B) {
 }
 
 func TestAugmentedIsOfflineError(t *testing.T) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, zshTester{}, "")
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
