@@ -28,12 +28,19 @@ jobs:
           # Work around a weird bug where zsh on ubuntu actions gives that directory 0777 which makes zsh refuse to start
           chmod 0755 -R /usr/share/zsh/ 
     - name: DNF-based Setup
-      if: ${{ matrix.distro == 'fedora:latest' || matrix.distro == 'opensuse/leap:latest' || matrix.distro == 'rockylinux:latest' }}
+      if: ${{ matrix.distro == 'fedora:latest' || matrix.distro == 'rockylinux:latest' }}
       run: |
 
           # Install our dependencies
           sudo dnf update -y
           sudo dnf install -y zsh tmux fish make gcc psmisc
+    - name: OpenSUSE Setup
+      if: ${{ matrix.distro == 'opensuse/leap:latest' }}
+      run: |
+
+          # Install our dependencies (no sudo for OpenSUSE)
+          dnf update -y
+          dnf install -y zsh tmux fish make gcc psmisc
     - name: Arch-based Setup
       if: ${{ matrix.distro == 'archlinux:latest' }}
       run: |
