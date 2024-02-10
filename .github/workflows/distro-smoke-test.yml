@@ -38,14 +38,14 @@ jobs:
       if: ${{ matrix.distro == 'opensuse/leap:latest' }}
       run: |
 
-          # Install our dependencies (no sudo for OpenSUSE)
-          zypper install --non-interactive zsh tmux fish make gcc psmisc
+          # Install our dependencies
+          zypper install -y zsh tmux fish make gcc psmisc
     - name: Arch-based Setup
       if: ${{ matrix.distro == 'archlinux:latest' }}
       run: |
 
           # Install our dependencies
-          pacman install --noconfirm zsh tmux fish make gcc psmisc
+          pacman install -Sy --noconfirm zsh tmux fish make gcc psmisc
     - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v3
