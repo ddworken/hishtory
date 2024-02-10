@@ -29,8 +29,12 @@ var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-ba
 	"TestTui-DefaultColorScheme", "TestTui-ColoredOutputWithDefaultFilter"}
 
 func main() {
-	exportMetrics()
-	checkGoldensUsed()
+	if os.Args[1] == "export" {
+		exportMetrics()
+	}
+	if os.Args[1] == "check-goldens" {
+		checkGoldensUsed()
+	}
 }
 
 func checkGoldensUsed() {

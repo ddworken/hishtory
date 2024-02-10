@@ -112,6 +112,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14]
       fail-fast: false
+    needs: test
     steps:
     - uses: actions/checkout@v4
     - name: Set up Go
@@ -126,3 +127,4 @@ jobs:
           echo ---
           ls *
           # TODO: Actually do this check that was reverted in 06cc3eedbc5be6a09dbc3f274adcacd875eb25a8
+          go run client/posttest/main.go check-goldens
