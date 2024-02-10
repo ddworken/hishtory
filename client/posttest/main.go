@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -43,15 +44,15 @@ func checkGoldensUsed() {
 	}
 	// Read the goldens that were used
 	usedGoldens := make([]string, 0)
-	filenames := []string{
-		"goldens-used-macos-14-BASIC/goldens-used.txt", "goldens-used-macos-14-TUI/goldens-used.txt",
-		"goldens-used-macos-latest-BASIC/goldens-used.txt", "goldens-used-macos-latest-TUI/goldens-used.txt",
-		"goldens-used-ubuntu-latest-BASIC/goldens-used.txt", "goldens-used-ubuntu-latest-TUI/goldens-used.txt",
+	filenames, err := filepath.Glob("*/goldens-used.txt")
+	if err != nil {
+		log.Fatalf("failed to list golden files: %v", err)
 	}
+	fmt.Printf("Found used goldens in %#v\n", filenames)
 	for _, filename := range filenames {
 		usedGoldensFile, err := os.Open(filename)
 		if err != nil {
-			log.Fatalf("failed to open /tmp/goldens-used.txt: %v", err)
+			log.Fatalf("failed to open %s: %v", filename, err)
 		}
 		defer usedGoldensFile.Close()
 		scanner := bufio.NewScanner(usedGoldensFile)
