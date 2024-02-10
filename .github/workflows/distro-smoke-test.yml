@@ -12,7 +12,7 @@ jobs:
   test:
     strategy:
       matrix:
-        distro: [ubuntu:latest, fedora:latest, debian:latest]
+        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest']
       fail-fast: false
     runs-on: ubuntu-latest
     container: ${{ matrix.distro }}
