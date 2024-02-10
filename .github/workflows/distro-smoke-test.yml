@@ -39,14 +39,13 @@ jobs:
       run: |
 
           # Install our dependencies (no sudo for OpenSUSE)
-          dnf update -y
-          dnf install -y zsh tmux fish make gcc psmisc
+          zypper install --non-interactive zsh tmux fish make gcc psmisc
     - name: Arch-based Setup
       if: ${{ matrix.distro == 'archlinux:latest' }}
       run: |
 
           # Install our dependencies
-          pacman install -y zsh tmux fish make gcc psmisc
+          pacman install --noconfirm zsh tmux fish make gcc psmisc
     - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v3
