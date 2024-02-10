@@ -45,7 +45,7 @@ jobs:
       run: |
 
           # Install our dependencies
-          pacman install -Sy --noconfirm zsh tmux fish make gcc psmisc
+          pacman -Sy --noconfirm zsh tmux fish make gcc psmisc
     - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v3
