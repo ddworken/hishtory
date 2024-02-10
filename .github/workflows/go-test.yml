@@ -119,8 +119,4 @@ jobs:
       uses: actions/download-artifact@v4
     - name: Check all goldens were used
       run: |
-          ls .
-          echo ---
-          ls *
-          # TODO: Actually do this check that was reverted in 06cc3eedbc5be6a09dbc3f274adcacd875eb25a8
           go run client/posttest/main.go check-goldens
