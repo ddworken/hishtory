@@ -1672,10 +1672,12 @@ func setupTestTui(t testing.TB, onlineStatus OnlineStatus) (shellTester, string,
 	// Insert a couple hishtory entries
 	db := hctx.GetDb(hctx.MakeContext())
 	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
+	require.NoError(t, db.Create(e1).Error)
 	if onlineStatus == Online {
 		manuallySubmitHistoryEntry(t, userSecret, e1)
 	}
 	e2 := testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")
+	require.NoError(t, db.Create(e2).Error)
 	if onlineStatus == Online {
 		manuallySubmitHistoryEntry(t, userSecret, e2)
 	}
@@ -1791,11 +1793,14 @@ func testTui_defaultFilter(t *testing.T) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, userSecret, _ := setupTestTui(t, Online)
+	db := hctx.GetDb(hctx.MakeContext())
 	e1 := testutils.MakeFakeHistoryEntry("exit 0")
 	e1.ExitCode = 0
+	require.NoError(t, db.Create(e1).Error)
 	manuallySubmitHistoryEntry(t, userSecret, e1)
 	e2 := testutils.MakeFakeHistoryEntry("exit 1")
 	e2.ExitCode = 1
+	require.NoError(t, db.Create(e2).Error)
 	manuallySubmitHistoryEntry(t, userSecret, e2)
 
 	// Configure a default filter
