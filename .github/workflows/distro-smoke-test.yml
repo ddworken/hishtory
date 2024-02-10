@@ -12,7 +12,7 @@ jobs:
   test:
     strategy:
       matrix:
-        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest', 'opensuse/leap:latest', 'rockylinux:latest']
+        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest', 'opensuse/leap:latest', 'rockylinux:latest', 'archlinux:latest']
       fail-fast: false
     runs-on: ubuntu-latest
     container: ${{ matrix.distro }}
@@ -39,6 +39,12 @@ jobs:
           # Install our dependencies
           sudo dnf update -y
           sudo dnf install -y zsh tmux fish make gcc psmisc
+    - name: Arch-based Setup
+      if: ${{ matrix.distro == 'archlinux:latest' }}
+      run: |
+
+          # Install our dependencies
+          sudo pacman install -y zsh tmux fish make gcc psmisc
     - name: Go test
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
