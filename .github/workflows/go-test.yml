@@ -98,7 +98,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: goldens-used-${{ matrix.os }-${{ matrix.tests }}.txt
+        name: goldens-used-${{ matrix.os }}-${{ matrix.tests }}.txt
         path: /tmp/goldens-used.txt
 
     # - name: Setup tmate session
