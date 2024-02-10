@@ -115,8 +115,10 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.21
-    - name: Download all artifacts
+    - name: Download artifact
       uses: actions/download-artifact@v4
+      with:
+        name: goldens-used-ubuntu-TUI.txt
     - name: Check all goldens were used
       run: |
           ls .
