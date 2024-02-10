@@ -1,0 +1,59 @@
+name: Smoke Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule:
+    - cron:  '0 0 * * *'
+  push:
+    branches: [ master ]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        distro: [ubuntu:latest, fedora:latest, debian:latest]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    container: ${{ matrix.distro }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.21
+    - name: Debian-based Setup
+      if: ${{ matrix.distro == 'ubuntu:latest' || matrix.distro == 'debian:latest' }}
+      run: |
+
+          # Install our dependencies
+          sudo apt-get update 
+          sudo apt-get install -y zsh tmux fish 
+
+          # Work around a weird bug where zsh on ubuntu actions gives that directory 0777 which makes zsh refuse to start
+          sudo chmod 0755 -R /usr/share/zsh/ 
+
+          # Set a consistent hostname so we can run tests that depend on it
+          sudo hostname ghaction-runner-hostname  
+    - name: Fedora-based Setup
+      if: ${{ matrix.distro == 'fedora:latest' }}
+      run: |
+
+          # Install our dependencies
+          sudo dnf update 
+          sudo dnf install -y zsh tmux fish 
+
+          # Set a consistent hostname so we can run tests that depend on it
+          sudo hostname ghaction-runner-hostname  
+    - name: Go test
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+          go install gotest.tools/gotestsum@bc98120
+          make ftest FILTER=TestInstallViaPythonScriptFromHead
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
