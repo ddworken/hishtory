@@ -95,7 +95,7 @@ jobs:
         name: testlog-${{ matrix.os }}-${{ matrix.tests }}.txt
         path: /tmp/test.log
     - name: Upload test log
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: goldens-used-${{ matrix.os }}-${{ matrix.tests }}.txt
