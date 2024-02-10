@@ -80,23 +80,49 @@ jobs:
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-results-${{ matrix.os }}.json
+        name: test-results-${{ matrix.os }}-${{ matrix.tests }}.json
         path: /tmp/testrun.json
     - name: Upload failed test goldens
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-goldens-${{ matrix.os }}.zip
+        name: test-goldens-${{ matrix.os }}-${{ matrix.tests }}.zip
         path: /tmp/test-goldens/
     - name: Upload test log
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: testlog-${{ matrix.os }}.txt
+        name: testlog-${{ matrix.os }}-${{ matrix.tests }}.txt
         path: /tmp/test.log
+    - name: Upload test log
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: goldens-used-${{ matrix.os }-${{ matrix.tests }}.txt
+        path: /tmp/goldens-used.txt
 
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
     #   with:
     #     limit-access-to-actor: true
+  check-goldens:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-14]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.21
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    - name: Check all goldens were used
+      run: |
+          ls .
+          echo ---
+          ls *
+          # TODO: Actually do this check that was reverted in 06cc3eedbc5be6a09dbc3f274adcacd875eb25a8
