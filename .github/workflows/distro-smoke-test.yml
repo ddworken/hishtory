@@ -12,7 +12,7 @@ jobs:
   test:
     strategy:
       matrix:
-        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest']
+        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest', 'opensuse/leap:latest', 'rockylinux:latest']
       fail-fast: false
     runs-on: ubuntu-latest
     container: ${{ matrix.distro }}
@@ -32,8 +32,8 @@ jobs:
 
           # Work around a weird bug where zsh on ubuntu actions gives that directory 0777 which makes zsh refuse to start
           chmod 0755 -R /usr/share/zsh/ 
-    - name: Fedora-based Setup
-      if: ${{ matrix.distro == 'fedora:latest' }}
+    - name: DNF-based Setup
+      if: ${{ matrix.distro == 'fedora:latest' || matrix.distro == 'opensuse/leap:latest' || matrix.distro == 'rockylinux:latest' }}
       run: |
 
           # Install our dependencies
