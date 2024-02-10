@@ -1085,6 +1085,7 @@ func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 }
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
+	tagAsBasicTest(t)
 	defer testutils.BackupAndRestore(t)()
 	testInstallViaPythonScriptChild(t, tester)
 
