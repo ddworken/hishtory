@@ -28,7 +28,7 @@ jobs:
 
           # Install our dependencies
           apt-get update 
-          apt-get install -y zsh tmux fish ca-certificates make
+          apt-get install -y zsh tmux fish ca-certificates make build-essential gcc
 
           # Work around a weird bug where zsh on ubuntu actions gives that directory 0777 which makes zsh refuse to start
           chmod 0755 -R /usr/share/zsh/ 
@@ -38,7 +38,7 @@ jobs:
 
           # Install our dependencies
           sudo dnf update -y
-          sudo dnf install -y zsh tmux fish make
+          sudo dnf install -y zsh tmux fish make gcc
     - name: Go test
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
