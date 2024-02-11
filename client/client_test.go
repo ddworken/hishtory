@@ -9,7 +9,6 @@ import (
 	"path"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -57,53 +56,6 @@ func TestMain(m *testing.M) {
 }
 
 var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
-
-func numTestShards() int {
-	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
-	if numTestShardsStr == "" {
-		return -1
-	}
-	numTestShards, err := strconv.Atoi(numTestShardsStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse NUM_TEST_SHARDS: %v", err))
-	}
-	return numTestShards
-}
-
-func currentShardNumber() int {
-	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
-	if currentShardNumberStr == "" {
-		return -1
-	}
-	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse CURRENT_SHARD_NUM: %v", err))
-	}
-	return currentShardNumber
-}
-
-func isShardedTestRun() bool {
-	return numTestShards() != -1 && currentShardNumber() != -1
-}
-
-func markTestForSharding(t *testing.T, testShardNumber int) {
-	if isShardedTestRun() {
-		if testShardNumber%numTestShards() != currentShardNumber() {
-			t.Skip("Skipping sharded test")
-		}
-	}
-}
-
-var shardNumberAllocator int = 0
-
-func wrapTestForSharding(test func(t *testing.T)) func(t *testing.T) {
-	shardNumberAllocator += 1
-	return func(t *testing.T) {
-		testShardNumber := shardNumberAllocator
-		markTestForSharding(t, testShardNumber)
-		test(t)
-	}
-}
 
 func TestParam(t *testing.T) {
 	if skipSlowTests() {
