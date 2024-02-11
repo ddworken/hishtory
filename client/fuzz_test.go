@@ -148,10 +148,6 @@ func FuzzTestMultipleUsers(f *testing.F) {
 		}
 	}
 
-	s := os.Getenv("SPLIT_TESTS")
-	if s != "" && s != "BASIC" {
-		f.Skip()
-	}
 	defer testutils.RunTestServer()()
 	// Format:
 	//   $Op = $Key;$Device|$Command\n
