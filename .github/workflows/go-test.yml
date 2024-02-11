@@ -94,7 +94,7 @@ jobs:
       with:
         name: testlog-${{ matrix.os }}-${{ matrix.test_shard }}.txt
         path: /tmp/test.log
-    - name: Upload test log
+    - name: Upload used goldens 
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
