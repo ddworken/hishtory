@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -19,18 +20,16 @@ var GLOBAL_STATSD *statsd.Client = nil
 
 var NUM_TEST_RETRIES map[string]int
 
-var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-bash", "testControlR-ControlC-fish",
-	"testControlR-ControlC-zsh", "testControlR-SelectMultiline-bash", "testControlR-SelectMultiline-fish",
-	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
-	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
-	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
-	"testUninstall-post-uninstall-zsh", "TestTui-ColoredOutput",
-	"TestTui-ColoredOutputWithCustomColorScheme", "TestTui-ColoredOutputWithSearch", "TestTui-ColoredOutputWithSearch-Highlight",
-	"TestTui-DefaultColorScheme", "TestTui-ColoredOutputWithDefaultFilter"}
+var UNUSED_GOLDENS []string = []string{"testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
+	"testCustomColumns-tquery-zsh"}
 
 func main() {
-	exportMetrics()
-	checkGoldensUsed()
+	if os.Args[1] == "export" {
+		exportMetrics()
+	}
+	if os.Args[1] == "check-goldens" {
+		checkGoldensUsed()
+	}
 }
 
 func checkGoldensUsed() {
@@ -39,17 +38,24 @@ func checkGoldensUsed() {
 	}
 	// Read the goldens that were used
 	usedGoldens := make([]string, 0)
-	usedGoldensFile, err := os.Open("/tmp/goldens-used.txt")
+	filenames, err := filepath.Glob("*/goldens-used.txt")
 	if err != nil {
-		log.Fatalf("failed to open /tmp/goldens-used.txt: %v", err)
+		log.Fatalf("failed to list golden files: %v", err)
 	}
-	defer usedGoldensFile.Close()
-	scanner := bufio.NewScanner(usedGoldensFile)
-	for scanner.Scan() {
-		usedGoldens = append(usedGoldens, strings.TrimSpace(scanner.Text()))
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatalf("failed to read lines from /tmp/goldens-used.txt: %v", err)
+	fmt.Printf("Found used goldens in %#v\n", filenames)
+	for _, filename := range filenames {
+		usedGoldensFile, err := os.Open(filename)
+		if err != nil {
+			log.Fatalf("failed to open %s: %v", filename, err)
+		}
+		defer usedGoldensFile.Close()
+		scanner := bufio.NewScanner(usedGoldensFile)
+		for scanner.Scan() {
+			usedGoldens = append(usedGoldens, strings.TrimSpace(scanner.Text()))
+		}
+		if err := scanner.Err(); err != nil {
+			log.Fatalf("failed to read lines from /tmp/goldens-used.txt: %v", err)
+		}
 	}
 
 	// List all the goldens that exist
@@ -66,11 +72,6 @@ func checkGoldensUsed() {
 		if !slices.Contains(usedGoldens, goldenName) {
 			if slices.Contains(UNUSED_GOLDENS, goldenName) {
 				// It is allowlisted to not be used
-				continue
-			}
-			if (runtime.GOOS == "darwin" && strings.Contains(goldenName, "-linux")) ||
-				(runtime.GOOS == "linux" && strings.Contains(goldenName, "-darwin")) {
-				// It is for another OS
 				continue
 			}
 			unusedGoldenErr = fmt.Errorf("golden file %v was never used", goldenName)
