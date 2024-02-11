@@ -443,11 +443,13 @@ func readFileToIterator(path string) Seq2[string, error] {
 	}
 }
 
-func getServerHostname() string {
+const DefaultServerHostname = "https://api.hishtory.dev"
+
+func GetServerHostname() string {
 	if server := os.Getenv("HISHTORY_SERVER"); server != "" {
 		return server
 	}
-	return "https://api.hishtory.dev"
+	return DefaultServerHostname
 }
 
 func httpClient() *http.Client {
@@ -459,7 +461,7 @@ func ApiGet(ctx context.Context, path string) ([]byte, error) {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	req, err := http.NewRequest("GET", getServerHostname()+path, nil)
+	req, err := http.NewRequest("GET", GetServerHostname()+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GET: %w", err)
 	}
@@ -468,15 +470,15 @@ func ApiGet(ctx context.Context, path string) ([]byte, error) {
 	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
 	resp, err := httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to GET %s%s: %w", getServerHostname(), path, err)
+		return nil, fmt.Errorf("failed to GET %s%s: %w", GetServerHostname(), path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", getServerHostname(), path, resp.StatusCode)
+		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", GetServerHostname(), path, resp.StatusCode)
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from GET %s%s: %w", getServerHostname(), path, err)
+		return nil, fmt.Errorf("failed to read response body from GET %s%s: %w", GetServerHostname(), path, err)
 	}
 	duration := time.Since(start)
 	hctx.GetLogger().Infof("ApiGet(%#v): %s\n", path, duration.String())
@@ -488,7 +490,7 @@ func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]b
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
 	start := time.Now()
-	req, err := http.NewRequest("POST", getServerHostname()+path, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("POST", GetServerHostname()+path, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create POST: %w", err)
 	}
@@ -498,18 +500,18 @@ func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]b
 	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
 	resp, err := httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to POST %s: %w", getServerHostname()+path, err)
+		return nil, fmt.Errorf("failed to POST %s: %w", GetServerHostname()+path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to POST %s: status_code=%d", getServerHostname()+path, resp.StatusCode)
+		return nil, fmt.Errorf("failed to POST %s: status_code=%d", GetServerHostname()+path, resp.StatusCode)
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from POST %s: %w", getServerHostname()+path, err)
+		return nil, fmt.Errorf("failed to read response body from POST %s: %w", GetServerHostname()+path, err)
 	}
 	duration := time.Since(start)
-	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", getServerHostname()+path, duration.String())
+	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", GetServerHostname()+path, duration.String())
 	return respBody, nil
 }
 
