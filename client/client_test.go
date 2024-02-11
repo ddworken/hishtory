@@ -60,15 +60,37 @@ var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
 
 var shardNumberAllocator int = 0
 
-func markTestForSharding(t *testing.T, testShardNumber int) {
+func numTestShards() int {
 	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
+	if numTestShardsStr == "" {
+		return 0
+	}
+	numTestShards, err := strconv.Atoi(numTestShardsStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse NUM_TEST_SHARDS: %v", err))
+	}
+	return numTestShards
+}
+
+func currentShardNumber() int {
 	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
-	if numTestShardsStr != "" && currentShardNumberStr != "" {
-		numTestShards, err := strconv.Atoi(numTestShardsStr)
-		require.NoError(t, err)
-		currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
-		require.NoError(t, err)
-		if testShardNumber%numTestShards != currentShardNumber {
+	if currentShardNumberStr == "" {
+		return 0
+	}
+	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse CURRENT_SHARD_NUM: %v", err))
+	}
+	return currentShardNumber
+}
+
+func isShardedTestRun() bool {
+	return numTestShards() != 0 && currentShardNumber() != 0
+}
+
+func markTestForSharding(t *testing.T, testShardNumber int) {
+	if isShardedTestRun() {
+		if testShardNumber%numTestShards() == currentShardNumber() {
 			t.Skip("Skipping sharded test")
 		}
 	}

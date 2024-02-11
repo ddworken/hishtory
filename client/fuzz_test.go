@@ -142,6 +142,12 @@ func FuzzTestMultipleUsers(f *testing.F) {
 	if skipSlowTests() {
 		f.Skip("skipping slow tests")
 	}
+	if isShardedTestRun() {
+		if currentShardNumber() == 0 {
+			f.Skip("Skipping sharded test")
+		}
+	}
+
 	s := os.Getenv("SPLIT_TESTS")
 	if s != "" && s != "BASIC" {
 		f.Skip()
