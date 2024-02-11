@@ -61,7 +61,7 @@ var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
 func numTestShards() int {
 	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
 	if numTestShardsStr == "" {
-		return 0
+		return -1
 	}
 	numTestShards, err := strconv.Atoi(numTestShardsStr)
 	if err != nil {
@@ -73,7 +73,7 @@ func numTestShards() int {
 func currentShardNumber() int {
 	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
 	if currentShardNumberStr == "" {
-		return 0
+		return -1
 	}
 	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
 	if err != nil {
@@ -83,13 +83,13 @@ func currentShardNumber() int {
 }
 
 func isShardedTestRun() bool {
-	return numTestShards() != 0 && currentShardNumber() != 0
+	return numTestShards() != -1 && currentShardNumber() != -1
 }
 
 func markTestForSharding(t *testing.T, testShardNumber int) {
 	fmt.Printf("DDWORKENDEBUG: markTestForSharding: isShardedTestRun()=%#v testShardNumber=%#v numTestShards()=%#v currentShardNumber()=%#v", isShardedTestRun(), testShardNumber, numTestShards(), currentShardNumber())
 	if isShardedTestRun() {
-		if testShardNumber%numTestShards() == currentShardNumber() {
+		if testShardNumber%numTestShards() != currentShardNumber() {
 			t.Skip("Skipping sharded test")
 		}
 	}
