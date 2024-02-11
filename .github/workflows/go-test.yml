@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14]
-        test_shards: ["0", "1", "2", "3", "4"]
+        test_shard: ["0", "1", "2", "3", "4", "5", "6"]
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
           go install gotest.tools/gotestsum@bc98120
-          NUM_TEST_SHARDS=5 CURRENT_SHARD_NUM=${{ matrix.test_shards }} make test
+          NUM_TEST_SHARDS=6 CURRENT_SHARD_NUM=${{ matrix.test_shard }} make test
     - name: Extra Delay
       run: |
 
@@ -80,25 +80,25 @@ jobs:
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-results-${{ matrix.os }}-${{ matrix.tests }}.json
+        name: test-results-${{ matrix.os }}-${{ matrix.test_shard }}.json
         path: /tmp/testrun.json
     - name: Upload failed test goldens
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-goldens-${{ matrix.os }}-${{ matrix.tests }}.zip
+        name: test-goldens-${{ matrix.os }}-${{ matrix.test_shard }}.zip
         path: /tmp/test-goldens/
     - name: Upload test log
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: testlog-${{ matrix.os }}-${{ matrix.tests }}.txt
+        name: testlog-${{ matrix.os }}-${{ matrix.test_shard }}.txt
         path: /tmp/test.log
     - name: Upload test log
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
-        name: goldens-used-${{ matrix.os }}-${{ matrix.tests }}
+        name: goldens-used-${{ matrix.os }}-${{ matrix.test_shard }}
         path: /tmp/goldens-used.txt
 
     # - name: Setup tmate session
