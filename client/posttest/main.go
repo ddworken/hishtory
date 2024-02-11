@@ -24,8 +24,7 @@ var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-ba
 	"testControlR-ControlC-zsh", "testControlR-SelectMultiline-bash", "testControlR-SelectMultiline-fish",
 	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
 	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
-	"testCustomColumns-tquery-zsh", "testUninstall-post-uninstall-bash",
-	"testUninstall-post-uninstall-zsh"}
+	"testCustomColumns-tquery-zsh"}
 
 func main() {
 	if os.Args[1] == "export" {
