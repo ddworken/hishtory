@@ -75,7 +75,7 @@ jobs:
       run: |
 
         # Add an extra short delay to allow datadog to flush metrics
-        sleep 300 # 5 minutes
+        sleep 90
     - name: Upload test results json
       uses: actions/upload-artifact@v3
       if: success() || failure()
