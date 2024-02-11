@@ -49,7 +49,7 @@ jobs:
       continue-on-error: true  # Since colima is flaky, and a failure here only impacts our metrics
       run: |
           # Install docker so it can be used for datadog
-          brew install --cask docker
+          brew install docker
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
