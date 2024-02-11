@@ -58,8 +58,6 @@ func TestMain(m *testing.M) {
 
 var shellTesters []shellTester = []shellTester{bashTester{}, zshTester{}}
 
-var shardNumberAllocator int = 0
-
 func numTestShards() int {
 	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
 	if numTestShardsStr == "" {
@@ -89,12 +87,15 @@ func isShardedTestRun() bool {
 }
 
 func markTestForSharding(t *testing.T, testShardNumber int) {
+	fmt.Printf("DDWORKENDEBUG: markTestForSharding: isShardedTestRun()=%#v testShardNumber=%#v numTestShards()=%#v currentShardNumber()=%#v", isShardedTestRun(), testShardNumber, numTestShards(), currentShardNumber())
 	if isShardedTestRun() {
 		if testShardNumber%numTestShards() == currentShardNumber() {
 			t.Skip("Skipping sharded test")
 		}
 	}
 }
+
+var shardNumberAllocator int = 0
 
 func wrapTestForSharding(test func(t *testing.T)) func(t *testing.T) {
 	shardNumberAllocator += 1
