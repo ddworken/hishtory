@@ -20,10 +20,7 @@ var GLOBAL_STATSD *statsd.Client = nil
 
 var NUM_TEST_RETRIES map[string]int
 
-var UNUSED_GOLDENS []string = []string{"TestTui-Exit", "testControlR-ControlC-bash", "testControlR-ControlC-fish",
-	"testControlR-ControlC-zsh", "testControlR-SelectMultiline-bash", "testControlR-SelectMultiline-fish",
-	"testControlR-SelectMultiline-zsh", "testControlR-bash-Disabled", "testControlR-fish-Disabled",
-	"testControlR-zsh-Disabled", "testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
+var UNUSED_GOLDENS []string = []string{"testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
 	"testCustomColumns-tquery-zsh"}
 
 func main() {
