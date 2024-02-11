@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14]
-        tests: [BASIC, TUI]
+        test_shards: ["0", "1", "2", "3", "4"]
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
           go install gotest.tools/gotestsum@bc98120
-          SPLIT_TESTS=${{ matrix.tests }} make test
+          NUM_TEST_SHARDS=5 CURRENT_SHARD_NUM=${{ matrix.test_shards }} make test
     - name: Extra Delay
       run: |
 
