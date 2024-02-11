@@ -46,10 +46,10 @@ jobs:
           sudo scutil --set HostName ghaction-runner-hostname
     - name: MacOS Docker Setup
       if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-14 '}}
-      continue-on-error: true
+      continue-on-error: true  # Since colima is flaky, and a failure here only impacts our metrics
       run: |
           # Install docker so it can be used for datadog
-          brew install docker
+          brew install --cask docker
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
