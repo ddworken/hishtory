@@ -87,7 +87,6 @@ func isShardedTestRun() bool {
 }
 
 func markTestForSharding(t *testing.T, testShardNumber int) {
-	fmt.Printf("DDWORKENDEBUG: markTestForSharding: isShardedTestRun()=%#v testShardNumber=%#v numTestShards()=%#v currentShardNumber()=%#v", isShardedTestRun(), testShardNumber, numTestShards(), currentShardNumber())
 	if isShardedTestRun() {
 		if testShardNumber%numTestShards() != currentShardNumber() {
 			t.Skip("Skipping sharded test")
