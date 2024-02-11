@@ -62,58 +62,58 @@ func TestParam(t *testing.T) {
 		shellTesters = shellTesters[:1]
 	}
 	for _, tester := range shellTesters {
-		t.Run("testRepeatedCommandThenQuery/"+tester.ShellName(), func(t *testing.T) { testRepeatedCommandThenQuery(t, tester) })
-		t.Run("testRepeatedCommandAndQuery/"+tester.ShellName(), func(t *testing.T) { testRepeatedCommandAndQuery(t, tester) })
-		t.Run("testRepeatedEnableDisable/"+tester.ShellName(), func(t *testing.T) { testRepeatedEnableDisable(t, tester) })
-		t.Run("testExcludeHiddenCommand/"+tester.ShellName(), func(t *testing.T) { testExcludeHiddenCommand(t, tester) })
-		t.Run("testUpdate/head->release/"+tester.ShellName(), func(t *testing.T) { testUpdateFromHeadToRelease(t, tester) })
-		t.Run("testUpdate/prev->release/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToRelease(t, tester) })
-		t.Run("testUpdate/prev->release/prod/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToReleaseViaProd(t, tester) })
-		t.Run("testUpdate/prev->current/"+tester.ShellName(), func(t *testing.T) { testUpdateFromPrevToCurrent(t, tester) })
-		t.Run("testAdvancedQuery/"+tester.ShellName(), func(t *testing.T) { testAdvancedQuery(t, tester) })
-		t.Run("testIntegration/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Online) })
-		t.Run("testIntegration/offline/"+tester.ShellName(), func(t *testing.T) { testIntegration(t, tester, Offline) })
-		t.Run("testIntegrationWithNewDevice/"+tester.ShellName(), func(t *testing.T) { testIntegrationWithNewDevice(t, tester) })
-		t.Run("testHishtoryBackgroundSaving/"+tester.ShellName(), func(t *testing.T) { testHishtoryBackgroundSaving(t, tester) })
-		t.Run("testDisplayTable/"+tester.ShellName(), func(t *testing.T) { testDisplayTable(t, tester) })
-		t.Run("testTableDisplayCwd/"+tester.ShellName(), func(t *testing.T) { testTableDisplayCwd(t, tester) })
-		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) })
-		t.Run("testRequestAndReceiveDbDump/"+tester.ShellName(), func(t *testing.T) { testRequestAndReceiveDbDump(t, tester) })
-		t.Run("testInstallViaPythonScript/"+tester.ShellName(), func(t *testing.T) { testInstallViaPythonScript(t, tester) })
-		t.Run("testExportWithQuery/"+tester.ShellName(), func(t *testing.T) { testExportWithQuery(t, tester) })
-		t.Run("testHelpCommand/"+tester.ShellName(), func(t *testing.T) { testHelpCommand(t, tester) })
-		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), func(t *testing.T) { testReuploadHistoryEntries(t, tester) })
-		t.Run("testHishtoryOffline/"+tester.ShellName(), func(t *testing.T) { testHishtoryOffline(t, tester) })
-		t.Run("testInitialHistoryImport/"+tester.ShellName(), func(t *testing.T) { testInitialHistoryImport(t, tester) })
-		t.Run("testLocalRedaction/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester, Online) })
-		t.Run("testLocalRedaction/offline/"+tester.ShellName(), func(t *testing.T) { testLocalRedaction(t, tester, Offline) })
-		t.Run("testRemoteRedaction/"+tester.ShellName(), func(t *testing.T) { testRemoteRedaction(t, tester) })
-		t.Run("testMultipleUsers/"+tester.ShellName(), func(t *testing.T) { testMultipleUsers(t, tester) })
-		t.Run("testConfigGetSet/"+tester.ShellName(), func(t *testing.T) { testConfigGetSet(t, tester) })
-		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), func(t *testing.T) { testHandleUpgradedFeatures(t, tester) })
-		t.Run("testCustomColumns/"+tester.ShellName(), func(t *testing.T) { testCustomColumns(t, tester) })
-		t.Run("testUninstall/"+tester.ShellName(), func(t *testing.T) { testUninstall(t, tester) })
-		t.Run("testPresaving/"+tester.ShellName(), func(t *testing.T) { testPresaving(t, tester, tester.ShellName()) })
-		t.Run("testPresavingOffline/"+tester.ShellName(), func(t *testing.T) { testPresavingOffline(t, tester) })
-		t.Run("testPresavingDisabled/"+tester.ShellName(), func(t *testing.T) { testPresavingDisabled(t, tester) })
-		t.Run("testControlR/online/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) })
-		t.Run("testControlR/offline/"+tester.ShellName(), func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) })
-		t.Run("testTabCompletion/"+tester.ShellName(), func(t *testing.T) { testTabCompletion(t, tester, tester.ShellName()) })
+		t.Run("testRepeatedCommandThenQuery/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testRepeatedCommandThenQuery(t, tester) }))
+		t.Run("testRepeatedCommandAndQuery/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testRepeatedCommandAndQuery(t, tester) }))
+		t.Run("testRepeatedEnableDisable/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testRepeatedEnableDisable(t, tester) }))
+		t.Run("testExcludeHiddenCommand/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testExcludeHiddenCommand(t, tester) }))
+		t.Run("testUpdate/head->release/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testUpdateFromHeadToRelease(t, tester) }))
+		t.Run("testUpdate/prev->release/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testUpdateFromPrevToRelease(t, tester) }))
+		t.Run("testUpdate/prev->release/prod/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testUpdateFromPrevToReleaseViaProd(t, tester) }))
+		t.Run("testUpdate/prev->current/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testUpdateFromPrevToCurrent(t, tester) }))
+		t.Run("testAdvancedQuery/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testAdvancedQuery(t, tester) }))
+		t.Run("testIntegration/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testIntegration(t, tester, Online) }))
+		t.Run("testIntegration/offline/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testIntegration(t, tester, Offline) }))
+		t.Run("testIntegrationWithNewDevice/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testIntegrationWithNewDevice(t, tester) }))
+		t.Run("testHishtoryBackgroundSaving/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testHishtoryBackgroundSaving(t, tester) }))
+		t.Run("testDisplayTable/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testDisplayTable(t, tester) }))
+		t.Run("testTableDisplayCwd/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testTableDisplayCwd(t, tester) }))
+		t.Run("testTimestampsAreReasonablyCorrect/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testTimestampsAreReasonablyCorrect(t, tester) }))
+		t.Run("testRequestAndReceiveDbDump/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testRequestAndReceiveDbDump(t, tester) }))
+		t.Run("testInstallViaPythonScript/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testInstallViaPythonScript(t, tester) }))
+		t.Run("testExportWithQuery/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testExportWithQuery(t, tester) }))
+		t.Run("testHelpCommand/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testHelpCommand(t, tester) }))
+		t.Run("testReuploadHistoryEntries/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testReuploadHistoryEntries(t, tester) }))
+		t.Run("testHishtoryOffline/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testHishtoryOffline(t, tester) }))
+		t.Run("testInitialHistoryImport/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testInitialHistoryImport(t, tester) }))
+		t.Run("testLocalRedaction/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testLocalRedaction(t, tester, Online) }))
+		t.Run("testLocalRedaction/offline/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testLocalRedaction(t, tester, Offline) }))
+		t.Run("testRemoteRedaction/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testRemoteRedaction(t, tester) }))
+		t.Run("testMultipleUsers/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testMultipleUsers(t, tester) }))
+		t.Run("testConfigGetSet/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testConfigGetSet(t, tester) }))
+		t.Run("testHandleUpgradedFeatures/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testHandleUpgradedFeatures(t, tester) }))
+		t.Run("testCustomColumns/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testCustomColumns(t, tester) }))
+		t.Run("testUninstall/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testUninstall(t, tester) }))
+		t.Run("testPresaving/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testPresaving(t, tester, tester.ShellName()) }))
+		t.Run("testPresavingOffline/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testPresavingOffline(t, tester) }))
+		t.Run("testPresavingDisabled/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testPresavingDisabled(t, tester) }))
+		t.Run("testControlR/online/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Online) }))
+		t.Run("testControlR/offline/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testControlR(t, tester, tester.ShellName(), Offline) }))
+		t.Run("testTabCompletion/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testTabCompletion(t, tester, tester.ShellName()) }))
 	}
-	t.Run("testTabCompletion/fish", func(t *testing.T) { testTabCompletion(t, zshTester{}, "fish") })
-	t.Run("testPresaving/fish", func(t *testing.T) { testPresaving(t, zshTester{}, "fish") })
-	t.Run("testControlR/fish", func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) })
-	t.Run("testTui/search/online", func(t *testing.T) { testTui_search(t, Online) })
-	t.Run("testTui/search/offline", func(t *testing.T) { testTui_search(t, Offline) })
-	t.Run("testTui/general/online", func(t *testing.T) { testTui_general(t, Online) })
-	t.Run("testTui/general/offline", func(t *testing.T) { testTui_general(t, Offline) })
-	t.Run("testTui/scroll", testTui_scroll)
-	t.Run("testTui/resize", testTui_resize)
-	t.Run("testTui/delete", testTui_delete)
-	t.Run("testTui/color", testTui_color)
-	t.Run("testTui/errors", testTui_errors)
-	t.Run("testTui/ai", testTui_ai)
-	t.Run("testTui/defaultFilter", testTui_defaultFilter)
+	t.Run("testTabCompletion/fish", wrapTestForSharding(func(t *testing.T) { testTabCompletion(t, zshTester{}, "fish") }))
+	t.Run("testPresaving/fish", wrapTestForSharding(func(t *testing.T) { testPresaving(t, zshTester{}, "fish") }))
+	t.Run("testControlR/fish", wrapTestForSharding(func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) }))
+	t.Run("testTui/search/online", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Online) }))
+	t.Run("testTui/search/offline", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Offline) }))
+	t.Run("testTui/general/online", wrapTestForSharding(func(t *testing.T) { testTui_general(t, Online) }))
+	t.Run("testTui/general/offline", wrapTestForSharding(func(t *testing.T) { testTui_general(t, Offline) }))
+	t.Run("testTui/scroll", wrapTestForSharding(testTui_scroll))
+	t.Run("testTui/resize", wrapTestForSharding(testTui_resize))
+	t.Run("testTui/delete", wrapTestForSharding(testTui_delete))
+	t.Run("testTui/color", wrapTestForSharding(testTui_color))
+	t.Run("testTui/errors", wrapTestForSharding(testTui_errors))
+	t.Run("testTui/ai", wrapTestForSharding(testTui_ai))
+	t.Run("testTui/defaultFilter", wrapTestForSharding(testTui_defaultFilter))
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1038,6 +1038,7 @@ echo other`)
 }
 
 func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
+	markTestForSharding(t, 0)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_PATH")()
 	altHishtoryPath := ".other-path"
@@ -1052,6 +1053,7 @@ func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 }
 
 func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
+	markTestForSharding(t, 1)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_OFFLINE")()
 	os.Setenv("HISHTORY_OFFLINE", "1")
@@ -1108,6 +1110,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 }
 
 func TestInstallViaPythonScriptFromHead(t *testing.T) {
+	markTestForSharding(t, 2)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -1219,6 +1222,7 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 
 func TestStripBashTimePrefix(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 4)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -1611,6 +1615,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 func TestFish(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 5)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -2570,6 +2575,7 @@ echo bar`)
 
 func TestTimestampFormat(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 6)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -2607,6 +2613,7 @@ func TestTimestampFormat(t *testing.T) {
 
 func TestSortByConsistentTimezone(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 7)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2646,6 +2653,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 
 func TestZDotDir(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 8)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
@@ -2680,6 +2688,7 @@ func TestZDotDir(t *testing.T) {
 
 func TestRemoveDuplicateRows(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 9)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2732,6 +2741,7 @@ echo foo`)
 
 func TestSetConfigNoCorruption(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 10)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2766,6 +2776,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 // Test that the config retrieved from the context is a reference and there are no consistency issues with it getting out of sync
 func TestCtxConfigIsReference(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 11)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -2877,6 +2888,7 @@ func createSyntheticImportEntries(t testing.TB, numSyntheticEntries int) {
 
 func TestImportHistory(t *testing.T) {
 	// Setup
+	markTestForSharding(t, 11)
 	tester := bashTester{}
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -2931,6 +2943,7 @@ func BenchmarkImport(b *testing.B) {
 }
 
 func TestAugmentedIsOfflineError(t *testing.T) {
+	markTestForSharding(t, 12)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, zshTester{}, "")
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()

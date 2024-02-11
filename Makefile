@@ -9,7 +9,7 @@ forcetest:			## Force running all tests without a test cache
 	make test
 
 test:				## Run all tests
-	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=10 --rerun-fails-max-failures=30 --format testname --jsonfile /tmp/testrun.json --post-run-command "go run client/posttest/main.go" -- -p 1 -timeout 90m  
+	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=10 --rerun-fails-max-failures=30 --format testname --jsonfile /tmp/testrun.json --post-run-command "go run client/posttest/main.go export" -- -p 1 -timeout 90m  
 
 ftest:				## Run a specific test specified via `make ftest FILTER=TestParam/testTui/color`
 	go clean -testcache

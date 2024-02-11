@@ -182,7 +182,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: 1.21
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741

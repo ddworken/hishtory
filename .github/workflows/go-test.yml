@@ -14,6 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14]
+        test_shard: ["0", "1", "2", "3", "4"]
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
@@ -45,10 +46,10 @@ jobs:
           sudo scutil --set HostName ghaction-runner-hostname
     - name: MacOS Docker Setup
       if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-14 '}}
-      continue-on-error: true
+      continue-on-error: true  # Since colima is flaky, and a failure here only impacts our metrics
       run: |
           # Install docker so it can be used for datadog
-          brew install docker
+          brew install --cask docker
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
@@ -69,33 +70,53 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
           go install gotest.tools/gotestsum@bc98120
-          make test
+          NUM_TEST_SHARDS=5 CURRENT_SHARD_NUM=${{ matrix.test_shard }} make test
     - name: Extra Delay
       run: |
 
         # Add an extra short delay to allow datadog to flush metrics
-        sleep 300 # 5 minutes
+        sleep 90
     - name: Upload test results json
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-results-${{ matrix.os }}.json
+        name: test-results-${{ matrix.os }}-${{ matrix.test_shard }}.json
         path: /tmp/testrun.json
     - name: Upload failed test goldens
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: test-goldens-${{ matrix.os }}.zip
+        name: test-goldens-${{ matrix.os }}-${{ matrix.test_shard }}.zip
         path: /tmp/test-goldens/
     - name: Upload test log
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: testlog-${{ matrix.os }}.txt
+        name: testlog-${{ matrix.os }}-${{ matrix.test_shard }}.txt
         path: /tmp/test.log
+    - name: Upload used goldens 
+      uses: actions/upload-artifact@v4
+      if: success() || failure()
+      with:
+        name: goldens-used-${{ matrix.os }}-${{ matrix.test_shard }}
+        path: /tmp/goldens-used.txt
 
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
     #   with:
     #     limit-access-to-actor: true
+  check-goldens:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.21
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+    - name: Check all goldens were used
+      run: |
+          go run client/posttest/main.go check-goldens
