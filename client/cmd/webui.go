@@ -10,7 +10,7 @@ import (
 )
 
 var webUiCmd = &cobra.Command{
-	Use:   "web-ui",
+	Use:   "start-web-ui",
 	Short: "Serve a basic web UI for interacting with your shell history",
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(webui.StartWebUiServer(hctx.MakeContext()))
