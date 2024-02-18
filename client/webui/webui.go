@@ -108,8 +108,8 @@ func StartWebUiServer(ctx context.Context) error {
 
 	server := http.Server{
 		BaseContext: func(l net.Listener) context.Context { return ctx },
-		Addr:        ":8080",
+		Addr:        ":8000",
 	}
-	fmt.Println("Starting web server...")
+	fmt.Printf("Starting web server on %s...\n", server.Addr)
 	return server.ListenAndServe()
 }
