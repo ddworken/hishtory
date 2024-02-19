@@ -56,6 +56,8 @@ type keyMap struct {
 	DeleteEntry             key.Binding
 	Help                    key.Binding
 	Quit                    key.Binding
+	JumpStartOfInput        key.Binding
+	JumpEndOfInput          key.Binding
 }
 
 var fakeTitleKeyBinding key.Binding = key.NewBinding(
@@ -133,6 +135,14 @@ var keys = keyMap{
 	Quit: key.NewBinding(
 		key.WithKeys("esc", "ctrl+c", "ctrl+d"),
 		key.WithHelp("esc", "exit hiSHtory "),
+	),
+	JumpStartOfInput: key.NewBinding(
+		key.WithKeys("ctrl+a"),
+		key.WithHelp("ctrl+a", "jump to the start of the input "),
+	),
+	JumpEndOfInput: key.NewBinding(
+		key.WithKeys("ctrl+e"),
+		key.WithHelp("ctrl+e", "jump to the end of the input "),
 	),
 }
 
@@ -340,6 +350,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
+			return m, nil
+		case key.Matches(msg, keys.JumpStartOfInput):
+			m.queryInput.SetCursor(0)
+			return m, nil
+		case key.Matches(msg, keys.JumpEndOfInput):
+			m.queryInput.SetCursor(len(m.queryInput.Value()))
 			return m, nil
 		default:
 			pendingCommands := tea.Batch()

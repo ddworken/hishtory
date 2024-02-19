@@ -2089,6 +2089,14 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 	out = strings.Split(stripTuiCommandPrefix(t, out), "\n")[0]
 	testutils.CompareGoldens(t, out, "TestTui-SelectAndCd")
 
+	// Test jumping around the cursor via shortcuts
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"foo C-a AAA C-e ZZZ",
+	})
+	out = strings.Split(stripTuiCommandPrefix(t, out), "\n")[0]
+	testutils.CompareGoldens(t, out, "TestTui-JumpCursor")
+
 	// Test the User column
 	tester.RunInteractiveShell(t, `hishtory config-add displayed-columns User`)
 	out = captureTerminalOutput(t, tester, []string{
