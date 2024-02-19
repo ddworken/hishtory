@@ -33,7 +33,7 @@ function _hishtory_precmd() {
 }
 
 _hishtory_widget() {
-    BUFFER=$(HISHTORY_TERM_INTEGRATION=1 hishtory tquery $BUFFER)
+    BUFFER=$(HISHTORY_TERM_INTEGRATION=1 HISHTORY_SHELL_NAME=zsh hishtory tquery $BUFFER)
     CURSOR=${#BUFFER}
     zle reset-prompt
 }
