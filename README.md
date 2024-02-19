@@ -185,6 +185,18 @@ You can configure a custom timestamp format for hiSHtory via `hishtory config-se
 </blockquote></details>
 
 <details>
+<summary>Web UI for sharing</summary><blockquote>
+
+If you'd like to temporarily allow someone else to search your shell history, you can start a web server via `hishtory start-web-ui`. This will expose a basic (password-protected) web UI on port `8000` where they can query your history:
+
+![demo showing the web UI searching for git](https://raw.githubusercontent.com/ddworken/hishtory/master/backend/web/landing/www/img/webui.png)
+
+Note that this uses [HTTP Basic Auth](https://en.wikipedia.org/wiki/Basic_access_authentication), so the credentials are sent over your local network via HTTP.
+
+</blockquote></details>
+
+
+<details>
 <summary>Customizing the install folder</summary><blockquote>
 
 By default, hiSHtory is installed in `~/.hishtory/`. If you want to customize this, you can do so by setting the `HISHTORY_PATH` environment variable to a path relative to your home directory (e.g. `export HISHTORY_PATH=.config/hishtory`). This must be set both when you install hiSHtory and when you use hiSHtory, so it is recommend to set it in your `.bashrc`/`.zshrc`/`.fishrc` before installing hiSHtory. 
