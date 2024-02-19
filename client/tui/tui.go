@@ -58,6 +58,8 @@ type keyMap struct {
 	Quit                    key.Binding
 	JumpStartOfInput        key.Binding
 	JumpEndOfInput          key.Binding
+	JumpWordLeft            key.Binding
+	JumpWordRight           key.Binding
 }
 
 var fakeTitleKeyBinding key.Binding = key.NewBinding(
@@ -143,6 +145,14 @@ var keys = keyMap{
 	JumpEndOfInput: key.NewBinding(
 		key.WithKeys("ctrl+e"),
 		key.WithHelp("ctrl+e", "jump to the end of the input "),
+	),
+	JumpWordLeft: key.NewBinding(
+		key.WithKeys("ctrl+left"),
+		key.WithHelp("ctrl+left", "jump left one word "),
+	),
+	JumpWordRight: key.NewBinding(
+		key.WithKeys("ctrl+right"),
+		key.WithHelp("ctrl+right", "jump right one word "),
 	),
 }
 
@@ -357,6 +367,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.JumpEndOfInput):
 			m.queryInput.SetCursor(len(m.queryInput.Value()))
 			return m, nil
+		case key.Matches(msg, keys.JumpWordLeft):
+			wordBoundaries := calculateWordBoundaries(m.queryInput.Value())
+			lastBoundary := 0
+			for _, boundary := range wordBoundaries {
+				if boundary >= m.queryInput.Position() {
+					m.queryInput.SetCursor(lastBoundary)
+					break
+				}
+				lastBoundary = boundary
+			}
+			return m, nil
+		case key.Matches(msg, keys.JumpWordRight):
+			wordBoundaries := calculateWordBoundaries(m.queryInput.Value())
+			for _, boundary := range wordBoundaries {
+				if boundary > m.queryInput.Position() {
+					m.queryInput.SetCursor(boundary)
+					break
+				}
+			}
+			return m, nil
 		default:
 			pendingCommands := tea.Batch()
 			if m.table != nil {
@@ -419,6 +449,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+}
+
+func calculateWordBoundaries(input string) []int {
+	ret := make([]int, 0)
+	ret = append(ret, 0)
+	for idx, char := range input {
+		if char == ' ' || char == '-' {
+			ret = append(ret, idx)
+		}
+	}
+	ret = append(ret, len(input))
+	return ret
 }
 
 func (m model) View() string {

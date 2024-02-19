@@ -2092,7 +2092,7 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 	// Test jumping around the cursor via shortcuts
 	out = captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"foo C-a AAA C-e ZZZ",
+		"foo C-a AAA SPACE C-e SPACE ZZZ",
 	})
 	out = strings.Split(stripTuiCommandPrefix(t, out), "\n")[0]
 	testutils.CompareGoldens(t, out, "TestTui-JumpCursor")
