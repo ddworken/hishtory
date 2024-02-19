@@ -3,7 +3,7 @@
 # Include guard. This file is sourced in multiple places, but we want it to only execute once. 
 # This trick is from https://stackoverflow.com/questions/7518584/is-there-any-mechanism-in-shell-script-alike-include-guard-in-c
 if [ -n "$__hishtory_bash_config_sourced" ]; then return; fi
-__hishtory_bash_config_sourced=`date`
+__hishtory_bash_config_sourced=true
 
 # For detecting color rendering support for this terminal, see #134
 hishtory getColorSupport
