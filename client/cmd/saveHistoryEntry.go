@@ -412,6 +412,9 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave bool) (string, error) {
 	if shell == "bash" {
 		cmd, err := getLastCommand(arg)
+		if cmd == "" {
+			return "", nil
+		}
 		if err != nil {
 			return "", fmt.Errorf("failed to build history entry: %w", err)
 		}
@@ -583,6 +586,9 @@ func parseCrossPlatformTime(data string) time.Time {
 }
 
 func getLastCommand(history string) (string, error) {
+	if history == "" {
+		return "", nil
+	}
 	split := strings.SplitN(strings.TrimSpace(history), " ", 2)
 	if len(split) <= 1 {
 		return "", fmt.Errorf("got unexpected bash history line: %#v, please open a bug at github.com/ddworken/hishtory", history)
