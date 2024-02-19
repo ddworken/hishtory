@@ -153,6 +153,19 @@ func (db *DB) DistinctUsers(ctx context.Context) (int64, error) {
 	return numDistinctUsers, nil
 }
 
+func (db *DB) UserAlreadyExist(ctx context.Context, userID string) (bool, error) {
+	var cnt int64
+	tx := db.WithContext(ctx).Table("devices").Where("user_id = ?", userID).Count(&cnt)
+	if tx.Error != nil {
+		return false, fmt.Errorf("tx.Error: %w", tx.Error)
+	}
+
+	if cnt > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (db *DB) DumpRequestCreate(ctx context.Context, req *shared.DumpRequest) error {
 	tx := db.WithContext(ctx).Create(req)
 	if tx.Error != nil {
@@ -409,7 +422,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 			FROM devices
 			GROUP BY user_id
 			HAVING COUNT(DISTINCT device_id) = 1
-		)	
+		)
 		`)
 		if r.Error != nil {
 			return fmt.Errorf("failed to create list of single device users: %w", r.Error)
@@ -419,7 +432,7 @@ func (db *DB) DeepClean(ctx context.Context) error {
 			SELECT user_id
 			FROM usage_data
 			WHERE last_used <= (now() - INTERVAL '180 days')
-		)	
+		)
 		`)
 		if r.Error != nil {
 			return fmt.Errorf("failed to create list of inactive users: %w", r.Error)
