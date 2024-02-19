@@ -201,18 +201,26 @@ func (s *Server) apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
-	if getMaximumNumberOfAllowedUsers() < math.MaxInt {
-		numDistinctUsers, err := s.db.DistinctUsers(r.Context())
-		if err != nil {
-			panic(fmt.Errorf("db.DistinctUsers: %w", err))
-		}
-		if numDistinctUsers >= int64(getMaximumNumberOfAllowedUsers()) {
-			panic(fmt.Sprintf("Refusing to allow registration of new device since there are currently %d users and this server allows a max of %d users", numDistinctUsers, getMaximumNumberOfAllowedUsers()))
-		}
-	}
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 	isIntegrationTestDevice := getOptionalQueryParam(r, "is_integration_test_device", false) == "true"
+
+	if getMaximumNumberOfAllowedUsers() < math.MaxInt {
+		userAlreadyExist, err := s.db.UserAlreadyExist(r.Context(), userId)
+		if err != nil {
+			panic(fmt.Errorf("db.UserAlreadyExist: %w", err))
+		}
+
+		if !userAlreadyExist {
+			numDistinctUsers, err := s.db.DistinctUsers(r.Context())
+			if err != nil {
+				panic(fmt.Errorf("db.DistinctUsers: %w", err))
+			}
+			if numDistinctUsers >= int64(getMaximumNumberOfAllowedUsers()) {
+				panic(fmt.Sprintf("Refusing to allow registration of new device since there are currently %d users and this server allows a max of %d users", numDistinctUsers, getMaximumNumberOfAllowedUsers()))
+			}
+		}
+	}
 
 	existingDevicesCount, err := s.db.CountDevicesForUser(r.Context(), userId)
 	checkGormError(err)
