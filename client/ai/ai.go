@@ -17,20 +17,20 @@ import (
 
 var mostRecentQuery string
 
-func DebouncedGetAiSuggestions(ctx context.Context, query string, numberCompletions int) ([]string, error) {
+func DebouncedGetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
 	mostRecentQuery = query
 	time.Sleep(time.Millisecond * 300)
 	if mostRecentQuery == query {
-		return GetAiSuggestions(ctx, query, numberCompletions)
+		return GetAiSuggestions(ctx, shellName, query, numberCompletions)
 	}
 	return nil, nil
 }
 
-func GetAiSuggestions(ctx context.Context, query string, numberCompletions int) ([]string, error) {
+func GetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
 	if os.Getenv("OPENAI_API_KEY") == "" {
-		return GetAiSuggestionsViaHishtoryApi(ctx, query, numberCompletions)
+		return GetAiSuggestionsViaHishtoryApi(ctx, shellName, query, numberCompletions)
 	} else {
-		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(query, getShellName(), getOsName(), numberCompletions)
+		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(query, shellName, getOsName(), numberCompletions)
 		return suggestions, err
 	}
 }
@@ -55,12 +55,7 @@ func getOsName() string {
 	}
 }
 
-func getShellName() string {
-	// TODO: Wire the real shell name in here
-	return "bash"
-}
-
-func GetAiSuggestionsViaHishtoryApi(ctx context.Context, query string, numberCompletions int) ([]string, error) {
+func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
 	hctx.GetLogger().Infof("Running OpenAI query for %#v", query)
 	req := ai.AiSuggestionRequest{
 		DeviceId:          hctx.GetConf(ctx).DeviceId,
@@ -68,7 +63,7 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, query string, numberCom
 		Query:             query,
 		NumberCompletions: numberCompletions,
 		OsName:            getOsName(),
-		ShellName:         getShellName(),
+		ShellName:         shellName,
 	}
 	reqData, err := json.Marshal(req)
 	if err != nil {

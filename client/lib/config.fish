@@ -29,7 +29,7 @@ end
 function __hishtory_on_control_r
 	set -l tmp (mktemp -t fish.XXXXXX)
 	set -x init_query (commandline -b)
-	HISHTORY_TERM_INTEGRATION=1 hishtory tquery $init_query > $tmp
+	HISHTORY_TERM_INTEGRATION=1 HISHTORY_SHELL_NAME=fish hishtory tquery $init_query > $tmp
 	set -l res $status
 	commandline -f repaint
 	if [ -s $tmp ]

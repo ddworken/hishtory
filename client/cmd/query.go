@@ -50,7 +50,11 @@ var tqueryCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(tui.TuiQuery(ctx, strings.Join(args, " ")))
+		shellName := "bash"
+		if os.Getenv("HISHTORY_SHELL_NAME") != "" {
+			shellName = os.Getenv("HISHTORY_SHELL_NAME")
+		}
+		lib.CheckFatalError(tui.TuiQuery(ctx, shellName, strings.Join(args, " ")))
 	},
 }
 
