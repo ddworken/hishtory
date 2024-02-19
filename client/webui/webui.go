@@ -30,7 +30,7 @@ type webUiData struct {
 func getTableRowsForDisplay(ctx context.Context, searchQuery string) ([][]string, error) {
 	results, err := lib.Search(ctx, hctx.GetDb(ctx), searchQuery, 100)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return buildTableRows(ctx, results)
 }
@@ -39,6 +39,7 @@ func htmx_resultsTable(w http.ResponseWriter, r *http.Request) {
 	searchQuery := r.URL.Query().Get("q")
 	tableRows, err := getTableRowsForDisplay(r.Context(), searchQuery)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		panic(err)
 	}
 	w.Header().Add("Content-Type", "text/html")
@@ -49,6 +50,7 @@ func htmx_resultsTable(w http.ResponseWriter, r *http.Request) {
 		ColumnNames:   hctx.GetConf(r.Context()).DisplayedColumns,
 	})
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		panic(err)
 	}
 }
@@ -74,6 +76,7 @@ func webuiHandler(w http.ResponseWriter, r *http.Request) {
 	searchQuery := r.URL.Query().Get("q")
 	tableRows, err := getTableRowsForDisplay(r.Context(), searchQuery)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		panic(err)
 	}
 	w.Header().Add("Content-Type", "text/html")
@@ -83,6 +86,7 @@ func webuiHandler(w http.ResponseWriter, r *http.Request) {
 		ColumnNames:   hctx.GetConf(r.Context()).DisplayedColumns,
 	})
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		panic(err)
 	}
 }

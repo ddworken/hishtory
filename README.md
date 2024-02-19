@@ -191,7 +191,7 @@ If you'd like to temporarily allow someone else to search your shell history, yo
 
 ![demo showing the web UI searching for git](https://raw.githubusercontent.com/ddworken/hishtory/master/backend/web/landing/www/img/webui.png)
 
-Note that this uses [HTTP Basic Auth](https://en.wikipedia.org/wiki/Basic_access_authentication), so the credentials are sent over your local network via HTTP!
+Note that this uses [HTTP Basic Auth](https://en.wikipedia.org/wiki/Basic_access_authentication), so the credentials are sent over your local network via HTTP.
 
 </blockquote></details>
 
