@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 
 	"html/template"
 
@@ -127,19 +126,21 @@ func secureStringEquals(s1, s2 string) bool {
 	return subtle.ConstantTimeCompare([]byte(s1), []byte(s2)) == 1
 }
 
-func StartWebUiServer(ctx context.Context) error {
+func StartWebUiServer(ctx context.Context, disableAuth bool, overridenUsername, overridenPassword string) error {
 	username := "hishtory"
 	// Note that uuid.NewRandom() uses crypto/rand and returns a UUID with 122 bits of security
 	password := uuid.Must(uuid.NewRandom()).String()
-	if os.Getenv("HISHTORY_TEST") != "" {
-		// For testing, we also support having the password be the secret key. This is still mostly secure, but
-		// it has the risk of the secret key being exposed over HTTP. It also means that the password doesn't
-		// rotate with each server instance. This is why we don't prefer this normally, but as a test-only method
-		// this is still plenty secure.
-		password = hctx.GetConf(ctx).UserSecret
+	if overridenUsername != "" && overridenPassword != "" {
+		username = overridenUsername
+		password = overridenPassword
 	}
-	http.Handle("/", withBasicAuth(username, password)(http.HandlerFunc(webuiHandler)))
-	http.Handle("/htmx/results-table", withBasicAuth(username, password)(http.HandlerFunc(htmx_resultsTable)))
+	wba := withBasicAuth(username, password)
+	if disableAuth {
+		// No-op wrapper that doesn't enforce auth
+		wba = func(h http.Handler) http.Handler { return h }
+	}
+	http.Handle("/", wba(http.HandlerFunc(webuiHandler)))
+	http.Handle("/htmx/results-table", wba(http.HandlerFunc(htmx_resultsTable)))
 
 	server := http.Server{
 		BaseContext: func(l net.Listener) context.Context { return ctx },
