@@ -403,6 +403,7 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 
 func (db *DB) DeepClean(ctx context.Context) error {
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Delete entries for users that have one device and are inactive
 		r := tx.Exec(`
 		CREATE TEMP TABLE temp_users_with_one_device AS (
 			SELECT user_id
@@ -439,7 +440,8 @@ func (db *DB) DeepClean(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Delete entries for users that have tons and tons of entries (e.g. due to a mis-use or misconfiguration)
 		r := tx.Exec(`
 		CREATE TEMP TABLE users_with_too_many_entries AS (
 			SELECT user_id
@@ -460,6 +462,50 @@ func (db *DB) DeepClean(ctx context.Context) error {
 			return fmt.Errorf("failed to delete entries for overly active users: %w", r.Error)
 		}
 		fmt.Printf("Ran deep clean for overly active users and deleted %d rows\n", r.RowsAffected)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Delete entries for integration test users
+		r := tx.Exec(`
+		CREATE TEMP TABLE temp_inactive_devices AS (
+			SELECT device_id
+			FROM usage_data
+			WHERE last_used <= (now() - INTERVAL '90 days')
+		)	
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to create list of inactive devices: %w", r.Error)
+		}
+		r = tx.Exec(`
+		CREATE TEMP TABLE temp_integration_devices AS (
+			SELECT device_id
+			FROM devices
+			WHERE is_integration_test_device
+		)	
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to create list of integration test devices: %w", r.Error)
+		}
+		r = tx.Raw(`
+		DELETE FROM enc_history_entries WHERE
+			device_id IN (SELECT * FROM temp_inactive_devices)
+			AND device_id IN (SELECT * FROM temp_integration_devices)
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to delete entries for integration test devices: %w", r.Error)
+		}
+		r = tx.Raw(`
+		DELETE FROM devices WHERE
+			device_id IN (SELECT * FROM temp_inactive_devices)
+			AND device_id IN (SELECT * FROM temp_integration_devices)
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to delete integration test devices: %w", r.Error)
+		}
+		fmt.Printf("Ran deep clean for integration test devices and deleted %d rows\n", r.RowsAffected)
 		return nil
 	})
 }
