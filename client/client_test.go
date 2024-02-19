@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -2957,6 +2959,46 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
 	require.False(t, lib.CanReachHishtoryServer(ctx))
 	require.True(t, lib.IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
+}
+
+func TestWebUi(t *testing.T) {
+	markTestForSharding(t, 13)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Run a few commands to search for
+	tester.RunInteractiveShell(t, `echo foobar`)
+
+	// Start the server
+	require.NoError(t, tester.RunInteractiveShellBackground(t, `hishtory start-web-ui`))
+	time.Sleep(time.Second)
+	defer tester.RunInteractiveShell(t, `killall hishtory`)
+
+	// And check that the server seems to be returning valid data
+	req, err := http.NewRequest("GET", "http://localhost:8000?q=foobar", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth("hishtory", hctx.GetConf(hctx.MakeContext()).UserSecret)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, resp.StatusCode)
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(respBody), "echo foobar")
+
+	// And that it rejects requests without auth
+	resp, err = http.Get("http://localhost:8000?q=foobar")
+	require.NoError(t, err)
+	require.Equal(t, 401, resp.StatusCode)
+
+	// And requests with incorrect auth
+	req, err = http.NewRequest("GET", "http://localhost:8000?q=foobar", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth("hishtory", "wrong-password")
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 401, resp.StatusCode)
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
