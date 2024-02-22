@@ -454,12 +454,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func calculateWordBoundaries(input string) []int {
 	ret := make([]int, 0)
 	ret = append(ret, 0)
+	prevWasBreaking := false
 	for idx, char := range input {
 		if char == ' ' || char == '-' {
-			ret = append(ret, idx)
+			if !prevWasBreaking {
+				ret = append(ret, idx)
+			}
+			prevWasBreaking = true
+		} else {
+			prevWasBreaking = false
 		}
 	}
-	ret = append(ret, len(input))
+	if !prevWasBreaking {
+		ret = append(ret, len(input))
+	}
 	return ret
 }
 
