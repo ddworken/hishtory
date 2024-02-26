@@ -390,9 +390,8 @@ func CompareGoldens(t testing.TB, out, goldenName string) {
 		}
 		require.NoError(t, os.WriteFile(path.Join("/tmp/test-goldens", goldenName), []byte(out), 0644))
 		if os.Getenv("HISHTORY_UPDATE_GOLDENS") == "" {
-			// TODO: Uncomment
-			// _, filename, line, _ := runtime.Caller(1)
-			// t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s\nactual=\n%s", goldenName, filename, line, diff, out)
+			_, filename, line, _ := runtime.Caller(1)
+			t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s\nactual=\n%s", goldenName, filename, line, diff, out)
 		} else {
 			require.NoError(t, os.WriteFile(goldenPath, []byte(out), 0644))
 		}
