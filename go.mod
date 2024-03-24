@@ -20,7 +20,7 @@ require (
 	github.com/rodaine/table v1.0.1
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/sirupsen/logrus v1.9.0
-	github.com/slsa-framework/slsa-verifier v1.3.2
+	github.com/slsa-framework/slsa-verifier v1.4.1
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20220823124025-807a23277127
@@ -148,7 +148,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20211214055906-6f57359322fd // indirect
-	github.com/google/trillian v1.5.0 // indirect
+	github.com/google/trillian v1.4.2 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
@@ -218,9 +218,9 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
-	github.com/sigstore/cosign v1.13.1 // indirect
+	github.com/sigstore/cosign v1.12.0 // indirect
 	github.com/sigstore/fulcio v0.6.0 // indirect
-	github.com/sigstore/rekor v1.0.0 // indirect
+	github.com/sigstore/rekor v0.11.0 // indirect
 	github.com/sigstore/sigstore v1.4.5 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/slsa-framework/slsa-github-generator v1.2.0 // indirect
