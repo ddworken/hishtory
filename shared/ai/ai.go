@@ -12,6 +12,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const DefaultOpenAiEndpoint = "https://api.openai.com/v1/chat/completions"
+
 type openAiRequest struct {
 	Model             string          `json:"model"`
 	Messages          []openAiMessage `json:"messages"`
@@ -51,7 +53,7 @@ type TestOnlyOverrideAiSuggestionRequest struct {
 
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
-func GetAiSuggestionsViaOpenAiApi(query, shellName, osName string, numberCompletions int) ([]string, OpenAiUsage, error) {
+func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName string, numberCompletions int) ([]string, OpenAiUsage, error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
 	}
@@ -63,7 +65,7 @@ func GetAiSuggestionsViaOpenAiApi(query, shellName, osName string, numberComplet
 		shellName = "bash"
 	}
 	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
+	if apiKey == "" && apiEndpoint == DefaultOpenAiEndpoint {
 		return nil, OpenAiUsage{}, fmt.Errorf("OPENAI_API_KEY environment variable is not set")
 	}
 	client := &http.Client{}
@@ -82,12 +84,14 @@ func GetAiSuggestionsViaOpenAiApi(query, shellName, osName string, numberComplet
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to serialize JSON for OpenAI API: %w", err)
 	}
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(apiReqStr))
+	req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(apiReqStr))
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to create OpenAI API request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to query OpenAI API: %w", err)

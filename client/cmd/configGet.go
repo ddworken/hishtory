@@ -146,6 +146,16 @@ var getColorScheme = &cobra.Command{
 	},
 }
 
+var getAiCompletionEndpoint = &cobra.Command{
+	Use:   "ai-completion-endpoint",
+	Short: "The AI endpoint to use for AI completions",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.AiCompletionEndpoint)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configGetCmd)
 	configGetCmd.AddCommand(getEnableControlRCmd)
@@ -159,4 +169,5 @@ func init() {
 	configGetCmd.AddCommand(getPresavingCmd)
 	configGetCmd.AddCommand(getColorScheme)
 	configGetCmd.AddCommand(getDefaultFilterCmd)
+	configGetCmd.AddCommand(getAiCompletionEndpoint)
 }

@@ -232,6 +232,9 @@ func handleUpgradedFeatures() error {
 		// AI completion is not yet configured, disable it for upgrades since this is a new feature
 		config.AiCompletion = false
 	}
+	if config.AiCompletionEndpoint == "" {
+		config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+	}
 	return hctx.SetConfig(&config)
 }
 
