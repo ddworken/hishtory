@@ -120,7 +120,7 @@ func HandleSlsaFailure(srcErr error) error {
 	if errors.Is(srcErr, errUserAbortUpdate) {
 		return srcErr
 	}
-	fmt.Printf("\nFailed to verify SLSA provenance! This is likely due to a SLSA bug (SLSA is a brand new standard, and like all new things, has bugs). Ignoring this failure means falling back to the way most software does updates. Do you want to ignore this failure and update anyways? [y/N]")
+	fmt.Printf("\nFailed to verify SLSA provenance due to err: %v\nThis is likely due to a SLSA bug (SLSA is a brand new standard, and like all new things, has bugs). Ignoring this failure means falling back to the way most software does updates. Do you want to ignore this failure and update anyways? [y/N]", srcErr)
 	reader := bufio.NewReader(os.Stdin)
 	resp, err := reader.ReadString('\n')
 	if err == nil && strings.TrimSpace(resp) == "y" {
