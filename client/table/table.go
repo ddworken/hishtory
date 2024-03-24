@@ -358,11 +358,11 @@ func (m *Model) MaxHScroll() int {
 	maxWidth := 0
 	index := m.ColIndex(m.hcol)
 	for _, row := range m.rows {
-		if len(row) > index {
-			maxWidth = max(len(row[index]), maxWidth)
+		for _, value := range row {
+			maxWidth = max(runewidth.StringWidth(value), maxWidth)
 		}
 	}
-	return max(maxWidth-m.cols[index].Width+1, 0)
+	return max(maxWidth-m.cols[index].Width+2, 0)
 }
 
 // SetWidth sets the width of the viewport of the table.
@@ -478,6 +478,17 @@ func (m Model) headersView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Left, s...)
 }
 
+func (m *Model) columnNeedsScrolling(columnIdxToCheck int) bool {
+	for rowIdx := m.start; rowIdx < m.end; rowIdx++ {
+		for columnIdx, value := range m.rows[rowIdx] {
+			if columnIdx == columnIdxToCheck && runewidth.StringWidth(value) > m.cols[columnIdx].Width {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (m *Model) renderRow(rowID int) string {
 	isRowSelected := rowID == m.cursor
 	var s = make([]string, 0, len(m.cols))
@@ -491,7 +502,7 @@ func (m *Model) renderRow(rowID int) string {
 		}
 
 		var renderedCell string
-		if i == m.ColIndex(m.hcol) && m.hcursor > 0 {
+		if m.columnNeedsScrolling(i) && m.hcursor > 0 {
 			renderedCell = style.Render(runewidth.Truncate(runewidth.TruncateLeft(value, m.hcursor, "…"), m.cols[i].Width, "…"))
 		} else {
 			renderedCell = style.Render(runewidth.Truncate(value, m.cols[i].Width, "…"))
