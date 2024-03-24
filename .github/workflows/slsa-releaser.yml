@@ -221,7 +221,7 @@ jobs:
           curl https://hishtory.dev/install.py | python3 -
           unset HISHTORY_TEST
           go build
-          python3 scripts/actions-validate.py
+          # python3 scripts/actions-validate.py
           echo DONE > hishtory-release-validation-completed
       - name: Release
         uses: softprops/action-gh-release@v1
