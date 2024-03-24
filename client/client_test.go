@@ -1792,6 +1792,8 @@ func testTui_scroll(t *testing.T) {
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
 
+	// TODO: Add a test here that shows all columns can be horizontally scrolled
+
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
 }
