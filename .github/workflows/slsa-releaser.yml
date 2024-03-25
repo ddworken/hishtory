@@ -220,7 +220,7 @@ jobs:
           export HISHTORY_TEST=1
           curl https://hishtory.dev/install.py | python3 -
           unset HISHTORY_TEST
-          go build
+          # go build
           python3 scripts/actions-validate.py
           echo DONE > hishtory-release-validation-completed
       - name: Release
