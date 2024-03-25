@@ -8,6 +8,7 @@ ALL_FILES = ['hishtory-linux-amd64', 'hishtory-linux-arm64', 'hishtory-darwin-am
 
 def validate_slsa(hishtory_binary: str) -> None:
     assert os.path.exists(hishtory_binary)
+    subprocess.check_output(['chmod', "+x", hishtory_binary])
     for filename in ALL_FILES:
         try:
             print(f"Validating {filename} with {hishtory_binary=}")
@@ -68,7 +69,7 @@ def main() -> None:
         if "darwin" in filename:
             validate_macos_signature(filename)
     print("Starting validation of SLSA attestations")
-    # validate_slsa("./hishtory")  # TODO: Re-enable validation using the local binary
+    validate_slsa("./hishtory-darwin-amd64") 
     validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
     print("Validating other metadata")
     validate_hishtory_status("./hishtory-darwin-amd64", True)
