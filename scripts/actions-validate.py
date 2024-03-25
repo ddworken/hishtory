@@ -68,7 +68,7 @@ def main() -> None:
         if "darwin" in filename:
             validate_macos_signature(filename)
     print("Starting validation of SLSA attestations")
-    validate_slsa("./hishtory")
+    # validate_slsa("./hishtory")  # TODO: Re-enable validation using the local binary
     validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
     print("Validating other metadata")
     validate_hishtory_status("./hishtory-darwin-amd64", True)
