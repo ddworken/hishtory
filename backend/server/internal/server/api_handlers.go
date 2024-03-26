@@ -289,6 +289,10 @@ func (s *Server) slsaStatusHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
 		return
 	}
+	if pv.LessThan(shared.ParsedVersion{MajorVersion: 0, MinorVersion: 286}) {
+		w.Write([]byte("Sigstore deployed a broken change. See https://github.com/slsa-framework/slsa-github-generator/issues/1163"))
+		return
+	}
 	w.Write([]byte("OK"))
 }
 
