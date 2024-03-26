@@ -215,6 +215,10 @@ jobs:
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: hishtory-darwin-arm64-unsigned
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
       - name: Validate Release
         run: |
           export HISHTORY_TEST=1
