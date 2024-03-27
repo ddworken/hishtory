@@ -331,7 +331,7 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 	if numDevices == 0 {
 		panic(fmt.Errorf("rejecting OpenAI request for user_id=%#v since it does not exist", req.UserId))
 	}
-	suggestions, usage, err := ai.GetAiSuggestionsViaOpenAiApi(req.Query, req.ShellName, req.OsName, req.NumberCompletions)
+	suggestions, usage, err := ai.GetAiSuggestionsViaOpenAiApi(ai.DefaultOpenAiEndpoint, req.Query, req.ShellName, req.OsName, req.NumberCompletions)
 	if err != nil {
 		panic(fmt.Errorf("failed to query OpenAI API: %w", err))
 	}

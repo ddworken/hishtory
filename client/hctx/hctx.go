@@ -205,6 +205,8 @@ type ClientConfig struct {
 	ColorScheme ColorScheme `json:"color_scheme"`
 	// A default filter that will be applied to all search queries
 	DefaultFilter string `json:"default_filter"`
+	// The endpoint to use for AI suggestions
+	AiCompletionEndpoint string `json:"ai_completion_endpoint"`
 }
 
 type ColorScheme struct {
@@ -271,6 +273,9 @@ func GetConfig() (ClientConfig, error) {
 	}
 	if config.ColorScheme.BorderColor == "" {
 		config.ColorScheme.BorderColor = GetDefaultColorScheme().BorderColor
+	}
+	if config.AiCompletionEndpoint == "" {
+		config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
 	}
 	return config, nil
 }
