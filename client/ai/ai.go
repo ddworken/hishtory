@@ -27,10 +27,10 @@ func DebouncedGetAiSuggestions(ctx context.Context, shellName, query string, num
 }
 
 func GetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
-	if os.Getenv("OPENAI_API_KEY") == "" {
+	if os.Getenv("OPENAI_API_KEY") == "" && hctx.GetConf(ctx).AiCompletionEndpoint == ai.DefaultOpenAiEndpoint {
 		return GetAiSuggestionsViaHishtoryApi(ctx, shellName, query, numberCompletions)
 	} else {
-		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(query, shellName, getOsName(), numberCompletions)
+		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(hctx.GetConf(ctx).AiCompletionEndpoint, query, shellName, getOsName(), numberCompletions)
 		return suggestions, err
 	}
 }

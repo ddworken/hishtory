@@ -1572,6 +1572,17 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 	if out != "Command \"Exit Code\" Timestamp foobar \n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
+
+	// For OpenAI endpoints
+	out = tester.RunInteractiveShell(t, `hishtory config-get ai-completion-endpoint`)
+	if out != "https://api.openai.com/v1/chat/completions\n" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+	tester.RunInteractiveShell(t, `hishtory config-set ai-completion-endpoint https://example.com/foo/bar`)
+	out = tester.RunInteractiveShell(t, `hishtory config-get ai-completion-endpoint`)
+	if out != "https://example.com/foo/bar\n" {
+		t.Fatalf("unexpected config-get output: %#v", out)
+	}
 }
 
 func clearControlRSearchFromConfig(t testing.TB) {
@@ -2166,7 +2177,6 @@ func testTui_ai(t *testing.T) {
 	})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-AiQuery-Disabled")
-
 }
 
 func testControlR(t *testing.T, tester shellTester, shellName string, onlineStatus OnlineStatus) {

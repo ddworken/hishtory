@@ -217,6 +217,18 @@ func validateColor(color string) error {
 	return nil
 }
 
+var setAiCompletionEndpoint = &cobra.Command{
+	Use:   "ai-completion-endpoint",
+	Short: "The AI endpoint to use for AI completions",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.AiCompletionEndpoint = args[0]
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
@@ -229,6 +241,7 @@ func init() {
 	configSetCmd.AddCommand(setPresavingCmd)
 	configSetCmd.AddCommand(setColorSchemeCmd)
 	configSetCmd.AddCommand(setDefaultFilterCommand)
+	configSetCmd.AddCommand(setAiCompletionEndpoint)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)
