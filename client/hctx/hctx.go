@@ -274,6 +274,9 @@ func GetConfig() (ClientConfig, error) {
 	if config.ColorScheme.BorderColor == "" {
 		config.ColorScheme.BorderColor = GetDefaultColorScheme().BorderColor
 	}
+	if config.AiCompletionEndpoint == "" {
+		config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+	}
 	return config, nil
 }
 
