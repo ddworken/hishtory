@@ -407,6 +407,9 @@ func normalizeHostnames(data string) string {
 }
 
 func GetOsVersion(t *testing.T) string {
+	if runtime.GOOS == "linux" {
+		return "actions"
+	}
 	var uts unix.Utsname
 	if err := unix.Uname(&uts); err != nil {
 		panic(err)
