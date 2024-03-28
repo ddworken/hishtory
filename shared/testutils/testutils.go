@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -403,4 +404,16 @@ func normalizeHostnames(data string) string {
 		data = strings.ReplaceAll(data, hostname, "ghaction-runner-hostname")
 	}
 	return data
+}
+
+func GetOsVersion(t *testing.T) string {
+	if runtime.GOOS == "linux" {
+		return "actions"
+	}
+	var uts unix.Utsname
+	if err := unix.Uname(&uts); err != nil {
+		panic(err)
+	}
+
+	return unix.ByteSliceToString(uts.Release[:])
 }

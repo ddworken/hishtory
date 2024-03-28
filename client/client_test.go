@@ -1857,15 +1857,6 @@ func testTui_defaultFilter(t *testing.T) {
 }
 
 func testTui_color(t *testing.T) {
-	if runtime.GOOS == "linux" {
-		// For some reason, this test fails on linux. Since this test isn't critical and is expected to be
-		// flaky, we can just skip it on linux.
-		t.Skip()
-	} else if testutils.IsGithubAction() {
-		// For some reason this started randomly failing on GH without any associated change (likely due to some invisible change in Actions infra). Disabling while I debug this.
-		t.Skip()
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	tester, _, _ := setupTestTui(t, Online)
@@ -1875,19 +1866,19 @@ func testTui_color(t *testing.T) {
 	// from inspection and primarily servers to detect unintended changes in hishtory's output.
 	out := captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutput")
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutput-"+runtime.GOOS+"-"+testutils.GetOsVersion(t))
 
 	// And the same once a search query has been typed in
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch")
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-"+runtime.GOOS+"-"+testutils.GetOsVersion(t))
 
 	// And one more time with highlight-matches
 	tester.RunInteractiveShell(t, ` hishtory config-set highlight-matches true`)
 	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get highlight-matches`)))
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-Highlight")
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithSearch-Highlight-"+runtime.GOOS+"-"+testutils.GetOsVersion(t))
 
 	// And one more time with customized colors
 	testutils.CompareGoldens(t, tester.RunInteractiveShell(t, ` hishtory config-get color-scheme`), "TestTui-DefaultColorScheme")
@@ -1896,7 +1887,7 @@ func testTui_color(t *testing.T) {
 	tester.RunInteractiveShell(t, ` hishtory config-set color-scheme border-color #f54272`)
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithCustomColorScheme")
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithCustomColorScheme-"+runtime.GOOS+"-"+testutils.GetOsVersion(t))
 
 	// And one more time with a default filter
 	require.Equal(t, "\"\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
@@ -1904,7 +1895,7 @@ func testTui_color(t *testing.T) {
 	require.Equal(t, "\"exit_code:0\"", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get default-filter`)))
 	out = captureTerminalOutputComplex(t, TmuxCaptureConfig{tester: tester, complexCommands: []TmuxCommand{{Keys: "hishtory SPACE tquery ENTER"}, {Keys: "ech"}}, includeEscapeSequences: true})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithDefaultFilter")
+	testutils.CompareGoldens(t, out, "TestTui-ColoredOutputWithDefaultFilter-"+runtime.GOOS+"-"+testutils.GetOsVersion(t))
 }
 
 func testTui_delete(t *testing.T) {
