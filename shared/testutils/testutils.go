@@ -416,5 +416,6 @@ func GetOsVersion(t *testing.T) string {
 		panic(err)
 	}
 
-	return unix.ByteSliceToString(uts.Release[:])
+	version := unix.ByteSliceToString(uts.Release[:])
+	return strings.Split(version, ".")[0]
 }
