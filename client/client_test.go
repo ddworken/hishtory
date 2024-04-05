@@ -1803,7 +1803,26 @@ func testTui_scroll(t *testing.T) {
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-RightScrollTwo")
 
-	// TODO: Add a test here that shows all columns can be horizontally scrolled
+	// Set up to test horizontal scrolling for other columns
+	veryLongDirEntry := testutils.MakeFakeHistoryEntry("echo 'short'")
+	veryLongDirEntry.CurrentWorkingDirectory = "/tmp/1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_0_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_1_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321_2_1234567890qwertyuiopasdfghjklzxxcvbnm0987654321"
+	manuallySubmitHistoryEntry(t, userSecret, veryLongDirEntry)
+	require.NoError(t, hctx.GetDb(hctx.MakeContext()).Create(veryLongDirEntry).Error)
+
+	// Test displaying long other columns
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-LongDirectoryName")
+
+	// Test horizontal scrolling for other columns
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"S-Right S-Right",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-RightScrollDirectoryTwo")
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
