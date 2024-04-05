@@ -54,6 +54,7 @@ jobs:
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
     - name: Set up Datadog
       if: ${{ github.ref == 'refs/heads/master' && matrix.os != 'macos-14' }}
+      continue-on-error: true  # Since colima is flaky, and a failure here only impacts our metrics
       uses: datadog/agent-github-action@v1.3
       with:
           api_key: ${{ secrets.DD_API_KEY }}
