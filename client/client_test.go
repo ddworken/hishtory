@@ -3034,4 +3034,25 @@ func TestWebUi(t *testing.T) {
 	require.Equal(t, 401, resp.StatusCode)
 }
 
+func TestForceInit(t *testing.T) {
+	markTestForSharding(t, 13)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	initialSecret := installHishtory(t, tester, "")
+	secondaryUserSecret := initialSecret + "-second"
+
+	// Run a commands to search for and confirm it was recorded
+	tester.RunInteractiveShell(t, `echo foobar`)
+	require.Equal(t, "echo foobar\n", tester.RunInteractiveShell(t, `hishtory export -pipefail -export`))
+
+	// Init as the other user with --force
+	out, err := tester.RunInteractiveShellRelaxed(t, ` export HISHTORY_SKIP_INIT_IMPORT=1
+	hishtory init --force `+secondaryUserSecret)
+	require.NoError(t, err)
+	require.Contains(t, out, "Setting secret hishtory key to "+secondaryUserSecret, "Failed to re-init with the user secret")
+
+	// Check that the history was cleared
+	require.NotContains(t, tester.RunInteractiveShell(t, `hishtory export`), "echo foobar")
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
