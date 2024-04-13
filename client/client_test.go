@@ -3056,3 +3056,4 @@ func TestForceInit(t *testing.T) {
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
+// TODO: Find some way to test mouse events to confirm that mouse scrolling works.
