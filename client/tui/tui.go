@@ -290,10 +290,7 @@ func updateTable(m model, rows []table.Row, entries []*data.HistoryEntry, search
 	}
 	m.lastQuery = *m.runQuery
 	m.runQuery = nil
-	if m.table.Cursor() >= len(m.tableEntries) {
-		// Ensure that we can't scroll past the end of the table
-		m.table.SetCursor(len(m.tableEntries) - 1)
-	}
+	preventTableOverscrolling(m)
 	return m
 }
 
