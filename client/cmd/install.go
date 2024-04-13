@@ -25,6 +25,7 @@ import (
 )
 
 var offlineInit *bool
+var forceInit *bool
 var offlineInstall *bool
 
 var installCmd = &cobra.Command{
@@ -67,7 +68,7 @@ var initCmd = &cobra.Command{
 		lib.CheckFatalError(err)
 		count, err := countStoredEntries(db)
 		lib.CheckFatalError(err)
-		if count > 0 {
+		if count > 0 && !(*forceInit) {
 			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset?\nNote: This won't clear any imported history entries from your existing shell\n[y/N]")
 			reader := bufio.NewReader(os.Stdin)
 			resp, err := reader.ReadString('\n')
@@ -645,5 +646,6 @@ func init() {
 	rootCmd.AddCommand(uninstallCmd)
 
 	offlineInit = initCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
+	forceInit = initCmd.Flags().Bool("force", false, "Force re-init without any prompts")
 	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
 }
