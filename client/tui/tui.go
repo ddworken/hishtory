@@ -409,14 +409,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			preventTableOverscrolling(m)
 			return m, tea.Batch(pendingCommands, cmd2, cmd3)
 		}
-	case tea.MouseMsg:
-		if msg.Button == tea.MouseButtonWheelDown {
-			m.table.MoveDown(1)
-		} else if msg.Button == tea.MouseButtonWheelUp {
-			m.table.MoveUp(1)
-		}
-		preventTableOverscrolling(m)
-		return m, nil
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
 		m.queryInput.Width = msg.Width
@@ -963,7 +955,7 @@ func configureColorProfile(ctx context.Context) {
 
 func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
 	configureColorProfile(ctx)
-	p := tea.NewProgram(initialModel(ctx, shellName, initialQuery), tea.WithOutput(os.Stderr), tea.WithMouseCellMotion())
+	p := tea.NewProgram(initialModel(ctx, shellName, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
 	go func() {
 		LAST_DISPATCHED_QUERY_ID++
