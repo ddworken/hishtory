@@ -87,6 +87,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 		path.Join(homedir, data.GetHishtoryPath(), "hishtory"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
+		path.Join(homedir, ".zhistory"),
 		path.Join(homedir, ".local/share/fish/fish_history"),
 	}
 	for _, file := range renameFiles {
