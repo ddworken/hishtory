@@ -15,6 +15,9 @@ ftest:				## Run a specific test specified via `make ftest FILTER=TestParam/test
 	go clean -testcache
 	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=0 --format testname -- -p 1 -run "$(FILTER)" -timeout 60m
 
+fbench:				## Run a specific benchmark test specified via `make fbench FILTER=BenchmarkQuery`
+	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -benchmem -bench "$(FILTER)" -timeout 60m ./...
+
 release:			## [ddworken only] Release the latest version on Github
 	# Bump the version
 	expr `cat VERSION` + 1 > VERSION

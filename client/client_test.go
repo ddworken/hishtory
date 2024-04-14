@@ -2977,6 +2977,31 @@ func BenchmarkImport(b *testing.B) {
 	}
 }
 
+func BenchmarkQuery(b *testing.B) {
+	b.StopTimer()
+	// Setup with an install with a lot of entries
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(b)()
+	testutils.ResetLocalState(b)
+	installHishtory(b, tester, "")
+	numSyntheticEntries := 100_000
+	createSyntheticImportEntries(b, numSyntheticEntries)
+	ctx := hctx.MakeContext()
+	numImported, err := lib.ImportHistory(ctx, false, true)
+	require.NoError(b, err)
+	require.GreaterOrEqual(b, numImported, numSyntheticEntries)
+
+	// Benchmark it
+	for n := 0; n < b.N; n++ {
+		// Benchmarked code:
+		b.StartTimer()
+		ctx := hctx.MakeContext()
+		_, err := lib.Search(ctx, hctx.GetDb(ctx), "echo", 0)
+		require.NoError(b, err)
+		b.StopTimer()
+	}
+}
+
 func TestAugmentedIsOfflineError(t *testing.T) {
 	markTestForSharding(t, 12)
 	defer testutils.BackupAndRestore(t)()
