@@ -9,8 +9,19 @@ on:
     branches: [ master ]
 
 jobs:
+  extra-delay:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Extra Delay
+      if: ${{ startsWith(github.event.head_commit.message, 'Release') }}
+      run: |
+
+        # If this is a release, then sleep for before starting the tests so that the newest version is released
+        # and pushed to the updated server before we run the tests
+        sleep 1200 # 20 minutes
   test:
     runs-on: ${{ matrix.os }}
+    needs: extra-delay
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14]
@@ -58,13 +69,6 @@ jobs:
       uses: datadog/agent-github-action@v1.3
       with:
           api_key: ${{ secrets.DD_API_KEY }}
-    - name: Extra Delay
-      if: ${{ startsWith(github.event.head_commit.message, 'Release') }}
-      run: |
-
-        # If this is a release, then sleep for before starting the tests so that the newest version is released
-        # and pushed to the updated server before we run the tests
-        sleep 1200 # 20 minutes
     - name: Go test
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
