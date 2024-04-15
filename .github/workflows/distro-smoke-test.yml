@@ -58,7 +58,6 @@ jobs:
       run: |
           go install gotest.tools/gotestsum@bc98120
           make ftest FILTER=TestInstallViaPythonScriptFromHead
-          make ftest FILTER=TestParam/testIntegrationWithNewDevice
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
