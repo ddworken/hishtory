@@ -174,7 +174,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	require.NoError(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
 	require.NoError(t, json.Unmarshal(respBody, &dumpRequests))
-	require.Len(t, dumpRequest, 1)
+	require.Len(t, dumpRequests, 1)
 	dumpRequest = dumpRequests[0]
 	require.Equal(t, otherDev2, dumpRequest.RequestingDeviceId)
 	require.Equal(t, otherUser, dumpRequest.UserId)
@@ -241,7 +241,7 @@ func TestDumpRequestAndResponse(t *testing.T) {
 	require.NoError(t, err)
 	dumpRequests = make([]*shared.DumpRequest, 0)
 	require.NoError(t, json.Unmarshal(respBody, &dumpRequests))
-	require.Len(t, dumpRequest, 1)
+	require.Len(t, dumpRequests, 1)
 	dumpRequest = dumpRequests[0]
 	require.Equal(t, otherDev2, dumpRequest.RequestingDeviceId)
 	require.Equal(t, otherUser, dumpRequest.UserId)
