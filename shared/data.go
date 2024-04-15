@@ -19,6 +19,10 @@ type EncHistoryEntry struct {
 	// Note that EncHistoryEntry.EncryptedId == HistoryEntry.Id (for entries created after pre-saving support)
 	EncryptedId string `json:"encrypted_id"`
 	ReadCount   int    `json:"read_count"`
+	// Whether this encrypted history entry came from DeviceId. If IsFromSameDevice is true,
+	// then this won't be sent back by the query endpoint. We do still purposefully store
+	// these since they're useful for initializing new devices.
+	IsFromSameDevice bool `json:"is_from_same_device"`
 }
 
 // Represents a request to get all history entries from a given device. Used as part of bootstrapping

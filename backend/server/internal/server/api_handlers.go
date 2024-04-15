@@ -39,7 +39,8 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("apiSubmitHandler: Found %d devices\n", len(devices))
 
-	err = s.db.AddHistoryEntriesForAllDevices(r.Context(), devices, entries)
+	sourceDeviceId := getOptionalQueryParam(r, "source_device_id", s.isTestEnvironment)
+	err = s.db.AddHistoryEntriesForAllDevices(r.Context(), sourceDeviceId, devices, entries)
 	if err != nil {
 		panic(fmt.Errorf("failed to execute transaction to add entries to DB: %w", err))
 	}
@@ -49,21 +50,20 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp := shared.SubmitResponse{}
 
-	deviceId := getOptionalQueryParam(r, "source_device_id", s.isTestEnvironment)
-	if deviceId != "" {
+	if sourceDeviceId != "" {
 		hv, err := shared.ParseVersionString(version)
 		if err != nil || hv.GreaterThan(shared.ParsedVersion{MinorVersion: 0, MajorVersion: 221}) {
 			// Note that if we fail to parse the version string, we do return dump and deletion requests. This is necessary
 			// since tests run with v0.Unknown which obviously fails to parse.
-			dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, deviceId)
+			dumpRequests, err := s.db.DumpRequestForUserAndDevice(r.Context(), userId, sourceDeviceId)
 			checkGormError(err)
 			resp.DumpRequests = dumpRequests
 
-			deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
+			deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, sourceDeviceId)
 			checkGormError(err)
 			resp.DeletionRequests = deletionRequests
 
-			checkGormError(s.db.DeletionRequestInc(r.Context(), userId, deviceId))
+			checkGormError(s.db.DeletionRequestInc(r.Context(), userId, sourceDeviceId))
 		}
 	}
 
@@ -73,6 +73,7 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Update this to filter out duplicate entries
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 	version := getHishtoryVersion(r)
