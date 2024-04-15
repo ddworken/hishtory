@@ -387,7 +387,7 @@ func TestDeletionRequests(t *testing.T) {
 	var retrievedEntries []*shared.EncHistoryEntry
 	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
 	if len(retrievedEntries) != 2 {
-		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
+		t.Fatalf("Expected to retrieve 2 entry, found %d", len(retrievedEntries))
 	}
 	for _, dbEntry := range retrievedEntries {
 		if dbEntry.DeviceId != devId1 {
