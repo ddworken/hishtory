@@ -31,7 +31,7 @@ func (db *DB) AllHistoryEntriesForUser(ctx context.Context, userID string) ([]*s
 
 func (db *DB) HistoryEntriesForDevice(ctx context.Context, deviceID string, limit int) ([]*shared.EncHistoryEntry, error) {
 	var historyEntries []*shared.EncHistoryEntry
-	tx := db.WithContext(ctx).Where("device_id = ? AND read_count < ?", deviceID, limit).Find(&historyEntries)
+	tx := db.WithContext(ctx).Where("device_id = ? AND read_count < ? AND NOT is_from_same_device", deviceID, limit).Find(&historyEntries)
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("tx.Error: %w", tx.Error)
@@ -52,12 +52,13 @@ func (db *DB) AddHistoryEntries(ctx context.Context, entries ...*shared.EncHisto
 	})
 }
 
-func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, devices []*Device, entries []*shared.EncHistoryEntry) error {
+func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, sourceDeviceId string, devices []*Device, entries []*shared.EncHistoryEntry) error {
 	chunkSize := 1000
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, device := range devices {
 			for _, entry := range entries {
 				entry.DeviceId = device.DeviceId
+				entry.IsFromSameDevice = sourceDeviceId == device.DeviceId
 			}
 			// Chunk the inserts to prevent the `extended protocol limited to 65535 parameters` error
 			for _, entriesChunk := range shared.Chunks(entries, chunkSize) {

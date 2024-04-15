@@ -481,7 +481,7 @@ func ApiGet(ctx context.Context, path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from GET %s%s: %w", GetServerHostname(), path, err)
 	}
 	duration := time.Since(start)
-	hctx.GetLogger().Infof("ApiGet(%#v): %s\n", path, duration.String())
+	hctx.GetLogger().Infof("ApiGet(%#v): %d bytes - %s\n", GetServerHostname()+path, len(respBody), duration.String())
 	return respBody, nil
 }
 
@@ -511,7 +511,7 @@ func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]b
 		return nil, fmt.Errorf("failed to read response body from POST %s: %w", GetServerHostname()+path, err)
 	}
 	duration := time.Since(start)
-	hctx.GetLogger().Infof("ApiPost(%#v): %s\n", GetServerHostname()+path, duration.String())
+	hctx.GetLogger().Infof("ApiPost(%#v): %d bytes - %s\n", GetServerHostname()+path, len(respBody), duration.String())
 	return respBody, nil
 }
 
