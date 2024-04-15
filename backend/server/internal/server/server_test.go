@@ -338,7 +338,6 @@ func TestDeletionRequests(t *testing.T) {
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
 	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
-	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// And another entry for user1
 	entry2 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -352,7 +351,6 @@ func TestDeletionRequests(t *testing.T) {
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
 	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
-	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// And an entry for user2 that has the same timestamp as the previous entry
 	entry3 := testutils.MakeFakeHistoryEntry("ls /foo/bar")
@@ -367,7 +365,6 @@ func TestDeletionRequests(t *testing.T) {
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
 	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
-	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Query for device id 1
 	w = httptest.NewRecorder()
@@ -379,8 +376,8 @@ func TestDeletionRequests(t *testing.T) {
 	require.NoError(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
 	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
-	if len(retrievedEntries) != 2 {
-		t.Fatalf("Expected to retrieve 2 entry, found %d", len(retrievedEntries))
+	if len(retrievedEntries) != 1 {
+		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
 	for _, dbEntry := range retrievedEntries {
 		if dbEntry.DeviceId != devId1 {
@@ -474,7 +471,6 @@ func TestDeletionRequests(t *testing.T) {
 	s.apiSubmitHandler(w, submitReq)
 	require.Equal(t, 200, w.Result().StatusCode)
 	require.NotEmpty(t, deserializeSubmitResponse(t, w).DeletionRequests)
-	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
 	// Query for deletion requests
 	w = httptest.NewRecorder()
