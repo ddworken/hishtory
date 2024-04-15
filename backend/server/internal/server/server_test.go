@@ -72,7 +72,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	deviceReq = httptest.NewRequest(http.MethodGet, "/?device_id="+otherDev+"&user_id="+otherUser, nil)
 	s.apiRegisterHandler(httptest.NewRecorder(), deviceReq)
 
-	// Submit a few entries for different devices
+	// Submit an entry from device 1
 	entry := testutils.MakeFakeHistoryEntry("ls ~/")
 	encEntry, err := data.EncryptHistoryEntry("key", entry)
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	require.Empty(t, deserializeSubmitResponse(t, w).DeletionRequests)
 	require.NotEmpty(t, deserializeSubmitResponse(t, w).DumpRequests)
 
-	// Query for device id 1
+	// Query for device id 1, no results returned
 	w = httptest.NewRecorder()
 	searchReq := httptest.NewRequest(http.MethodGet, "/?device_id="+devId1+"&user_id="+userId, nil)
 	s.apiQueryHandler(w, searchReq)
@@ -96,16 +96,9 @@ func TestESubmitThenQuery(t *testing.T) {
 	require.NoError(t, err)
 	var retrievedEntries []*shared.EncHistoryEntry
 	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
-	require.Equal(t, 1, len(retrievedEntries))
-	dbEntry := retrievedEntries[0]
-	require.Equal(t, devId1, dbEntry.DeviceId)
-	require.Equal(t, data.UserId("key"), dbEntry.UserId)
-	require.Equal(t, 0, dbEntry.ReadCount)
-	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
-	require.NoError(t, err)
-	require.Equal(t, decEntry, entry)
+	require.Equal(t, 0, len(retrievedEntries))
 
-	// Same for device id 2
+	// Query for device id 2 and the entry is found
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?device_id="+devId2+"&user_id="+userId, nil)
 	s.apiQueryHandler(w, searchReq)
@@ -117,7 +110,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	if len(retrievedEntries) != 1 {
 		t.Fatalf("Expected to retrieve 1 entry, found %d", len(retrievedEntries))
 	}
-	dbEntry = retrievedEntries[0]
+	dbEntry := retrievedEntries[0]
 	if dbEntry.DeviceId != devId2 {
 		t.Fatalf("Response contains an incorrect device ID: %#v", *dbEntry)
 	}
@@ -127,7 +120,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	if dbEntry.ReadCount != 0 {
 		t.Fatalf("db.ReadCount should have been 1, was %v", dbEntry.ReadCount)
 	}
-	decEntry, err = data.DecryptHistoryEntry("key", *dbEntry)
+	decEntry, err := data.DecryptHistoryEntry("key", *dbEntry)
 	require.NoError(t, err)
 	require.Equal(t, decEntry, entry)
 
