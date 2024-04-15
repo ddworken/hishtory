@@ -73,6 +73,7 @@ func (s *Server) apiSubmitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiBootstrapHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Update this to filter out duplicate entries
 	userId := getRequiredQueryParam(r, "user_id")
 	deviceId := getRequiredQueryParam(r, "device_id")
 	version := getHishtoryVersion(r)
