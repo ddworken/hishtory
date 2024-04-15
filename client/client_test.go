@@ -2996,7 +2996,9 @@ func BenchmarkQuery(b *testing.B) {
 		// Benchmarked code:
 		b.StartTimer()
 		ctx := hctx.MakeContext()
-		_, err := lib.Search(ctx, hctx.GetDb(ctx), "echo", 100)
+		err := lib.RetrieveAdditionalEntriesFromRemote(ctx, "tui")
+		require.NoError(b, err)
+		_, err = lib.Search(ctx, hctx.GetDb(ctx), "echo", 100)
 		require.NoError(b, err)
 		b.StopTimer()
 	}
