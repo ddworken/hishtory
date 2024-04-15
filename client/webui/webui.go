@@ -126,7 +126,7 @@ func secureStringEquals(s1, s2 string) bool {
 	return subtle.ConstantTimeCompare([]byte(s1), []byte(s2)) == 1
 }
 
-func StartWebUiServer(ctx context.Context, disableAuth bool, overridenUsername, overridenPassword string) error {
+func StartWebUiServer(ctx context.Context, port int, disableAuth bool, overridenUsername, overridenPassword string) error {
 	username := "hishtory"
 	// Note that uuid.NewRandom() uses crypto/rand and returns a UUID with 122 bits of security
 	password := uuid.Must(uuid.NewRandom()).String()
@@ -144,7 +144,7 @@ func StartWebUiServer(ctx context.Context, disableAuth bool, overridenUsername, 
 
 	server := http.Server{
 		BaseContext: func(l net.Listener) context.Context { return ctx },
-		Addr:        ":8000",
+		Addr:        fmt.Sprintf(":%d", port),
 	}
 	fmt.Printf("Starting web server on %s...\n", server.Addr)
 	fmt.Printf("Username: %s\nPassword: %s\n", username, password)

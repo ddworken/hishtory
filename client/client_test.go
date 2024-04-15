@@ -3029,12 +3029,12 @@ func TestWebUi(t *testing.T) {
 	tester.RunInteractiveShell(t, `echo foobar`)
 
 	// Start the server
-	require.NoError(t, tester.RunInteractiveShellBackground(t, `hishtory start-web-ui --force-creds hishtory:my_password`))
+	require.NoError(t, tester.RunInteractiveShellBackground(t, `hishtory start-web-ui --port 8001 --force-creds hishtory:my_password`))
 	time.Sleep(time.Second)
 	defer tester.RunInteractiveShell(t, `killall hishtory`)
 
 	// And check that the server seems to be returning valid data
-	req, err := http.NewRequest("GET", "http://localhost:8000?q=foobar", nil)
+	req, err := http.NewRequest("GET", "http://localhost:8001?q=foobar", nil)
 	require.NoError(t, err)
 	req.SetBasicAuth("hishtory", "my_password")
 	resp, err := http.DefaultClient.Do(req)
@@ -3046,12 +3046,12 @@ func TestWebUi(t *testing.T) {
 	require.Contains(t, string(respBody), "echo foobar")
 
 	// And that it rejects requests without auth
-	resp, err = http.Get("http://localhost:8000?q=foobar")
+	resp, err = http.Get("http://localhost:8001?q=foobar")
 	require.NoError(t, err)
 	require.Equal(t, 401, resp.StatusCode)
 
 	// And requests with incorrect auth
-	req, err = http.NewRequest("GET", "http://localhost:8000?q=foobar", nil)
+	req, err = http.NewRequest("GET", "http://localhost:8001?q=foobar", nil)
 	require.NoError(t, err)
 	req.SetBasicAuth("hishtory", "wrong-password")
 	resp, err = http.DefaultClient.Do(req)

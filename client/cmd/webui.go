@@ -13,6 +13,7 @@ import (
 
 var disableAuth *bool
 var forceCreds *string
+var port *int
 
 var webUiCmd = &cobra.Command{
 	Use:   "start-web-ui",
@@ -32,7 +33,7 @@ var webUiCmd = &cobra.Command{
 		if *disableAuth && *forceCreds != "" {
 			lib.CheckFatalError(fmt.Errorf("cannot specify both --disable-auth and --force-creds"))
 		}
-		lib.CheckFatalError(webui.StartWebUiServer(hctx.MakeContext(), *disableAuth, overridenUsername, overridenPassword))
+		lib.CheckFatalError(webui.StartWebUiServer(hctx.MakeContext(), *port, *disableAuth, overridenUsername, overridenPassword))
 		os.Exit(1)
 	},
 }
@@ -41,4 +42,5 @@ func init() {
 	rootCmd.AddCommand(webUiCmd)
 	disableAuth = webUiCmd.Flags().Bool("disable-auth", false, "Disable authentication for the Web UI (Warning: This means your entire shell history will be accessible from the local web server)")
 	forceCreds = webUiCmd.Flags().String("force-creds", "", "Specify the credentials to use for basic auth in the form `user:password`")
+	port = webUiCmd.Flags().Int("port", 8000, "The port for the web server to listen on")
 }
