@@ -2150,7 +2150,7 @@ func testTui_errors(t *testing.T) {
 
 	// Check the output when the device is offline AND there is an invalid search
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "ls:"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "ls", ":"})
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "")
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-OfflineInvalid")
