@@ -2056,7 +2056,9 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 	// And check that we can quote colons
 	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"foo:bar",
+		"foo",
+		":",
+		"bar",
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-SearchColonError")
 	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
