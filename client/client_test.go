@@ -1870,7 +1870,9 @@ func testTui_defaultFilter(t *testing.T) {
 	// Run a search query, type something, and then delete the default filter
 	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
 		"hishtory SPACE tquery ENTER",
-		"exit Left Left Left Left Left BSpace BSpace",
+		"exit",
+		"Left Left Left Left Left",
+		"BSpace BSpace",
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-DefaultFilter-DeletedWithText")
 }
