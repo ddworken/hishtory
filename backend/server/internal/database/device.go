@@ -52,7 +52,7 @@ func (db *DB) CreateDevice(ctx context.Context, device *Device) error {
 
 func (db *DB) DevicesForUser(ctx context.Context, userID string) ([]*Device, error) {
 	var devices []*Device
-	tx := db.WithContext(ctx).Where("user_id = ?", userID).Find(&devices)
+	tx := db.WithContext(ctx).Where("user_id = ? AND uninstall_date IS NULL", userID).Find(&devices)
 	if tx.Error != nil {
 		return nil, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
