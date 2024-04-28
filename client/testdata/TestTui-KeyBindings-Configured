@@ -1,0 +1,17 @@
+up: 			up alt+OA ctrl+p
+down: 			?
+page-up: 		pgup
+page-down: 		pgdown
+select-entry: 		enter
+select-entry-and-cd: 	ctrl+x
+left: 			left
+right: 			right
+table-left: 		shift+left
+table-right: 		shift+right
+delete-entry: 		ctrl+k
+help: 			ctrl+j
+quit: 			esc ctrl+c ctrl+d
+jump-start-of-input: 	ctrl+a
+jump-end-of-input: 	ctrl+e
+word-left: 		ctrl+left
+word-right: 		ctrl+right
