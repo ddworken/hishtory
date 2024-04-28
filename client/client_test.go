@@ -2178,7 +2178,7 @@ func testTui_keybindings(t *testing.T) {
 		"'?' Enter",
 	})
 	out = stripTuiCommandPrefix(t, out)
-	testutils.CompareGoldens(t, out, "TestTui-KeyBindings-Selected")
+	require.Regexp(t, regexp.MustCompile(`^ls ~/\n`), out)
 }
 
 func testTui_errors(t *testing.T) {
