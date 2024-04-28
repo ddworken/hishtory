@@ -122,6 +122,13 @@ You can customize hishtory's color scheme for the TUI. Run `hishtory config-set 
 </blockquote></details>
 
 <details>
+<summary>Custom Key Bindings</summary><blockquote>
+
+You can customize hishtory's key bindings for the TUI. Run `hishtory config-get key-bindings` to see the current key bindings. You can then run `hishtory config-set key-bindings $action $keybinding` to configure custom key bindings.
+
+</blockquote></details>
+
+<details>
 <summary>Disabling Control+R integration</summary><blockquote>
 
 If you'd like to disable the Control+R integration in your shell, you can do so by running `hishtory config-set enable-control-r false`. If you do this, you can then manually query hiSHtory by running `hishtory query <YOUR QUERY HERE>`.
@@ -194,7 +201,6 @@ If you'd like to temporarily allow someone else to search your shell history, yo
 Note that this uses [HTTP Basic Auth](https://en.wikipedia.org/wiki/Basic_access_authentication), so the credentials are sent over your local network via HTTP.
 
 </blockquote></details>
-
 
 <details>
 <summary>Customizing the install folder</summary><blockquote>

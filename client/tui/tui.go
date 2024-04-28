@@ -23,6 +23,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/table"
+	"github.com/ddworken/hishtory/client/tui/keybindings"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
@@ -42,120 +43,6 @@ var LAST_DISPATCHED_QUERY_ID = 0
 var LAST_DISPATCHED_QUERY_TIMESTAMP time.Time
 var LAST_PROCESSED_QUERY_ID = -1
 
-type keyMap struct {
-	Up                      key.Binding
-	Down                    key.Binding
-	PageUp                  key.Binding
-	PageDown                key.Binding
-	SelectEntry             key.Binding
-	SelectEntryAndChangeDir key.Binding
-	Left                    key.Binding
-	Right                   key.Binding
-	TableLeft               key.Binding
-	TableRight              key.Binding
-	DeleteEntry             key.Binding
-	Help                    key.Binding
-	Quit                    key.Binding
-	JumpStartOfInput        key.Binding
-	JumpEndOfInput          key.Binding
-	JumpWordLeft            key.Binding
-	JumpWordRight           key.Binding
-}
-
-var fakeTitleKeyBinding key.Binding = key.NewBinding(
-	key.WithKeys(""),
-	key.WithHelp("hiSHtory: Search your shell history", ""),
-)
-
-var fakeEmptyKeyBinding key.Binding = key.NewBinding(
-	key.WithKeys(""),
-	key.WithHelp("", ""),
-)
-
-func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{fakeTitleKeyBinding, k.Help}
-}
-
-func (k keyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{fakeTitleKeyBinding, k.Up, k.Left, k.SelectEntry, k.SelectEntryAndChangeDir},
-		{fakeEmptyKeyBinding, k.Down, k.Right, k.DeleteEntry},
-		{fakeEmptyKeyBinding, k.PageUp, k.TableLeft, k.Quit},
-		{fakeEmptyKeyBinding, k.PageDown, k.TableRight, k.Help},
-	}
-}
-
-var keys = keyMap{
-	Up: key.NewBinding(
-		key.WithKeys("up", "alt+OA", "ctrl+p"),
-		key.WithHelp("↑ ", "scroll up "),
-	),
-	Down: key.NewBinding(
-		key.WithKeys("down", "alt+OB", "ctrl+n"),
-		key.WithHelp("↓ ", "scroll down "),
-	),
-	PageUp: key.NewBinding(
-		key.WithKeys("pgup"),
-		key.WithHelp("pgup", "page up "),
-	),
-	PageDown: key.NewBinding(
-		key.WithKeys("pgdown"),
-		key.WithHelp("pgdn", "page down "),
-	),
-	SelectEntry: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "select an entry "),
-	),
-	SelectEntryAndChangeDir: key.NewBinding(
-		key.WithKeys("ctrl+x"),
-		key.WithHelp("ctrl+x", "select an entry and cd into that directory"),
-	),
-	Left: key.NewBinding(
-		key.WithKeys("left"),
-		key.WithHelp("← ", "move left "),
-	),
-	Right: key.NewBinding(
-		key.WithKeys("right"),
-		key.WithHelp("→ ", "move right "),
-	),
-	TableLeft: key.NewBinding(
-		key.WithKeys("shift+left"),
-		key.WithHelp("shift+← ", "scroll the table left "),
-	),
-	TableRight: key.NewBinding(
-		key.WithKeys("shift+right"),
-		key.WithHelp("shift+→ ", "scroll the table right "),
-	),
-	DeleteEntry: key.NewBinding(
-		key.WithKeys("ctrl+k"),
-		key.WithHelp("ctrl+k", "delete the highlighted entry "),
-	),
-	Help: key.NewBinding(
-		key.WithKeys("ctrl+h"),
-		key.WithHelp("ctrl+h", "help "),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("esc", "ctrl+c", "ctrl+d"),
-		key.WithHelp("esc", "exit hiSHtory "),
-	),
-	JumpStartOfInput: key.NewBinding(
-		key.WithKeys("ctrl+a"),
-		key.WithHelp("ctrl+a", "jump to the start of the input "),
-	),
-	JumpEndOfInput: key.NewBinding(
-		key.WithKeys("ctrl+e"),
-		key.WithHelp("ctrl+e", "jump to the end of the input "),
-	),
-	JumpWordLeft: key.NewBinding(
-		key.WithKeys("ctrl+left"),
-		key.WithHelp("ctrl+left", "jump left one word "),
-	),
-	JumpWordRight: key.NewBinding(
-		key.WithKeys("ctrl+right"),
-		key.WithHelp("ctrl+right", "jump right one word "),
-	),
-}
-
 type SelectStatus int64
 
 const (
@@ -163,6 +50,8 @@ const (
 	Selected
 	SelectedWithChangeDir
 )
+
+var loadedKeyBindings keybindings.KeyMap = keybindings.DefaultKeyMap
 
 type model struct {
 	// context
@@ -330,20 +219,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keys.Quit):
+		case key.Matches(msg, loadedKeyBindings.Quit):
 			m.quitting = true
 			return m, tea.Quit
-		case key.Matches(msg, keys.SelectEntry):
+		case key.Matches(msg, loadedKeyBindings.SelectEntry):
 			if len(m.tableEntries) != 0 && m.table != nil {
 				m.selected = Selected
 			}
 			return m, tea.Quit
-		case key.Matches(msg, keys.SelectEntryAndChangeDir):
+		case key.Matches(msg, loadedKeyBindings.SelectEntryAndChangeDir):
 			if len(m.tableEntries) != 0 && m.table != nil {
 				m.selected = SelectedWithChangeDir
 			}
 			return m, tea.Quit
-		case key.Matches(msg, keys.DeleteEntry):
+		case key.Matches(msg, loadedKeyBindings.DeleteEntry):
 			if m.table == nil {
 				return m, nil
 			}
@@ -355,16 +244,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := runQueryAndUpdateTable(m, true, true)
 			preventTableOverscrolling(m)
 			return m, cmd
-		case key.Matches(msg, keys.Help):
+		case key.Matches(msg, loadedKeyBindings.Help):
 			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
-		case key.Matches(msg, keys.JumpStartOfInput):
+		case key.Matches(msg, loadedKeyBindings.JumpStartOfInput):
 			m.queryInput.SetCursor(0)
 			return m, nil
-		case key.Matches(msg, keys.JumpEndOfInput):
+		case key.Matches(msg, loadedKeyBindings.JumpEndOfInput):
 			m.queryInput.SetCursor(len(m.queryInput.Value()))
 			return m, nil
-		case key.Matches(msg, keys.JumpWordLeft):
+		case key.Matches(msg, loadedKeyBindings.WordLeft):
 			wordBoundaries := calculateWordBoundaries(m.queryInput.Value())
 			lastBoundary := 0
 			for _, boundary := range wordBoundaries {
@@ -375,7 +264,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				lastBoundary = boundary
 			}
 			return m, nil
-		case key.Matches(msg, keys.JumpWordRight):
+		case key.Matches(msg, loadedKeyBindings.WordRight):
 			wordBoundaries := calculateWordBoundaries(m.queryInput.Value())
 			for _, boundary := range wordBoundaries {
 				if boundary > m.queryInput.Position() {
@@ -509,7 +398,7 @@ func (m model) View() string {
 	if isExtraCompactHeightMode() {
 		additionalMessagesStr = "\n"
 	}
-	helpView := m.help.View(keys)
+	helpView := m.help.View(loadedKeyBindings)
 	if isExtraCompactHeightMode() {
 		helpView = ""
 	}
@@ -751,10 +640,10 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 		return table.Model{}, err
 	}
 	km := table.KeyMap{
-		LineUp:   keys.Up,
-		LineDown: keys.Down,
-		PageUp:   keys.PageUp,
-		PageDown: keys.PageDown,
+		LineUp:   loadedKeyBindings.Up,
+		LineDown: loadedKeyBindings.Down,
+		PageUp:   loadedKeyBindings.PageUp,
+		PageDown: loadedKeyBindings.PageDown,
 		GotoTop: key.NewBinding(
 			key.WithKeys("home"),
 			key.WithHelp("home", "go to start"),
@@ -763,8 +652,8 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 			key.WithKeys("end"),
 			key.WithHelp("end", "go to end"),
 		),
-		MoveLeft:  keys.TableLeft,
-		MoveRight: keys.TableRight,
+		MoveLeft:  loadedKeyBindings.TableLeft,
+		MoveRight: loadedKeyBindings.TableRight,
 	}
 	_, terminalHeight, err := getTerminalSize()
 	if err != nil {
@@ -954,6 +843,7 @@ func configureColorProfile(ctx context.Context) {
 }
 
 func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
+	loadedKeyBindings = hctx.GetConf(ctx).KeyBindings.ToKeyMap()
 	configureColorProfile(ctx)
 	p := tea.NewProgram(initialModel(ctx, shellName, initialQuery), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
