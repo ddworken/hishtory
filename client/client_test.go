@@ -3127,4 +3127,66 @@ func TestForceInit(t *testing.T) {
 	require.NotContains(t, tester.RunInteractiveShell(t, `hishtory export`), "echo foobar")
 }
 
+func TestChangeSyncingStatus(t *testing.T) {
+	markTestForSharding(t, 14)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+
+	// Install it offline and record a command or two
+	userSecret := installWithOnlineStatus(t, tester, Offline)
+	assertOnlineStatus(t, Offline)
+	tester.RunInteractiveShell(t, `echo "device1_whileOffline_1"`)
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
+		"TestChangeSyncingStatus-Offline",
+	)
+
+	// Go online
+	out := tester.RunInteractiveShell(t, `hishtory syncing enable`)
+	require.Equal(t, "Enabled syncing successfully\n", out)
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
+		"TestChangeSyncingStatus-Online",
+	)
+
+	// Back up that device and set up another device to confirm syncing is working
+	restoreDev1 := testutils.BackupAndRestoreWithId(t, "dev1")
+	installHishtory(t, tester, userSecret)
+	out = tester.RunInteractiveShell(t, `hishtory export`)
+	require.Contains(t, out, "device1_whileOffline_1")
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
+		"TestChangeSyncingStatus-Online",
+	)
+
+	// Go back to the first device, disable syncing, and then record a command
+	restoreDev2 := testutils.BackupAndRestoreWithId(t, "dev2")
+	restoreDev1()
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
+		"TestChangeSyncingStatus-Online",
+	)
+	out = tester.RunInteractiveShell(t, `hishtory syncing disable`)
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
+		"TestChangeSyncingStatus-Offline",
+	)
+	require.Equal(t, "Disabled syncing successfully\n", out)
+	tester.RunInteractiveShell(t, `echo "device1_whileOffline_2"`)
+	out = tester.RunInteractiveShell(t, `hishtory export`)
+	require.Contains(t, out, "device1_whileOffline_1")
+	require.Contains(t, out, "device1_whileOffline_2")
+
+	// Then go back to the second device which won't see that command
+	testutils.BackupAndRestoreWithId(t, "dev1")
+	restoreDev2()
+	out = tester.RunInteractiveShell(t, `hishtory export`)
+	require.Contains(t, out, "device1_whileOffline_1")
+	require.NotContains(t, out, "device1_whileOffline_2")
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
+		"TestChangeSyncingStatus-Online",
+	)
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

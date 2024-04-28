@@ -155,7 +155,7 @@ If you don't need the ability to sync your shell history, you can install hiSHto
 curl https://hishtory.dev/install.py | HISHTORY_OFFLINE=true python3 -
 ```
 
-This disables syncing and it is not possible to re-enable syncing after doing this.
+This disables syncing completely so that the client will not rely on the hiSHtory backend at all. You can also change the syncing status via `hishtory syncing enable` or `hishtory syncing disable`.
 
 </blockquote></details>
 
