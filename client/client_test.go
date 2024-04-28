@@ -114,6 +114,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/delete", wrapTestForSharding(testTui_delete))
 	t.Run("testTui/color", wrapTestForSharding(testTui_color))
 	t.Run("testTui/errors", wrapTestForSharding(testTui_errors))
+	t.Run("testTui/keybindings", wrapTestForSharding(testTui_keybindings))
 	t.Run("testTui/ai", wrapTestForSharding(testTui_ai))
 	t.Run("testTui/defaultFilter", wrapTestForSharding(testTui_defaultFilter))
 
@@ -2138,6 +2139,46 @@ func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
+}
+
+func testTui_keybindings(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t, Online)
+
+	// Check the default config
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory config-get key-bindings`),
+		"TestTui-KeyBindings-Default",
+	)
+
+	// Configure some custom key bindings
+	tester.RunInteractiveShell(t, `hishtory config-set key-bindings down '?'`)
+	tester.RunInteractiveShell(t, `hishtory config-set key-bindings help ctrl+j`)
+
+	// Check that they got configured
+	testutils.CompareGoldens(t,
+		tester.RunInteractiveShell(t, `hishtory config-get key-bindings`),
+		"TestTui-KeyBindings-Configured",
+	)
+
+	// Record a command and demo searching for it
+	tester.RunInteractiveShell(t, `echo 1`)
+	tester.RunInteractiveShell(t, `echo 2`)
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-j",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-KeyBindings-Help")
+
+	// Use the custom key binding for scrolling down
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'?' Enter",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	require.Regexp(t, regexp.MustCompile(`^ls ~/\n`), out)
 }
 
 func testTui_errors(t *testing.T) {

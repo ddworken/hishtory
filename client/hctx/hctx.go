@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/tui/keybindings"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -208,6 +209,8 @@ type ClientConfig struct {
 	DefaultFilter string `json:"default_filter"`
 	// The endpoint to use for AI suggestions
 	AiCompletionEndpoint string `json:"ai_completion_endpoint"`
+	// Custom key bindings for the TUI
+	KeyBindings keybindings.SerializableKeyMap `json:"key_bindings"`
 }
 
 type ColorScheme struct {
@@ -260,6 +263,7 @@ func GetConfig() (ClientConfig, error) {
 	if err != nil {
 		return ClientConfig{}, fmt.Errorf("failed to parse config file: %w", err)
 	}
+	config.KeyBindings = config.KeyBindings.WithDefaults()
 	if config.DisplayedColumns == nil || len(config.DisplayedColumns) == 0 {
 		config.DisplayedColumns = []string{"Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command"}
 	}
