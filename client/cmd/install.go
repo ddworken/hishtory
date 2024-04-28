@@ -591,12 +591,15 @@ func setup(userSecret string, isOffline bool) error {
 	if config.IsOffline {
 		return nil
 	}
-	ctx := hctx.MakeContext()
+	return registerAndBootstrapDevice(hctx.MakeContext(), &config, db, userSecret)
+}
+
+func registerAndBootstrapDevice(ctx context.Context, config *hctx.ClientConfig, db *gorm.DB, userSecret string) error {
 	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
 	if isIntegrationTestDevice() {
 		registerPath += "&is_integration_test_device=true"
 	}
-	_, err = lib.ApiGet(ctx, registerPath)
+	_, err := lib.ApiGet(ctx, registerPath)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %w", err)
 	}
