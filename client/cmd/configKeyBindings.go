@@ -77,6 +77,8 @@ var setKeyBindingsCmd = &cobra.Command{
 			config.KeyBindings.WordLeft = args[1:]
 		case "word-right":
 			config.KeyBindings.WordRight = args[1:]
+		default:
+			lib.CheckFatalError(fmt.Errorf("unknown action %q, run `hishtory config-get keybindings` to see the list of currently configured key bindings", args[0]))
 		}
 		lib.CheckFatalError(hctx.SetConfig(config))
 	},
