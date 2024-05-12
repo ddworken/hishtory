@@ -172,6 +172,7 @@ func countLinesInFile(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer file.Close()
 	buf := make([]byte, 32*1024)
 	count := 0
 	lineSep := []byte{'\n'}
