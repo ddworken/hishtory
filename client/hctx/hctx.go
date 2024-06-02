@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -82,7 +83,7 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	newLogger := logger.New(
 		GetLogger().WithField("fromSQL", true),
 		logger.Config{
-			SlowThreshold:             100 * time.Millisecond,
+			SlowThreshold:             time.Nanosecond,
 			LogLevel:                  logger.Warn,
 			IgnoreRecordNotFoundError: false,
 			Colorful:                  false,
@@ -107,7 +108,32 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	db.Exec("CREATE INDEX IF NOT EXISTS start_time_index ON history_entries(start_time)")
 	db.Exec("CREATE INDEX IF NOT EXISTS end_time_index ON history_entries(end_time)")
 	db.Exec("CREATE INDEX IF NOT EXISTS entry_id_index ON history_entries(entry_id)")
+	/*
+		local_username, hostname, command, current_working_directory, exit_code, start_time, end_time, device_id, home_directory, entry_id, custom_columns
+	*/
+	queries := []string{
+		"DROP TABLE ft",
+		"CREATE VIRTUAL TABLE ft USING fts5(local_username, hostname, command, current_working_directory, home_directory, custom_columns, content='history_entries')",
+		"INSERT INTO ft(ft) VALUES('rebuild')",
+		`SELECT * FROM ft WHERE (command MATCH "foo" OR local_username MATCH "foo" OR current_working_directory MATCH "foo")`,
+	}
+	for _, query := range queries {
+		danger(query, db.Exec(query))
+
+	}
+	fmt.Println("Done with FTS setup!")
 	return db, nil
+}
+
+func danger(query string, res *gorm.DB) {
+	fmt.Printf("Executing query=%q\n", query)
+	err := res.Error
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table: ") && strings.Contains(query, "DROP TABLE ") {
+			return
+		}
+		panic(err)
+	}
 }
 
 type hishtoryContextKey string

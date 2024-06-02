@@ -745,8 +745,44 @@ func where(tx *gorm.DB, s string, v1 any, v2 any) *gorm.DB {
 	panic(fmt.Sprintf("Impossible state: v1=%#v, v2=%#v", v1, v2))
 }
 
+func isSimpleQuery(tokens []string) bool {
+	for _, token := range tokens {
+		if strings.HasPrefix(token, "-") || containsUnescaped(token, ":") {
+			return false
+		}
+	}
+	return true
+}
+
+func makeFtsQuery(ctx context.Context, db *gorm.DB, tokens []string) (*gorm.DB, error) {
+	fmt.Printf("makeFtsQuery: tokens=%#v\n", tokens)
+
+	// tx := db.Exec("SELECT * FROM ft")
+	// for _, token := range tokens {
+	// 	tx = tx.Where("(command MATCH ? OR local_username MATCH ? OR current_working_directory MATCH ?)", token, token, token)
+	// }
+	// return tx, nil
+	query := "SELECT * FROM ft WHERE "
+	isFirst := true
+	args := []any{}
+	for _, token := range tokens {
+		if !isFirst {
+			query += " OR "
+		}
+		query += fmt.Sprintf("(command MATCH %q OR local_username MATCH %q OR current_working_directory MATCH %q)", token, token, token)
+		args = append(args, token, token, token)
+		isFirst = false
+	}
+	fmt.Printf("makeFtsQuery: %s\n", query)
+	return db.Exec(query), nil
+}
+
 func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
 	tokens := tokenize(query)
+	if isSimpleQuery(tokens) {
+		fmt.Println("Calling makeFtsQuery")
+		return makeFtsQuery(ctx, db, tokens)
+	}
 	tx := db.Model(&data.HistoryEntry{}).Where("true")
 	for _, token := range tokens {
 		if strings.HasPrefix(token, "-") {
@@ -823,6 +859,7 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit int, c
 }
 
 func parseNonAtomizedToken(token string) (string, any, any, any, error) {
+	// TODO: We probably should find a way to support searching based on custom columns here
 	wildcardedToken := "%" + unescape(token) + "%"
 	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
 }

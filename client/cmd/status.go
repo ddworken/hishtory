@@ -25,6 +25,9 @@ var statusCmd = &cobra.Command{
 			printOnlineStatus(config)
 		}
 		fmt.Printf("Commit Hash: %s\n", lib.GitCommit)
+		results, err := lib.Search(ctx, hctx.GetDb(ctx), "foo", 10)
+		lib.CheckFatalError(err)
+		fmt.Printf("results=%#v\n", results)
 	},
 }
 

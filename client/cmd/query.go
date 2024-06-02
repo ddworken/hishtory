@@ -37,7 +37,8 @@ var queryCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
-		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
+		fmt.Println("DDWORKENDEBUG: 1")
+		// lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
 		query(ctx, strings.Join(args, " "))
 	},
 }
