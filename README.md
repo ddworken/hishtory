@@ -87,6 +87,8 @@ The TUI (opened via `Control+R`) supports a number of key bindings:
 
 Press `Control+H` to view a help page documenting these.
 
+You can also customize hishtory's key bindings for the TUI. Run `hishtory config-get key-bindings` to see the current key bindings. You can then run `hishtory config-set key-bindings $action $keybinding` to configure custom key bindings.
+
 </blockquote></details>
 
 <details>
@@ -118,13 +120,6 @@ hishtory config-add displayed-columns git_remote
 <summary>Custom Color Scheme</summary><blockquote>
 
 You can customize hishtory's color scheme for the TUI. Run `hishtory config-set color-scheme` to see information on what is customizable and how to do so.
-
-</blockquote></details>
-
-<details>
-<summary>Custom Key Bindings</summary><blockquote>
-
-You can customize hishtory's key bindings for the TUI. Run `hishtory config-get key-bindings` to see the current key bindings. You can then run `hishtory config-set key-bindings $action $keybinding` to configure custom key bindings.
 
 </blockquote></details>
 
