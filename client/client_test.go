@@ -3196,7 +3196,7 @@ func TestInstallSkipConfigModification(t *testing.T) {
 
 	// Install and check that it gave info on how to configure the shell
 	out := tester.RunInteractiveShell(t, ` /tmp/client install --skip-config-modification | grep -v "secret hishtory key"`)
-	testutils.CompareGoldens(t, out, "TestInstallSkipConfigModification-InstallOutput")
+	testutils.CompareGoldens(t, out, "TestInstallSkipConfigModification-InstallOutput-"+runtime.GOOS)
 
 	// Check that the shell config files weren't configured
 	homedir, err := os.UserHomeDir()
