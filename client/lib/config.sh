@@ -20,9 +20,22 @@ function __hishtory_precommand() {
   HISHTORY_START_TIME=`hishtory getTimestamp`
   CMD=`history 1`
   if ! [ -z "CMD " ] ; then
-    (hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME &) # Background Run
-    # hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME  # Foreground Run
+    if [[ "$CMD" != "$LAST_PRESAVED_COMMAND" ]] ; then 
+      (hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME &) # Background Run
+      # hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME  # Foreground Run
+    fi 
   fi
+  # This code with $LAST_PRESAVED_COMMAND is necessary to work around a quirk of bash. With bash,
+  # if you run the command `foo` and then press `Control+R`, it will trigger the DEBUG signal. And
+  # `history 1` will still return `foo` so this will lead to duplicate pre-saves causing entries to
+  # show up twice. This works around this issue by skipping presaving if the last commadn we presaved
+  # was identical. 
+  # 
+  # This does lead to a potential correctness bug since it means if someone runs the same non-terminating
+  # command twice in a row, we won't pre-save the second entry. But this seems reasonably unlikely
+  # such that it is worth accepting this issue to mitigate the duplicate entries observed in
+  # https://github.com/ddworken/hishtory/issues/215.
+  LAST_PRESAVED_COMMAND=$CMD
 }
 trap "__hishtory_precommand" DEBUG
 
