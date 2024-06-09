@@ -3127,8 +3127,20 @@ func TestForceInit(t *testing.T) {
 	require.NotContains(t, tester.RunInteractiveShell(t, `hishtory export`), "echo foobar")
 }
 
+func TestBashOrderingBug(t *testing.T) {
+	markTestForSharding(t, 15)
+	defer testutils.BackupAndRestore(t)()
+	tester := bashTester{}
+	installHishtory(t, tester, "")
+
+	// Trigger a set of steps that cause a weird bug with bash as reported in github.com/ddworken/hishtory/issues/215
+	captureTerminalOutput(t, tester, []string{"command1 Enter", "command2 Enter", "C-R", "C-C", "command3 Enter", "command4 Enter"})
+	out := tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail | grep -v '/tmp/client install'`)
+	testutils.CompareGoldens(t, out, "TestBashOrderingBug-Export")
+}
+
 func TestChangeSyncingStatus(t *testing.T) {
-	markTestForSharding(t, 14)
+	markTestForSharding(t, 15)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
