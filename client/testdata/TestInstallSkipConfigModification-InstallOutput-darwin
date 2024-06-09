@@ -22,4 +22,3 @@ export PATH="$PATH:/Users/runner/.hishtory"
 source /Users/runner/.hishtory/config.zsh
 ```
 
-
