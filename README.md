@@ -131,7 +131,7 @@ If you'd like to disable the Control+R integration in your shell, you can do so 
 </blockquote></details>
 
 <details>
-<summary>Custom search filters</summary><blockquote>
+<summary>Default search filters</summary><blockquote>
 
 By default, hiSHtory query will show all results for your search query. But, it is possible to configure a default filter that will apply to all searches by default. For example, this can be used to configure hiSHtory to only show entries with an exit code of `0`:
 
