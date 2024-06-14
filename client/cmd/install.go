@@ -26,6 +26,7 @@ import (
 var offlineInit *bool
 var forceInit *bool
 var offlineInstall *bool
+var skipConfigModification *bool
 
 var installCmd = &cobra.Command{
 	Use:    "install",
@@ -37,7 +38,7 @@ var installCmd = &cobra.Command{
 		if len(args) > 0 {
 			secretKey = args[0]
 		}
-		lib.CheckFatalError(install(secretKey, *offlineInstall))
+		lib.CheckFatalError(install(secretKey, *offlineInstall, *skipConfigModification))
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
@@ -145,7 +146,7 @@ func warnIfUnsupportedBashVersion() error {
 	return nil
 }
 
-func install(secretKey string, offline bool) error {
+func install(secretKey string, offline, skipConfigModification bool) error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %w", err)
@@ -158,15 +159,15 @@ func install(secretKey string, offline bool) error {
 	if err != nil {
 		return err
 	}
-	err = configureBashrc(homedir, path)
+	err = configureBashrc(homedir, path, skipConfigModification)
 	if err != nil {
 		return err
 	}
-	err = configureZshrc(homedir, path)
+	err = configureZshrc(homedir, path, skipConfigModification)
 	if err != nil {
 		return err
 	}
-	err = configureFish(homedir, path)
+	err = configureFish(homedir, path, skipConfigModification)
 	if err != nil {
 		return err
 	}
@@ -254,7 +255,7 @@ func getFishConfigPath(homedir string) string {
 	return path.Join(homedir, data.GetHishtoryPath(), "config.fish")
 }
 
-func configureFish(homedir, binaryPath string) error {
+func configureFish(homedir, binaryPath string, skipConfigModification bool) error {
 	// Check if fish is installed
 	_, err := exec.LookPath("fish")
 	if err != nil {
@@ -282,11 +283,15 @@ func configureFish(homedir, binaryPath string) error {
 		return nil
 	}
 	// Add to fishrc
+	if _, err := exec.LookPath("fish"); err != nil && skipConfigModification {
+		// fish is not installed, so avoid prompting the user to configure fish
+		return nil
+	}
 	err = os.MkdirAll(path.Join(homedir, ".config/fish"), 0o744)
 	if err != nil {
 		return fmt.Errorf("failed to create fish config directory: %w", err)
 	}
-	return addToShellConfig(path.Join(homedir, ".config/fish/config.fish"), getFishConfigFragment(homedir))
+	return addToShellConfig(path.Join(homedir, ".config/fish/config.fish"), getFishConfigFragment(homedir), skipConfigModification)
 }
 
 func getFishConfigFragment(homedir string) string {
@@ -309,7 +314,7 @@ func getZshConfigPath(homedir string) string {
 	return path.Join(homedir, data.GetHishtoryPath(), "config.zsh")
 }
 
-func configureZshrc(homedir, binaryPath string) error {
+func configureZshrc(homedir, binaryPath string, skipConfigModification bool) error {
 	// Create the file we're going to source in our zshrc. Do this no matter what in case there are updates to it.
 	configContents := lib.ConfigZshContents
 	if os.Getenv("HISHTORY_TEST") != "" {
@@ -332,7 +337,7 @@ func configureZshrc(homedir, binaryPath string) error {
 		return nil
 	}
 	// Add to zshrc
-	return addToShellConfig(getZshRcPath(homedir), getZshConfigFragment(homedir))
+	return addToShellConfig(getZshRcPath(homedir), getZshConfigFragment(homedir), skipConfigModification)
 }
 
 func getZshRcPath(homedir string) string {
@@ -362,7 +367,7 @@ func getBashConfigPath(homedir string) string {
 	return path.Join(homedir, data.GetHishtoryPath(), "config.sh")
 }
 
-func configureBashrc(homedir, binaryPath string) error {
+func configureBashrc(homedir, binaryPath string, skipConfigModification bool) error {
 	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
 	configContents := lib.ConfigShContents
 	if os.Getenv("HISHTORY_TEST") != "" {
@@ -382,7 +387,7 @@ func configureBashrc(homedir, binaryPath string) error {
 		return fmt.Errorf("failed to check ~/.bashrc: %w", err)
 	}
 	if !bashRcIsConfigured {
-		err = addToShellConfig(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
+		err = addToShellConfig(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir), skipConfigModification)
 		if err != nil {
 			return err
 		}
@@ -394,7 +399,7 @@ func configureBashrc(homedir, binaryPath string) error {
 			return fmt.Errorf("failed to check ~/.bash_profile: %w", err)
 		}
 		if !bashProfileIsConfigured {
-			err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir))
+			err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir), skipConfigModification)
 			if err != nil {
 				return err
 			}
@@ -403,7 +408,11 @@ func configureBashrc(homedir, binaryPath string) error {
 	return nil
 }
 
-func addToShellConfig(shellConfigPath, configFragment string) error {
+func addToShellConfig(shellConfigPath, configFragment string, skipConfigModification bool) error {
+	if skipConfigModification {
+		fmt.Printf("Please edit %q to add:\n\n```\n%s\n```\n\n", convertToRelativePath(shellConfigPath), strings.TrimSpace(configFragment))
+		return nil
+	}
 	f, err := os.OpenFile(shellConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to append to %s: %w", shellConfigPath, err)
@@ -414,6 +423,17 @@ func addToShellConfig(shellConfigPath, configFragment string) error {
 		return fmt.Errorf("failed to append to %s: %w", shellConfigPath, err)
 	}
 	return nil
+}
+
+func convertToRelativePath(path string) string {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if strings.HasPrefix(path, homedir) {
+		return strings.Replace(path, homedir, "~", 1)
+	}
+	return path
 }
 
 func getBashConfigFragment(homedir string) string {
@@ -642,5 +662,6 @@ func init() {
 
 	offlineInit = initCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
 	forceInit = initCmd.Flags().Bool("force", false, "Force re-init without any prompts")
-	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode wiht all syncing capabilities disabled")
+	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode with all syncing capabilities disabled")
+	skipConfigModification = installCmd.Flags().Bool("skip-config-modification", false, "Skip modifying shell configs and instead instruct the user on how to modify their configs")
 }

@@ -1,0 +1,24 @@
+Please edit "~/.bashrc" to add:
+
+```
+# Hishtory Config:
+export PATH="$PATH:/home/runner/.hishtory"
+source /home/runner/.hishtory/config.sh
+```
+
+Please edit "~/.bash_profile" to add:
+
+```
+# Hishtory Config:
+export PATH="$PATH:/home/runner/.hishtory"
+source /home/runner/.hishtory/config.sh
+```
+
+Please edit "~/.zshrc" to add:
+
+```
+# Hishtory Config:
+export PATH="$PATH:/home/runner/.hishtory"
+source /home/runner/.hishtory/config.zsh
+```
+

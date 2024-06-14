@@ -3201,4 +3201,29 @@ func TestChangeSyncingStatus(t *testing.T) {
 	)
 }
 
+func TestInstallSkipConfigModification(t *testing.T) {
+	markTestForSharding(t, 14)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+
+	// Install and check that it gave info on how to configure the shell
+	out := tester.RunInteractiveShell(t, ` /tmp/client install --skip-config-modification | grep -v "secret hishtory key"`)
+	testutils.CompareGoldens(t, out, "TestInstallSkipConfigModification-InstallOutput-"+runtime.GOOS)
+
+	// Check that the shell config files weren't configured
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+	shellConfigFiles := []string{
+		path.Join(homedir, ".zshrc"),
+		path.Join(homedir, ".bashrc"),
+		path.Join(homedir, ".bash_profile"),
+		path.Join(homedir, ".config/fish/config.fish"),
+	}
+	for _, file := range shellConfigFiles {
+		fileContents, err := os.ReadFile(file)
+		require.NoError(t, err)
+		require.NotContains(t, fileContents, "hishtory")
+	}
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
