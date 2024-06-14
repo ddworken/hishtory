@@ -131,6 +131,17 @@ If you'd like to disable the Control+R integration in your shell, you can do so 
 </blockquote></details>
 
 <details>
+<summary>Custom search filters</summary><blockquote>
+
+By default, hiSHtory query will show all results for your search query. But, it is possible to configure a default filter that will apply to all searches by default. For example, this can be used to configure hiSHtory to only show entries with an exit code of `0`:
+
+```
+hishtory config-set default-filter exit_code:0
+```
+
+</blockquote></details>
+
+<details>
 <summary>Filtering duplicate entries</summary><blockquote>
 
 By default, hishtory query will show all results even if this includes duplicate history entries. This helps you keep track of how many times you've run a command and in what contexts. If you'd rather disable this so that hiSHtory won't show duplicate entries, you can run:
