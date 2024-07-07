@@ -520,7 +520,7 @@ func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter
 }
 
 func commandEscaper(cmd string) string {
-	if !strings.Contains(cmd, "\n") {
+	if !strings.Contains(cmd, "\n") && !strings.Contains(cmd, "\t") {
 		// No special escaping necessary
 		return cmd
 	}
