@@ -117,6 +117,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/keybindings", wrapTestForSharding(testTui_keybindings))
 	t.Run("testTui/ai", wrapTestForSharding(testTui_ai))
 	t.Run("testTui/defaultFilter", wrapTestForSharding(testTui_defaultFilter))
+	t.Run("testTui/escaping", wrapTestForSharding(testTui_escaping))
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1827,6 +1828,23 @@ func testTui_scroll(t *testing.T) {
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
+}
+
+func testTui_escaping(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, userSecret, _ := setupTestTui(t, Online)
+	db := hctx.GetDb(hctx.MakeContext())
+	e := testutils.MakeFakeHistoryEntry("echo 'a\tb\nc'")
+	require.NoError(t, db.Create(e).Error)
+	manuallySubmitHistoryEntry(t, userSecret, e)
+
+	// Test that it escapes tab and new line characters
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-Escaping")
 }
 
 func testTui_defaultFilter(t *testing.T) {
