@@ -45,7 +45,7 @@ jobs:
       run: |
 
           # Install our dependencies
-          pacman -Sy --noconfirm zsh tmux fish make gcc psmisc python-pip
+          pacman -Sy --noconfirm zsh tmux fish make gcc psmisc python-pip openssl python-pyopenssl
     - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v3
