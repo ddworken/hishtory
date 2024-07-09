@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.25.1-0.20240205134909-2b46020ca072
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/fatih/color v1.15.0
+	github.com/fatih/color v1.16.0
 	github.com/glebarez/sqlite v1.4.7
 	github.com/go-test/deep v1.1.0
 	github.com/google/go-cmp v0.6.0
@@ -24,7 +24,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.20.0
 	golang.org/x/term v0.18.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.43.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -137,7 +137,7 @@ require (
 	github.com/google/trillian v1.5.2 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/in-toto/in-toto-golang v0.9.0 // indirect
