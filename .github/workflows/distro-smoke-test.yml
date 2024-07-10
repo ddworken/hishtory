@@ -48,7 +48,7 @@ jobs:
           pacman -Sy --noconfirm zsh tmux fish make gcc psmisc python-pip openssl python-pyopenssl
     - uses: actions/checkout@v4
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: 1.21
     - name: Go test
