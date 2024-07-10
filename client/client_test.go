@@ -822,6 +822,15 @@ echo other`)
 		t.Fatalf("hishtory query has unexpected number of lines: out=%#v", out)
 	}
 	require.Contains(t, out, "/tmp")
+
+	// Record a command in a directory that does not exist
+	tester.RunInteractiveShell(t, `mkdir /tmp/deleted-test
+cd /tmp/deleted-test
+rm -rf /tmp/deleted-test
+echo test2
+`)
+	out = hishtoryQuery(t, tester, "echo test2")
+	require.Contains(t, out, "/tmp/deleted-test")
 }
 
 func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
