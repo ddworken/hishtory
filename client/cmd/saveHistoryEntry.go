@@ -648,6 +648,10 @@ func getCwdWithoutSubstitution() (string, error) {
 			return cwd, nil
 		}
 	}
+	cwd = os.Getenv("PWD")
+	if cwd != "" && strings.HasPrefix(cwd, "/") {
+		return cwd, nil
+	}
 	return "", err
 }
 
