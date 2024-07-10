@@ -113,7 +113,7 @@ jobs:
       
   # Sign the binaries and upload the signed binaries
   macos_signer:
-    runs-on: macos-11.0
+    runs-on: macos-14.0
     needs: 
       - build-darwin-amd64 
       - build-darwin-arm64 
