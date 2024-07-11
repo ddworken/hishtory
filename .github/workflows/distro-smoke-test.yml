@@ -40,6 +40,7 @@ jobs:
 
           # Install our dependencies
           zypper install -y zsh tmux fish make gcc psmisc git tar
+          ln -s `which bash` /bin/sh
     - name: Arch-based Setup
       if: ${{ matrix.distro == 'archlinux:latest' }}
       run: |
@@ -58,8 +59,8 @@ jobs:
       run: |
           go install gotest.tools/gotestsum@bc98120
           make ftest FILTER=TestInstallViaPythonScriptFromHead
-    # - name: Setup tmate session
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
-    #   with:
-    #     limit-access-to-actor: true
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
