@@ -39,7 +39,7 @@ jobs:
       run: |
 
           # Install our dependencies
-          zypper install -y zsh tmux fish make gcc psmisc
+          zypper install -y zsh tmux fish make gcc psmisc git tar
     - name: Arch-based Setup
       if: ${{ matrix.distro == 'archlinux:latest' }}
       run: |
