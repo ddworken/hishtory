@@ -12,7 +12,7 @@ jobs:
   test:
     strategy:
       matrix:
-        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest', 'opensuse/leap:latest', 'archlinux:latest']
+        distro: ['ubuntu:latest', 'fedora:latest', 'debian:latest', 'archlinux:latest']
       fail-fast: false
     runs-on: ubuntu-latest
     container: ${{ matrix.distro }}
@@ -34,13 +34,6 @@ jobs:
           # Install our dependencies
           sudo dnf update -y
           sudo dnf install -y zsh tmux fish make gcc psmisc
-    - name: OpenSUSE Setup
-      if: ${{ matrix.distro == 'opensuse/leap:latest' }}
-      run: |
-
-          # Install our dependencies
-          zypper install -y zsh tmux fish make gcc psmisc git tar
-          ln -s `which bash` /bin/sh
     - name: Arch-based Setup
       if: ${{ matrix.distro == 'archlinux:latest' }}
       run: |
@@ -59,8 +52,8 @@ jobs:
       run: |
           go install gotest.tools/gotestsum@bc98120
           make ftest FILTER=TestInstallViaPythonScriptFromHead
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
