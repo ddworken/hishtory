@@ -8,12 +8,15 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/webui"
+
 	"github.com/spf13/cobra"
 )
 
-var disableAuth *bool
-var forceCreds *string
-var port *int
+var (
+	disableAuth *bool
+	forceCreds  *string
+	port        *int
+)
 
 var webUiCmd = &cobra.Command{
 	Use:   "start-web-ui",

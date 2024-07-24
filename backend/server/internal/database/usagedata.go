@@ -65,7 +65,7 @@ func (db *DB) UpdateUsageDataForNumEntriesHandled(ctx context.Context, userId, d
 	return nil
 }
 
-func (db *DB) UpdateUsageDataClientVersion(ctx context.Context, userID, deviceID string, version string) error {
+func (db *DB) UpdateUsageDataClientVersion(ctx context.Context, userID, deviceID, version string) error {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET version = ? WHERE user_id = ? AND device_id = ?", version, userID, deviceID)
 
 	if tx.Error != nil {

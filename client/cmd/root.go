@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ddworken/hishtory/client/lib"
+
 	"github.com/spf13/cobra"
 )
 

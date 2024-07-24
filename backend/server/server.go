@@ -7,10 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/ddworken/hishtory/backend/server/internal/database"
 	"github.com/ddworken/hishtory/backend/server/internal/release"
 	"github.com/ddworken/hishtory/backend/server/internal/server"
+
+	"github.com/DataDog/datadog-go/statsd"
 	_ "github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -21,10 +22,8 @@ const (
 	StatsdSocket = "unix:///var/run/datadog/dsd.socket"
 )
 
-var (
-	// Filled in via ldflags with the latest released version as of the server getting built
-	ReleaseVersion string
-)
+// Filled in via ldflags with the latest released version as of the server getting built
+var ReleaseVersion string
 
 func isTestEnvironment() bool {
 	return os.Getenv("HISHTORY_TEST") != ""
@@ -104,8 +103,10 @@ func OpenDB() (*database.DB, error) {
 	return db, nil
 }
 
-var LAST_USER_STATS_RUN = time.Unix(0, 0)
-var LAST_DEEP_CLEAN = time.Unix(0, 0)
+var (
+	LAST_USER_STATS_RUN = time.Unix(0, 0)
+	LAST_DEEP_CLEAN     = time.Unix(0, 0)
+)
 
 func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
 	// Determine the latest released version of hishtory to serve via the /api/v1/download

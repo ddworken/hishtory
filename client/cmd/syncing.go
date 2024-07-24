@@ -7,6 +7,7 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+
 	"github.com/spf13/cobra"
 )
 

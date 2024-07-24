@@ -8,6 +8,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+
 	"github.com/spf13/cobra"
 )
 
@@ -102,6 +103,7 @@ var setEnableAiCompletionCmd = &cobra.Command{
 		lib.CheckFatalError(hctx.SetConfig(config))
 	},
 }
+
 var setPresavingCmd = &cobra.Command{
 	Use:       "presaving",
 	Short:     "Enable 'presaving' of shell entries that never finish running",
