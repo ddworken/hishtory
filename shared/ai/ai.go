@@ -68,7 +68,6 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName string, 
 	if apiKey == "" && apiEndpoint == DefaultOpenAiEndpoint {
 		return nil, OpenAiUsage{}, fmt.Errorf("OPENAI_API_KEY environment variable is not set")
 	}
-	client := &http.Client{}
 	apiReq := openAiRequest{
 		Model:             "gpt-3.5-turbo",
 		NumberCompletions: numberCompletions,
@@ -92,7 +91,7 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName string, 
 	if apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to query OpenAI API: %w", err)
 	}
