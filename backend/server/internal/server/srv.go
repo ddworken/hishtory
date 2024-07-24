@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/ddworken/hishtory/backend/server/internal/database"
 	"github.com/ddworken/hishtory/shared"
+
+	"github.com/DataDog/datadog-go/statsd"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 )
 
@@ -27,8 +28,10 @@ type Server struct {
 	updateInfo              shared.UpdateInfo
 }
 
-type CronFn func(ctx context.Context, db *database.DB, stats *statsd.Client) error
-type Option func(*Server)
+type (
+	CronFn func(ctx context.Context, db *database.DB, stats *statsd.Client) error
+	Option func(*Server)
+)
 
 func WithStatsd(statsd *statsd.Client) Option {
 	return func(s *Server) {
@@ -154,7 +157,7 @@ func (s *Server) handleNonCriticalError(err error) {
 	}
 }
 
-func (s *Server) updateUsageData(ctx context.Context, version string, remoteAddr string, userId, deviceId string, numEntriesHandled int, isQuery bool) error {
+func (s *Server) updateUsageData(ctx context.Context, version, remoteAddr, userId, deviceId string, numEntriesHandled int, isQuery bool) error {
 	if !s.trackUsageData {
 		return nil
 	}

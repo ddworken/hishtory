@@ -19,6 +19,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"gorm.io/gorm"
@@ -441,7 +442,6 @@ func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave boo
 	} else {
 		return "", fmt.Errorf("tried to save a hishtory entry from an unsupported shell=%#v", shell)
 	}
-
 }
 
 func trimTrailingWhitespace(s string) string {
@@ -582,7 +582,6 @@ func parseCrossPlatformTime(data string) time.Time {
 	} else {
 		return time.Unix(startTime, 0).UTC()
 	}
-
 }
 
 func getLastCommand(history string) (string, error) {

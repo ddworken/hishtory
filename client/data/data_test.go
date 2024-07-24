@@ -57,5 +57,4 @@ func TestCustomColumnSerialization(t *testing.T) {
 	if val != "[{\"name\":\"name1\",\"value\":\"val1\"},{\"name\":\"name2\",\"value\":\"val2\"}]" {
 		t.Fatalf("unexpected val for empty CustomColumns: %#v", val)
 	}
-
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ddworken/hishtory/shared/testutils"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )
@@ -18,8 +19,10 @@ type operation struct {
 	redactQuery string
 }
 
-var tmp int = 0
-var runCounter *int = &tmp
+var (
+	tmp        int  = 0
+	runCounter *int = &tmp
+)
 
 func fuzzTest(t *testing.T, tester shellTester, input string) {
 	testutils.TestLog(t, fmt.Sprintf("Starting fuzz test for input=%#v", input))

@@ -20,8 +20,10 @@ var GLOBAL_STATSD *statsd.Client = nil
 
 var NUM_TEST_RETRIES map[string]int
 
-var UNUSED_GOLDENS []string = []string{"testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
-	"testCustomColumns-tquery-zsh"}
+var UNUSED_GOLDENS []string = []string{
+	"testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
+	"testCustomColumns-tquery-zsh",
+}
 
 func main() {
 	if os.Args[1] == "export" {
@@ -90,7 +92,6 @@ func checkGoldensUsed() {
 		}
 	}
 	fmt.Println("Validated that all goldens in testdata/ were referenced!")
-
 }
 
 func exportMetrics() {

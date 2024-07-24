@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
+
 	"github.com/jackc/pgx/v4/stdlib"
 	_ "github.com/lib/pq"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"

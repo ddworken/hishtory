@@ -469,7 +469,7 @@ func (m *Model) FromValues(value, separator string) {
 }
 
 func (m Model) headersView() string {
-	var s = make([]string, 0, len(m.cols))
+	s := make([]string, 0, len(m.cols))
 	for _, col := range m.cols {
 		style := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true)
 		renderedCell := style.Render(runewidth.Truncate(col.Title, col.Width, "…"))
@@ -491,7 +491,7 @@ func (m *Model) columnNeedsScrolling(columnIdxToCheck int) bool {
 
 func (m *Model) renderRow(rowID int) string {
 	isRowSelected := rowID == m.cursor
-	var s = make([]string, 0, len(m.cols))
+	s := make([]string, 0, len(m.cols))
 	for i, value := range m.rows[rowID] {
 		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
 

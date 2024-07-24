@@ -6,6 +6,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+
 	"github.com/spf13/cobra"
 )
 
@@ -57,6 +58,7 @@ var deleteCustomColumnsCmd = &cobra.Command{
 		lib.CheckFatalError(hctx.SetConfig(config))
 	},
 }
+
 var deleteDisplayedColumnCommand = &cobra.Command{
 	Use:     "displayed-columns",
 	Aliases: []string{"displayed-column"},

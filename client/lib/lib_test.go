@@ -10,6 +10,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -142,6 +143,7 @@ func TestChunks(t *testing.T) {
 		}
 	}
 }
+
 func TestZshWeirdness(t *testing.T) {
 	testcases := []struct {
 		input  string

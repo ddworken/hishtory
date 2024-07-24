@@ -13,14 +13,14 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/tui/keybindings"
 	"github.com/ddworken/hishtory/shared"
+
+	// Needed to use sqlite without CGO
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-
-	// Needed to use sqlite without CGO
-	"github.com/glebarez/sqlite"
 )
 
 var (

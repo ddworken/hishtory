@@ -14,15 +14,15 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/backend/server/internal/database"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
-
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
+
 	"github.com/go-test/deep"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 var DB *database.DB

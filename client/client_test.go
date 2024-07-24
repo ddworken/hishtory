@@ -16,10 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
-
 	"github.com/ddworken/hishtory/client/cmd"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
@@ -27,7 +23,11 @@ import (
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/ai"
 	"github.com/ddworken/hishtory/shared/testutils"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func skipSlowTests() bool {
@@ -1244,7 +1244,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 	homedir, err := os.UserHomeDir()
 	require.NoError(t, err)
 	f, err := os.OpenFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
-		os.O_APPEND|os.O_WRONLY, 0644)
+		os.O_APPEND|os.O_WRONLY, 0o644)
 	require.NoError(t, err)
 	defer f.Close()
 	_, err = f.WriteString("\nexport HISTTIMEFORMAT='%F %T '\n")
@@ -1263,7 +1263,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 	homedir, err = os.UserHomeDir()
 	require.NoError(t, err)
 	f, err = os.OpenFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
-		os.O_APPEND|os.O_WRONLY, 0644)
+		os.O_APPEND|os.O_WRONLY, 0o644)
 	require.NoError(t, err)
 	defer f.Close()
 	_, err = f.WriteString("\nexport HISTTIMEFORMAT='[%c] '\n")
@@ -2983,7 +2983,7 @@ func testMultipleUsers(t *testing.T, tester shellTester) {
 func createSyntheticImportEntries(t testing.TB, numSyntheticEntries int) {
 	homedir, err := os.UserHomeDir()
 	require.NoError(t, err)
-	f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	require.NoError(t, err)
 	defer f.Close()
 	for i := 1; i <= numSyntheticEntries; i++ {
