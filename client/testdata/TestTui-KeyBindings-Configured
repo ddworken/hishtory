@@ -15,3 +15,4 @@ jump-start-of-input: 	ctrl+a
 jump-end-of-input: 	ctrl+e
 word-left: 		ctrl+left
 word-right: 		ctrl+right
+hide-columns: 		ctrl+t
