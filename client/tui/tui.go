@@ -94,6 +94,9 @@ type model struct {
 
 	// The currently executing shell. Defaults to bash if not specified. Used for more precise AI suggestions.
 	shellName string
+
+	// Compacting TUI config
+	compactTUIflag bool
 }
 
 type doneDownloadingMsg struct{}
@@ -122,7 +125,8 @@ func initialModel(ctx context.Context, shellName, initialQuery string) model {
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	queryInput := textinput.New()
-	defaultFilter := hctx.GetConf(ctx).DefaultFilter
+	cfg := hctx.GetConf(ctx)
+	defaultFilter := cfg.DefaultFilter
 	if defaultFilter != "" {
 		queryInput.Prompt = "[" + defaultFilter + "] "
 	}
@@ -143,7 +147,7 @@ func initialModel(ctx context.Context, shellName, initialQuery string) model {
 		queryInput.SetValue(initialQuery)
 	}
 	CURRENT_QUERY_FOR_HIGHLIGHTING = initialQuery
-	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName, compactTUIflag: cfg.ForceCompactMode}
 }
 
 func (m model) Init() tea.Cmd {
@@ -395,15 +399,15 @@ func (m model) View() string {
 		additionalMessages = append(additionalMessages, fmt.Sprintf("%s Executing search query...", m.spinner.View()))
 	}
 	additionalMessagesStr := strings.Join(additionalMessages, "\n") + "\n"
-	if isExtraCompactHeightMode() {
+	if isExtraCompactHeightMode() || m.compactTUIflag {
 		additionalMessagesStr = "\n"
 	}
 	helpView := m.help.View(loadedKeyBindings)
-	if isExtraCompactHeightMode() {
+	if isExtraCompactHeightMode() || m.compactTUIflag {
 		helpView = ""
 	}
 	additionalSpacing := "\n"
-	if isCompactHeightMode() {
+	if isCompactHeightMode() || m.compactTUIflag {
 		additionalSpacing = ""
 	}
 	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView)) + helpView
