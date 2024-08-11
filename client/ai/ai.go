@@ -30,7 +30,7 @@ func GetAiSuggestions(ctx context.Context, shellName, query string, numberComple
 	if os.Getenv("OPENAI_API_KEY") == "" && hctx.GetConf(ctx).AiCompletionEndpoint == ai.DefaultOpenAiEndpoint {
 		return GetAiSuggestionsViaHishtoryApi(ctx, shellName, query, numberCompletions)
 	} else {
-		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(hctx.GetConf(ctx).AiCompletionEndpoint, query, shellName, getOsName(), numberCompletions)
+		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(hctx.GetConf(ctx).AiCompletionEndpoint, query, shellName, getOsName(), os.Getenv("OPENAI_API_MODEL"), numberCompletions)
 		return suggestions, err
 	}
 }
@@ -64,6 +64,7 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string
 		NumberCompletions: numberCompletions,
 		OsName:            getOsName(),
 		ShellName:         shellName,
+		Model:             os.Getenv("OPENAI_API_MODEL"),
 	}
 	reqData, err := json.Marshal(req)
 	if err != nil {

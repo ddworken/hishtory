@@ -54,7 +54,7 @@ type TestOnlyOverrideAiSuggestionRequest struct {
 
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
-func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName string, numberCompletions int) ([]string, OpenAiUsage, error) {
+func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
 	}
@@ -63,7 +63,7 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName string, 
 	if apiKey == "" && apiEndpoint == DefaultOpenAiEndpoint {
 		return nil, OpenAiUsage{}, fmt.Errorf("OPENAI_API_KEY environment variable is not set")
 	}
-	apiReqStr, err := json.Marshal(createOpenAiRequest(query, shellName, osName, numberCompletions))
+	apiReqStr, err := json.Marshal(createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel, numberCompletions))
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to serialize JSON for OpenAI API: %w", err)
 	}
@@ -112,13 +112,14 @@ type AiSuggestionRequest struct {
 	NumberCompletions int    `json:"number_completions"`
 	ShellName         string `json:"shell_name"`
 	OsName            string `json:"os_name"`
+	Model             string `json:"model"`
 }
 
 type AiSuggestionResponse struct {
 	Suggestions []string `json:"suggestions"`
 }
 
-func createOpenAiRequest(query, shellName, osName string, numberCompletions int) openAiRequest {
+func createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) openAiRequest {
 	if osName == "" {
 		osName = "Linux"
 	}
@@ -126,11 +127,14 @@ func createOpenAiRequest(query, shellName, osName string, numberCompletions int)
 		shellName = "bash"
 	}
 
-	model := os.Getenv("OPENAI_API_MODEL")
-	if model == "" {
-		// According to https://platform.openai.com/docs/models gpt-4o-mini is the best model
-		// by performance/price ratio.
-		model = "gpt-4o-mini"
+	// According to https://platform.openai.com/docs/models gpt-4o-mini is the best model
+	// by performance/price ratio.
+	model := "gpt-4o-mini"
+	if envModel := os.Getenv("OPENAI_API_MODEL"); envModel != "" {
+		model = envModel
+	}
+	if overriddenOpenAiModel != "" {
+		model = overriddenOpenAiModel
 	}
 
 	if envNumberCompletions := os.Getenv("OPENAI_API_NUMBER_COMPLETIONS"); envNumberCompletions != "" {
