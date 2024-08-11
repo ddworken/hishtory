@@ -19,14 +19,17 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
+
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
-var offlineInit *bool
-var forceInit *bool
-var offlineInstall *bool
-var skipConfigModification *bool
+var (
+	offlineInit            *bool
+	forceInit              *bool
+	offlineInstall         *bool
+	skipConfigModification *bool
+)
 
 var installCmd = &cobra.Command{
 	Use:    "install",
@@ -573,7 +576,7 @@ func stripLines(filePath, lines string) error {
 			ret += "\n"
 		}
 	}
-	return os.WriteFile(filePath, []byte(ret), 0644)
+	return os.WriteFile(filePath, []byte(ret), 0o644)
 }
 
 func setup(userSecret string, isOffline bool) error {

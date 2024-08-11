@@ -12,6 +12,7 @@ import (
 	"github.com/ddworken/hishtory/backend/server/internal/database"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/ai"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -195,7 +196,6 @@ func (s *Server) apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http
 
 func (s *Server) apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewEncoder(w).Encode(s.updateInfo)
-
 	if err != nil {
 		panic(fmt.Errorf("failed to JSON marshall the update info: %w", err))
 	}

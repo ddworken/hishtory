@@ -21,6 +21,7 @@ import (
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/testutils"
+
 	"github.com/stretchr/testify/require"
 )
 

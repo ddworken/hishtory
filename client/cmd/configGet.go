@@ -7,6 +7,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +42,7 @@ var getHighlightMatchesCmd = &cobra.Command{
 		fmt.Println(config.HighlightMatches)
 	},
 }
+
 var getDefaultFilterCmd = &cobra.Command{
 	Use:   "default-filter",
 	Short: "The default filter that is applied to all search queries",

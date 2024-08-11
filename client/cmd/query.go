@@ -11,6 +11,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 	"github.com/ddworken/hishtory/client/tui"
+
 	"github.com/fatih/color"
 	"github.com/muesli/termenv"
 	"github.com/rodaine/table"
@@ -171,7 +172,7 @@ func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResult
 
 	numRows := 0
 
-	var seenCommands = make(map[string]bool)
+	seenCommands := make(map[string]bool)
 
 	for _, entry := range results {
 		if config.FilterDuplicateCommands && entry != nil {

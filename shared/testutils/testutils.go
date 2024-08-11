@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/client/data"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -154,7 +155,7 @@ setopt SHARE_HISTORY
 	if strings.Contains(string(dat), zshrcHistConfig) {
 		return
 	}
-	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path.Join(homedir, ".zshrc"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	checkError(err)
 	defer f.Close()
 	_, err = f.WriteString(zshrcHistConfig)
@@ -290,7 +291,7 @@ func RunTestServer() func() {
 			panic(fmt.Sprintf("server experienced an error\n\n\nstderr=\n%s\n\n\nstdout=%s", stderr.String(), stdout.String()))
 		}
 		// Persist test server logs for debugging
-		f, err := os.OpenFile("/tmp/hishtory-server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile("/tmp/hishtory-server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		checkError(err)
 		defer f.Close()
 		_, err = f.Write([]byte(stdout.String() + "\n"))
@@ -332,7 +333,7 @@ func IsGithubAction() bool {
 }
 
 func TestLog(t testing.TB, line string) {
-	f, err := os.OpenFile("/tmp/test.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile("/tmp/test.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -351,7 +352,7 @@ func persistLog() {
 	if err != nil {
 		return
 	}
-	f, err := os.OpenFile("/tmp/hishtory.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("/tmp/hishtory.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	checkError(err)
 	defer f.Close()
 	_, err = f.Write(log)
@@ -362,7 +363,7 @@ func persistLog() {
 
 func recordUsingGolden(t testing.TB, goldenName string) {
 	f, err := os.OpenFile("/tmp/goldens-used.txt",
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		t.Fatalf("failed to open file to record using golden: %v", err)
 	}
@@ -389,12 +390,12 @@ func CompareGoldens(t testing.TB, out, goldenName string) {
 		if err := os.Mkdir("/tmp/test-goldens", os.ModePerm); err != nil && !os.IsExist(err) {
 			log.Fatal(err)
 		}
-		require.NoError(t, os.WriteFile(path.Join("/tmp/test-goldens", goldenName), []byte(out), 0644))
+		require.NoError(t, os.WriteFile(path.Join("/tmp/test-goldens", goldenName), []byte(out), 0o644))
 		if os.Getenv("HISHTORY_UPDATE_GOLDENS") == "" {
 			_, filename, line, _ := runtime.Caller(1)
 			t.Fatalf("hishtory golden mismatch for %s at %s:%d (-expected +got):\n%s\nactual=\n%s", goldenName, filename, line, diff, out)
 		} else {
-			require.NoError(t, os.WriteFile(goldenPath, []byte(out), 0644))
+			require.NoError(t, os.WriteFile(goldenPath, []byte(out), 0o644))
 		}
 	}
 }

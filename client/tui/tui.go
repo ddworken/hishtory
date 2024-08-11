@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	_ "embed" // for embedding config.sh
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,14 +11,6 @@ import (
 	"strings"
 	"time"
 
-	_ "embed" // for embedding config.sh
-
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/ddworken/hishtory/client/ai"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
@@ -25,23 +18,36 @@ import (
 	"github.com/ddworken/hishtory/client/table"
 	"github.com/ddworken/hishtory/client/tui/keybindings"
 	"github.com/ddworken/hishtory/shared"
+
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
 )
 
-const TABLE_HEIGHT = 20
-const PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
+const (
+	TABLE_HEIGHT       = 20
+	PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
+)
 
-var CURRENT_QUERY_FOR_HIGHLIGHTING string = ""
-var SELECTED_COMMAND string = ""
+var (
+	CURRENT_QUERY_FOR_HIGHLIGHTING string = ""
+	SELECTED_COMMAND               string = ""
+)
 
 // Globally shared monotonically increasing IDs used to prevent race conditions in handling async queries.
 // If the user types 'l' and then 's', two queries will be dispatched: One for 'l' and one for 'ls'. These
 // counters are used to ensure that we don't process the query results for 'ls' and then promptly overwrite
 // them with the results for 'l'.
-var LAST_DISPATCHED_QUERY_ID = 0
-var LAST_DISPATCHED_QUERY_TIMESTAMP time.Time
-var LAST_PROCESSED_QUERY_ID = -1
+var (
+	LAST_DISPATCHED_QUERY_ID        = 0
+	LAST_DISPATCHED_QUERY_TIMESTAMP time.Time
+	LAST_PROCESSED_QUERY_ID         = -1
+)
 
 type SelectStatus int64
 
@@ -96,11 +102,14 @@ type model struct {
 	shellName string
 }
 
-type doneDownloadingMsg struct{}
-type offlineMsg struct{}
-type bannerMsg struct {
-	banner string
-}
+type (
+	doneDownloadingMsg struct{}
+	offlineMsg         struct{}
+	bannerMsg          struct {
+		banner string
+	}
+)
+
 type asyncQueryFinishedMsg struct {
 	// The query ID finished running. Used to ensure that we only process this message if it is the latest query to finish.
 	queryId int
@@ -499,7 +508,7 @@ func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter
 	}
 	var rows []table.Row
 	var filteredData []*data.HistoryEntry
-	var seenCommands = make(map[string]bool)
+	seenCommands := make(map[string]bool)
 
 	for i := 0; i < numEntries; i++ {
 		if i < len(searchResults) {
@@ -633,6 +642,7 @@ func max(a, b int) int {
 	}
 	return b
 }
+
 func min(a, b int) int {
 	if a < b {
 		return a
