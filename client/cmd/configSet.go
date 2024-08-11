@@ -210,6 +210,18 @@ var setColorSchemeBorderColor = &cobra.Command{
 	},
 }
 
+var toggleCompactMode = &cobra.Command{
+	Use:   "toggle-compact-mode",
+	Short: "Toggle compact mode switching it on or off",
+	Args:  cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ForceCompactMode = !config.ForceCompactMode
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func validateColor(color string) error {
 	if !strings.HasPrefix(color, "#") || len(color) != 7 {
 		return fmt.Errorf("color %q is invalid, it should be a hexadecimal color like #663399", color)
@@ -242,6 +254,7 @@ func init() {
 	configSetCmd.AddCommand(setColorSchemeCmd)
 	configSetCmd.AddCommand(setDefaultFilterCommand)
 	configSetCmd.AddCommand(setAiCompletionEndpoint)
+	configSetCmd.AddCommand(toggleCompactMode)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)
