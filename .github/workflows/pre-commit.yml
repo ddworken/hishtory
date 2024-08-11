@@ -19,6 +19,8 @@ jobs:
 
           go install honnef.co/go/tools/cmd/staticcheck@latest
           go install github.com/kisielk/errcheck@latest
+          go install mvdan.cc/gofumpt@latest
+          go install github.com/daixiang0/gci@latest
     - uses: pre-commit/action@v3.0.0
       with:
         extra_args: --all-files
