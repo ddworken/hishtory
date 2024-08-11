@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ddworken/hishtory/shared/testutils"
+
 	"github.com/stretchr/testify/require"
 )
 

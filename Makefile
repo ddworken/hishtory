@@ -1,7 +1,7 @@
 help:				## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
 
-fmt:
+fmt:				## Format all files
 	gofumpt -l -w -extra .
 	gci write --custom-order -s standard -s 'Prefix(github.com/ddworken/hishtory)' -s default .
 
