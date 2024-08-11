@@ -189,6 +189,8 @@ type ClientConfig struct {
 	// Custom columns
 	CustomColumns []CustomColumnDefinition `json:"custom_columns"`
 	// Whether this is an offline instance of hishtory with no syncing
+	ForceCompactMode bool `json:"force_compact_mode"`
+	// Whether this is an offline instance of hishtory with no syncing
 	IsOffline bool `json:"is_offline"`
 	// Whether duplicate commands should be displayed
 	FilterDuplicateCommands bool `json:"filter_duplicate_commands"`
