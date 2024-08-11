@@ -56,7 +56,7 @@ func getOsName() string {
 }
 
 func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
-	hctx.GetLogger().Infof("Running OpenAI query for %#v", query)
+	hctx.GetLogger().Infof("Running OpenAI query for %#v via hishtory server", query)
 	req := ai.AiSuggestionRequest{
 		DeviceId:          hctx.GetConf(ctx).DeviceId,
 		UserId:            data.UserId(hctx.GetConf(ctx).UserSecret),
