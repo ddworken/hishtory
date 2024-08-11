@@ -210,6 +210,19 @@ var setColorSchemeBorderColor = &cobra.Command{
 	},
 }
 
+var compactMode = &cobra.Command{
+	Use:       "compact-mode",
+	Short:     "Configure whether the TUI should run in compact mode to minimize wasted terminal space",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ForceCompactMode = args[0] == "true"
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func validateColor(color string) error {
 	if !strings.HasPrefix(color, "#") || len(color) != 7 {
 		return fmt.Errorf("color %q is invalid, it should be a hexadecimal color like #663399", color)
@@ -242,6 +255,7 @@ func init() {
 	configSetCmd.AddCommand(setColorSchemeCmd)
 	configSetCmd.AddCommand(setDefaultFilterCommand)
 	configSetCmd.AddCommand(setAiCompletionEndpoint)
+	configSetCmd.AddCommand(compactMode)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)
