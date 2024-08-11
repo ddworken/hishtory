@@ -188,7 +188,7 @@ type ClientConfig struct {
 	DisplayedColumns []string `json:"displayed_columns"`
 	// Custom columns
 	CustomColumns []CustomColumnDefinition `json:"custom_columns"`
-	// Whether this is an offline instance of hishtory with no syncing
+	// Whether to force enable a compact mode for the TUI
 	ForceCompactMode bool `json:"force_compact_mode"`
 	// Whether this is an offline instance of hishtory with no syncing
 	IsOffline bool `json:"is_offline"`
