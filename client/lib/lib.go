@@ -104,7 +104,7 @@ func BuildTableRow(ctx context.Context, columnNames []string, entry data.History
 			} else {
 				row = append(row, entry.EndTime.Local().Sub(entry.StartTime.Local()).Round(time.Millisecond).String())
 			}
-		case "Exit Code", "Exit_Code", "ExitCode", "exitcode":
+		case "Exit Code", "Exit_Code", "ExitCode", "exitcode", "$?", "EC":
 			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
 		case "Command", "command":
 			row = append(row, commandRenderer(entry.Command))
