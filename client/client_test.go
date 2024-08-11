@@ -1778,6 +1778,18 @@ func testTui_resize(t *testing.T) {
 	})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-LongQuery")
+
+	// Toggle on forced compact mode and check that it respects that even with a large terminal
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get compact-mode`)))
+	tester.RunInteractiveShell(t, `hishtory config-set compact-mode true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get compact-mode`)))
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 150, 60, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER"},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-ForcedCompactMode")
+	tester.RunInteractiveShell(t, `hishtory config-set compact-mode false`)
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get compact-mode`)))
 }
 
 func testTui_scroll(t *testing.T) {
