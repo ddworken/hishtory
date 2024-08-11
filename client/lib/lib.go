@@ -87,17 +87,17 @@ func BuildTableRow(ctx context.Context, columnNames []string, entry data.History
 	row := make([]string, 0)
 	for _, header := range columnNames {
 		switch header {
-		case "Hostname", "hostname":
+		case "Hostname", "hostname", "hn":
 			row = append(row, entry.Hostname)
 		case "CWD", "cwd":
 			row = append(row, entry.CurrentWorkingDirectory)
-		case "Timestamp", "timestamp":
+		case "Timestamp", "timestamp", "ts":
 			if entry.StartTime.UnixMilli() == 0 {
 				row = append(row, "N/A")
 			} else {
 				row = append(row, entry.StartTime.Local().Format(hctx.GetConf(ctx).TimestampFormat))
 			}
-		case "Runtime", "runtime":
+		case "Runtime", "runtime", "rt":
 			if entry.EndTime.UnixMilli() == 0 {
 				// An EndTime of zero means this is a pre-saved entry that never finished
 				row = append(row, "N/A")
@@ -106,7 +106,7 @@ func BuildTableRow(ctx context.Context, columnNames []string, entry data.History
 			}
 		case "Exit Code", "Exit_Code", "ExitCode", "exitcode", "$?", "EC":
 			row = append(row, fmt.Sprintf("%d", entry.ExitCode))
-		case "Command", "command":
+		case "Command", "command", "cmd":
 			row = append(row, commandRenderer(entry.Command))
 		case "User", "user":
 			row = append(row, entry.LocalUsername)
