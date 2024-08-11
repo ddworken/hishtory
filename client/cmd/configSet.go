@@ -210,14 +210,15 @@ var setColorSchemeBorderColor = &cobra.Command{
 	},
 }
 
-var toggleCompactMode = &cobra.Command{
-	Use:   "toggle-compact-mode",
-	Short: "Toggle compact mode switching it on or off",
-	Args:  cobra.ExactArgs(0),
+var compactMode = &cobra.Command{
+	Use:       "compact-mode",
+	Short:     "Configure whether the TUI should run in compact mode to minimize wasted terminal space",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
-		config.ForceCompactMode = !config.ForceCompactMode
+		config.ForceCompactMode = args[0] == "true"
 		lib.CheckFatalError(hctx.SetConfig(config))
 	},
 }
@@ -254,7 +255,7 @@ func init() {
 	configSetCmd.AddCommand(setColorSchemeCmd)
 	configSetCmd.AddCommand(setDefaultFilterCommand)
 	configSetCmd.AddCommand(setAiCompletionEndpoint)
-	configSetCmd.AddCommand(toggleCompactMode)
+	configSetCmd.AddCommand(compactMode)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)
