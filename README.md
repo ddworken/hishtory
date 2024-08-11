@@ -100,7 +100,9 @@ You can customize the columns that are displayed via `hishtory config-set displa
 hishtory config-set displayed-columns CWD Command
 ```
 
-The list of supported columns are: `Hostname`, `CWD`, `Timestamp`, `Runtime`, `ExitCode`, `Command`, and `User`.
+The list of supported columns are: `Hostname`, `CWD`, `Timestamp`, `Runtime`, `ExitCode`, `Command`, and `User` (along with any custom columns).
+
+Many of the column names also support custom shorter column names to save space. For example, rather than having a column named `Exit Code`, it can be referenced as `$?` to save space. See [here](https://github.com/ddworken/hishtory/blob/ca0c72b/client/lib/lib.go#L86-L122) for the full list of column names that can be used. 
 
 </blockquote></details>
 
