@@ -94,9 +94,6 @@ type model struct {
 
 	// The currently executing shell. Defaults to bash if not specified. Used for more precise AI suggestions.
 	shellName string
-
-	// Compacting TUI config
-	compactTUIflag bool
 }
 
 type doneDownloadingMsg struct{}
@@ -147,7 +144,7 @@ func initialModel(ctx context.Context, shellName, initialQuery string) model {
 		queryInput.SetValue(initialQuery)
 	}
 	CURRENT_QUERY_FOR_HIGHLIGHTING = initialQuery
-	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName, compactTUIflag: cfg.ForceCompactMode}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName}
 }
 
 func (m model) Init() tea.Cmd {
@@ -399,21 +396,24 @@ func (m model) View() string {
 		additionalMessages = append(additionalMessages, fmt.Sprintf("%s Executing search query...", m.spinner.View()))
 	}
 	additionalMessagesStr := strings.Join(additionalMessages, "\n") + "\n"
-	if isExtraCompactHeightMode() || m.compactTUIflag {
+	if isExtraCompactHeightMode(m.ctx) {
 		additionalMessagesStr = "\n"
 	}
 	helpView := m.help.View(loadedKeyBindings)
-	if isExtraCompactHeightMode() || m.compactTUIflag {
+	if isExtraCompactHeightMode(m.ctx) {
 		helpView = ""
 	}
 	additionalSpacing := "\n"
-	if isCompactHeightMode() || m.compactTUIflag {
+	if isCompactHeightMode(m.ctx) {
 		additionalSpacing = ""
 	}
 	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView)) + helpView
 }
 
-func isExtraCompactHeightMode() bool {
+func isExtraCompactHeightMode(ctx context.Context) bool {
+	if hctx.GetConf(ctx).ForceCompactMode {
+		return true
+	}
 	_, height, err := getTerminalSize()
 	if err != nil {
 		hctx.GetLogger().Infof("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
@@ -422,7 +422,10 @@ func isExtraCompactHeightMode() bool {
 	return height < 15
 }
 
-func isCompactHeightMode() bool {
+func isCompactHeightMode(ctx context.Context) bool {
+	if hctx.GetConf(ctx).ForceCompactMode {
+		return true
+	}
 	_, height, err := getTerminalSize()
 	if err != nil {
 		hctx.GetLogger().Infof("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
@@ -443,7 +446,7 @@ func renderNullableTable(m model, helpText string) string {
 	}
 	helpTextLen := strings.Count(helpText, "\n")
 	baseStyle := getBaseStyle(*hctx.GetConf(m.ctx))
-	if isCompactHeightMode() && helpTextLen > 1 {
+	if isCompactHeightMode(m.ctx) && helpTextLen > 1 {
 		// If the help text is expanded, and this is a small window, then we truncate the table so that the help text displays on top of it
 		lines := strings.Split(baseStyle.Render(m.table.View()), "\n")
 		truncated := lines[:len(lines)-helpTextLen]
@@ -664,10 +667,10 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 		return table.Model{}, err
 	}
 	tuiSize := 12
-	if isCompactHeightMode() {
+	if isCompactHeightMode(ctx) {
 		tuiSize -= 2
 	}
-	if isExtraCompactHeightMode() {
+	if isExtraCompactHeightMode(ctx) {
 		tuiSize -= 3
 	}
 	tableHeight := min(TABLE_HEIGHT, terminalHeight-tuiSize)
