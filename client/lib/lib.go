@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	_ "embed" // for embedding config.sh
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,18 +22,15 @@ import (
 	"strings"
 	"time"
 
-	_ "embed" // for embedding config.sh
-
-	"golang.org/x/exp/slices"
-	"gorm.io/gorm"
+	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/ddworken/hishtory/shared"
 
 	"github.com/araddon/dateparse"
 	"github.com/google/uuid"
 	"github.com/schollz/progressbar/v3"
-
-	"github.com/ddworken/hishtory/client/data"
-	"github.com/ddworken/hishtory/client/hctx"
-	"github.com/ddworken/hishtory/shared"
+	"golang.org/x/exp/slices"
+	"gorm.io/gorm"
 )
 
 //go:embed config.sh
@@ -44,8 +42,10 @@ var ConfigZshContents string
 //go:embed config.fish
 var ConfigFishContents string
 
-var Version string = "Unknown"
-var GitCommit string = "Unknown"
+var (
+	Version   string = "Unknown"
+	GitCommit string = "Unknown"
+)
 
 // 512KB ought to be enough for any reasonable cmd
 // Funnily enough, 256KB actually wasn't enough. See https://github.com/ddworken/hishtory/issues/93
@@ -728,7 +728,7 @@ func parseTimeGenerously(input string) (time.Time, error) {
 }
 
 // A wrapper around tx.Where(...) that filters out nil-values
-func where(tx *gorm.DB, s string, v1 any, v2 any) *gorm.DB {
+func where(tx *gorm.DB, s string, v1, v2 any) *gorm.DB {
 	if v1 == nil && v2 == nil {
 		return tx.Where(s)
 	}
@@ -787,7 +787,7 @@ func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.
 
 const SEARCH_RETRY_COUNT = 3
 
-func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit int, currentRetryNum int) ([]*data.HistoryEntry, error) {
+func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, currentRetryNum int) ([]*data.HistoryEntry, error) {
 	if ctx == nil && query != "" {
 		return nil, fmt.Errorf("lib.Search called with a nil context and a non-empty query (this should never happen)")
 	}
@@ -982,7 +982,7 @@ func heuristicIgnoreUnclosedQuote(isCurrentlyInQuotedString bool, quoteType rune
 	return true
 }
 
-func containsUnescaped(query string, token string) bool {
+func containsUnescaped(query, token string) bool {
 	runeQuery := []rune(query)
 	for i := 0; i < len(runeQuery); i++ {
 		if runeQuery[i] == '\\' && i+1 < len(runeQuery) {

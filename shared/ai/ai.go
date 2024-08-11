@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/ddworken/hishtory/client/hctx"
+
 	"golang.org/x/exp/slices"
 )
 

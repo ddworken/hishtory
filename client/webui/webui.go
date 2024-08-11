@@ -5,15 +5,15 @@ import (
 	"crypto/subtle"
 	"embed"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"net/url"
 
-	"html/template"
-
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+
 	"github.com/google/uuid"
 )
 
@@ -92,7 +92,6 @@ func webuiHandler(w http.ResponseWriter, r *http.Request) {
 
 func getTemplates() *template.Template {
 	return template.Must(template.ParseFS(templateFiles, "templates/*"))
-
 }
 
 func buildTableRows(ctx context.Context, entries []*data.HistoryEntry) ([][]string, error) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared/testutils"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -167,6 +168,7 @@ func TestBuildRegexFromTimeFormat(t *testing.T) {
 		}
 	}
 }
+
 func TestGetLastCommand(t *testing.T) {
 	testcases := []struct {
 		input, expectedOutput string
