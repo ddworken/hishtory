@@ -146,6 +146,16 @@ var getColorScheme = &cobra.Command{
 	},
 }
 
+var getCompactMode = &cobra.Command{
+	Use:   "compact-mode",
+	Short: "Get whether the TUI is running in compact mode to minimize wasted terminal space",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.ForceCompactMode)
+	},
+}
+
 var getAiCompletionEndpoint = &cobra.Command{
 	Use:   "ai-completion-endpoint",
 	Short: "The AI endpoint to use for AI completions",
@@ -170,4 +180,5 @@ func init() {
 	configGetCmd.AddCommand(getColorScheme)
 	configGetCmd.AddCommand(getDefaultFilterCmd)
 	configGetCmd.AddCommand(getAiCompletionEndpoint)
+	configGetCmd.AddCommand(getCompactMode)
 }
