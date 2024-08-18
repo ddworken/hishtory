@@ -16,6 +16,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"github.com/samber/lo"
 )
 
 type DB struct {
@@ -238,31 +239,42 @@ func (db *DB) UninstallDevice(ctx context.Context, userId, deviceId string) (int
 }
 
 func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, deletedMessages []shared.MessageIdentifier) (int64, error) {
-	tx := db.WithContext(ctx).Where("false")
-	for _, message := range deletedMessages {
-		if userId == "" {
-			return 0, fmt.Errorf("failed to delete entry because userId is empty")
-		}
-		if message.DeviceId == "" {
-			// The DeviceId is empty, so there is nothing to do for this since it won't match anything
-			continue
-		}
-		if message.EndTime != (time.Time{}) && message.EntryId != "" {
-			// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.EndTime, message.EntryId))
-		} else if message.EndTime != (time.Time{}) && message.EntryId == "" {
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ?)", userId, message.EndTime))
-		} else if message.EndTime == (time.Time{}) && message.EntryId != "" {
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (encrypted_id = ?)", userId, message.EntryId))
-		} else {
-			return 0, fmt.Errorf("failed to delete entry because message.EndTime=%#v and message.EntryId=%#v are both empty", message.EndTime, message.EntryId)
-		}
+	if len(deletedMessages) == 0 {
+		return 0, nil
 	}
-	result := tx.Delete(&shared.EncHistoryEntry{})
-	if result.Error != nil {
-		return 0, fmt.Errorf("result.Error: %w", result.Error)
+
+	if userId == "" {
+		return 0, fmt.Errorf("failed to delete entry because userId is empty")
 	}
-	return result.RowsAffected, nil
+
+	var rowsAffected int64
+	for _, chunkOfMessages := range lo.Chunk(deletedMessages, 255) {
+		tx := db.WithContext(ctx).Where("false")
+		for _, message := range chunkOfMessages {
+			if message.DeviceId == "" {
+				// The DeviceId is empty, so there is nothing to do for this since it won't match anything
+				continue
+			}
+			if message.EndTime != (time.Time{}) && message.EntryId != "" {
+				// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
+				tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.EndTime, message.EntryId))
+			} else if message.EndTime != (time.Time{}) && message.EntryId == "" {
+				tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ?)", userId, message.EndTime))
+			} else if message.EndTime == (time.Time{}) && message.EntryId != "" {
+				tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (encrypted_id = ?)", userId, message.EntryId))
+			} else {
+				return 0, fmt.Errorf("failed to delete entry because message.EndTime=%#v and message.EntryId=%#v are both empty", message.EndTime, message.EntryId)
+			}
+		}
+		result := tx.Delete(&shared.EncHistoryEntry{})
+		if result.Error != nil {
+			return 0, fmt.Errorf("result.Error: %w", result.Error)
+		}
+
+		rowsAffected += result.RowsAffected
+	}
+
+	return rowsAffected, nil
 }
 
 func (db *DB) DeletionRequestInc(ctx context.Context, userID, deviceID string) error {
