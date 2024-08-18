@@ -11,12 +11,12 @@ import (
 
 	"github.com/jackc/pgx/v4/stdlib"
 	_ "github.com/lib/pq"
+	"github.com/samber/lo"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"github.com/samber/lo"
 )
 
 type DB struct {
