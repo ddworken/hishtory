@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -425,6 +426,56 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 		DailyInstalls:           dailyInstalls,
 		DailyUninstalls:         dailyUninstalls,
 	}).Error
+}
+
+func (db *DB) SelfHostedDeepClean(ctx context.Context) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		runDeletes := os.Getenv("HISHTORY_SELF_HOSTED_DEEP_CLEAN") != ""
+		r := tx.Exec(`
+		CREATE TEMP TABLE temp_inactive_devices AS (
+			SELECT device_id
+			FROM usage_data
+			WHERE last_used <= (now() - INTERVAL '90 days')
+		)
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to create list of inactive users: %w", r.Error)
+		}
+		if runDeletes {
+			r = tx.Raw(`
+			DELETE FROM enc_history_entries WHERE
+				device_id IN (SELECT * FROM temp_inactive_devices)
+			`)
+			if r.Error != nil {
+				return fmt.Errorf("failed to delete entries for inactive devices: %w", r.Error)
+			}
+			r = tx.Raw(`
+			DELETE FROM devices WHERE
+				device_id IN (SELECT * FROM temp_inactive_devices)
+			`)
+			if r.Error != nil {
+				return fmt.Errorf("failed to delete inactive devices: %w", r.Error)
+			}
+		} else {
+			r = tx.Raw(`
+			SELECT COUNT(*)
+			FROM enc_history_entries
+			WHERE device_id IN (SELECT * FROM temp_inactive_devices)
+			`)
+			if r.Error != nil {
+				return fmt.Errorf("failed to count entries for inactive devices: %w", r.Error)
+			}
+			count, err := extractInt64FromRow(r.Row())
+			if err != nil {
+				return fmt.Errorf("failed to extract count of entries for inactive devices: %w", err)
+			}
+			if count > 10_000 {
+				fmt.Printf("WARNING: This server is persisting %d entries for devices that have been offline for more than 90 days. If this is unexpected, set the server environment variable HISHTORY_SELF_HOSTED_DEEP_CLEAN=1 to permanently delete these devices.\n", count)
+			}
+		}
+		fmt.Println("Successfully checked for inactive devices")
+		return nil
+	})
 }
 
 func (db *DB) DeepClean(ctx context.Context) error {
