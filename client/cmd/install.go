@@ -507,7 +507,7 @@ func tweakConfigForTests(configContents string) (string, error) {
 		ret += "\n"
 	}
 	if !(substitutionCount == 2 && removedCount == 2) {
-		return "", fmt.Errorf("failed to find substitution line in configConents=%#v", configContents)
+		return "", fmt.Errorf("failed to find substitution line in configContents=%#v", configContents)
 	}
 	return ret, nil
 }
