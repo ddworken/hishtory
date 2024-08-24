@@ -409,8 +409,12 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 		if err != nil {
 			return fmt.Errorf("failed to check ~/.bash_profile: %w", err)
 		}
+		profileFilename, err := getBashProfileFilename(homedir)
+		if err != nil {
+			return fmt.Errorf("failed to get bash profile file name: %w", err)
+		}
 		if !bashProfileIsConfigured {
-			err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir), skipConfigModification)
+			err = addToShellConfig(path.Join(homedir, profileFilename), getBashConfigFragment(homedir), skipConfigModification)
 			if err != nil {
 				return err
 			}
@@ -477,12 +481,40 @@ func doesBashProfileNeedConfig(homedir string) bool {
 	return false
 }
 
+// check if we need to add hishtory config in .bash_profile or .profile
+func getBashProfileFilename(homedir string) (string, error) {
+	_, err := os.Stat(path.Join(homedir, ".bash_profile"))
+	if err == nil {
+		return ".bash_profile", nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	_, err = os.Stat(path.Join(homedir, ".profile"))
+	if err == nil {
+		return ".profile", nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	// If no bash profile file exists, use .bash_profile as the default one
+	return ".bash_profile", nil
+}
+
 func isBashProfileConfigured(homedir string) (bool, error) {
+	var profileFileName string
+
 	_, err := os.Stat(path.Join(homedir, ".bash_profile"))
 	if errors.Is(err, os.ErrNotExist) {
+		_, err := os.Stat(path.Join(homedir, ".profile"))
+		if err == nil {
+			profileFileName = ".profile"
+		}
+	} else {
+		profileFileName = ".bash_profile"
+	}
+	if profileFileName == "" {
 		return false, nil
 	}
-	bashrc, err := os.ReadFile(path.Join(homedir, ".bash_profile"))
+	bashrc, err := os.ReadFile(path.Join(homedir, profileFileName))
 	if err != nil {
 		return false, fmt.Errorf("failed to read bash_profile: %w", err)
 	}
