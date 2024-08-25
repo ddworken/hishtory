@@ -9,3 +9,6 @@ node_modules/
 package.json
 package-lock.json
 .prettierrc
+
+# VS Code settings
+.vscode/
