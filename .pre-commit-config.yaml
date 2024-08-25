@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/Bahjat/pre-commit-golang
-    rev: a4be1d0f860565649a450a8d480e541844c14a07
+    rev: bdba95f94147c2f5da7eda81e15cdd92c41758ba
     hooks:
       - id: go-vet
       - id: go-static-check # install https://staticcheck.io/docs/

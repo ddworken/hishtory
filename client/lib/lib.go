@@ -219,7 +219,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		filepath.Join(homedir, ".bash_history"),
 		filepath.Join(homedir, ".zsh_history"),
 	}
-	if histfile := os.Getenv("HISTFILE"); histfile != "" && !slices.Contains[string](inputFiles, histfile) {
+	if histfile := os.Getenv("HISTFILE"); histfile != "" && !slices.Contains(inputFiles, histfile) {
 		inputFiles = append(inputFiles, histfile)
 	}
 	zHistPath := filepath.Join(homedir, ".zhistory")
