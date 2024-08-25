@@ -1,6 +1,6 @@
 module github.com/ddworken/hishtory
 
-go 1.21
+go 1.23.0
 
 require (
 	github.com/DataDog/datadog-go v4.8.3+incompatible

@@ -33,7 +33,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-linux-amd64.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-linux-arm64:
@@ -45,7 +45,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-linux-arm64.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-linux-arm7:
@@ -57,7 +57,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-linux-arm7.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-freebsd-amd64:
@@ -69,7 +69,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-freebsd-amd64.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-netbsd-amd64:
@@ -81,7 +81,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-netbsd-amd64.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-darwin-amd64:
@@ -94,7 +94,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-darwin-amd64.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
   build-darwin-arm64:
@@ -107,7 +107,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v1.10.0
     with:
       config-file: .github/slsa/.slsa-goreleaser-darwin-arm64.yml
-      go-version: 1.21
+      go-version: 1.23
       evaluated-envs: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
       compile-builder: true # See github.com/slsa-framework/slsa-github-generator/issues/942
       
@@ -184,7 +184,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21
+          go-version: 1.23
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: hishtory-linux-amd64
