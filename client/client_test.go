@@ -3265,4 +3265,29 @@ func TestInstallSkipConfigModification(t *testing.T) {
 	}
 }
 
+func TestConfigLogLevel(t *testing.T) {
+	markTestForSharding(t, 16)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Check default log level
+	out := tester.RunInteractiveShell(t, `hishtory config-get log-level`)
+	require.Equal(t, "info\n", out)
+
+	// Set log level to debug
+	tester.RunInteractiveShell(t, `hishtory config-set log-level debug`)
+
+	// Verify log level was changed
+	out = tester.RunInteractiveShell(t, `hishtory config-get log-level`)
+	require.Equal(t, "debug\n", out)
+
+	// Set back to default
+	tester.RunInteractiveShell(t, `hishtory config-set log-level info`)
+
+	// Verify log level was changed back
+	out = tester.RunInteractiveShell(t, `hishtory config-get log-level`)
+	require.Equal(t, "info\n", out)
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

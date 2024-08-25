@@ -18,6 +18,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/termenv v0.15.2
 	github.com/rodaine/table v1.0.1
+	github.com/samber/lo v1.46.0
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/sirupsen/logrus v1.9.1
 	github.com/slsa-framework/slsa-verifier v1.4.2-0.20221130213533-128324f48837
@@ -25,7 +26,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/sys v0.20.0
-	golang.org/x/term v0.18.0
+	golang.org/x/term v0.20.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.43.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/driver/postgres v1.3.1
@@ -222,14 +223,14 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.19.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240205150955-31a09d347014 // indirect

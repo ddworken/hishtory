@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v4/stdlib"
 	_ "github.com/lib/pq"
+	"github.com/samber/lo"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	"gorm.io/driver/postgres"
@@ -238,31 +240,42 @@ func (db *DB) UninstallDevice(ctx context.Context, userId, deviceId string) (int
 }
 
 func (db *DB) DeleteMessagesFromBackend(ctx context.Context, userId string, deletedMessages []shared.MessageIdentifier) (int64, error) {
-	tx := db.WithContext(ctx).Where("false")
-	for _, message := range deletedMessages {
-		if userId == "" {
-			return 0, fmt.Errorf("failed to delete entry because userId is empty")
-		}
-		if message.DeviceId == "" {
-			// The DeviceId is empty, so there is nothing to do for this since it won't match anything
-			continue
-		}
-		if message.EndTime != (time.Time{}) && message.EntryId != "" {
-			// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.EndTime, message.EntryId))
-		} else if message.EndTime != (time.Time{}) && message.EntryId == "" {
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ?)", userId, message.EndTime))
-		} else if message.EndTime == (time.Time{}) && message.EntryId != "" {
-			tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (encrypted_id = ?)", userId, message.EntryId))
-		} else {
-			return 0, fmt.Errorf("failed to delete entry because message.EndTime=%#v and message.EntryId=%#v are both empty", message.EndTime, message.EntryId)
-		}
+	if len(deletedMessages) == 0 {
+		return 0, nil
 	}
-	result := tx.Delete(&shared.EncHistoryEntry{})
-	if result.Error != nil {
-		return 0, fmt.Errorf("result.Error: %w", result.Error)
+
+	if userId == "" {
+		return 0, fmt.Errorf("failed to delete entry because userId is empty")
 	}
-	return result.RowsAffected, nil
+
+	var rowsAffected int64
+	for _, chunkOfMessages := range lo.Chunk(deletedMessages, 255) {
+		tx := db.WithContext(ctx).Where("false")
+		for _, message := range chunkOfMessages {
+			if message.DeviceId == "" {
+				// The DeviceId is empty, so there is nothing to do for this since it won't match anything
+				continue
+			}
+			if message.EndTime != (time.Time{}) && message.EntryId != "" {
+				// Note that we do an OR with date or the ID matching since the ID is not always recorded for older history entries.
+				tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ? OR encrypted_id = ?)", userId, message.EndTime, message.EntryId))
+			} else if message.EndTime != (time.Time{}) && message.EntryId == "" {
+				tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (date = ?)", userId, message.EndTime))
+			} else if message.EndTime == (time.Time{}) && message.EntryId != "" {
+				tx = tx.Or(db.WithContext(ctx).Where("user_id = ? AND (encrypted_id = ?)", userId, message.EntryId))
+			} else {
+				return 0, fmt.Errorf("failed to delete entry because message.EndTime=%#v and message.EntryId=%#v are both empty", message.EndTime, message.EntryId)
+			}
+		}
+		result := tx.Delete(&shared.EncHistoryEntry{})
+		if result.Error != nil {
+			return 0, fmt.Errorf("result.Error: %w", result.Error)
+		}
+
+		rowsAffected += result.RowsAffected
+	}
+
+	return rowsAffected, nil
 }
 
 func (db *DB) DeletionRequestInc(ctx context.Context, userID, deviceID string) error {
@@ -413,6 +426,56 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 		DailyInstalls:           dailyInstalls,
 		DailyUninstalls:         dailyUninstalls,
 	}).Error
+}
+
+func (db *DB) SelfHostedDeepClean(ctx context.Context) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		runDeletes := os.Getenv("HISHTORY_SELF_HOSTED_DEEP_CLEAN") != ""
+		r := tx.Exec(`
+		CREATE TEMP TABLE temp_inactive_devices AS (
+			SELECT device_id
+			FROM usage_data
+			WHERE last_used <= (now() - INTERVAL '90 days')
+		)
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to create list of inactive users: %w", r.Error)
+		}
+		if runDeletes {
+			r = tx.Raw(`
+			DELETE FROM enc_history_entries WHERE
+				device_id IN (SELECT * FROM temp_inactive_devices)
+			`)
+			if r.Error != nil {
+				return fmt.Errorf("failed to delete entries for inactive devices: %w", r.Error)
+			}
+			r = tx.Raw(`
+			DELETE FROM devices WHERE
+				device_id IN (SELECT * FROM temp_inactive_devices)
+			`)
+			if r.Error != nil {
+				return fmt.Errorf("failed to delete inactive devices: %w", r.Error)
+			}
+		} else {
+			r = tx.Raw(`
+			SELECT COUNT(*)
+			FROM enc_history_entries
+			WHERE device_id IN (SELECT * FROM temp_inactive_devices)
+			`)
+			if r.Error != nil {
+				return fmt.Errorf("failed to count entries for inactive devices: %w", r.Error)
+			}
+			count, err := extractInt64FromRow(r.Row())
+			if err != nil {
+				return fmt.Errorf("failed to extract count of entries for inactive devices: %w", err)
+			}
+			if count > 10_000 {
+				fmt.Printf("WARNING: This server is persisting %d entries for devices that have been offline for more than 90 days. If this is unexpected, set the server environment variable HISHTORY_SELF_HOSTED_DEEP_CLEAN=1 to permanently delete these devices.\n", count)
+			}
+		}
+		fmt.Println("Successfully checked for inactive devices")
+		return nil
+	})
 }
 
 func (db *DB) DeepClean(ctx context.Context) error {

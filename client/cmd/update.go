@@ -121,6 +121,9 @@ func update(ctx context.Context) error {
 		return fmt.Errorf("failed to install update (stderr=%#v), is %s in a noexec directory? (if so, set the TMPDIR environment variable): %w", stderr.String(), getTmpClientPath(), err)
 	}
 	fmt.Printf("Successfully updated hishtory from v0.%s to %s\n", lib.Version, getPossiblyOverriddenVersion(downloadData))
+
+	// Delete the file after installing to prevent issues like #227
+	_ = os.Remove(getTmpClientPath())
 	return nil
 }
 

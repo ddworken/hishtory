@@ -52,8 +52,14 @@ func GetLogger() *logrus.Logger {
 
 		hishtoryLogger = logrus.New()
 		hishtoryLogger.SetFormatter(logFormatter)
-		hishtoryLogger.SetLevel(logrus.InfoLevel)
 		hishtoryLogger.SetOutput(lumberjackLogger)
+
+		// Configure the log level from the config file, if the config file exists
+		hishtoryLogger.SetLevel(logrus.InfoLevel)
+		cfg, err := GetConfig()
+		if err == nil {
+			hishtoryLogger.SetLevel(cfg.LogLevel)
+		}
 	})
 	return hishtoryLogger
 }
@@ -213,6 +219,8 @@ type ClientConfig struct {
 	AiCompletionEndpoint string `json:"ai_completion_endpoint"`
 	// Custom key bindings for the TUI
 	KeyBindings keybindings.SerializableKeyMap `json:"key_bindings"`
+	// The log level for hishtory (e.g., "debug", "info", "warn", "error")
+	LogLevel logrus.Level `json:"log_level"`
 }
 
 type ColorScheme struct {
@@ -283,6 +291,9 @@ func GetConfig() (ClientConfig, error) {
 	}
 	if config.AiCompletionEndpoint == "" {
 		config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+	}
+	if config.LogLevel == logrus.Level(0) {
+		config.LogLevel = logrus.InfoLevel
 	}
 	return config, nil
 }

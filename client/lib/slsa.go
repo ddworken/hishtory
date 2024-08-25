@@ -55,7 +55,7 @@ func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag s
 	}
 	resp, err := ApiGet(ctx, "/api/v1/slsa-status?newVersion="+versionTag)
 	if err != nil {
-		hctx.GetLogger().Infof("Failed to query SLSA status (err=%#v), assuming that SLSA is currently working", err)
+		hctx.GetLogger().Warnf("Failed to query SLSA status (err=%#v), assuming that SLSA is currently working", err)
 	}
 	if err == nil && string(resp) != "OK" {
 	slsa_status_error:

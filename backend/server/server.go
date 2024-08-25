@@ -128,10 +128,17 @@ func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
 	}
 
 	// Run a deep clean less often to cover some more edge cases that hurt DB performance
-	if isProductionEnvironment() && time.Since(LAST_DEEP_CLEAN) > 24*3*time.Hour {
+	if time.Since(LAST_DEEP_CLEAN) > 24*3*time.Hour {
 		LAST_DEEP_CLEAN = time.Now()
-		if err := db.DeepClean(ctx); err != nil {
-			return fmt.Errorf("db.DeepClean: %w", err)
+		if isProductionEnvironment() {
+			if err := db.DeepClean(ctx); err != nil {
+				return fmt.Errorf("db.DeepClean: %w", err)
+			}
+		}
+		if !isProductionEnvironment() && !isTestEnvironment() {
+			if err := db.SelfHostedDeepClean(ctx); err != nil {
+				return fmt.Errorf("db.SelfHostedDeepClean: %w", err)
+			}
 		}
 	}
 
