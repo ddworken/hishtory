@@ -602,6 +602,10 @@ func setup(userSecret string, isOffline bool) error {
 	config.HighlightMatches = true
 	config.AiCompletion = true
 	config.IsOffline = isOffline
+	if isOffline {
+		// By default, offline mode disables AI completion. Users can still enable it if they want it. See #220.
+		config.AiCompletion = false
+	}
 	config.EnablePresaving = true
 	err := hctx.SetConfig(&config)
 	if err != nil {

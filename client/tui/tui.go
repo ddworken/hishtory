@@ -499,7 +499,7 @@ func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellNa
 func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
-	if config.AiCompletion && !config.IsOffline && strings.HasPrefix(query, "?") && len(query) > 1 {
+	if config.AiCompletion && strings.HasPrefix(query, "?") && len(query) > 1 {
 		return getRowsFromAiSuggestions(ctx, columnNames, shellName, query)
 	}
 	searchResults, err := lib.Search(ctx, db, defaultFilter+" "+query, numEntries)
