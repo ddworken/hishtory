@@ -116,7 +116,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, decEntry, entry)
 
-	// Bootstrap handler should return 2 entries, one for each device
+	// Bootstrap handler should return 1 entries, one for each device, but deduplicated
 	w = httptest.NewRecorder()
 	searchReq = httptest.NewRequest(http.MethodGet, "/?user_id="+data.UserId("key")+"&device_id="+devId1, nil)
 	s.apiBootstrapHandler(w, searchReq)
@@ -125,7 +125,7 @@ func TestESubmitThenQuery(t *testing.T) {
 	respBody, err = io.ReadAll(res.Body)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(respBody, &retrievedEntries))
-	require.Len(t, retrievedEntries, 2)
+	require.Len(t, retrievedEntries, 1)
 
 	// Assert that we aren't leaking connections
 	assertNoLeakedConnections(t, DB)
