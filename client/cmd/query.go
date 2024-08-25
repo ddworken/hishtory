@@ -113,13 +113,13 @@ var updateLocalDbFromRemoteCmd = &cobra.Command{
 			if config.BetaMode {
 				lib.CheckFatalError(err)
 			} else if err != nil {
-				hctx.GetLogger().Infof("updateLocalDbFromRemote: Failed to RetrieveAdditionalEntriesFromRemote: %v", err)
+				hctx.GetLogger().Warnf("updateLocalDbFromRemote: Failed to RetrieveAdditionalEntriesFromRemote: %v", err)
 			}
 			err = lib.ProcessDeletionRequests(ctx)
 			if config.BetaMode {
 				lib.CheckFatalError(err)
 			} else if err != nil {
-				hctx.GetLogger().Infof("updateLocalDbFromRemote: Failed to ProcessDeletionRequests: %v", err)
+				hctx.GetLogger().Warnf("updateLocalDbFromRemote: Failed to ProcessDeletionRequests: %v", err)
 			}
 		}
 	},

@@ -9,6 +9,7 @@ import (
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -244,6 +245,23 @@ var setAiCompletionEndpoint = &cobra.Command{
 	},
 }
 
+var setLogLevelCmd = &cobra.Command{
+	Use:       "log-level",
+	Short:     "Set the log level for hishtory logs",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"error", "warn", "info", "debug"},
+	Run: func(cmd *cobra.Command, args []string) {
+		level, err := logrus.ParseLevel(args[0])
+		if err != nil {
+			lib.CheckFatalError(fmt.Errorf("invalid log level: %v", err))
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.LogLevel = level
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
@@ -258,6 +276,7 @@ func init() {
 	configSetCmd.AddCommand(setDefaultFilterCommand)
 	configSetCmd.AddCommand(setAiCompletionEndpoint)
 	configSetCmd.AddCommand(compactMode)
+	configSetCmd.AddCommand(setLogLevelCmd)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)

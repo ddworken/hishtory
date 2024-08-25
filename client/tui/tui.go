@@ -146,7 +146,7 @@ func initialModel(ctx context.Context, shellName, initialQuery string) model {
 	if err == nil {
 		queryInput.Width = width
 	} else {
-		hctx.GetLogger().Infof("getTerminalSize() return err=%#v, defaulting queryInput to a width of 50", err)
+		hctx.GetLogger().Warnf("getTerminalSize() return err=%#v, defaulting queryInput to a width of 50", err)
 		queryInput.Width = 50
 	}
 	if initialQuery != "" {
@@ -378,7 +378,7 @@ func (m model) View() string {
 			if strings.HasPrefix(changeDir, "~/") {
 				homedir, err := os.UserHomeDir()
 				if err != nil {
-					hctx.GetLogger().Infof("UserHomeDir() return err=%v, skipping replacing ~/", err)
+					hctx.GetLogger().Warnf("UserHomeDir() return err=%v, skipping replacing ~/", err)
 				} else {
 					strippedChangeDir, _ := strings.CutPrefix(changeDir, "~/")
 					changeDir = filepath.Join(homedir, strippedChangeDir)
@@ -425,7 +425,7 @@ func isExtraCompactHeightMode(ctx context.Context) bool {
 	}
 	_, height, err := getTerminalSize()
 	if err != nil {
-		hctx.GetLogger().Infof("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
+		hctx.GetLogger().Warnf("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
 		return false
 	}
 	return height < 15
@@ -437,7 +437,7 @@ func isCompactHeightMode(ctx context.Context) bool {
 	}
 	_, height, err := getTerminalSize()
 	if err != nil {
-		hctx.GetLogger().Infof("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
+		hctx.GetLogger().Warnf("got err=%v when retrieving terminal dimensions, assuming the terminal is reasonably tall", err)
 		return false
 	}
 	return height < 25
@@ -467,7 +467,7 @@ func renderNullableTable(m model, helpText string) string {
 func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellName, query string) ([]table.Row, []*data.HistoryEntry, error) {
 	suggestions, err := ai.DebouncedGetAiSuggestions(ctx, shellName, strings.TrimPrefix(query, "?"), 5)
 	if err != nil {
-		hctx.GetLogger().Infof("failed to get AI query suggestions: %v", err)
+		hctx.GetLogger().Warnf("failed to get AI query suggestions: %v", err)
 		return nil, nil, fmt.Errorf("failed to get AI query suggestions: %w", err)
 	}
 	var rows []table.Row
@@ -716,7 +716,7 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 				if err != nil {
 					// Failed to compile the regex for highlighting matches, this should never happen. In this
 					// case, just use a regexp that matches nothing to ensure that the TUI doesn't crash.
-					hctx.GetLogger().Infof("Failed to compile regex %#v for query %#v, disabling highlighting of matches", queryRegex, CURRENT_QUERY_FOR_HIGHLIGHTING)
+					hctx.GetLogger().Warnf("Failed to compile regex %#v for query %#v, disabling highlighting of matches", queryRegex, CURRENT_QUERY_FOR_HIGHLIGHTING)
 					re = MATCH_NOTHING_REGEXP
 				} else {
 					re = r

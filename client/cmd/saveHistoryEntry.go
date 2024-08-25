@@ -124,7 +124,7 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 func handlePotentialUploadFailure(ctx context.Context, err error, config *hctx.ClientConfig, entryTimestamp time.Time) {
 	if err != nil {
 		if lib.IsOfflineError(ctx, err) {
-			hctx.GetLogger().Infof("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
+			hctx.GetLogger().Warnf("Failed to remotely persist hishtory entry because we failed to connect to the remote server! This is likely because the device is offline, but also could be because the remote server is having reliability issues. Original error: %v", err)
 			if !config.HaveMissedUploads {
 				config.HaveMissedUploads = true
 				// Set MissedUploadTimestamp to `entry timestamp - 1` so that the current entry will get
@@ -261,7 +261,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 		// this function after a short delay. If it still is empty, then we assume we are in case #1.
 		if isRetry {
 			// Already retried, assume we're in case #1
-			hctx.GetLogger().Infof("failed to find presaved entry matching cmd=%#v even with retry, skipping delete", entry.Command)
+			hctx.GetLogger().Warnf("failed to find presaved entry matching cmd=%#v even with retry, skipping delete", entry.Command)
 			return nil
 		} else {
 			time.Sleep(500 * time.Millisecond)

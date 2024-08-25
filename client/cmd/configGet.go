@@ -183,4 +183,15 @@ func init() {
 	configGetCmd.AddCommand(getDefaultFilterCmd)
 	configGetCmd.AddCommand(getAiCompletionEndpoint)
 	configGetCmd.AddCommand(getCompactMode)
+	configGetCmd.AddCommand(getLogLevelCmd)
+}
+
+var getLogLevelCmd = &cobra.Command{
+	Use:   "log-level",
+	Short: "Get the current log level for hishtory logs",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.LogLevel.String())
+	},
 }
