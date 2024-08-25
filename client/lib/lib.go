@@ -393,7 +393,6 @@ func concatIterators(iters ...iter.Seq2[string, error]) iter.Seq2[string, error]
 		for _, seq := range iters {
 			seq(yield)
 		}
-		return
 	}
 }
 
@@ -406,7 +405,6 @@ func Values[Slice ~[]Elem, Elem any](s Slice) iter.Seq2[Elem, error] {
 				return
 			}
 		}
-		return
 	}
 }
 
@@ -436,8 +434,6 @@ func readFileToIterator(path string) iter.Seq2[string, error] {
 			yield("", fmt.Errorf("scanner.Err()=%w", err))
 			return
 		}
-
-		return
 	}
 }
 

@@ -274,7 +274,7 @@ func GetConfig() (ClientConfig, error) {
 		return ClientConfig{}, fmt.Errorf("failed to parse config file: %w", err)
 	}
 	config.KeyBindings = config.KeyBindings.WithDefaults()
-	if config.DisplayedColumns == nil || len(config.DisplayedColumns) == 0 {
+	if len(config.DisplayedColumns) == 0 {
 		config.DisplayedColumns = []string{"Hostname", "CWD", "Timestamp", "Runtime", "Exit Code", "Command"}
 	}
 	if config.TimestampFormat == "" {
