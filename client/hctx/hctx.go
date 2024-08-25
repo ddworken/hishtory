@@ -42,7 +42,7 @@ func GetLogger() *logrus.Logger {
 		lumberjackLogger := &lumberjack.Logger{
 			Filename:   path.Join(homedir, data.GetHishtoryPath(), "hishtory.log"),
 			MaxSize:    1, // MB
-			MaxBackups: 10,
+			MaxBackups: 1,
 			MaxAge:     30, // days
 		}
 
