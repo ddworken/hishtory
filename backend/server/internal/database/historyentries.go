@@ -27,7 +27,19 @@ func (db *DB) AllHistoryEntriesForUser(ctx context.Context, userID string) ([]*s
 		return nil, fmt.Errorf("tx.Error: %w", tx.Error)
 	}
 
-	return historyEntries, nil
+	// Remove duplicate entries using EncryptedId as the key to save bandwidth when sending data to the client
+	uniqueEntries := make(map[string]*shared.EncHistoryEntry)
+	for _, entry := range historyEntries {
+		uniqueEntries[entry.EncryptedId] = entry
+	}
+
+	// Convert the map back to a slice
+	dedupedEntries := make([]*shared.EncHistoryEntry, 0, len(uniqueEntries))
+	for _, entry := range uniqueEntries {
+		dedupedEntries = append(dedupedEntries, entry)
+	}
+
+	return dedupedEntries, nil
 }
 
 func (db *DB) HistoryEntriesForDevice(ctx context.Context, deviceID string, limit int) ([]*shared.EncHistoryEntry, error) {
