@@ -736,7 +736,7 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 				chunkStyle := lipgloss.NewStyle()
 				if position.IsRowSelected {
 					// Apply the selected style as the base style if this is the highlighted row of the table
-					chunkStyle = s.Selected.Copy()
+					chunkStyle = s.Selected
 				}
 				if isLeftMost {
 					chunkStyle = chunkStyle.PaddingLeft(1)
