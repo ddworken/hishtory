@@ -31,6 +31,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
+	"iter"
 )
 
 //go:embed config.sh
@@ -218,7 +219,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		filepath.Join(homedir, ".bash_history"),
 		filepath.Join(homedir, ".zsh_history"),
 	}
-	if histfile := os.Getenv("HISTFILE"); histfile != "" && !slices.Contains[string](inputFiles, histfile) {
+	if histfile := os.Getenv("HISTFILE"); histfile != "" && !slices.Contains(inputFiles, histfile) {
 		inputFiles = append(inputFiles, histfile)
 	}
 	zHistPath := filepath.Join(homedir, ".zhistory")
@@ -369,10 +370,10 @@ func getFishHistoryPath(homedir string) string {
 	return filepath.Join(homedir, ".local/share/fish/fish_history")
 }
 
-func parseFishHistory(homedir string) Seq2[string, error] {
+func parseFishHistory(homedir string) iter.Seq2[string, error] {
 	lines := readFileToIterator(getFishHistoryPath(homedir))
-	return func(yield func(string, error) bool) bool {
-		return lines(func(line string, err error) bool {
+	return func(yield func(string, error) bool) {
+		lines(func(line string, err error) bool {
 			if err != nil {
 				return yield(line, err)
 			}
@@ -385,44 +386,37 @@ func parseFishHistory(homedir string) Seq2[string, error] {
 	}
 }
 
-type (
-	// Represents an iterator of (K,V). Equivalent of the future Go stdlib type iter.Seq2.
-	// TODO: Swap this to the stdlib function once it has been released, along with the below two functions
-	Seq2[K, V any] func(yield func(K, V) bool) bool
-)
-
-// Concatenate two iterators. Equivalent of the future Go stdlib function iter.Concat2.
-func concatIterators(iters ...Seq2[string, error]) Seq2[string, error] {
-	return func(yield func(string, error) bool) bool {
+// Concatenate two iterators.
+// TODO: Equivalent of the future Go stdlib function iter.Concat2.
+func concatIterators(iters ...iter.Seq2[string, error]) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
 		for _, seq := range iters {
-			if !seq(yield) {
-				return false
-			}
+			seq(yield)
 		}
-		return true
 	}
 }
 
-// Convert a slice into an iterator. Equivalent of the future Go stdlib function iter.Values
-func Values[Slice ~[]Elem, Elem any](s Slice) Seq2[Elem, error] {
-	return func(yield func(Elem, error) bool) bool {
+// Convert a slice into an iterator.
+// TODO: Equivalent of the future Go stdlib function iter.Values
+func Values[Slice ~[]Elem, Elem any](s Slice) iter.Seq2[Elem, error] {
+	return func(yield func(Elem, error) bool) {
 		for _, v := range s {
 			if !yield(v, nil) {
-				return false
+				return
 			}
 		}
-		return true
 	}
 }
 
-func readFileToIterator(path string) Seq2[string, error] {
-	return func(yield func(string, error) bool) bool {
+func readFileToIterator(path string) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-			return true
+			return
 		}
 		file, err := os.Open(path)
 		if err != nil {
-			return yield("", fmt.Errorf("failed to open file: %w", err))
+			yield("", fmt.Errorf("failed to open file: %w", err))
+			return
 		}
 		defer file.Close()
 
@@ -432,15 +426,14 @@ func readFileToIterator(path string) Seq2[string, error] {
 		for scanner.Scan() {
 			line := scanner.Text()
 			if !yield(line, nil) {
-				return false
+				return
 			}
 		}
 
 		if err := scanner.Err(); err != nil {
-			return yield("", fmt.Errorf("scanner.Err()=%w", err))
+			yield("", fmt.Errorf("scanner.Err()=%w", err))
+			return
 		}
-
-		return true
 	}
 }
 
