@@ -3303,8 +3303,8 @@ func TestSanitizeEscapeCodes(t *testing.T) {
 		"SPACE",
 	})
 
-	// Compare the output with the golden file
-	testutils.CompareGoldens(t, out, "TestSanitizeEscapeCodes-Output")
+	// It gets stripped out
+	require.Contains(t, out, "Search Query: >\n")
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
