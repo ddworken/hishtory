@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
 var (

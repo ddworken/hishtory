@@ -811,7 +811,7 @@ func SearchWithOffset(ctx context.Context, db *gorm.DB, query string, limit, off
 
 const SEARCH_RETRY_COUNT = 3
 
-func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offset int, currentRetryNum int) ([]*data.HistoryEntry, error) {
+func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offset, currentRetryNum int) ([]*data.HistoryEntry, error) {
 	if ctx == nil && query != "" {
 		return nil, fmt.Errorf("lib.Search called with a nil context and a non-empty query (this should never happen)")
 	}
