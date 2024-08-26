@@ -46,7 +46,7 @@ var installCmd = &cobra.Command{
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
-			count, err := countStoredEntries(db)
+			count, err := lib.CountStoredEntries(db)
 			lib.CheckFatalError(err)
 			if count < 10 {
 				fmt.Println("Importing existing shell history...")
@@ -70,7 +70,7 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := hctx.OpenLocalSqliteDb()
 		lib.CheckFatalError(err)
-		count, err := countStoredEntries(db)
+		count, err := lib.CountStoredEntries(db)
 		lib.CheckFatalError(err)
 		if count > 0 && !(*forceInit) {
 			fmt.Printf("Your current hishtory profile has saved history entries, are you sure you want to run `init` and reset?\nNote: This won't clear any imported history entries from your existing shell\n[y/N]")
@@ -131,13 +131,6 @@ var uninstallCmd = &cobra.Command{
 			fmt.Printf("Uninstall completed, but received server error: %v", err)
 		}
 	},
-}
-
-func countStoredEntries(db *gorm.DB) (int64, error) {
-	return lib.RetryingDbFunctionWithResult(func() (int64, error) {
-		var count int64
-		return count, db.Model(&data.HistoryEntry{}).Count(&count).Error
-	})
 }
 
 func warnIfUnsupportedBashVersion() error {
