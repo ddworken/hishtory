@@ -3290,4 +3290,21 @@ func TestConfigLogLevel(t *testing.T) {
 	require.Equal(t, "info\n", out)
 }
 
+func TestSanitizeEscapeCodes(t *testing.T) {
+	markTestForSharding(t, 17)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Input the escape code sequence
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'11;rgb:1c1c/1c1c/1c1c'",
+		"SPACE",
+	})
+
+	// Compare the output with the golden file
+	testutils.CompareGoldens(t, out, "TestSanitizeEscapeCodes-Output")
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

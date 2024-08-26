@@ -1,0 +1,31 @@
+david@ghaction-runner-hostname hishtory % hishtory tquery
+
+
+
+Search Query: >
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Hostname         CWD                   Timestamp                      Runtime    Exit Code  Command               │
+│───────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ ghaction-runner-hostname       ~/code/hishtory       Aug 25 2024 18:52:40 PDT       N/A        0          hishtory tquery       │
+│ ghaction-runner-hostname       ~/code/hishtory       Aug 25 2024 18:52:39 PDT       45ms       0          set -eo pipefail      │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+│                                                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+hiSHtory: Search your shell history  • ctrl+h help

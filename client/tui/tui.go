@@ -225,7 +225,13 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 	return nil
 }
 
+func sanitizeEscapeCodes(input string) string {
+	re := regexp.MustCompile(`\d\d;rgb:[0-9a-f]{4}/[0-9a-f]{4}/[0-9a-f]{4}`)
+	return re.ReplaceAllString(input, "")
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m.queryInput.SetValue(sanitizeEscapeCodes(m.queryInput.Value()))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
