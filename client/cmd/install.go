@@ -398,6 +398,9 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 	}
 	// Check if we need to configure the bash_profile and configure it if so
 	if doesBashProfileNeedConfig(homedir) {
+		_, err := os.Stat(path.Join(homedir, ".bash_profile"))
+		bashProfileExists := !errors.Is(err, os.ErrNotExist)
+
 		bashProfileIsConfigured, err := isBashProfileConfigured(homedir)
 		if err != nil {
 			return fmt.Errorf("failed to check ~/.bash_profile: %w", err)
@@ -406,6 +409,14 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 			err = addToShellConfig(path.Join(homedir, ".bash_profile"), getBashConfigFragment(homedir), skipConfigModification)
 			if err != nil {
 				return err
+			}
+			if !bashProfileExists {
+				// If the .bash_profile doesn't exist and we just created it, we're breaking the sourcing of .profile (see #238)
+				// So we need to source .profile from .bash_profile
+				err = addToShellConfig(path.Join(homedir, ".bash_profile"), "\n# Source .profile:\nsource ~/.profile\n", skipConfigModification)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
