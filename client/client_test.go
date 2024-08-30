@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -3305,6 +3306,60 @@ func TestSanitizeEscapeCodes(t *testing.T) {
 
 	// It gets stripped out
 	require.Contains(t, out, "Search Query: >\n")
+}
+
+func TestCreatedBashProfileSourcesProfile(t *testing.T) {
+	if runtime.GOOS == "linux" {
+		t.Skip("hishtory doesn't create .bash_profile on linux")
+	}
+	markTestForSharding(t, 18)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	// Delete .bash_profile so hishtory will create a new one
+	require.NoError(t, os.Remove(filepath.Join(homedir, ".bash_profile")))
+
+	// Install hishtory
+	installHishtory(t, tester, "")
+
+	// Check that both files exist now
+	require.FileExists(t, filepath.Join(homedir, ".bash_profile"))
+	require.FileExists(t, filepath.Join(homedir, ".profile"))
+
+	// Check that .bash_profile sources .profile and that it contains the hishtory config
+	bashProfileContent, err := os.ReadFile(filepath.Join(homedir, ".bash_profile"))
+	require.NoError(t, err)
+	require.Contains(t, string(bashProfileContent), "source ~/.profile")
+	require.Contains(t, string(bashProfileContent), "# Hishtory Config:\n")
+}
+
+func TestExistingBashProfileDoesNotSourceProfile(t *testing.T) {
+	if runtime.GOOS == "linux" {
+		t.Skip("hishtory doesn't create .bash_profile on linux")
+	}
+	markTestForSharding(t, 18)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	// Ensure .bash_profile exists so that hishtory doesn't create it
+	require.FileExists(t, filepath.Join(homedir, ".bash_profile"))
+
+	// Install hishtory
+	installHishtory(t, tester, "")
+
+	// Check that both files exist now
+	require.FileExists(t, filepath.Join(homedir, ".bash_profile"))
+	require.FileExists(t, filepath.Join(homedir, ".profile"))
+
+	// Check that .bash_profile does not source .profile and that it does contain the hishtory config
+	bashProfileContent, err := os.ReadFile(filepath.Join(homedir, ".bash_profile"))
+	require.NoError(t, err)
+	require.NotContains(t, string(bashProfileContent), "source ~/.profile")
+	require.Contains(t, string(bashProfileContent), "# Hishtory Config:\n")
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

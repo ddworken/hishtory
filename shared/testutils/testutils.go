@@ -99,6 +99,7 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 		path.Join(homedir, ".zshrc"),
 		path.Join(homedir, ".bashrc"),
 		path.Join(homedir, ".bash_profile"),
+		path.Join(homedir, ".profile"),
 	}
 	for _, file := range copyFiles {
 		touchFile(file)
