@@ -13,7 +13,6 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v4 v4.18.2
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/muesli/termenv v0.15.2
@@ -29,7 +28,7 @@ require (
 	golang.org/x/term v0.23.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gorm.io/driver/postgres v1.4.6
+	gorm.io/driver/postgres v1.5.9
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/gotestsum v1.11.0
