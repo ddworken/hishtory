@@ -10,7 +10,7 @@ import (
 
 	"github.com/ddworken/hishtory/shared"
 
-	"github.com/jackc/pgx/v4/stdlib"
+	"github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/lib/pq"
 	"github.com/samber/lo"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
