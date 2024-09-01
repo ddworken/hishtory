@@ -102,6 +102,7 @@ func OpenDB() (*database.DB, error) {
 	}
 	if os.Getenv("HISHTORY_COMPOSE_TEST") != "" {
 		// Run an extra round of migrations to test the migration code path to prevent issues like #241
+		fmt.Println("AutoMigrating DB tables a second time for test coverage")
 		err := db.AddDatabaseTables()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
