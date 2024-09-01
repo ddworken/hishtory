@@ -48,8 +48,10 @@ jobs:
           ! (./hishtory export | grep "ls -Slah /")
           # Assert that the entry is syncing properly
           ./hishtory status -v | grep 'Sync Status: Synced'
-    # - name: Setup tmate session
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
-    #   with:
-    #     limit-access-to-actor: true
+          # Show the full status output for debugging
+          ./hishtory status -v
+    - name: Setup tmate session
+      # if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
