@@ -52,8 +52,8 @@ jobs:
           ./hishtory status -v | grep 'Sync Server: http://localhost'
           # Show the full status output for debugging
           ./hishtory status -v
-    - name: Setup tmate session
-      # if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   # if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
