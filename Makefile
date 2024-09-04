@@ -41,12 +41,12 @@ build-api:			## [ddworken only] Build the API for api.hishtory.dev
 deploy-static: 			## [ddworken only] Build and deploy the server for hishtory.dev
 deploy-static: build-static
 	ssh server "docker push gcr.io/dworken-k8s/hishtory-static"
-	ssh monoserver "cd ~/infra/ && docker compose pull hishtory-static && docker compose rm -svf hishtory-static && docker compose up -d hishtory-static"
+	ssh monoserver "cd ~/code/infra/ && docker compose pull hishtory-static && docker compose rm -svf hishtory-static && docker compose up -d hishtory-static"
 
 deploy-api:			## [ddworken only] Build and deploy the API server for api.hishtory.dev
 deploy-api: build-api
 	docker push gcr.io/dworken-k8s/hishtory-api
-	ssh monoserver "cd ~/infra/ && docker compose pull hishtory-api && docker compose up -d --no-deps hishtory-api"
+	ssh monoserver "cd ~/code/infra/ && docker compose pull hishtory-api && docker compose up -d --no-deps hishtory-api"
 
 deploy:				## [ddworken only] Build and deploy all backend services
 deploy: release deploy-static deploy-api
