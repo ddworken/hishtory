@@ -24,7 +24,7 @@ jobs:
           sudo chmod 0755 -R /usr/share/zsh/  # Work around a weird bug where zsh on ubuntu actions gives that diretory 0777 which makes zsh refuse to start
           sudo hostname ghaction-runner-hostname  # Set a consistent hostname so we can run tests that depend on it
           docker compose -f backend/server/docker-compose.yml build
-          docker compose -f backend/server/docker-compose.yml up -d 
+          HISHTORY_COMPOSE_TEST=1 docker compose -f backend/server/docker-compose.yml up -d 
           export HISHTORY_SERVER=http://localhost
           go build
           ./hishtory install
@@ -48,8 +48,12 @@ jobs:
           ! (./hishtory export | grep "ls -Slah /")
           # Assert that the entry is syncing properly
           ./hishtory status -v | grep 'Sync Status: Synced'
+          # And that we are properly using the self-hosted server
+          ./hishtory status -v | grep 'Sync Server: http://localhost'
+          # Show the full status output for debugging
+          ./hishtory status -v
     # - name: Setup tmate session
-    #   if: ${{ failure() }}
+    #   # if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
     #   with:
     #     limit-access-to-actor: true

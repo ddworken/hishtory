@@ -41,6 +41,7 @@ services:
         delay: 3s
     environment:
       HISHTORY_POSTGRES_DB: postgresql://postgres:TODO_YOUR_POSTGRES_PASSWORD_HERE@postgres:5432/hishtory?sslmode=disable
+      HISHTORY_COMPOSE_TEST: $HISHTORY_COMPOSE_TEST
     ports:
       - 80:8080
 volumes:
