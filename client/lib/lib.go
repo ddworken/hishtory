@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"log"
 	"math/rand"
 	"net/http"
@@ -31,7 +32,6 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
-	"iter"
 )
 
 //go:embed config.sh
