@@ -71,3 +71,5 @@ __hishtory_bind_control_r() {
 }
 
 [ "$(hishtory config-get enable-control-r)" = true ] && __hishtory_bind_control_r
+
+type _get_comp_words_by_ref &>/dev/null && source <(hishtory completion bash)
