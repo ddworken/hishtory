@@ -838,13 +838,13 @@ func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
-	// Check that we can find the go binary
-	_, err := exec.LookPath("go")
+	// Check that we can find the go binary and use that path to it for consistency
+	goBinPath, err := exec.LookPath("go")
 	require.NoError(t, err)
 
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := tester.RunInteractiveShell(t, `unset HISHTORY_TEST
-CGO_ENABLED=0 go build -o /tmp/client
+CGO_ENABLED=0 `+goBinPath+` build -o /tmp/client
 /tmp/client install`)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
