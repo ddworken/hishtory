@@ -2478,7 +2478,7 @@ echo bar`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE ENTER", "-pipefail"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
 	if testutils.IsGithubAction() {
 		testName += "-isAction"
@@ -2735,7 +2735,7 @@ func TestTimestampFormat(t *testing.T) {
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail SPACE -tablesizing"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail -tablesizing")
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
 
@@ -2836,7 +2836,7 @@ echo foo`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-query")
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-tquery")
 
 	// And change the config to filter out duplicate rows
@@ -2852,7 +2852,7 @@ echo foo`)
 
 	// Check tquery
 	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 
 	// Check actually selecting it with query
