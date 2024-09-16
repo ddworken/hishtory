@@ -927,3 +927,4 @@ func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
 
 // TODO: support custom key bindings
 // TODO: make the help page wrap
+// TODO: If the initial query contains dashes, maybe we should smartly escape them?
