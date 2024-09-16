@@ -2477,7 +2477,7 @@ echo bar`)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE ENTER", "-pipefail"})
 	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
 	if testutils.IsGithubAction() {
@@ -2734,7 +2734,7 @@ func TestTimestampFormat(t *testing.T) {
 	// And check that it is displayed in both the tui and the classic view
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail SPACE -tablesizing"})
 	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
@@ -2774,7 +2774,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
 	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -tablesizing`)
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-export")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail SPACE -tablesizing"})
 	out = stripTuiCommandPrefix(t, out)
 	require.Regexp(t, regexp.MustCompile(`Timestamp[\s\S]*Command[\s\S]*Apr 16 2022 01:36:26 PDT[\s\S]*third_entry[\s\S]*Apr 16 2022 01:19:46 PDT[\s\S]*second_entry[\s\S]*Apr 16 2022 01:03:06 PDT[\s\S]*first_entry`), out)
 }
@@ -2835,7 +2835,7 @@ echo foo`)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail"})
 	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-tquery")
 
@@ -2851,13 +2851,14 @@ echo foo`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
 
 	// Check tquery
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail"})
 	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 
 	// Check actually selecting it with query
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "-pipefail", ExtraDelay: 1.0},
 		{Keys: "Down Down"},
 		{Keys: "ENTER", ExtraDelay: 1.0},
 	})

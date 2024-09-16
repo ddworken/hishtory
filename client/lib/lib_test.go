@@ -306,8 +306,8 @@ func TestSplitEscaped(t *testing.T) {
 		{"'foo\"bar", ' ', -1, []string{"'foo\"bar"}},
 		{"\"foo'\\\"bar\"", ' ', -1, []string{"foo'\"bar"}},
 		{"'foo\"\\'bar'", ' ', -1, []string{"foo\"'bar"}},
-		{"''", ' ', -1, nil},
-		{"\"\"", ' ', -1, nil},
+		{"''", ' ', -1, []string{""}},
+		{"\"\"", ' ', -1, []string{""}},
 		{"\\\"", ' ', -1, []string{"\""}},
 		{"\\'", ' ', -1, []string{"'"}},
 		// Tests the behavior of quotes with
