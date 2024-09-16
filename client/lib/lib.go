@@ -995,9 +995,7 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 			token = append(token, runeQuery[i])
 		}
 	}
-	if string(token) != "" {
-		tokens = append(tokens, string(token))
-	}
+	tokens = append(tokens, string(token))
 	return tokens
 }
 

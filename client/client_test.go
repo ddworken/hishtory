@@ -2114,6 +2114,14 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		"'\"'foo:bar'\"'",
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-SearchColonDoubleQuoted")
+
+	// And check that we can quote dashes
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("foo --bar")).Error)
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'\"'--bar'\"'",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchQuoteDash")
 }
 
 func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
