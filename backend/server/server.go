@@ -225,7 +225,7 @@ func main() {
 		server.IsProductionEnvironment(isProductionEnvironment()),
 		server.WithCron(cron),
 		server.WithUpdateInfo(release.BuildUpdateInfo(release.Version)),
-		server.TrackUsageData(true),
+		server.TrackUsageData(isProductionEnvironment() || isTestEnvironment() || os.Getenv("HISHTORY_ENABLE_USAGE_STATS") != ""),
 	)
 
 	go runBackgroundJobs(context.Background(), srv, db, stats)
