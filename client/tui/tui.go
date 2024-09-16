@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	_ "embed" // for embedding config.sh
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -865,21 +866,55 @@ func configureColorProfile(ctx context.Context) {
 	}
 }
 
-func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
+func buildInitialQueryWithSearchEscaping(initialQueryArray []string) (string, error) {
+	var initialQuery string
+
+	for i, queryChunk := range initialQueryArray {
+		if i != 0 {
+			initialQuery += " "
+		}
+		if strings.HasPrefix(queryChunk, "-") {
+			quoted, err := json.Marshal(queryChunk)
+			if err != nil {
+				return "", fmt.Errorf("failed to marshal query chunk for escaping: %w", err)
+			}
+			initialQuery += string(quoted)
+		} else {
+			initialQuery += queryChunk
+		}
+	}
+
+	return initialQuery, nil
+}
+
+func splitQueryArray(initialQueryArray []string) []string {
+	var splitQueryArray []string
+	for _, queryChunk := range initialQueryArray {
+		splitQueryArray = append(splitQueryArray, strings.Split(queryChunk, " ")...)
+	}
+	return splitQueryArray
+}
+
+func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string) error {
+	initialQueryArray = splitQueryArray(initialQueryArray)
+	initialQueryWithEscaping, err := buildInitialQueryWithSearchEscaping(initialQueryArray)
+	if err != nil {
+		return err
+	}
 	loadedKeyBindings = hctx.GetConf(ctx).KeyBindings.ToKeyMap()
 	configureColorProfile(ctx)
-	p := tea.NewProgram(initialModel(ctx, shellName, initialQuery), tea.WithOutput(os.Stderr))
+	p := tea.NewProgram(initialModel(ctx, shellName, initialQueryWithEscaping), tea.WithOutput(os.Stderr))
 	// Async: Get the initial set of rows
 	go func() {
 		LAST_DISPATCHED_QUERY_ID++
 		queryId := LAST_DISPATCHED_QUERY_ID
 		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
 		conf := hctx.GetConf(ctx)
-		rows, entries, err := getRows(ctx, conf.DisplayedColumns, shellName, conf.DefaultFilter, initialQuery, PADDED_NUM_ENTRIES)
-		if err == nil || initialQuery == "" {
+		rows, entries, err := getRows(ctx, conf.DisplayedColumns, shellName, conf.DefaultFilter, initialQueryWithEscaping, PADDED_NUM_ENTRIES)
+		if err == nil || initialQueryWithEscaping == "" {
 			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
 		} else {
-			// initialQuery is likely invalid in some way, let's just drop it
+			// The initial query is likely invalid in some way, let's just drop it
 			emptyQuery := ""
 			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, shellName, conf.DefaultFilter, emptyQuery, PADDED_NUM_ENTRIES)
 			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
@@ -913,13 +948,13 @@ func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
 		p.Send(bannerMsg{banner: string(banner)})
 	}()
 	// Blocking: Start the TUI
-	_, err := p.Run()
+	_, err = p.Run()
 	if err != nil {
 		return err
 	}
 	if SELECTED_COMMAND == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
-		// Print out the initialQuery instead so that we don't clear the terminal
-		SELECTED_COMMAND = initialQuery
+		// Print out the initialQuery instead so that we don't clear the terminal (note that we don't use the escaped one here)
+		SELECTED_COMMAND = strings.Join(initialQueryArray, " ")
 	}
 	fmt.Printf("%s\n", SELECTED_COMMAND)
 	return nil
