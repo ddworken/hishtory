@@ -1,27 +1,6 @@
 Search Query: > -pipefail -tablesizing
 
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname   CWD     Timestamp          Runtime  Exit Code  Command                                                                                                                                    │
+│ Hostname                  CWD                       Timestamp          Runtime  Exit Code  Command                                                                                                   │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ localhost  ~/foo/  2022/Apr/16 01:03  24s      3          table_cmd2                                                                                                                                 │
-│ localhost  /tmp/   2022/Apr/16 01:03  4s       2          table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa… │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-│                                                                                                                                                                                                      │
-└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-hiSHtory: Search your shell history  • ctrl+h help
+│ ghaction-runner-hostname  ~/work/hishtory/hishtory  2024/Sep/15 22:14  N/A      0
