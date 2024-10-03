@@ -46,7 +46,7 @@ function __hishtory_postcommand() {
 
   if [ -n "${HISHTORY_FIRST_PROMPT:-}" ]; then
     unset HISHTORY_FIRST_PROMPT
-    return
+    return $EXIT_CODE
   fi
 
   # Run after every prompt
@@ -57,6 +57,8 @@ function __hishtory_postcommand() {
   LAST_SAVED_COMMAND=$CMD
 
   (hishtory updateLocalDbFromRemote &)
+
+  return $EXIT_CODE
 }
 PROMPT_COMMAND="__hishtory_postcommand; $PROMPT_COMMAND"
 export HISTTIMEFORMAT=$HISTTIMEFORMAT
