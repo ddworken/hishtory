@@ -53,8 +53,9 @@ os.system('chmod +x ' + tmpFilePath)
 cmd = tmpFilePath + ' install'
 if os.environ.get('HISHTORY_OFFLINE'):
     cmd += " --offline"
-if len(sys.argv) > 1:
-    cmd += " " + " ".join(sys.argv[1:])
+additional_flags = [flag for flag in sys.argv[1:] if flag.startswith("-") and flag != "-"]
+if additional_flags:
+    cmd += " " + " ".join(additional_flags)
 exitCode = os.system(cmd)
 os.remove(tmpFilePath)
 if exitCode != 0:
