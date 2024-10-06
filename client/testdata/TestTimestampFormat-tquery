@@ -1,6 +1,27 @@
-Search Query: > -pipefail -tablesizing
+Search Query: > table_cmd -tquery
 
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname                  CWD                       Timestamp          Runtime  Exit Code  Command                                                                                                   │
+│ Hostname    CWD              Timestamp          Runtime  Exit Code  Command                                                                                                                          │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ ghaction-runner-hostname  ~/work/hishtory/hishtory  2024/Sep/28 12:46  N/A      0
+│ localhost   ~/foo/           2022/Apr/16 01:03  24s      3          table_cmd2                                                                                                                       │
+│ localhost   /tmp/            2022/Apr/16 01:03  4s       2          table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa… │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+hiSHtory: Search your shell history  • ctrl+h help

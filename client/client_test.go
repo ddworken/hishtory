@@ -2734,7 +2734,7 @@ func TestTimestampFormat(t *testing.T) {
 	// And check that it is displayed in both the tui and the classic view
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail SPACE -tablesizing"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "table_cmd SPACE -tquery"})
 	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
