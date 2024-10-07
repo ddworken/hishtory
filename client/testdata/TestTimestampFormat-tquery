@@ -1,10 +1,10 @@
 Search Query: > table_cmd -tquery
 
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hostname    CWD              Timestamp          Runtime  Exit Code  Command                                                                                                                          │
+│ Hostname                  CWD                       Timestamp          Runtime  Exit Code  Command                                                                                                   │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ localhost   ~/foo/           2022/Apr/16 01:03  24s      3          table_cmd2                                                                                                                       │
-│ localhost   /tmp/            2022/Apr/16 01:03  4s       2          table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa… │
+│ localhost                 ~/foo/                    2022/Apr/16 01:03  24s      3          table_cmd2                                                                                                │
+│ localhost                 /tmp/                     2022/Apr/16 01:03  4s       2          table_cmd1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa… │
 │                                                                                                                                                                                                      │
 │                                                                                                                                                                                                      │
 │                                                                                                                                                                                                      │

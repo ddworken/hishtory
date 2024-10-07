@@ -3,4 +3,25 @@ Search Query: > -pipefail
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ Exit Code  Command                                                        │
 │───────────────────────────────────────────────────────────────────────────│
-│ 0
+│ 0          hishtory tquery                                                │
+│ 0          hishtory config-set displayed-columns 'Exit Code' Command      │
+│ 0          echo foo                                                       │
+│ 0          echo baz                                                       │
+│ 0          echo baz                                                       │
+│ 0          echo foo                                                       │
+│ 0          echo foo                                                       │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+hiSHtory: Search your shell history  • ctrl+h help
