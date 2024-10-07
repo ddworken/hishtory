@@ -4,4 +4,5 @@ echo baz
 echo baz
 echo foo
 hishtory config-set displayed-columns 'Exit Code' Command
+hishtory tquery
 hishtory config-set filter-duplicate-commands true

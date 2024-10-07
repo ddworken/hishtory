@@ -55,7 +55,7 @@ var tqueryCmd = &cobra.Command{
 		if os.Getenv("HISHTORY_SHELL_NAME") != "" {
 			shellName = os.Getenv("HISHTORY_SHELL_NAME")
 		}
-		lib.CheckFatalError(tui.TuiQuery(ctx, shellName, strings.Join(args, " ")))
+		lib.CheckFatalError(tui.TuiQuery(ctx, shellName, args))
 	},
 }
 
