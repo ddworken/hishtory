@@ -160,8 +160,6 @@ hishtory config-set filter-duplicate-commands true
 If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode:
 
 ```sh
-curl https://hishtory.dev/install.py | HISHTORY_OFFLINE=true python3 -
-# or
 curl https://hishtory.dev/install.py | python3 - --offline
 ```
 

@@ -1063,18 +1063,16 @@ func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.RemoveAll(path.Join(homedir, altHishtoryPath)))
 
-	testInstallViaPythonScriptChild(t, zshTester{})
+	testInstallViaPythonScriptChild(t, zshTester{}, Online)
 }
 
 func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 	markTestForSharding(t, 1)
 	defer testutils.BackupAndRestore(t)()
-	defer testutils.BackupAndRestoreEnv("HISHTORY_OFFLINE")()
-	os.Setenv("HISHTORY_OFFLINE", "1")
 	tester := zshTester{}
 
 	// Check that installing works
-	testInstallViaPythonScriptChild(t, tester)
+	testInstallViaPythonScriptChild(t, tester, Offline)
 
 	// And check that it installed in offline mode
 	out := tester.RunInteractiveShell(t, `hishtory status -v`)
@@ -1083,14 +1081,14 @@ func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
-	testInstallViaPythonScriptChild(t, tester)
+	testInstallViaPythonScriptChild(t, tester, Online)
 
 	// And check that it installed in online mode
 	out := tester.RunInteractiveShell(t, `hishtory status -v`)
 	require.Contains(t, out, "\nSync Mode: Enabled\n")
 }
 
-func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
+func testInstallViaPythonScriptChild(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
@@ -1099,7 +1097,11 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 
 	// Install via the python script
-	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`)
+	additionalFlags := " "
+	if onlineStatus == Offline {
+		additionalFlags = "--offline"
+	}
+	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`+additionalFlags)
 	require.Contains(t, out, "Succesfully installed hishtory")
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
