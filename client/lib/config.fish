@@ -11,12 +11,14 @@ function _hishtory_post_exec --on-event fish_preexec
 end
 
 function __hishtory_on_prompt --on-event fish_postexec
+    # Runs after <ENTER>, after the command is executed
     set _hishtory_exit_code $status
     hishtory saveHistoryEntry fish $_hishtory_exit_code \"$_hishtory_command\" $_hishtory_start_time &> /dev/null &
     builtin disown
     hishtory updateLocalDbFromRemote &> /dev/null &
     builtin disown
-    set --global -e _hishtory_command  # Unset _hishtory_command so we don't double-save entries when fish_prompt is invoked but fish_postexec isn't
+    # Unset _hishtory_command so we don't double-save entries when fish_prompt is invoked but fish_postexec isn't
+    set --global -e _hishtory_command
 end
 
 function __hishtory_on_control_r
