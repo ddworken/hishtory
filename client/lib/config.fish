@@ -32,3 +32,5 @@ function __hishtory_on_control_r
 end
 
 [ (hishtory config-get enable-control-r) = true ] && bind \cr __hishtory_on_control_r
+
+hishtory completion fish | source
