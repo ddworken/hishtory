@@ -13,7 +13,7 @@ end
 function __hishtory_on_prompt --on-event fish_postexec
     # Runs after <ENTER>, after the command is executed
     set _hishtory_exit_code $status
-    hishtory saveHistoryEntry fish $_hishtory_exit_code \"$_hishtory_command\" $_hishtory_start_time &> /dev/null &
+    hishtory saveHistoryEntry fish $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &> /dev/null &
     builtin disown
     hishtory updateLocalDbFromRemote &> /dev/null &
     builtin disown
