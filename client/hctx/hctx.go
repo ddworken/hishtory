@@ -221,6 +221,8 @@ type ClientConfig struct {
 	KeyBindings keybindings.SerializableKeyMap `json:"key_bindings"`
 	// The log level for hishtory (e.g., "debug", "info", "warn", "error")
 	LogLevel logrus.Level `json:"log_level"`
+	// Whether the TUI should render in full-screen mode
+	FullScreenRendering bool `json:"full_screen_rendering"`
 }
 
 type ColorScheme struct {
