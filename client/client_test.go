@@ -1101,7 +1101,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester, onlineSta
 	if onlineStatus == Offline {
 		additionalFlags = "--offline"
 	}
-	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 - -- `+additionalFlags)
+	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 - `+additionalFlags)
 	require.Contains(t, out, "Succesfully installed hishtory")
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
