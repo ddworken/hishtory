@@ -53,7 +53,7 @@ os.system('chmod +x ' + tmpFilePath)
 cmd = tmpFilePath + ' install'
 if os.environ.get('HISHTORY_OFFLINE'):
     cmd += " --offline"
-additional_flags = [flag for flag in sys.argv[1:] if flag.startswith("-") and flag != "-"]
+additional_flags = [flag for flag in sys.argv[1:] if flag.startswith("-") and flag != "-" and flag != "--"]
 if additional_flags:
     cmd += " " + " ".join(additional_flags)
 exitCode = os.system(cmd)
