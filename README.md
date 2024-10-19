@@ -200,6 +200,19 @@ You can configure a custom timestamp format for hiSHtory via `hishtory config-se
 </blockquote></details>
 
 <details>
+<summary>Custom rendering</summary><blockquote>
+
+By default, hiHStory tries to render the TUI in a reasonable way that balances terminal space consumption and TUI usability. If you find that you wish to customize this behavior, there are two config options that you can experiment with enabling:
+
+```
+hishtory config-set compact-mode true  # Renders the TUI in "compact mode" with less whitespace
+hishtory config-set full-screen true   # Renders the TUI in "full-screen mode" so that it uses the entire terminal
+```
+
+</blockquote></details>
+
+
+<details>
 <summary>Web UI for sharing</summary><blockquote>
 
 If you'd like to temporarily allow someone else to search your shell history, you can start a web server via `hishtory start-web-ui`. This will expose a basic (password-protected) web UI on port `8000` where they can query your history:
