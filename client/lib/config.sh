@@ -31,8 +31,8 @@ function __hishtory_precommand() {
     # such that it is worth accepting this issue to mitigate the duplicate entries observed in
     # https://github.com/ddworken/hishtory/issues/215.
     if [[ "$CMD" != "$LAST_PRESAVED_COMMAND" ]] &&  [[ "$CMD" != "$LAST_SAVED_COMMAND" ]]; then 
-      (hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME &) # Background Run
-      # hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME  # Foreground Run
+      (hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME &) 2>&1 >/dev/null # Background Run
+      # hishtory presaveHistoryEntry bash "$CMD" $HISHTORY_START_TIME 2>&1 >/dev/null # Foreground Run
     fi 
   fi
   LAST_PRESAVED_COMMAND=$CMD
@@ -51,8 +51,8 @@ function __hishtory_postcommand() {
 
   # Run after every prompt
   CMD=`history 1`
-  (hishtory saveHistoryEntry bash $EXIT_CODE "$CMD" $HISHTORY_START_TIME &) # Background Run
-  # hishtory saveHistoryEntry bash $EXIT_CODE "$CMD" $HISHTORY_START_TIME  # Foreground Run
+  (hishtory saveHistoryEntry bash $EXIT_CODE "$CMD" $HISHTORY_START_TIME &) 2>&1 >/dev/null # Background Run
+  # hishtory saveHistoryEntry bash $EXIT_CODE "$CMD" $HISHTORY_START_TIME 2>&1 >/dev/null # Foreground Run
 
   LAST_SAVED_COMMAND=$CMD
 

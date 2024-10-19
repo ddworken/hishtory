@@ -14,8 +14,8 @@ function _hishtory_add() {
     _hishtory_command=$1
     _hishtory_start_time=`hishtory getTimestamp`
     if ! [ -z "$_hishtory_command " ]; then
-        (hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time &)  # Background Run
-        # hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time  # Foreground Run
+        (hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time &) 2>&1 >/dev/null # Background Run
+        # hishtory presaveHistoryEntry zsh "$_hishtory_command" $_hishtory_start_time 2>&1 >/dev/null # Foreground Run
     fi
 }
 
@@ -27,8 +27,8 @@ function _hishtory_precmd() {
         unset _hishtory_first_prompt
         return
     fi
-    (hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &)  # Background Run
-    # hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time  # Foreground Run
+    (hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time &) 2>&1 >/dev/null  # Background Run
+    # hishtory saveHistoryEntry zsh $_hishtory_exit_code "$_hishtory_command" $_hishtory_start_time 2>&1 >/dev/null # Foreground Run
     (hishtory updateLocalDbFromRemote &)
 }
 
