@@ -42,7 +42,10 @@ var installCmd = &cobra.Command{
 		if len(args) > 0 {
 			secretKey = args[0]
 		}
-		lib.CheckFatalError(install(secretKey, *offlineInstall, *skipConfigModification))
+		if strings.HasPrefix(secretKey, "-") {
+			lib.CheckFatalError(fmt.Errorf("secret key %#v looks like a CLI flag, please use a secret key that does not start with a -", secretKey))
+		}
+		// TODO: Add a check to crash if secretKey looks like a flag		lib.CheckFatalError(install(secretKey, *offlineInstall, *skipConfigModification))
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
