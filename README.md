@@ -159,8 +159,8 @@ hishtory config-set filter-duplicate-commands true
 
 If you don't need the ability to sync your shell history, you can install hiSHtory in offline mode:
 
-```
-curl https://hishtory.dev/install.py | HISHTORY_OFFLINE=true python3 -
+```sh
+curl https://hishtory.dev/install.py | python3 - --offline
 ```
 
 This disables syncing completely so that the client will not rely on the hiSHtory backend at all. You can also change the syncing status via `hishtory syncing enable` or `hishtory syncing disable`.
@@ -198,6 +198,19 @@ hiSHtory imports your existing shell history by default. If for some reason this
 You can configure a custom timestamp format for hiSHtory via `hishtory config-set timestamp-format '2006/Jan/2 15:04'`. The timestamp format string should be in [the format used by Go's `time.Format(...)`](https://pkg.go.dev/time#Time.Format). 
 
 </blockquote></details>
+
+<details>
+<summary>Custom rendering</summary><blockquote>
+
+By default, hiHStory tries to render the TUI in a reasonable way that balances terminal space consumption and TUI usability. If you find that you wish to customize this behavior, there are two config options that you can experiment with enabling:
+
+```
+hishtory config-set compact-mode true  # Renders the TUI in "compact mode" with less whitespace
+hishtory config-set full-screen true   # Renders the TUI in "full-screen mode" so that it uses the entire terminal
+```
+
+</blockquote></details>
+
 
 <details>
 <summary>Web UI for sharing</summary><blockquote>

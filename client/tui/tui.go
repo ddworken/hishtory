@@ -30,11 +30,6 @@ import (
 	"golang.org/x/term"
 )
 
-const (
-	TABLE_HEIGHT       = 20
-	PADDED_NUM_ENTRIES = TABLE_HEIGHT * 5
-)
-
 var (
 	CURRENT_QUERY_FOR_HIGHLIGHTING string = ""
 	SELECTED_COMMAND               string = ""
@@ -225,7 +220,7 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 				// The default filter was cleared for this session, so don't apply it
 				defaultFilter = ""
 			}
-			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, PADDED_NUM_ENTRIES)
+			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
 			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil, false}
 		}
 	}
@@ -467,7 +462,7 @@ func getBaseStyle(config hctx.ClientConfig) lipgloss.Style {
 
 func renderNullableTable(m model, helpText string) string {
 	if m.table == nil {
-		return strings.Repeat("\n", TABLE_HEIGHT+3)
+		return strings.Repeat("\n", getTableHeight(m.ctx)+3)
 	}
 	helpTextLen := strings.Count(helpText, "\n")
 	baseStyle := getBaseStyle(*hctx.GetConf(m.ctx))
@@ -666,6 +661,25 @@ func min(a, b int) int {
 	return b
 }
 
+func getTableHeight(ctx context.Context) int {
+	config := hctx.GetConf(ctx)
+	if config.FullScreenRendering {
+		_, terminalHeight, err := getTerminalSize()
+		if err != nil {
+			// A reasonable guess at a default if for some reason we fail to retrieve the terminal size
+			return 30
+		}
+		return max(terminalHeight-15, 20)
+	}
+	// Default to 20 when not full-screen since we want to balance showing a large table with not using the entire screen
+	return 20
+}
+
+func getNumEntriesNeeded(ctx context.Context) int {
+	// Get more than table height since the TUI filters some out (e.g. duplicate entries)
+	return getTableHeight(ctx) * 5
+}
+
 func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.Model, error) {
 	config := hctx.GetConf(ctx)
 	columns, err := makeTableColumns(ctx, shellName, config.DisplayedColumns, rows)
@@ -699,7 +713,7 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 	if isExtraCompactHeightMode(ctx) {
 		tuiSize -= 3
 	}
-	tableHeight := min(TABLE_HEIGHT, terminalHeight-tuiSize)
+	tableHeight := min(getTableHeight(ctx), terminalHeight-tuiSize)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
@@ -918,12 +932,16 @@ func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string)
 	}
 	loadedKeyBindings = hctx.GetConf(ctx).KeyBindings.ToKeyMap()
 	configureColorProfile(ctx)
-	p := tea.NewProgram(initialModel(ctx, shellName, initialQueryWithEscaping), tea.WithOutput(os.Stderr))
+	additionalOptions := []tea.ProgramOption{tea.WithOutput(os.Stderr)}
+	if hctx.GetConf(ctx).FullScreenRendering {
+		additionalOptions = append(additionalOptions, tea.WithAltScreen())
+	}
+	p := tea.NewProgram(initialModel(ctx, shellName, initialQueryWithEscaping), additionalOptions...)
 	// Async: Get the initial set of rows
 	go func() {
 		queryId := allocateQueryId()
 		conf := hctx.GetConf(ctx)
-		rows, entries, err := getRows(ctx, conf.DisplayedColumns, shellName, conf.DefaultFilter, initialQueryWithEscaping, PADDED_NUM_ENTRIES)
+		rows, entries, err := getRows(ctx, conf.DisplayedColumns, shellName, conf.DefaultFilter, initialQueryWithEscaping, getNumEntriesNeeded(ctx))
 		if err == nil || initialQueryWithEscaping == "" {
 			if err != nil {
 				panic(err)
@@ -932,7 +950,7 @@ func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string)
 		} else {
 			// The initial query is likely invalid in some way, let's just drop it
 			emptyQuery := ""
-			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, shellName, conf.DefaultFilter, emptyQuery, PADDED_NUM_ENTRIES)
+			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, shellName, conf.DefaultFilter, emptyQuery, getNumEntriesNeeded(ctx))
 			if err != nil {
 				panic(err)
 			}

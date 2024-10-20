@@ -262,6 +262,19 @@ var setLogLevelCmd = &cobra.Command{
 	},
 }
 
+var setFullScreenCmd = &cobra.Command{
+	Use:       "full-screen",
+	Short:     "Configure whether or not hishtory is configured to run in full-screen mode",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.FullScreenRendering = args[0] == "true"
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
@@ -277,6 +290,7 @@ func init() {
 	configSetCmd.AddCommand(setAiCompletionEndpoint)
 	configSetCmd.AddCommand(compactMode)
 	configSetCmd.AddCommand(setLogLevelCmd)
+	configSetCmd.AddCommand(setFullScreenCmd)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)

@@ -119,6 +119,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/ai", wrapTestForSharding(testTui_ai))
 	t.Run("testTui/defaultFilter", wrapTestForSharding(testTui_defaultFilter))
 	t.Run("testTui/escaping", wrapTestForSharding(testTui_escaping))
+	t.Run("testTui/fullscreen", wrapTestForSharding(testTui_fullscreen))
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -838,13 +839,13 @@ func testHishtoryBackgroundSaving(t *testing.T, tester shellTester) {
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
-	// Check that we can find the go binary
-	_, err := exec.LookPath("go")
+	// Check that we can find the go binary and use that path to it for consistency
+	goBinPath, err := exec.LookPath("go")
 	require.NoError(t, err)
 
 	// Test install with an unset HISHTORY_TEST var so that we save in the background (this is likely to be flakey!)
 	out := tester.RunInteractiveShell(t, `unset HISHTORY_TEST
-CGO_ENABLED=0 go build -o /tmp/client
+CGO_ENABLED=0 `+goBinPath+` build -o /tmp/client
 /tmp/client install`)
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
@@ -1063,18 +1064,16 @@ func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.RemoveAll(path.Join(homedir, altHishtoryPath)))
 
-	testInstallViaPythonScriptChild(t, zshTester{})
+	testInstallViaPythonScriptChild(t, zshTester{}, Online)
 }
 
 func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 	markTestForSharding(t, 1)
 	defer testutils.BackupAndRestore(t)()
-	defer testutils.BackupAndRestoreEnv("HISHTORY_OFFLINE")()
-	os.Setenv("HISHTORY_OFFLINE", "1")
 	tester := zshTester{}
 
 	// Check that installing works
-	testInstallViaPythonScriptChild(t, tester)
+	testInstallViaPythonScriptChild(t, tester, Offline)
 
 	// And check that it installed in offline mode
 	out := tester.RunInteractiveShell(t, `hishtory status -v`)
@@ -1083,14 +1082,14 @@ func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
 
 func testInstallViaPythonScript(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
-	testInstallViaPythonScriptChild(t, tester)
+	testInstallViaPythonScriptChild(t, tester, Online)
 
 	// And check that it installed in online mode
 	out := tester.RunInteractiveShell(t, `hishtory status -v`)
 	require.Contains(t, out, "\nSync Mode: Enabled\n")
 }
 
-func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
+func testInstallViaPythonScriptChild(t *testing.T, tester shellTester, onlineStatus OnlineStatus) {
 	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
@@ -1099,7 +1098,11 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
 
 	// Install via the python script
-	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 -`)
+	additionalFlags := " "
+	if onlineStatus == Offline {
+		additionalFlags = "--offline"
+	}
+	out := tester.RunInteractiveShell(t, `curl https://hishtory.dev/install.py | python3 - `+additionalFlags)
 	require.Contains(t, out, "Succesfully installed hishtory")
 	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
 	matches := r.FindStringSubmatch(out)
@@ -1867,6 +1870,54 @@ func testTui_escaping(t *testing.T) {
 	})
 	out = stripTuiCommandPrefix(t, out)
 	testutils.CompareGoldens(t, out, "TestTui-Escaping")
+}
+
+func testTui_fullscreen(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, _ := setupTestTui(t, Online)
+
+	// By default full-screen mode is disabled
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get full-screen`)))
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get compact-mode`)))
+
+	// Test that we can enable it
+	tester.RunInteractiveShell(t, `hishtory config-set full-screen true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get full-screen`)))
+
+	// Test that it renders in full-screen mode taking up the entire terminal
+	out := captureTerminalOutput(t, tester, []string{
+		"echo foo ENTER",
+		"hishtory SPACE tquery ENTER",
+	})
+	testutils.CompareGoldens(t, out, "TestTui-FullScreenRender")
+
+	// Test that it clears full-screen mode and restores the original terminal state
+	out = captureTerminalOutput(t, tester, []string{
+		"echo SPACE foo ENTER",
+		"hishtory SPACE tquery ENTER",
+		"Escape",
+	})
+	require.Contains(t, out, "echo foo\n")
+	require.Contains(t, out, "hishtory tquery\n")
+	require.NotContains(t, out, "Search Query")
+	require.True(t, len(strings.Split(out, "\n")) <= 7)
+
+	// Test that it renders the help page fine
+	out = captureTerminalOutput(t, tester, []string{
+		"echo SPACE foo ENTER",
+		"hishtory SPACE tquery ENTER",
+		"C-h",
+	})
+	testutils.CompareGoldens(t, out, "TestTui-FullScreenHelp")
+
+	// Test that it renders fine in full-screen mode and compact-mode
+	tester.RunInteractiveShell(t, `hishtory config-set compact-mode true`)
+	out = captureTerminalOutput(t, tester, []string{
+		"echo foo ENTER",
+		"hishtory SPACE tquery ENTER",
+	})
+	testutils.CompareGoldens(t, out, "TestTui-FullScreenCompactRender")
 }
 
 func testTui_defaultFilter(t *testing.T) {

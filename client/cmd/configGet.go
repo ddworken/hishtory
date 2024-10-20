@@ -184,6 +184,7 @@ func init() {
 	configGetCmd.AddCommand(getAiCompletionEndpoint)
 	configGetCmd.AddCommand(getCompactMode)
 	configGetCmd.AddCommand(getLogLevelCmd)
+	configGetCmd.AddCommand(getFullScreenCmd)
 }
 
 var getLogLevelCmd = &cobra.Command{
@@ -193,5 +194,15 @@ var getLogLevelCmd = &cobra.Command{
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		fmt.Println(config.LogLevel.String())
+	},
+}
+
+var getFullScreenCmd = &cobra.Command{
+	Use:   "full-screen",
+	Short: "Get whether or not hishtory is configured to run in full-screen mode",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.FullScreenRendering)
 	},
 }
