@@ -2724,6 +2724,7 @@ echo baz`)
 	// And then uninstall
 	out, err := tester.RunInteractiveShellRelaxed(t, `yes | hishtory uninstall`)
 	require.NoError(t, err)
+	out = strings.Replace(out, "/Users/", "/home/", -1)
 	testutils.CompareGoldens(t, out, "testUninstall-uninstall-"+tester.ShellName())
 
 	// And check that hishtory has been uninstalled
