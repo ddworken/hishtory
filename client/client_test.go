@@ -2910,11 +2910,12 @@ echo foo`)
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
 		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
 		{Keys: "-pipefail", ExtraDelay: 1.0},
-		{Keys: "Down Down"},
+		{Keys: "Down Down Down"},
 		{Keys: "ENTER", ExtraDelay: 1.0},
 	})
 	out = stripTuiCommandPrefix(t, out)
-	require.Contains(t, out, "\necho foo\n")
+	require.Contains(t, out, "echo foo\n")
+	require.NotContains(t, out, "hishtory tquery")
 	require.NotContains(t, out, "echo baz")
 	require.NotContains(t, out, "config-set")
 }
