@@ -26,10 +26,11 @@ import (
 )
 
 var (
-	offlineInit            *bool
-	forceInit              *bool
-	offlineInstall         *bool
-	skipConfigModification *bool
+	offlineInit                  *bool
+	forceInit                    *bool
+	offlineInstall               *bool
+	skipConfigModification       *bool
+	skipUpdateConfigModification *bool
 )
 
 var installCmd = &cobra.Command{
@@ -45,7 +46,7 @@ var installCmd = &cobra.Command{
 		if strings.HasPrefix(secretKey, "-") {
 			lib.CheckFatalError(fmt.Errorf("secret key %#v looks like a CLI flag, please use a secret key that does not start with a -", secretKey))
 		}
-		lib.CheckFatalError(install(secretKey, *offlineInstall, *skipConfigModification))
+		lib.CheckFatalError(install(secretKey, *offlineInstall, *skipConfigModification || *skipUpdateConfigModification))
 		if os.Getenv("HISHTORY_SKIP_INIT_IMPORT") == "" {
 			db, err := hctx.OpenLocalSqliteDb()
 			lib.CheckFatalError(err)
@@ -686,4 +687,5 @@ func init() {
 	forceInit = initCmd.Flags().Bool("force", false, "Force re-init without any prompts")
 	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode with all syncing capabilities disabled")
 	skipConfigModification = installCmd.Flags().Bool("skip-config-modification", false, "Skip modifying shell configs and instead instruct the user on how to modify their configs")
+	skipUpdateConfigModification = installCmd.Flags().Bool("skip-update-config-modification", false, "Skip modifying shell configs for updates")
 }
