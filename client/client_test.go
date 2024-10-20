@@ -2165,6 +2165,14 @@ func testTui_search(t *testing.T, onlineStatus OnlineStatus) {
 		"'\"'foo:bar'\"'",
 	}))
 	testutils.CompareGoldens(t, out, "TestTui-SearchColonDoubleQuoted")
+
+	// And check that we can quote dashes
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("foo --bar")).Error)
+	out = stripTuiCommandPrefix(t, captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"'\"'--bar'\"'",
+	}))
+	testutils.CompareGoldens(t, out, "TestTui-SearchQuoteDash")
 }
 
 func testTui_general(t *testing.T, onlineStatus OnlineStatus) {
@@ -2520,8 +2528,8 @@ echo bar`)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' git_remote Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, fmt.Sprintf("testCustomColumns-query-isAction=%v", testutils.IsGithubAction()))
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE ENTER", "-pipefail"})
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testName := "testCustomColumns-tquery-" + tester.ShellName()
 	if testutils.IsGithubAction() {
 		testName += "-isAction"
@@ -2778,8 +2786,8 @@ func TestTimestampFormat(t *testing.T) {
 	// And check that it is displayed in both the tui and the classic view
 	out := hishtoryQuery(t, tester, "-pipefail -tablesizing")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail -tablesizing")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "table_cmd SPACE -tquery"})
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "TestTimestampFormat-tquery")
 }
 
@@ -2818,7 +2826,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-query")
 	out = tester.RunInteractiveShell(t, `hishtory export -pipefail -tablesizing`)
 	testutils.CompareGoldens(t, out, "TestSortByConsistentTimezone-export")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail SPACE -tablesizing ENTER"})
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail SPACE -tablesizing"})
 	out = stripTuiCommandPrefix(t, out)
 	require.Regexp(t, regexp.MustCompile(`Timestamp[\s\S]*Command[\s\S]*Apr 16 2022 01:36:26 PDT[\s\S]*third_entry[\s\S]*Apr 16 2022 01:19:46 PDT[\s\S]*second_entry[\s\S]*Apr 16 2022 01:03:06 PDT[\s\S]*first_entry`), out)
 }
@@ -2879,8 +2887,8 @@ echo foo`)
 	tester.RunInteractiveShell(t, `hishtory config-set displayed-columns 'Exit Code' Command`)
 	out = tester.RunInteractiveShell(t, `hishtory query -pipefail`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-query")
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail"})
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-tquery")
 
 	// And change the config to filter out duplicate rows
@@ -2895,18 +2903,20 @@ echo foo`)
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-query")
 
 	// Check tquery
-	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery SPACE -pipefail ENTER"})
-	out = stripRequiredPrefix(t, out, "hishtory tquery -pipefail")
+	out = captureTerminalOutput(t, tester, []string{"hishtory SPACE tquery ENTER", "-pipefail"})
+	out = stripRequiredPrefix(t, out, "hishtory tquery")
 	testutils.CompareGoldens(t, out, "testRemoveDuplicateRows-enabled-tquery")
 
 	// Check actually selecting it with query
 	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
-		{Keys: "hishtory SPACE tquery SPACE -pipefail ENTER", ExtraDelay: 1.0},
-		{Keys: "Down Down"},
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "-pipefail", ExtraDelay: 1.0},
+		{Keys: "Down Down Down"},
 		{Keys: "ENTER", ExtraDelay: 1.0},
 	})
 	out = stripTuiCommandPrefix(t, out)
-	require.Contains(t, out, "\necho foo\n")
+	require.Contains(t, out, "echo foo\n")
+	require.NotContains(t, out, "hishtory tquery")
 	require.NotContains(t, out, "echo baz")
 	require.NotContains(t, out, "config-set")
 }

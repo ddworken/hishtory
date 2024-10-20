@@ -324,6 +324,11 @@ func TestSplitEscaped(t *testing.T) {
 		{"foo:bar", ' ', -1, []string{"foo:bar"}},
 		{"'foo:bar'", ' ', -1, []string{"foo\\:bar"}},
 		{"\"foo:bar\"", ' ', -1, []string{"foo\\:bar"}},
+		// Tests for quoting dashes
+		{"'-foo'", ' ', -1, []string{"\\-foo"}},
+		{"'--foo'", ' ', -1, []string{"\\--foo"}},
+		{"bar '--foo'", ' ', -1, []string{"bar", "\\--foo"}},
+		{"bar 'foo-baz'", ' ', -1, []string{"bar", "foo-baz"}},
 	}
 	for _, tc := range testcases {
 		actual := splitEscaped(tc.input, tc.char, tc.limit)

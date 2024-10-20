@@ -965,7 +965,9 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 	isInSingleQuotedString := false
 	for i := 0; i < len(runeQuery); i++ {
 		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator && !isInSingleQuotedString && !isInDoubleQuotedString {
-			tokens = append(tokens, string(token))
+			if string(token) != "" {
+				tokens = append(tokens, string(token))
+			}
 			token = token[:0]
 			splits++
 		} else if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
@@ -982,8 +984,13 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 		} else if runeQuery[i] == '\'' && !isInDoubleQuotedString && !heuristicIgnoreUnclosedQuote(isInSingleQuotedString, '\'', runeQuery, i) {
 			isInSingleQuotedString = !isInSingleQuotedString
 		} else {
-			if (isInSingleQuotedString || isInDoubleQuotedString) && separator == ' ' && runeQuery[i] == ':' {
-				token = append(token, '\\')
+			if (isInSingleQuotedString || isInDoubleQuotedString) && separator == ' ' {
+				if runeQuery[i] == ':' {
+					token = append(token, '\\')
+				}
+				if runeQuery[i] == '-' && len(token) == 0 {
+					token = append(token, '\\')
+				}
 			}
 			token = append(token, runeQuery[i])
 		}
