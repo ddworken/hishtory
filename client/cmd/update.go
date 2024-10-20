@@ -112,7 +112,7 @@ func update(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to chmod +x the update (stdout=%#v, stderr=%#v): %w", stdout.String(), stderr.String(), err)
 	}
-	cmd = exec.Command(getTmpClientPath(), "install", "--skip-update-config-modification")
+	cmd = exec.Command(getTmpClientPath(), "install")
 	cmd.Stdout = os.Stdout
 	stderr = bytes.Buffer{}
 	cmd.Stdin = os.Stdin

@@ -31,6 +31,9 @@ var (
 	offlineInstall               *bool
 	skipConfigModification       *bool
 	skipUpdateConfigModification *bool
+
+	//lint:ignore U1000 Flag that is allowed to be specified, but not used
+	currentlyInstalledVersion *string
 )
 
 var installCmd = &cobra.Command{
@@ -688,4 +691,5 @@ func init() {
 	offlineInstall = installCmd.Flags().Bool("offline", false, "Install hiSHtory in offline mode with all syncing capabilities disabled")
 	skipConfigModification = installCmd.Flags().Bool("skip-config-modification", false, "Skip modifying shell configs and instead instruct the user on how to modify their configs")
 	skipUpdateConfigModification = installCmd.Flags().Bool("skip-update-config-modification", false, "Skip modifying shell configs for updates")
+	currentlyInstalledVersion = installCmd.Flags().String("currently-installed-version", "", "The currently installed version (used by the update command)")
 }
