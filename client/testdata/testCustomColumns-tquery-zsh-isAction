@@ -3,6 +3,7 @@ Search Query: > -pipefail
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Exit Code  git_remote                               Command                                                                                                                                        │
 │────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ 0          https://github.com/ddworken/hishtory     hishtory tquery                                                                                                                                │
 │ 0          https://github.com/ddworken/hishtory     hishtory config-set displayed-columns 'Exit Code' git_remote Command                                                                           │
 │ 0                                                   echo bar                                                                                                                                       │
 │ 0                                                   cd /                                                                                                                                           │
@@ -12,7 +13,6 @@ Search Query: > -pipefail
 │ 0                                                   cd /                                                                                                                                           │
 │ 0                                                   echo $FOOBAR world                                                                                                                             │
 │ 0                                                   export FOOBAR='hello'                                                                                                                          │
-│                                                                                                                                                                                                    │
 │                                                                                                                                                                                                    │
 │                                                                                                                                                                                                    │
 │                                                                                                                                                                                                    │

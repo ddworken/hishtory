@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	_ "embed" // for embedding config.sh
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -95,6 +96,9 @@ type model struct {
 
 	// The currently executing shell. Defaults to bash if not specified. Used for more precise AI suggestions.
 	shellName string
+
+	// Whether we've finished the first load of results. If we haven't, we refuse to run additional queries to avoid race conditions with how we handle invalid initial queries.
+	hasFinishedFirstLoad bool
 }
 
 type (
@@ -119,6 +123,8 @@ type asyncQueryFinishedMsg struct {
 	maintainCursor bool
 	// An updated search query. May be used for initial queries when they're invalid.
 	overriddenSearchQuery *string
+
+	isFirstQuery bool
 }
 
 func initialModel(ctx context.Context, shellName, initialQuery string) model {
@@ -148,7 +154,7 @@ func initialModel(ctx context.Context, shellName, initialQuery string) model {
 		queryInput.SetValue(initialQuery)
 	}
 	CURRENT_QUERY_FOR_HIGHLIGHTING = initialQuery
-	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName, hasFinishedFirstLoad: false}
 }
 
 func (m model) Init() tea.Cmd {
@@ -199,13 +205,14 @@ func preventTableOverscrolling(m model) {
 
 func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.Cmd {
 	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || forceUpdateTable || m.searchErr != nil {
+		// if !m.hasFinishedFirstLoad {
+		// 	return nil
+		// }
 		query := m.lastQuery
 		if m.runQuery != nil {
 			query = *m.runQuery
 		}
-		LAST_DISPATCHED_QUERY_ID++
-		queryId := LAST_DISPATCHED_QUERY_ID
-		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
+		queryId := allocateQueryId()
 		return func() tea.Msg {
 			conf := hctx.GetConf(m.ctx)
 			defaultFilter := conf.DefaultFilter
@@ -214,7 +221,7 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 				defaultFilter = ""
 			}
 			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
-			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil}
+			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil, false}
 		}
 	}
 	return nil
@@ -330,6 +337,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.overriddenSearchQuery != nil {
 				m.queryInput.SetValue(*msg.overriddenSearchQuery)
 			}
+		}
+		if msg.isFirstQuery {
+			m.hasFinishedFirstLoad = true
 		}
 		return m, nil
 	default:
@@ -879,28 +889,72 @@ func configureColorProfile(ctx context.Context) {
 	}
 }
 
-func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
+func buildInitialQueryWithSearchEscaping(initialQueryArray []string) (string, error) {
+	var initialQuery string
+
+	for i, queryChunk := range initialQueryArray {
+		if i != 0 {
+			initialQuery += " "
+		}
+		if strings.HasPrefix(queryChunk, "-") {
+			quoted, err := json.Marshal(queryChunk)
+			if err != nil {
+				return "", fmt.Errorf("failed to marshal query chunk for escaping: %w", err)
+			}
+			initialQuery += string(quoted)
+		} else {
+			initialQuery += queryChunk
+		}
+	}
+
+	return initialQuery, nil
+}
+
+func splitQueryArray(initialQueryArray []string) []string {
+	var splitQueryArray []string
+	for _, queryChunk := range initialQueryArray {
+		splitQueryArray = append(splitQueryArray, strings.Split(queryChunk, " ")...)
+	}
+	return splitQueryArray
+}
+
+func allocateQueryId() int {
+	LAST_DISPATCHED_QUERY_ID++
+	LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
+	return LAST_DISPATCHED_QUERY_ID
+}
+
+func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string) error {
+	initialQueryArray = splitQueryArray(initialQueryArray)
+	initialQueryWithEscaping, err := buildInitialQueryWithSearchEscaping(initialQueryArray)
+	if err != nil {
+		return err
+	}
 	loadedKeyBindings = hctx.GetConf(ctx).KeyBindings.ToKeyMap()
 	configureColorProfile(ctx)
 	additionalOptions := []tea.ProgramOption{tea.WithOutput(os.Stderr)}
 	if hctx.GetConf(ctx).FullScreenRendering {
 		additionalOptions = append(additionalOptions, tea.WithAltScreen())
 	}
-	p := tea.NewProgram(initialModel(ctx, shellName, initialQuery), additionalOptions...)
+	p := tea.NewProgram(initialModel(ctx, shellName, initialQueryWithEscaping), additionalOptions...)
 	// Async: Get the initial set of rows
 	go func() {
-		LAST_DISPATCHED_QUERY_ID++
-		queryId := LAST_DISPATCHED_QUERY_ID
-		LAST_DISPATCHED_QUERY_TIMESTAMP = time.Now()
+		queryId := allocateQueryId()
 		conf := hctx.GetConf(ctx)
-		rows, entries, err := getRows(ctx, conf.DisplayedColumns, shellName, conf.DefaultFilter, initialQuery, getNumEntriesNeeded(ctx))
-		if err == nil || initialQuery == "" {
-			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil})
+		rows, entries, err := getRows(ctx, conf.DisplayedColumns, shellName, conf.DefaultFilter, initialQueryWithEscaping, getNumEntriesNeeded(ctx))
+		if err == nil || initialQueryWithEscaping == "" {
+			if err != nil {
+				panic(err)
+			}
+			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: nil, isFirstQuery: true})
 		} else {
-			// initialQuery is likely invalid in some way, let's just drop it
+			// The initial query is likely invalid in some way, let's just drop it
 			emptyQuery := ""
 			rows, entries, err := getRows(ctx, hctx.GetConf(ctx).DisplayedColumns, shellName, conf.DefaultFilter, emptyQuery, getNumEntriesNeeded(ctx))
-			p.Send(asyncQueryFinishedMsg{queryId: queryId, rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery})
+			if err != nil {
+				panic(err)
+			}
+			p.Send(asyncQueryFinishedMsg{queryId: allocateQueryId(), rows: rows, entries: entries, searchErr: err, forceUpdateTable: true, maintainCursor: false, overriddenSearchQuery: &emptyQuery, isFirstQuery: true})
 		}
 	}()
 	// Async: Retrieve additional entries from the backend
@@ -931,13 +985,13 @@ func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
 		p.Send(bannerMsg{banner: string(banner)})
 	}()
 	// Blocking: Start the TUI
-	_, err := p.Run()
+	_, err = p.Run()
 	if err != nil {
 		return err
 	}
 	if SELECTED_COMMAND == "" && os.Getenv("HISHTORY_TERM_INTEGRATION") != "" {
-		// Print out the initialQuery instead so that we don't clear the terminal
-		SELECTED_COMMAND = initialQuery
+		// Print out the initialQuery instead so that we don't clear the terminal (note that we don't use the escaped one here)
+		SELECTED_COMMAND = strings.Join(initialQueryArray, " ")
 	}
 	fmt.Printf("%s\n", SELECTED_COMMAND)
 	return nil
@@ -945,4 +999,3 @@ func TuiQuery(ctx context.Context, shellName, initialQuery string) error {
 
 // TODO: support custom key bindings
 // TODO: make the help page wrap
-// TODO: If the initial query contains dashes, maybe we should smartly escape them?
