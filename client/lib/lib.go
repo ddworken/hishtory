@@ -852,6 +852,9 @@ func parseNonAtomizedToken(token string) (string, any, any, any, error) {
 
 func parseAtomizedToken(ctx context.Context, token string) (string, any, any, error) {
 	splitToken := splitEscaped(token, ':', 2)
+	if len(splitToken) != 2 {
+		return "", nil, nil, fmt.Errorf("search query contains malformed search atom '%s'", token)
+	}
 	field := unescape(splitToken[0])
 	val := unescape(splitToken[1])
 	switch field {
