@@ -123,6 +123,14 @@ func TestSearch(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("Search() returned %d results, expected 3, results=%#v", len(results), results)
 	}
+
+	// A search for just a plain colon, returns an error but doesn't crash
+	_, err = Search(ctx, db, ":", 5)
+	require.Error(t, err)
+	require.Equal(t, "search query contains malformed search atom ':'", err.Error())
+	_, err = Search(ctx, db, "foo :", 5)
+	require.Error(t, err)
+	require.Equal(t, "search query contains malformed search atom ':'", err.Error())
 }
 
 func TestChunks(t *testing.T) {
