@@ -2,15 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
-var verbose *bool
+var (
+	verbose    *bool
+	configFlag *bool
+)
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
@@ -26,6 +31,14 @@ var statusCmd = &cobra.Command{
 			printOnlineStatus(config)
 		}
 		fmt.Printf("Commit Hash: %s\n", lib.GitCommit)
+		if *configFlag {
+			y, err := yaml.Marshal(config)
+			if err != nil {
+				lib.CheckFatalError(fmt.Errorf("failed to marshal config to yaml: %w", err))
+			}
+			indented := "\t" + strings.ReplaceAll(string(y), "\n", "\n\t")
+			fmt.Printf("Full Config:\n%s\n", indented)
+		}
 	},
 }
 
@@ -49,4 +62,5 @@ func printOnlineStatus(config *hctx.ClientConfig) {
 func init() {
 	rootCmd.AddCommand(statusCmd)
 	verbose = statusCmd.Flags().BoolP("verbose", "v", false, "Display verbose hiSHtory information")
+	configFlag = statusCmd.Flags().Bool("full-config", false, "Display hiSHtory's full config")
 }
