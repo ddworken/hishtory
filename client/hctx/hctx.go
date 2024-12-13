@@ -170,24 +170,24 @@ func GetHome(ctx context.Context) string {
 
 type ClientConfig struct {
 	// The user secret that is used to derive encryption keys for syncing history entries
-	UserSecret string `json:"user_secret"`
+	UserSecret string `json:"user_secret" yaml:"-"`
 	// Whether hishtory recording is enabled
-	IsEnabled bool `json:"is_enabled"`
+	IsEnabled bool `json:"is_enabled" yaml:"-"`
 	// A device ID used to track which history entry came from which device for remote syncing
-	DeviceId string `json:"device_id"`
+	DeviceId string `json:"device_id" yaml:"-"`
 	// Used for skipping history entries prefixed with a space in bash
-	LastPreSavedHistoryLine string `json:"last_presaved_history_line"`
+	LastPreSavedHistoryLine string `json:"last_presaved_history_line" yaml:"-"`
 	// Used for skipping history entries prefixed with a space in bash
-	LastSavedHistoryLine string `json:"last_saved_history_line"`
+	LastSavedHistoryLine string `json:"last_saved_history_line" yaml:"-"`
 	// Used for uploading history entries that we failed to upload due to a missing network connection
-	HaveMissedUploads     bool  `json:"have_missed_uploads"`
-	MissedUploadTimestamp int64 `json:"missed_upload_timestamp"`
+	HaveMissedUploads     bool  `json:"have_missed_uploads" yaml:"-"`
+	MissedUploadTimestamp int64 `json:"missed_upload_timestamp" yaml:"-"`
 	// Used for uploading deletion requests that we failed to upload due to a missed network connection
 	// Note that this is only applicable for deleting pre-saved entries. For interactive deletion, we just
 	// show the user an error message if they're offline.
-	PendingDeletionRequests []shared.DeletionRequest `json:"pending_deletion_requests"`
+	PendingDeletionRequests []shared.DeletionRequest `json:"pending_deletion_requests" yaml:"-"`
 	// Used for avoiding double imports of .bash_history
-	HaveCompletedInitialImport bool `json:"have_completed_initial_import"`
+	HaveCompletedInitialImport bool `json:"have_completed_initial_import" yaml:"-"`
 	// Whether control-r bindings are enabled
 	ControlRSearchEnabled bool `json:"enable_control_r_search"`
 	// The set of columns that the user wants to be displayed

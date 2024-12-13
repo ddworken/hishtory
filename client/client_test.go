@@ -3424,4 +3424,15 @@ func TestExistingBashProfileDoesNotSourceProfile(t *testing.T) {
 	require.Contains(t, string(bashProfileContent), "# Hishtory Config:\n")
 }
 
+func TestStatusFullConfig(t *testing.T) {
+	markTestForSharding(t, 19)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Check default log level
+	out := tester.RunInteractiveShell(t, `hishtory status --full-config | grep -v 'Secret Key'`)
+	testutils.CompareGoldens(t, out, "TestStatusFullConfig")
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

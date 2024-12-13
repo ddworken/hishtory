@@ -1,0 +1,71 @@
+hiSHtory: v0.Unknown
+Enabled: true
+Commit Hash: Unknown
+Full Config:
+	controlrsearchenabled: true
+	displayedcolumns:
+	    - Hostname
+	    - CWD
+	    - Timestamp
+	    - Runtime
+	    - Exit Code
+	    - Command
+	customcolumns: []
+	forcecompactmode: false
+	isoffline: false
+	filterduplicatecommands: false
+	timestampformat: Jan 2 2006 15:04:05 MST
+	betamode: false
+	highlightmatches: true
+	aicompletion: true
+	enablepresaving: true
+	colorscheme:
+	    selectedtext: '#ffff99'
+	    selectedbackground: '#3300ff'
+	    bordercolor: '#585858'
+	defaultfilter: ""
+	aicompletionendpoint: https://api.openai.com/v1/chat/completions
+	keybindings:
+	    up:
+	        - up
+	        - alt+OA
+	        - ctrl+p
+	    down:
+	        - down
+	        - alt+OB
+	        - ctrl+n
+	    pageup:
+	        - pgup
+	    pagedown:
+	        - pgdown
+	    selectentry:
+	        - enter
+	    selectentryandchangedir:
+	        - ctrl+x
+	    left:
+	        - left
+	    right:
+	        - right
+	    tableleft:
+	        - shift+left
+	    tableright:
+	        - shift+right
+	    deleteentry:
+	        - ctrl+k
+	    help:
+	        - ctrl+h
+	    quit:
+	        - esc
+	        - ctrl+c
+	        - ctrl+d
+	    jumpstartofinput:
+	        - ctrl+a
+	    jumpendofinput:
+	        - ctrl+e
+	    wordleft:
+	        - ctrl+left
+	    wordright:
+	        - ctrl+right
+	loglevel: info
+	fullscreenrendering: false
+	
