@@ -48,6 +48,9 @@ var (
 	GitCommit string = "Unknown"
 )
 
+// The batch size for the DB operations for importing history. Used by all types of imports.
+var ImportBatchSize = 100
+
 // 512KB ought to be enough for any reasonable cmd
 // Funnily enough, 256KB actually wasn't enough. See https://github.com/ddworken/hishtory/issues/93
 var maxSupportedLineLengthForImport = 512_000
@@ -235,7 +238,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		return 0, fmt.Errorf("failed to count input lines during hishtory import: %w", err)
 	}
 	if shouldReadStdin {
-		extraEntries, err := readStdin()
+		extraEntries, err := ReadStdin()
 		if err != nil {
 			return 0, fmt.Errorf("failed to read stdin: %w", err)
 		}
@@ -260,7 +263,6 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	var iteratorError error = nil
 	var batch []data.HistoryEntry
 	importTimestamp := time.Now().UTC()
-	batchSize := 100
 	importEntryId := uuid.Must(uuid.NewRandom()).String()
 	var bar *progressbar.ProgressBar
 	if totalNumEntries > NUM_IMPORTED_ENTRIES_SLOW {
@@ -296,7 +298,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			EntryId:                 entryId,
 		})
 		batch = append(batch, entry)
-		if len(batch) > batchSize {
+		if len(batch) > ImportBatchSize {
 			err = RetryingDbFunction(func() error {
 				if err := db.Create(batch).Error; err != nil {
 					return fmt.Errorf("failed to import batch of history entries: %w", err)
@@ -347,7 +349,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	return numEntriesImported, nil
 }
 
-func readStdin() ([]string, error) {
+func ReadStdin() ([]string, error) {
 	ret := make([]string, 0)
 	in := bufio.NewReader(os.Stdin)
 	for {
