@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/ddworken/hishtory/client/hctx"
+	"github.com/ddworken/hishtory/client/lib"
 
 	"golang.org/x/exp/slices"
 )
@@ -76,7 +77,7 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overrid
 	if apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := lib.GetHttpClient().Do(req)
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to query OpenAI API: %w", err)
 	}

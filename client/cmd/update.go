@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -287,7 +286,7 @@ func downloadFile(filename, url string) error {
 	}
 
 	// Download the data
-	resp, err := http.Get(url)
+	resp, err := lib.GetHttpClient().Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to download file at %s to %s: %w", url, filename, err)
 	}
