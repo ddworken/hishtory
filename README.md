@@ -165,6 +165,8 @@ curl https://hishtory.dev/install.py | python3 - --offline
 
 This disables syncing completely so that the client will not rely on the hiSHtory backend at all. You can also change the syncing status via `hishtory syncing enable` or `hishtory syncing disable`.
 
+For more information on offline mode, see [here](https://github.com/ddworken/hishtory/blob/master/docs/offline-binary.md).
+
 </blockquote></details>
 
 <details>
