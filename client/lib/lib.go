@@ -284,7 +284,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		// quite slow, so this makes imports considerably faster
 		entryId := importEntryId + fmt.Sprintf("%d", numEntriesImported)
 		entry := normalizeEntryTimezone(data.HistoryEntry{
-			LocalUsername:           currentUser.Name,
+			LocalUsername:           currentUser.Username,
 			Hostname:                hostname,
 			Command:                 cmd,
 			CurrentWorkingDirectory: "Unknown",
