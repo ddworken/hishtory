@@ -189,14 +189,14 @@ func (s *Server) apiGetPendingDumpRequestsHandler(w http.ResponseWriter, r *http
 	checkGormError(err)
 
 	if err := json.NewEncoder(w).Encode(dumpRequests); err != nil {
-		panic(fmt.Errorf("failed to JSON marshall the dump requests: %w", err))
+		panic(fmt.Errorf("failed to JSON marshal the dump requests: %w", err))
 	}
 }
 
 func (s *Server) apiDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewEncoder(w).Encode(s.updateInfo)
 	if err != nil {
-		panic(fmt.Errorf("failed to JSON marshall the update info: %w", err))
+		panic(fmt.Errorf("failed to JSON marshal the update info: %w", err))
 	}
 }
 
@@ -258,7 +258,7 @@ func (s *Server) getDeletionRequestsHandler(w http.ResponseWriter, r *http.Reque
 	deletionRequests, err := s.db.DeletionRequestsForUserAndDevice(r.Context(), userId, deviceId)
 	checkGormError(err)
 	if err := json.NewEncoder(w).Encode(deletionRequests); err != nil {
-		panic(fmt.Errorf("failed to JSON marshall the dump requests: %w", err))
+		panic(fmt.Errorf("failed to JSON marshal the dump requests: %w", err))
 	}
 }
 
@@ -340,7 +340,7 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 	var resp ai.AiSuggestionResponse
 	resp.Suggestions = suggestions
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		panic(fmt.Errorf("failed to JSON marshall the API response: %w", err))
+		panic(fmt.Errorf("failed to JSON marshal the API response: %w", err))
 	}
 }
 
