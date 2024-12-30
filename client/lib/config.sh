@@ -56,7 +56,7 @@ function __hishtory_postcommand() {
 
   LAST_SAVED_COMMAND=$CMD
 
-  (hishtory updateLocalDbFromRemote &)
+  (hishtory updateLocalDbFromRemote &) 2>&1 >/dev/null
 
   return $EXIT_CODE
 }
