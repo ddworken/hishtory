@@ -17,12 +17,20 @@ forcetest:			## Force running all tests without a test cache
 test:				## Run all tests
 	TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=10 --rerun-fails-max-failures=30 --format testname --jsonfile /tmp/testrun.json --post-run-command "go run client/posttest/main.go export" -- -p 1 -timeout 90m
 
-ftest:				## Run a specific test specified via `make ftest FILTER=TestParam/testTui/color`
+ftest:				## Run a specific test specified via `make ftest FILTER=TestParam/testTui/color` or `make ftest FILTER=TestImportJson`
 	go clean -testcache
 	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=0 --format testname -- -p 1 -run "$(FILTER)" -timeout 60m
 
 fbench:				## Run a specific benchmark test specified via `make fbench FILTER=BenchmarkQuery`
 	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -benchmem -bench "$(FILTER)" -timeout 60m ./...
+
+backup:				## Backup the local hishtory install. It is recommended to do this before doing any local dev or running any integration tests.
+	rm -rf ~/.hishtory.bak || true 
+	cp -a ~/.hishtory ~/.hishtory.bak
+
+restore:			## Restore the local hishtory install. If anything goes wrong during local dev or from running integration tests, you can restore the local hishtory install to the last backup.
+	rm -rf ~/.hishtory
+	mv ~/.hishtory.bak ~/.hishtory
 
 release:			## [ddworken only] Release the latest version on Github
 	# Bump the version

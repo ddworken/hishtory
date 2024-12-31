@@ -269,13 +269,14 @@ Contributions are extremely welcome! I appreciate all contributions in terms of 
 
 If you're making code contributions, check out `make help` for some information on some useful commands. Namely, note that my general dev workflow consists of:
 
+* Run `make backup` to create a backup of the current hishtory install in `~/.hishtory.bak/`
 * Make some local changes (e.g. to fix a bug or add a new feature)
 * Run `make local-install` to build and install your local version (note that this won't mess up your current hishtory DB!)
 * ... Repeat until you're happy with your change ...
 * Write some tests for your change. Unit tests are great, but we also have a large number of integration tests in `client_test.go`
     * Note that the hishtory tests are quite thorough, so running them locally is quite time consuming (and some of them only work on Github Actions). Instead, I recommend using `make ftest` (see `make help` for information on this) to run the specific tests that you're adding/changing.
 * Open a PR on Github! Once you open the PR, I'll take a look and will trigger Github Actions to run all the tests which will ensure that your change doesn't lead to any reggressions.
-* [Optional] If you want to switch back to the latest released version (rather than your local change), run `hishtory update`
+* [Optional] If you want to switch back to your previously installed hishtory version (rather than your local change), run `make restore`
 * Merge the PR! :tada:
 
 ## Security
