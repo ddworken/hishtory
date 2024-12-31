@@ -63,5 +63,3 @@ func init() {
 	configAddCmd.AddCommand(addCustomColumnsCmd)
 	configAddCmd.AddCommand(addDisplayedColumnsCmd)
 }
-
-// TODO: excluded-default-search-columns

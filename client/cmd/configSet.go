@@ -276,9 +276,11 @@ var setFullScreenCmd = &cobra.Command{
 }
 
 var setExcludedDefaultSearchColumns = &cobra.Command{
-	Use:       "excluded-default-search-columns",
-	Short:     "Set the list of columns that are excluded from default search queries and are only searchable via search atoms",
-	Args:      cobra.OnlyValidArgs,
+	Use:   "excluded-default-search-columns",
+	Short: "Set the list of columns that are excluded from default search queries and are only searchable via search atoms",
+	Long:  "By default hishtory queries are checked against `command`, `current_working_directory`, and `hostname`. This option can be used to disable searching against `current_working_directory` and/or `hostname`. E.g. `hishtory config-set excluded-default-search-columns current_working_directory` would exclude `current_working_directory` from default searches.",
+	Args:  cobra.OnlyValidArgs,
+	// Note: If we are ever adding new arguments to this list, we should consider adding support for this config option in configAdd.go and configDelete.go.
 	ValidArgs: []string{"current_working_directory", "hostname"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()

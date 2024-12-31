@@ -90,5 +90,3 @@ func init() {
 	configDeleteCmd.AddCommand(deleteCustomColumnsCmd)
 	configDeleteCmd.AddCommand(deleteDisplayedColumnCommand)
 }
-
-// TODO: excluded-default-search-columns
