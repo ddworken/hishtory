@@ -192,6 +192,8 @@ A few configuration options:
 
 hiSHtory imports your existing shell history by default. If for some reason this didn't work (e.g. you had your shell history in a non-standard file), you can import it by piping it into `hishtory import` (e.g. `cat ~/.my_history | hishtory import`).
 
+If you'd like to import rich history data (e.g. because you previously tracked other history metadata with another tool), you can use `hishtory import-json`. See `hishtory import-json --help` for more information.
+
 </blockquote></details>
 
 <details>
@@ -242,7 +244,7 @@ Debug logs are stored in `~/.hishtory/hishtory.log`. If you run into any issues,
 <details>
 <summary>Uninstalling</summary><blockquote>
 
-If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` first. 
+If you'd like to uninstall hishtory, just run `hishtory uninstall`. Note that this deletes the SQLite DB storing your history, so consider running a `hishtory export` or a `hishtory export-json` first. 
 
 Note that if you're experiencing any issues with hiSHtory, try running `hishtory update` first! Performance and reliability is always improving, and we highly value [your feedback](https://github.com/ddworken/hishtory/issues).
 
