@@ -3443,7 +3443,7 @@ func TestStatusFullConfig(t *testing.T) {
 	out := tester.RunInteractiveShell(t, `hishtory status --full-config | grep -v 'Secret Key'`)
 	testutils.CompareGoldens(t, out, "TestStatusFullConfig")
 }
-  
+
 func TestExportJson(t *testing.T) {
 	markTestForSharding(t, 20)
 	defer testutils.BackupAndRestore(t)()
@@ -3527,10 +3527,9 @@ func TestOfflineClient(t *testing.T) {
 	testutils.CompareGoldens(t, out, "testControlR-Initial")
 
 	// And check that even if syncing is enabled, the fully offline client will never send an HTTP request
-	out, err := tester.RunInteractiveShellRelaxed(t, `hishtory syncing enable`)
+	_, err := tester.RunInteractiveShellRelaxed(t, `hishtory syncing enable`)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "panic: Cannot GetHttpClient() from a hishtory client compiled with the offline tag!")
 }
-
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
