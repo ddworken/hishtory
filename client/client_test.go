@@ -3435,4 +3435,39 @@ func TestStatusFullConfig(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestStatusFullConfig")
 }
 
+func TestExportJson(t *testing.T) {
+	markTestForSharding(t, 20)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Create some history entries
+	db := hctx.GetDb(hctx.MakeContext())
+	e1 := testutils.MakeFakeHistoryEntry("echo synth1")
+	e1.StartTime = time.Unix(1234567, 0)
+	require.NoError(t, db.Create(e1).Error)
+	e2 := testutils.MakeFakeHistoryEntry("echo synth2")
+	e1.StartTime = time.Unix(1244567, 0)
+	require.NoError(t, db.Create(e2).Error)
+
+	// Run export-json
+	out := tester.RunInteractiveShell(t, `hishtory export-json | grep synth | grep -v export-json`)
+	testutils.CompareGoldens(t, out, "TestExportJson")
+}
+
+func TestImportJson(t *testing.T) {
+	markTestForSharding(t, 20)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Run an import with the export-json golden
+	out := tester.RunInteractiveShell(t, `cat client/testdata/TestExportJson | hishtory import-json`)
+	require.Equal(t, "Imported 2 history entries\n", out)
+
+	// Run export-json
+	out = tester.RunInteractiveShell(t, `hishtory export-json | grep synth | grep -v export-json`)
+	testutils.CompareGoldens(t, out, "TestExportJson")
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
