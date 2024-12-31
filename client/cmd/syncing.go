@@ -14,6 +14,7 @@ import (
 var syncingCmd = &cobra.Command{
 	Use:       "syncing",
 	Short:     "Configure syncing to enable or disable syncing with the hishtory backend",
+	Long:      "Run `hishtory syncing disable` to disable syncing and `hishtory syncing enable` to enable syncing.",
 	ValidArgs: []string{"disable", "enable"},
 	Args:      cobra.MatchAll(cobra.OnlyValidArgs, cobra.ExactArgs(1)),
 	Run: func(cmd *cobra.Command, args []string) {

@@ -460,7 +460,7 @@ func ApiGet(ctx context.Context, path string) ([]byte, error) {
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	req.Header.Set("X-Hishtory-Device-Id", hctx.GetConf(ctx).DeviceId)
 	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := GetHttpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET %s%s: %w", GetServerHostname(), path, err)
 	}
@@ -490,7 +490,7 @@ func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]b
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	req.Header.Set("X-Hishtory-Device-Id", hctx.GetConf(ctx).DeviceId)
 	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := GetHttpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to POST %s: %w", GetServerHostname()+path, err)
 	}

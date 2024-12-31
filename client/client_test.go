@@ -54,6 +54,15 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("failed to build client: %v", err))
 	}
 
+	// Build the fully offline client so it is available in /tmp/client-offline
+	cmd = exec.Command("go", "build", "-o", "/tmp/client-offline", "-tags", "offline")
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "CGO_ENABLED=0")
+	err = cmd.Run()
+	if err != nil {
+		panic(fmt.Sprintf("failed to build offline client: %v", err))
+	}
+
 	// Start the tests
 	m.Run()
 }
@@ -3434,7 +3443,7 @@ func TestStatusFullConfig(t *testing.T) {
 	out := tester.RunInteractiveShell(t, `hishtory status --full-config | grep -v 'Secret Key'`)
 	testutils.CompareGoldens(t, out, "TestStatusFullConfig")
 }
-
+  
 func TestExportJson(t *testing.T) {
 	markTestForSharding(t, 20)
 	defer testutils.BackupAndRestore(t)()
@@ -3469,5 +3478,59 @@ func TestImportJson(t *testing.T) {
 	out = tester.RunInteractiveShell(t, `hishtory export-json | grep synth | grep -v export-json`)
 	testutils.CompareGoldens(t, out, "TestExportJson")
 }
+
+func TestOfflineClient(t *testing.T) {
+	markTestForSharding(t, 21)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+
+	// Install the offline client
+	out := tester.RunInteractiveShell(t, ` /tmp/client-offline install `)
+	r := regexp.MustCompile(`Setting secret hishtory key to (.*)`)
+	matches := r.FindStringSubmatch(out)
+	if len(matches) != 2 {
+		t.Fatalf("Failed to extract userSecret from output=%#v: matches=%#v", out, matches)
+	}
+	assertOnlineStatus(t, Offline)
+
+	// Disable recording so that all our testing commands don't get recorded
+	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, `hishtory config-set enable-control-r true`)
+	tester.RunInteractiveShell(t, ` HISHTORY_REDACT_FORCE=true hishtory redact set emo pipefail`)
+
+	// Insert a few hishtory entries that we'll use for testing into an empty DB
+	db := hctx.GetDb(hctx.MakeContext())
+	require.NoError(t, db.Where("true").Delete(&data.HistoryEntry{}).Error)
+	e1 := testutils.MakeFakeHistoryEntry("ls ~/")
+	e1.CurrentWorkingDirectory = "/etc/"
+	e1.Hostname = "server"
+	e1.ExitCode = 127
+	require.NoError(t, db.Create(e1).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/foo/")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/bar/")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'bar' &")).Error)
+
+	// Check that they're there (and there aren't any other entries)
+	var historyEntries []*data.HistoryEntry
+	db.Model(&data.HistoryEntry{}).Find(&historyEntries)
+	if len(historyEntries) != 5 {
+		t.Fatalf("expected to find 6 history entries, actual found %d: %#v", len(historyEntries), historyEntries)
+	}
+	out = tester.RunInteractiveShell(t, `hishtory export`)
+	testutils.CompareGoldens(t, out, "testControlR-InitialExport")
+
+	// And check that the control-r binding brings up the search
+	out = captureTerminalOutputWithShellName(t, tester, tester.ShellName(), []string{"C-R"})
+	split := strings.Split(out, "\n\n\n")
+	out = strings.TrimSpace(split[len(split)-1])
+	testutils.CompareGoldens(t, out, "testControlR-Initial")
+
+	// And check that even if syncing is enabled, the fully offline client will never send an HTTP request
+	out, err := tester.RunInteractiveShellRelaxed(t, `hishtory syncing enable`)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "panic: Cannot GetHttpClient() from a hishtory client compiled with the offline tag!")
+}
+
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
