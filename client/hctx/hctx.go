@@ -223,6 +223,9 @@ type ClientConfig struct {
 	LogLevel logrus.Level `json:"log_level"`
 	// Whether the TUI should render in full-screen mode
 	FullScreenRendering bool `json:"full_screen_rendering"`
+	// Columns that are excluded from default searches (but are still supported to search via search atoms)
+	// See https://github.com/ddworken/hishtory/issues/268 for context on this.
+	ExcludedDefaultSearchColumns []string `json:"excluded_default_search_columns"`
 }
 
 type ColorScheme struct {

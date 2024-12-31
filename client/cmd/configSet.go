@@ -275,6 +275,19 @@ var setFullScreenCmd = &cobra.Command{
 	},
 }
 
+var setExcludedDefaultSearchColumns = &cobra.Command{
+	Use:       "excluded-default-search-columns",
+	Short:     "Set the list of columns that are excluded from default search queries and are only searchable via search atoms",
+	Args:      cobra.OnlyValidArgs,
+	ValidArgs: []string{"current_working_directory", "hostname"},
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ExcludedDefaultSearchColumns = args
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
@@ -291,6 +304,7 @@ func init() {
 	configSetCmd.AddCommand(compactMode)
 	configSetCmd.AddCommand(setLogLevelCmd)
 	configSetCmd.AddCommand(setFullScreenCmd)
+	configSetCmd.AddCommand(setExcludedDefaultSearchColumns)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)

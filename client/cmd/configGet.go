@@ -168,6 +168,19 @@ var getAiCompletionEndpoint = &cobra.Command{
 	},
 }
 
+var getExcludedDefaultSearchColumns = &cobra.Command{
+	Use:   "excluded-default-search-columns",
+	Short: "Get the list of columns that are excluded from default search queries and are only searchable via search atoms",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		for _, col := range config.ExcludedDefaultSearchColumns {
+			fmt.Print(col + " ")
+		}
+		fmt.Print("\n")
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configGetCmd)
 	configGetCmd.AddCommand(getEnableControlRCmd)
@@ -185,6 +198,7 @@ func init() {
 	configGetCmd.AddCommand(getCompactMode)
 	configGetCmd.AddCommand(getLogLevelCmd)
 	configGetCmd.AddCommand(getFullScreenCmd)
+	configGetCmd.AddCommand(getExcludedDefaultSearchColumns)
 }
 
 var getLogLevelCmd = &cobra.Command{
