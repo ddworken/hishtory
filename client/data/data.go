@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
@@ -160,7 +161,20 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	return decryptedEntry, nil
 }
 
+func ValidateHishtoryPath() error {
+	hishtoryPath := os.Getenv("HISHTORY_PATH")
+	if strings.HasPrefix(hishtoryPath, "/") {
+		return fmt.Errorf("HISHTORY_PATH must be a relative path")
+	}
+	return nil
+}
+
 func GetHishtoryPath() string {
+	err := ValidateHishtoryPath()
+	if err != nil {
+		// This panic() can only trigger if the env variable is changed after process startup
+		panic(err)
+	}
 	hishtoryPath := os.Getenv("HISHTORY_PATH")
 	if hishtoryPath != "" {
 		return hishtoryPath
