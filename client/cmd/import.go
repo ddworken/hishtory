@@ -17,10 +17,11 @@ import (
 )
 
 var importCmd = &cobra.Command{
-	Use:    "import",
-	Hidden: true,
-	Short:  "Re-import history entries from your existing shell history",
-	Long:   "Note that you may also pipe commands to be imported in via stdin. For example `history | hishtory import`.",
+	Use:     "import",
+	GroupID: GROUP_ID_MANAGEMENT,
+	Hidden:  true,
+	Short:   "Re-import history entries from your existing shell history",
+	Long:    "Note that you may also pipe commands to be imported in via stdin. For example `history | hishtory import`.",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		numImported, err := lib.ImportHistory(ctx, true, true)
@@ -32,8 +33,9 @@ var importCmd = &cobra.Command{
 }
 
 var importJsonCmd = &cobra.Command{
-	Use:   "import-json",
-	Short: "Import history entries formatted in JSON lines format into hiSHtory",
+	Use:     "import-json",
+	GroupID: GROUP_ID_MANAGEMENT,
+	Short:   "Import history entries formatted in JSON lines format into hiSHtory",
 	Long: "Data is read from stdin. For example: `cat data.txt | hishtory import-json`.\n\nExample JSON format:\n\n```\n" +
 		"{\"command\":\"echo foo\"}\n" +
 		"{\"command\":\"echo bar\", \"current_working_directory\": \"/tmp/\"}\n" +

@@ -36,11 +36,13 @@ var (
 	currentlyInstalledVersion *string
 )
 
+var GROUP_ID_INSTALL string = "group_id_install"
+
 var installCmd = &cobra.Command{
-	Use:    "install",
-	Hidden: true,
-	Short:  "Copy this binary to ~/.hishtory/ and configure your shell to use it for recording your shell history",
-	Args:   cobra.MaximumNArgs(1),
+	Use:     "install",
+	Short:   "Copy this binary to ~/.hishtory/ and configure your shell to use it for recording your shell history",
+	GroupID: GROUP_ID_INSTALL,
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		secretKey := ""
 		if len(args) > 0 {
@@ -72,7 +74,7 @@ var installCmd = &cobra.Command{
 var initCmd = &cobra.Command{
 	Use:     "init",
 	Short:   "Re-initialize hiSHtory with a specified secret key",
-	GroupID: GROUP_ID_CONFIG,
+	GroupID: GROUP_ID_INSTALL,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := hctx.OpenLocalSqliteDb()
@@ -107,8 +109,9 @@ var initCmd = &cobra.Command{
 }
 
 var uninstallCmd = &cobra.Command{
-	Use:   "uninstall",
-	Short: "Completely uninstall hiSHtory and remove your shell history",
+	Use:     "uninstall",
+	Short:   "Completely uninstall hiSHtory and remove your shell history",
+	GroupID: GROUP_ID_INSTALL,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		fmt.Printf("Are you sure you want to uninstall hiSHtory and delete all locally saved history data [y/N]")
