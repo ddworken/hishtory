@@ -15,8 +15,9 @@ import (
 )
 
 var exportJsonCmd = &cobra.Command{
-	Use:   "export-json",
-	Short: "Export history entries formatted in JSON lines format (as accepted by hishtory import-json, and easily parsable by other tools)",
+	Use:     "export-json",
+	Short:   "Export history entries formatted in JSON lines format (as accepted by hishtory import-json, and easily parsable by other tools)",
+	GroupID: GROUP_ID_MANAGEMENT,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		err := exportToJson(ctx, os.Stdout)

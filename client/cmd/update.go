@@ -22,8 +22,9 @@ import (
 )
 
 var updateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Securely update hishtory to the latest version",
+	Use:     "update",
+	GroupID: GROUP_ID_INSTALL,
+	Short:   "Securely update hishtory to the latest version",
 	Run: func(cmd *cobra.Command, args []string) {
 		lib.CheckFatalError(update(hctx.MakeContext()))
 	},

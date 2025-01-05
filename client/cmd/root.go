@@ -30,5 +30,6 @@ func init() {
 	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_QUERYING, Title: "History Searching"})
 	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_MANAGEMENT, Title: "History Management"})
 	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_CONFIG, Title: "Configuration"})
+	rootCmd.AddGroup(&cobra.Group{ID: GROUP_ID_INSTALL, Title: "Installation"})
 	rootCmd.Version = "v0." + lib.Version
 }
