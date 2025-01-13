@@ -160,7 +160,7 @@ func stripZshWeirdness(cmd string) string {
 	return cmd
 }
 
-var BASH_FIRST_COMMAND_BUG_REGEX = regexp.MustCompile(`^#\d+\s+$`)
+var BASH_FIRST_COMMAND_BUG_REGEX = regexp.MustCompile(`^#\d+\s*$`)
 
 func isBashWeirdness(cmd string) bool {
 	// Bash has this weird behavior where the it has entries like `#1664342754` in the
