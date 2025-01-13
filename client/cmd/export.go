@@ -48,6 +48,10 @@ func exportToJson(ctx context.Context, w io.Writer) error {
 			break
 		}
 		for _, entry := range entries {
+			if entry.Command == "" {
+				// Skip empty commands, see https://github.com/ddworken/hishtory/issues/279
+				continue
+			}
 			m, err := structToMap(*entry)
 			if err != nil {
 				return err
