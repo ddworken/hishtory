@@ -3454,6 +3454,8 @@ func TestExportJson(t *testing.T) {
 	db := hctx.GetDb(hctx.MakeContext())
 	e1 := testutils.MakeFakeHistoryEntry("echo synth1")
 	e1.StartTime = time.Unix(1234567, 0)
+	e1.CustomColumns = make(data.CustomColumns, 1)
+	e1.CustomColumns[0] = data.CustomColumn{Name: "MyCol", Val: "bar"}
 	require.NoError(t, db.Create(e1).Error)
 	e2 := testutils.MakeFakeHistoryEntry("echo synth2")
 	e1.StartTime = time.Unix(1244567, 0)
