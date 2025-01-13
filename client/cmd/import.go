@@ -77,9 +77,6 @@ func importFromJson(ctx context.Context) (int, error) {
 		if entry.Command == "" {
 			return 0, fmt.Errorf("cannot import history entries without a command, JSON line: %#v", line)
 		}
-		if len(entry.CustomColumns) > 0 {
-			return 0, fmt.Errorf("cannot import history entries with custom columns, JSON line: %#v", line)
-		}
 		if entry.LocalUsername == "" {
 			entry.LocalUsername = currentUser.Username
 		}
