@@ -544,6 +544,30 @@ func (db *DB) DeepClean(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		r := tx.Exec(`
+		CREATE TEMP TABLE high_del_req_users AS (
+			SELECT user_id
+			FROM deletion_requests
+			GROUP BY 1
+			HAVING COUNT(*) > 100000
+		)`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to create list of users with too many deletion requests: %w", r.Error)
+		}
+		r = tx.Raw(`
+		DELETE FROM deletion_requests 
+			WHERE user_id IN (SELECT * FROM high_del_req_users) AND read_count > 25;
+		`)
+		if r.Error != nil {
+			return fmt.Errorf("failed to delete entries for overly active users: %w", r.Error)
+		}
+		fmt.Printf("Ran deep clean for overly active deletion requests and deleted %d rows\n", r.RowsAffected)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Delete entries for integration test users
 		r := tx.Exec(`
