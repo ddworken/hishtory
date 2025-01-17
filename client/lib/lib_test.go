@@ -355,26 +355,26 @@ func TestParseNonAtomizedToken(t *testing.T) {
 	// Default
 	q, v1, v2, v3, err := parseNonAtomizedToken(ctx, "echo hello")
 	require.NoError(t, err)
-	require.Equal(t, "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ? )", q)
+	require.Equal(t, "(false OR command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ? )", q)
 	require.Equal(t, v1, "%echo hello%")
 	require.Equal(t, v2, "%echo hello%")
 	require.Equal(t, v3, "%echo hello%")
 
 	// Skipping cwd
 	config := hctx.GetConf(ctx)
-	config.ExcludedDefaultSearchColumns = []string{"current_working_directory"}
+	config.DefaultSearchColumns = []string{"hostname", "command"}
 	q, v1, v2, v3, err = parseNonAtomizedToken(ctx, "echo hello")
 	require.NoError(t, err)
-	require.Equal(t, "(command LIKE ? OR hostname LIKE ? )", q)
+	require.Equal(t, "(false OR command LIKE ? OR hostname LIKE ? )", q)
 	require.Equal(t, v1, "%echo hello%")
 	require.Equal(t, v2, "%echo hello%")
 	require.Nil(t, v3)
 
 	// Skipping cwd and hostname
-	config.ExcludedDefaultSearchColumns = []string{"current_working_directory", "hostname"}
+	config.DefaultSearchColumns = []string{"command"}
 	q, v1, v2, v3, err = parseNonAtomizedToken(ctx, "echo hello")
 	require.NoError(t, err)
-	require.Equal(t, "(command LIKE ? )", q)
+	require.Equal(t, "(false OR command LIKE ? )", q)
 	require.Equal(t, v1, "%echo hello%")
 	require.Nil(t, v2)
 	require.Nil(t, v3)

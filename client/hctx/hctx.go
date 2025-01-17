@@ -223,9 +223,9 @@ type ClientConfig struct {
 	LogLevel logrus.Level `json:"log_level"`
 	// Whether the TUI should render in full-screen mode
 	FullScreenRendering bool `json:"full_screen_rendering"`
-	// Columns that are excluded from default searches (but are still supported to search via search atoms)
+	// Columns that are used for default searches.
 	// See https://github.com/ddworken/hishtory/issues/268 for context on this.
-	ExcludedDefaultSearchColumns []string `json:"excluded_default_search_columns"`
+	DefaultSearchColumns []string `json:"default_search_columns"`
 }
 
 type ColorScheme struct {
@@ -299,6 +299,9 @@ func GetConfig() (ClientConfig, error) {
 	}
 	if config.LogLevel == logrus.Level(0) {
 		config.LogLevel = logrus.InfoLevel
+	}
+	if len(config.DefaultSearchColumns) == 0 {
+		config.DefaultSearchColumns = []string{"command", "current_working_directory", "hostname"}
 	}
 	return config, nil
 }

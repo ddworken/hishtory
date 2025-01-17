@@ -851,13 +851,17 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offse
 
 func parseNonAtomizedToken(ctx context.Context, token string) (string, any, any, any, error) {
 	wildcardedToken := "%" + unescape(token) + "%"
-	query := "(command LIKE ? "
-	numFilters := 1
-	if !slices.Contains(hctx.GetConf(ctx).ExcludedDefaultSearchColumns, "hostname") {
+	query := "(false "
+	numFilters := 0
+	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "command") {
+		query += "OR command LIKE ? "
+		numFilters += 1
+	}
+	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "hostname") {
 		query += "OR hostname LIKE ? "
 		numFilters += 1
 	}
-	if !slices.Contains(hctx.GetConf(ctx).ExcludedDefaultSearchColumns, "current_working_directory") {
+	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "current_working_directory") {
 		query += "OR current_working_directory LIKE ? "
 		numFilters += 1
 	}
