@@ -932,26 +932,11 @@ func parseAtomizedToken(ctx context.Context, token string) (string, any, any, er
 	case "command":
 		return "(instr(command, ?) > 0)", val, nil, nil
 	default:
-		knownCustomColumns := make([]string, 0)
-		// Get custom columns that are defined on this machine
-		conf := hctx.GetConf(ctx)
-		for _, c := range conf.CustomColumns {
-			knownCustomColumns = append(knownCustomColumns, c.ColumnName)
-		}
-		// Also get all ones that are in the DB
-		names, err := getAllCustomColumnNames(ctx)
+		knownCustomColumns, err := getAllCustomColumnNames(ctx)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to get custom column names from the DB: %w", err)
+			return "", nil, nil, fmt.Errorf("failed to get list of known custom columns: %w", err)
 		}
-		knownCustomColumns = append(knownCustomColumns, names...)
-		// Check if the atom is for a custom column that exists and if it isn't, return an error
-		isCustomColumn := false
-		for _, ccName := range knownCustomColumns {
-			if ccName == field {
-				isCustomColumn = true
-			}
-		}
-		if !isCustomColumn {
+		if !slices.Contains(knownCustomColumns, field) {
 			return "", nil, nil, fmt.Errorf("search query contains unknown search atom '%s' that doesn't match any column names", field)
 		}
 		// Build the where clause for the custom column
@@ -960,6 +945,22 @@ func parseAtomizedToken(ctx context.Context, token string) (string, any, any, er
 }
 
 func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
+	knownCustomColumns := make([]string, 0)
+	// Get custom columns that are defined on this machine
+	conf := hctx.GetConf(ctx)
+	for _, c := range conf.CustomColumns {
+		knownCustomColumns = append(knownCustomColumns, c.ColumnName)
+	}
+	// Also get all ones that are in the DB
+	names, err := getAllCustomColumnNamesFromDb(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get custom column names from the DB: %w", err)
+	}
+	knownCustomColumns = append(knownCustomColumns, names...)
+	return knownCustomColumns, nil
+}
+
+func getAllCustomColumnNamesFromDb(ctx context.Context) ([]string, error) {
 	db := hctx.GetDb(ctx)
 	rows, err := RetryingDbFunctionWithResult(func() (*sql.Rows, error) {
 		query := `
