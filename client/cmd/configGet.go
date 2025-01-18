@@ -168,6 +168,19 @@ var getAiCompletionEndpoint = &cobra.Command{
 	},
 }
 
+var getDefaultSearchColumns = &cobra.Command{
+	Use:   "default-search-columns",
+	Short: "Get the list of columns that are used for \"default\" search queries that don't use any search atoms",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		for _, col := range config.DefaultSearchColumns {
+			fmt.Print(col + " ")
+		}
+		fmt.Print("\n")
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configGetCmd)
 	configGetCmd.AddCommand(getEnableControlRCmd)
@@ -185,6 +198,7 @@ func init() {
 	configGetCmd.AddCommand(getCompactMode)
 	configGetCmd.AddCommand(getLogLevelCmd)
 	configGetCmd.AddCommand(getFullScreenCmd)
+	configGetCmd.AddCommand(getDefaultSearchColumns)
 }
 
 var getLogLevelCmd = &cobra.Command{

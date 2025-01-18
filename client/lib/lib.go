@@ -750,17 +750,21 @@ func parseTimeGenerously(input string) (time.Time, error) {
 }
 
 // A wrapper around tx.Where(...) that filters out nil-values
-func where(tx *gorm.DB, s string, v1, v2 any) *gorm.DB {
-	if v1 == nil && v2 == nil {
-		return tx.Where(s)
+func where(tx *gorm.DB, s string, args ...any) *gorm.DB {
+	trimmedArgs := make([]any, 0)
+	foundNil := false
+	for _, v := range args {
+		if v == nil {
+			foundNil = true
+		}
+		if foundNil && v != nil {
+			panic(fmt.Sprintf("Illegal state: args=%#v", args))
+		}
+		if v != nil {
+			trimmedArgs = append(trimmedArgs, v)
+		}
 	}
-	if v1 != nil && v2 == nil {
-		return tx.Where(s, v1)
-	}
-	if v1 != nil && v2 != nil {
-		return tx.Where(s, v1, v2)
-	}
-	panic(fmt.Sprintf("Impossible state: v1=%#v, v2=%#v", v1, v2))
+	return tx.Where(s, trimmedArgs...)
 }
 
 func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
@@ -780,11 +784,11 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 				}
 				tx = where(tx, "NOT "+query, v1, v2)
 			} else {
-				query, v1, v2, v3, err := parseNonAtomizedToken(token[1:])
+				query, v1, v2, v3, err := parseNonAtomizedToken(ctx, token[1:])
 				if err != nil {
 					return nil, err
 				}
-				tx = tx.Where("NOT "+query, v1, v2, v3)
+				tx = where(tx, "NOT "+query, v1, v2, v3)
 			}
 		} else if containsUnescaped(token, ":") {
 			query, v1, v2, err := parseAtomizedToken(ctx, token)
@@ -793,11 +797,11 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 			}
 			tx = where(tx, query, v1, v2)
 		} else {
-			query, v1, v2, v3, err := parseNonAtomizedToken(token)
+			query, v1, v2, v3, err := parseNonAtomizedToken(ctx, token)
 			if err != nil {
 				return nil, err
 			}
-			tx = tx.Where(query, v1, v2, v3)
+			tx = where(tx, query, v1, v2, v3)
 		}
 	}
 	return tx, nil
@@ -847,9 +851,36 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offse
 	return historyEntries, nil
 }
 
-func parseNonAtomizedToken(token string) (string, any, any, any, error) {
+func parseNonAtomizedToken(ctx context.Context, token string) (string, any, any, any, error) {
 	wildcardedToken := "%" + unescape(token) + "%"
-	return "(command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ?)", wildcardedToken, wildcardedToken, wildcardedToken, nil
+	query := "(false "
+	numFilters := 0
+	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "command") {
+		query += "OR command LIKE ? "
+		numFilters += 1
+	}
+	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "hostname") {
+		query += "OR hostname LIKE ? "
+		numFilters += 1
+	}
+	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "current_working_directory") {
+		query += "OR current_working_directory LIKE ? "
+		numFilters += 1
+	}
+	query += ")"
+	var t1 any = nil
+	var t2 any = nil
+	var t3 any = nil
+	if numFilters >= 1 {
+		t1 = wildcardedToken
+	}
+	if numFilters >= 2 {
+		t2 = wildcardedToken
+	}
+	if numFilters >= 3 {
+		t3 = wildcardedToken
+	}
+	return query, t1, t2, t3, nil
 }
 
 func parseAtomizedToken(ctx context.Context, token string) (string, any, any, error) {

@@ -280,10 +280,14 @@ func RunTestServer() func() {
 		panic(fmt.Errorf("expected server stdout to end with %#v, but it doesn't: %#v", expectedSuffix, stdout.String()))
 	}
 	return func() {
+		// Kill the server process to guarantee the next test can run
 		err := cmd.Process.Kill()
 		if err != nil && err.Error() != "os: process already finished" {
 			panic(fmt.Sprintf("failed to kill server process: %v", err))
 		}
+		// Delete the built server binary to avoid wasting disk space
+		_ = os.Remove(fn)
+		// Now that we've cleaned up, check the output to see if the server had any errors
 		allOutput := stdout.String() + stderr.String()
 		if strings.Contains(allOutput, "failed to") && IsOnline() {
 			panic(fmt.Sprintf("server experienced an error\n\n\nstderr=\n%s\n\n\nstdout=%s", stderr.String(), stdout.String()))

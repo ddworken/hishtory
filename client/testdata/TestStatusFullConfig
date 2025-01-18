@@ -68,4 +68,8 @@ Full Config:
 	        - ctrl+right
 	loglevel: info
 	fullscreenrendering: false
+	defaultsearchcolumns:
+	    - command
+	    - current_working_directory
+	    - hostname
 	

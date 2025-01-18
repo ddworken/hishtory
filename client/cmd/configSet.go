@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/hctx"
@@ -275,6 +276,24 @@ var setFullScreenCmd = &cobra.Command{
 	},
 }
 
+var setDefaultSearchColumns = &cobra.Command{
+	Use:   "default-search-columns",
+	Short: "Get the list of columns that are used for \"default\" search queries that don't use any search atoms",
+	Long:  "By default hishtory queries are checked against `command`, `current_working_directory`, and `hostname`. This option can be used to exclude `current_working_directory` and/or `hostname` from default search queries. E.g. `hishtory config-set default-search-columns hostname command` would exclude `current_working_directory` from default searches.",
+	Args:  cobra.OnlyValidArgs,
+	// Note: If we are ever adding new arguments to this list, we should consider adding support for this config option in configAdd.go and configDelete.go.
+	ValidArgs: []string{"current_working_directory", "hostname", "command"},
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		if !slices.Contains(args, "command") {
+			lib.CheckFatalError(fmt.Errorf("command is a required default search column"))
+		}
+		config.DefaultSearchColumns = args
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
@@ -291,6 +310,7 @@ func init() {
 	configSetCmd.AddCommand(compactMode)
 	configSetCmd.AddCommand(setLogLevelCmd)
 	configSetCmd.AddCommand(setFullScreenCmd)
+	configSetCmd.AddCommand(setDefaultSearchColumns)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)
 	setColorSchemeCmd.AddCommand(setColorSchemeBorderColor)

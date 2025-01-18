@@ -3534,4 +3534,58 @@ func TestOfflineClient(t *testing.T) {
 	require.Contains(t, err.Error(), "panic: Cannot GetHttpClient() from a hishtory client compiled with the offline tag!")
 }
 
+func TestDefaultSearchColumns(t *testing.T) {
+	markTestForSharding(t, 21)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Disable recording so that all our testing commands don't get recorded
+	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
+	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory config-set enable-control-r true`)
+	tester.RunInteractiveShell(t, ` HISHTORY_REDACT_FORCE=true hishtory redact pipefail`)
+	db := hctx.GetDb(hctx.MakeContext())
+	require.NoError(t, db.Where("true").Delete(&data.HistoryEntry{}).Error)
+
+	// Insert a few hishtory entries that we'll use for testing into an empty DB
+	e1 := testutils.MakeFakeHistoryEntry("echo hi")
+	e1.CurrentWorkingDirectory = "/cwd1/"
+	e1.Hostname = "h1"
+	require.NoError(t, db.Create(e1).Error)
+	e2 := testutils.MakeFakeHistoryEntry("ls")
+	e2.CurrentWorkingDirectory = "/echo/"
+	e2.Hostname = "hi"
+	require.NoError(t, db.Create(e2).Error)
+
+	// Check that by default all columns are included
+	out := tester.RunInteractiveShell(t, ` hishtory export echo | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-Default-Echo")
+	out = tester.RunInteractiveShell(t, ` hishtory export hi | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-Default-Hi")
+
+	// Update the config value to exclude CWD
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "command current_working_directory hostname \n")
+	tester.RunInteractiveShell(t, ` hishtory config-set default-search-columns 'hostname' 'command'`)
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "hostname command \n")
+
+	// Without CWD included
+	out = tester.RunInteractiveShell(t, ` hishtory export echo | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWD-Echo")
+	out = tester.RunInteractiveShell(t, ` hishtory export hi | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWD-Hi")
+
+	// Update the config value to exclude hostname
+	tester.RunInteractiveShell(t, ` hishtory config-set default-search-columns command`)
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "command \n")
+
+	// Without hostname included
+	out = tester.RunInteractiveShell(t, ` hishtory export echo | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWDHostname-Echo")
+	out = tester.RunInteractiveShell(t, ` hishtory export hi | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWDHostname-Hi")
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

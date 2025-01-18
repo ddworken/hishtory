@@ -12,6 +12,7 @@ import (
 	"github.com/ddworken/hishtory/shared/testutils"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestMain(m *testing.M) {
@@ -343,5 +344,65 @@ func TestSplitEscaped(t *testing.T) {
 		if !reflect.DeepEqual(actual, tc.expected) {
 			t.Fatalf("failure for splitEscaped(%#v, %#v, %#v), actual=%#v", tc.input, string(tc.char), tc.limit, actual)
 		}
+	}
+}
+
+func TestParseNonAtomizedToken(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	require.NoError(t, hctx.InitConfig())
+	ctx := hctx.MakeContext()
+
+	// Default
+	q, v1, v2, v3, err := parseNonAtomizedToken(ctx, "echo hello")
+	require.NoError(t, err)
+	require.Equal(t, "(false OR command LIKE ? OR hostname LIKE ? OR current_working_directory LIKE ? )", q)
+	require.Equal(t, v1, "%echo hello%")
+	require.Equal(t, v2, "%echo hello%")
+	require.Equal(t, v3, "%echo hello%")
+
+	// Skipping cwd
+	config := hctx.GetConf(ctx)
+	config.DefaultSearchColumns = []string{"hostname", "command"}
+	q, v1, v2, v3, err = parseNonAtomizedToken(ctx, "echo hello")
+	require.NoError(t, err)
+	require.Equal(t, "(false OR command LIKE ? OR hostname LIKE ? )", q)
+	require.Equal(t, v1, "%echo hello%")
+	require.Equal(t, v2, "%echo hello%")
+	require.Nil(t, v3)
+
+	// Skipping cwd and hostname
+	config.DefaultSearchColumns = []string{"command"}
+	q, v1, v2, v3, err = parseNonAtomizedToken(ctx, "echo hello")
+	require.NoError(t, err)
+	require.Equal(t, "(false OR command LIKE ? )", q)
+	require.Equal(t, v1, "%echo hello%")
+	require.Nil(t, v2)
+	require.Nil(t, v3)
+}
+
+func TestWhere(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	require.NoError(t, hctx.InitConfig())
+	ctx := hctx.MakeContext()
+	db := hctx.GetDb(ctx)
+
+	testcases := []struct {
+		in_query       string
+		in_args        []any
+		expected_query string
+	}{
+		{"exit_code = ?", []any{1}, "SELECT * FROM `history_entries` WHERE exit_code = 1"},
+		{"exit_code = ?", []any{1, nil, nil}, "SELECT * FROM `history_entries` WHERE exit_code = 1"},
+		{"exit_code = ? OR exit_code = ?", []any{1, 2, nil}, "SELECT * FROM `history_entries` WHERE exit_code = 1 OR exit_code = 2"},
+	}
+
+	for _, tc := range testcases {
+		tx := where(db, tc.in_query, tc.in_args...)
+		queryString := tx.ToSQL(func(tx *gorm.DB) *gorm.DB {
+			var entries []data.HistoryEntry
+			return tx.Find(&entries)
+		})
+		require.Equal(t, tc.expected_query, queryString)
+
 	}
 }
