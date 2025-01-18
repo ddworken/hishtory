@@ -760,7 +760,9 @@ func where(tx *gorm.DB, s string, args ...any) *gorm.DB {
 		if foundNil && v != nil {
 			panic(fmt.Sprintf("Illegal state: args=%#v", args))
 		}
-		trimmedArgs = append(trimmedArgs, v)
+		if v != nil {
+			trimmedArgs = append(trimmedArgs, v)
+		}
 	}
 	return tx.Where(s, trimmedArgs...)
 }
