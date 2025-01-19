@@ -13,7 +13,7 @@ Full Config:
 	customcolumns: []
 	forcecompactmode: false
 	isoffline: false
-	filterduplicatecommands: false
+	filterduplicatecommands: true
 	timestampformat: Jan 2 2006 15:04:05 MST
 	betamode: false
 	highlightmatches: true
@@ -70,6 +70,6 @@ Full Config:
 	fullscreenrendering: false
 	defaultsearchcolumns:
 	    - command
-	    - current_working_directory
 	    - hostname
+	    - current_working_directory
 	
