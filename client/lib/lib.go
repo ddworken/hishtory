@@ -962,8 +962,13 @@ func GetAllCustomColumnNames(ctx context.Context) ([]string, error) {
 	return knownCustomColumns, nil
 }
 
+var cachedCustomColumnNames []string
+
 func getAllCustomColumnNamesFromDb(ctx context.Context) ([]string, error) {
-	// TODO: It would probably be good to memoize this, since this reads every entry in the DB and is called repeatedly in the TUI
+	if len(cachedCustomColumnNames) > 0 {
+		// Note: We memoize this function since it is called repeatedly in the TUI and querying the entire DB for every updated search is quite inefficient.
+		return cachedCustomColumnNames, nil
+	}
 	db := hctx.GetDb(ctx)
 	rows, err := RetryingDbFunctionWithResult(func() (*sql.Rows, error) {
 		query := `
@@ -985,6 +990,7 @@ func getAllCustomColumnNamesFromDb(ctx context.Context) ([]string, error) {
 		}
 		ccNames = append(ccNames, ccName)
 	}
+	cachedCustomColumnNames = ccNames
 	return ccNames, nil
 }
 
