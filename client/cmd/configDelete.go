@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"slices"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -70,13 +72,7 @@ var deleteDisplayedColumnCommand = &cobra.Command{
 		deletedColumns := args
 		newColumns := make([]string, 0)
 		for _, c := range config.DisplayedColumns {
-			isDeleted := false
-			for _, d := range deletedColumns {
-				if c == d {
-					isDeleted = true
-				}
-			}
-			if !isDeleted {
+			if !slices.Contains(deletedColumns, c) {
 				newColumns = append(newColumns, c)
 			}
 		}
@@ -85,8 +81,32 @@ var deleteDisplayedColumnCommand = &cobra.Command{
 	},
 }
 
+var deleteDefaultSearchColumnCmd = &cobra.Command{
+	Use:     "default-search-columns",
+	Aliases: []string{"default-search-column"},
+	Short:   "Delete a default search column",
+	Args:    cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		deletedColumns := args
+		newColumns := make([]string, 0)
+		if slices.Contains(deletedColumns, "command") {
+			lib.CheckFatalError(fmt.Errorf("command is a required default search column"))
+		}
+		for _, c := range config.DefaultSearchColumns {
+			if !slices.Contains(deletedColumns, c) {
+				newColumns = append(newColumns, c)
+			}
+		}
+		config.DefaultSearchColumns = newColumns
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configDeleteCmd)
 	configDeleteCmd.AddCommand(deleteCustomColumnsCmd)
 	configDeleteCmd.AddCommand(deleteDisplayedColumnCommand)
+	configDeleteCmd.AddCommand(deleteDefaultSearchColumnCmd)
 }

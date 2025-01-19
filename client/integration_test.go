@@ -3610,4 +3610,28 @@ func TestDefaultSearchColumns(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-MyCol-baz")
 }
 
+func TestDefaultSearchColumnsAddDelete(t *testing.T) {
+	markTestForSharding(t, 21)
+	defer testutils.BackupAndRestore(t)()
+	tester := zshTester{}
+	installHishtory(t, tester, "")
+
+	// Use config-set
+	out := tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "command hostname current_working_directory \n")
+	tester.RunInteractiveShell(t, ` hishtory config-set default-search-columns 'hostname' 'command'`)
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "hostname command \n")
+
+	// Use config-add
+	tester.RunInteractiveShell(t, ` hishtory config-add default-search-columns 'current_working_directory'`)
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "hostname command current_working_directory \n")
+
+	// Use config-delete
+	tester.RunInteractiveShell(t, ` hishtory config-delete default-search-columns 'hostname'`)
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "command current_working_directory \n")
+}
+
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
