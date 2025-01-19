@@ -784,11 +784,11 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 				}
 				tx = where(tx, "NOT "+query, v1, v2)
 			} else {
-				query, v1, v2, v3, err := parseNonAtomizedToken(ctx, token[1:])
+				query, args, err := parseNonAtomizedToken(ctx, token[1:])
 				if err != nil {
 					return nil, err
 				}
-				tx = where(tx, "NOT "+query, v1, v2, v3)
+				tx = where(tx, "NOT "+query, args...)
 			}
 		} else if containsUnescaped(token, ":") {
 			query, v1, v2, err := parseAtomizedToken(ctx, token)
@@ -797,11 +797,11 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 			}
 			tx = where(tx, query, v1, v2)
 		} else {
-			query, v1, v2, v3, err := parseNonAtomizedToken(ctx, token)
+			query, args, err := parseNonAtomizedToken(ctx, token)
 			if err != nil {
 				return nil, err
 			}
-			tx = where(tx, query, v1, v2, v3)
+			tx = where(tx, query, args...)
 		}
 	}
 	return tx, nil
@@ -851,36 +851,27 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offse
 	return historyEntries, nil
 }
 
-func parseNonAtomizedToken(ctx context.Context, token string) (string, any, any, any, error) {
+var SUPPORTED_DEFAULT_COLUMNS = []string{"command", "hostname", "current_working_directory"}
+
+func parseNonAtomizedToken(ctx context.Context, token string) (string, []any, error) {
 	wildcardedToken := "%" + unescape(token) + "%"
 	query := "(false "
-	numFilters := 0
-	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "command") {
-		query += "OR command LIKE ? "
-		numFilters += 1
-	}
-	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "hostname") {
-		query += "OR hostname LIKE ? "
-		numFilters += 1
-	}
-	if slices.Contains(hctx.GetConf(ctx).DefaultSearchColumns, "current_working_directory") {
-		query += "OR current_working_directory LIKE ? "
-		numFilters += 1
+	args := make([]any, 0)
+	for _, column := range hctx.GetConf(ctx).DefaultSearchColumns {
+		if slices.Contains(SUPPORTED_DEFAULT_COLUMNS, column) {
+			query += "OR " + column + " LIKE ? "
+			args = append(args, wildcardedToken)
+		} else {
+			q, a, err := buildCustomColumnSearchQuery(ctx, column, unescape(token))
+			if err != nil {
+				return "", nil, err
+			}
+			query += "OR " + q + " "
+			args = append(args, a...)
+		}
 	}
 	query += ")"
-	var t1 any = nil
-	var t2 any = nil
-	var t3 any = nil
-	if numFilters >= 1 {
-		t1 = wildcardedToken
-	}
-	if numFilters >= 2 {
-		t2 = wildcardedToken
-	}
-	if numFilters >= 3 {
-		t3 = wildcardedToken
-	}
-	return query, t1, t2, t3, nil
+	return query, args, nil
 }
 
 func parseAtomizedToken(ctx context.Context, token string) (string, any, any, error) {
@@ -932,19 +923,30 @@ func parseAtomizedToken(ctx context.Context, token string) (string, any, any, er
 	case "command":
 		return "(instr(command, ?) > 0)", val, nil, nil
 	default:
-		knownCustomColumns, err := getAllCustomColumnNames(ctx)
+		q, args, err := buildCustomColumnSearchQuery(ctx, field, val)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to get list of known custom columns: %w", err)
+			return "", nil, nil, err
 		}
-		if !slices.Contains(knownCustomColumns, field) {
-			return "", nil, nil, fmt.Errorf("search query contains unknown search atom '%s' that doesn't match any column names", field)
+		if len(args) != 2 {
+			return "", nil, nil, fmt.Errorf("custom column search query returned an unexpected number of args: %d", len(args))
 		}
-		// Build the where clause for the custom column
-		return "EXISTS (SELECT 1 FROM json_each(custom_columns) WHERE json_extract(value, '$.name') = ? and instr(json_extract(value, '$.value'), ?) > 0)", field, val, nil
+		return q, args[0], args[1], nil
 	}
 }
 
-func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
+func buildCustomColumnSearchQuery(ctx context.Context, columnName, columnVal string) (string, []any, error) {
+	knownCustomColumns, err := GetAllCustomColumnNames(ctx)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get list of known custom columns: %w", err)
+	}
+	if !slices.Contains(knownCustomColumns, columnName) {
+		return "", nil, fmt.Errorf("search query contains unknown search atom '%s' that doesn't match any column names", columnName)
+	}
+	// Build the where clause for the custom column
+	return "EXISTS (SELECT 1 FROM json_each(custom_columns) WHERE json_extract(value, '$.name') = ? and instr(json_extract(value, '$.value'), ?) > 0)", []any{columnName, columnVal}, nil
+}
+
+func GetAllCustomColumnNames(ctx context.Context) ([]string, error) {
 	knownCustomColumns := make([]string, 0)
 	// Get custom columns that are defined on this machine
 	conf := hctx.GetConf(ctx)
@@ -961,6 +963,7 @@ func getAllCustomColumnNames(ctx context.Context) ([]string, error) {
 }
 
 func getAllCustomColumnNamesFromDb(ctx context.Context) ([]string, error) {
+	// TODO: It would probably be good to memoize this, since this reads every entry in the DB and is called repeatedly in the TUI
 	db := hctx.GetDb(ctx)
 	rows, err := RetryingDbFunctionWithResult(func() (*sql.Rows, error) {
 		query := `

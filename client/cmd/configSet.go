@@ -281,13 +281,21 @@ var setDefaultSearchColumns = &cobra.Command{
 	Short: "Get the list of columns that are used for \"default\" search queries that don't use any search atoms",
 	Long:  "By default hishtory queries are checked against `command`, `current_working_directory`, and `hostname`. This option can be used to exclude `current_working_directory` and/or `hostname` from default search queries. E.g. `hishtory config-set default-search-columns hostname command` would exclude `current_working_directory` from default searches.",
 	Args:  cobra.OnlyValidArgs,
-	// Note: If we are ever adding new arguments to this list, we should consider adding support for this config option in configAdd.go and configDelete.go.
-	ValidArgs: []string{"current_working_directory", "hostname", "command"},
 	Run: func(cmd *cobra.Command, args []string) {
+		// TODO: Add configAdd and configDelete support for this command
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		if !slices.Contains(args, "command") {
 			lib.CheckFatalError(fmt.Errorf("command is a required default search column"))
+		}
+		customColNames, err := lib.GetAllCustomColumnNames(ctx)
+		if err != nil {
+			lib.CheckFatalError(fmt.Errorf("failed to get custom column names: %v", err))
+		}
+		for _, col := range args {
+			if !slices.Contains(lib.SUPPORTED_DEFAULT_COLUMNS, col) && !slices.Contains(customColNames, col) {
+				lib.CheckFatalError(fmt.Errorf("column %q is not a valid column name", col))
+			}
 		}
 		config.DefaultSearchColumns = args
 		lib.CheckFatalError(hctx.SetConfig(config))

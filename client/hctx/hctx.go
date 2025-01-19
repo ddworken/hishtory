@@ -301,7 +301,7 @@ func GetConfig() (ClientConfig, error) {
 		config.LogLevel = logrus.InfoLevel
 	}
 	if len(config.DefaultSearchColumns) == 0 {
-		config.DefaultSearchColumns = []string{"command", "current_working_directory", "hostname"}
+		config.DefaultSearchColumns = []string{"command", "hostname", "current_working_directory"}
 	}
 	return config, nil
 }
