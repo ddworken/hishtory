@@ -3551,10 +3551,15 @@ func TestDefaultSearchColumns(t *testing.T) {
 	e1 := testutils.MakeFakeHistoryEntry("echo hi")
 	e1.CurrentWorkingDirectory = "/cwd1/"
 	e1.Hostname = "h1"
+	e1.CustomColumns = make(data.CustomColumns, 2)
+	e1.CustomColumns[0] = data.CustomColumn{Name: "MyCol", Val: "baz"}
+	e1.CustomColumns[1] = data.CustomColumn{Name: "baz", Val: "bar"}
 	require.NoError(t, db.Create(e1).Error)
 	e2 := testutils.MakeFakeHistoryEntry("ls")
 	e2.CurrentWorkingDirectory = "/echo/"
 	e2.Hostname = "hi"
+	e2.CustomColumns = make(data.CustomColumns, 1)
+	e2.CustomColumns[0] = data.CustomColumn{Name: "MyCol", Val: "bar"}
 	require.NoError(t, db.Create(e2).Error)
 
 	// Check that by default all columns are included
@@ -3565,7 +3570,7 @@ func TestDefaultSearchColumns(t *testing.T) {
 
 	// Update the config value to exclude CWD
 	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
-	require.Equal(t, out, "command current_working_directory hostname \n")
+	require.Equal(t, out, "command hostname current_working_directory \n")
 	tester.RunInteractiveShell(t, ` hishtory config-set default-search-columns 'hostname' 'command'`)
 	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
 	require.Equal(t, out, "hostname command \n")
@@ -3586,6 +3591,23 @@ func TestDefaultSearchColumns(t *testing.T) {
 	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWDHostname-Echo")
 	out = tester.RunInteractiveShell(t, ` hishtory export hi | grep -v pipefail`)
 	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWDHostname-Hi")
+
+	// Add a custom column to the search
+	tester.RunInteractiveShell(t, ` hishtory config-set default-search-columns 'hostname' 'command' MyCol`)
+	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
+	require.Equal(t, out, "hostname command MyCol \n")
+
+	// Check that the normal searches still work fine
+	out = tester.RunInteractiveShell(t, ` hishtory export echo | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWD-Echo")
+	out = tester.RunInteractiveShell(t, ` hishtory export hi | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-NoCWD-Hi")
+
+	// Check that we can search for the custom column by default
+	out = tester.RunInteractiveShell(t, ` hishtory export bar | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-MyCol-bar")
+	out = tester.RunInteractiveShell(t, ` hishtory export baz | grep -v pipefail`)
+	testutils.CompareGoldens(t, out, "TestDefaultSearchColumns-MyCol-baz")
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed
