@@ -70,6 +70,6 @@ Full Config:
 	fullscreenrendering: false
 	defaultsearchcolumns:
 	    - command
-	    - current_working_directory
 	    - hostname
+	    - current_working_directory
 	
