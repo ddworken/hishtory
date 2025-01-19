@@ -296,7 +296,6 @@ var setDefaultSearchColumns = &cobra.Command{
 	Long:  "By default hishtory queries are checked against `command`, `current_working_directory`, and `hostname`. This option can be used to exclude `current_working_directory` and/or `hostname` from default search queries. E.g. `hishtory config-set default-search-columns hostname command` would exclude `current_working_directory` from default searches. Alternatively, it can be used to include custom columns in default searches.",
 	Args:  cobra.OnlyValidArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Add configAdd and configDelete support for this command
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		if !slices.Contains(args, "command") {
