@@ -103,6 +103,16 @@ func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, er
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return []byte{}, []byte{}, fmt.Errorf("failed to read a nonce: %w", err)
 	}
+	// Note that this is using AES-GCM with a default 96 bit nonce. This means that if a user has
+	// 2^32 = 4 billion history entries, they'll have a 2^-33 chance of experiencing a nonce collision.
+	// Even with this seemingly absurd number of history entries, the chance of a collision is still
+	// quite low (and the impact is minimal, in our case the key relevant piece is just leaking the xor
+	// of the two collidding history entries).
+	//
+	// If we ever wanted to improve on this, we could consider swapping to AES-GCM-SIV which mitigates
+	// this issue through a synthetic IV. For now, I haven't prioritized this since the risk here is quite
+	// low and migrating hishtory to support a new and old AEAD scheme would be a bit of a pain. But if
+	// anyone is ever concerned about this or disagrees with this logic, please open a GH issue!
 	ciphertext := aead.Seal(nil, nonce, data, additionalData)
 	_, err = aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
