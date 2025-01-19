@@ -966,7 +966,9 @@ var cachedCustomColumnNames []string
 
 func getAllCustomColumnNamesFromDb(ctx context.Context) ([]string, error) {
 	if len(cachedCustomColumnNames) > 0 {
-		// Note: We memoize this function since it is called repeatedly in the TUI and querying the entire DB for every updated search is quite inefficient.
+		// Note: We memoize this function since it is called repeatedly in the TUI and querying the
+		// entire DB for every updated search is quite inefficient. This is reasonable since the set
+		// of custom columns shouldn't ever change within the lifetime of one hishtory process.
 		return cachedCustomColumnNames, nil
 	}
 	db := hctx.GetDb(ctx)
