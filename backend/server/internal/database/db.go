@@ -430,9 +430,16 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 
 func (db *DB) SelfHostedDeepClean(ctx context.Context) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		supportsTempTable := db.Name() == "postgres"
+		tmpDirective := ""
+		if supportsTempTable {
+			tmpDirective = "TEMP"
+		}
 		runDeletes := os.Getenv("HISHTORY_SELF_HOSTED_DEEP_CLEAN") != ""
+		_ = tx.Exec(`DROP TABLE IF EXISTS temp_inactive_devices`)
+		defer tx.Exec(`DROP TABLE IF EXISTS temp_inactive_devices`)
 		r := tx.Exec(`
-		CREATE TEMP TABLE temp_inactive_devices AS (
+		CREATE ` + tmpDirective + ` TABLE temp_inactive_devices AS (
 			SELECT device_id
 			FROM usage_data
 			WHERE last_used <= (now() - INTERVAL '90 days')
