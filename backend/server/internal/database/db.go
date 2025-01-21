@@ -429,6 +429,10 @@ func (db *DB) GenerateAndStoreActiveUserStats(ctx context.Context) error {
 }
 
 func (db *DB) SelfHostedDeepClean(ctx context.Context) error {
+	if db.Name() == "sqlite" {
+		// sqlite doesn't support the `(now() - INTERVAL '90 days')` syntax used in the below queries.
+		return nil
+	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		runDeletes := os.Getenv("HISHTORY_SELF_HOSTED_DEEP_CLEAN") != ""
 		r := tx.Exec(`
