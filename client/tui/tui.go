@@ -205,9 +205,6 @@ func preventTableOverscrolling(m model) {
 
 func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.Cmd {
 	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || forceUpdateTable || m.searchErr != nil {
-		// if !m.hasFinishedFirstLoad {
-		// 	return nil
-		// }
 		query := m.lastQuery
 		if m.runQuery != nil {
 			query = *m.runQuery
