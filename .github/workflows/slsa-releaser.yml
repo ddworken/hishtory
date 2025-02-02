@@ -140,22 +140,22 @@ jobs:
           brew install coreutils
           python3 scripts/actions-sign.py
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hishtory-darwin-arm64
           path: hishtory-darwin-arm64
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hishtory-darwin-amd64
           path: hishtory-darwin-amd64
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hishtory-darwin-arm64-unsigned
           path: hishtory-darwin-arm64-unsigned
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hishtory-darwin-amd64-unsigned
           path: hishtory-darwin-amd64-unsigned

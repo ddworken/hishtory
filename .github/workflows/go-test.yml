@@ -82,19 +82,19 @@ jobs:
         # Add an extra short delay to allow datadog to flush metrics
         sleep 90
     - name: Upload test results json
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: test-results-${{ matrix.os }}-${{ matrix.test_shard }}.json
         path: /tmp/testrun.json
     - name: Upload failed test goldens
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: test-goldens-${{ matrix.os }}-${{ matrix.test_shard }}.zip
         path: /tmp/test-goldens/
     - name: Upload test log
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: testlog-${{ matrix.os }}-${{ matrix.test_shard }}.txt
