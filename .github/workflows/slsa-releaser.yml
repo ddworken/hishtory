@@ -199,7 +199,7 @@ jobs:
           name: hishtory-linux-arm64.intoto.jsonl
       - uses: actions/download-artifact@v4
         with:
-          name: hishtory-darwin-amd64-signed
+          name: hishtory-darwin-amd64
           path: hishtory-darwin-amd64
       - uses: actions/download-artifact@v4
         with:
@@ -209,7 +209,7 @@ jobs:
           name: hishtory-darwin-amd64-unsigned
       - uses: actions/download-artifact@v4
         with:
-          name: hishtory-darwin-arm64-signed
+          name: hishtory-darwin-arm64
           path: hishtory-darwin-arm64
       - uses: actions/download-artifact@v4
         with:
