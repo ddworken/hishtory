@@ -224,6 +224,11 @@ jobs:
           unset HISHTORY_TEST
           python3 scripts/actions-validate.py
           echo DONE > hishtory-release-validation-completed
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
