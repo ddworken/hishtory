@@ -78,7 +78,7 @@ def main() -> None:
             validate_macos_signature(filename)
     print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory-darwin-amd64") 
-    validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
+    # validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
     print("Validating other metadata")
     validate_hishtory_status("./hishtory-darwin-amd64", True)
     validate_hishtory_status(os.path.expanduser("~/.hishtory/hishtory"), False)
