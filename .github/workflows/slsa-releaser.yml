@@ -126,10 +126,10 @@ jobs:
           sleep 60
       - uses: actions/download-artifact@v4
         with:
-          name: hishtory-darwin-arm64-bin
+          name: hishtory-darwin-arm64
       - uses: actions/download-artifact@v4
         with:
-          name: hishtory-darwin-amd64-bin
+          name: hishtory-darwin-amd64
       - name: Download and sign the latest executables
         env: 
           GH_TOKEN: ${{ github.token }}
