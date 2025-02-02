@@ -9,6 +9,7 @@ node_modules/
 package.json
 package-lock.json
 .prettierrc
+*.cpuprof
 
 # VS Code settings
 .vscode/

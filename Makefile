@@ -22,7 +22,7 @@ ftest:				## Run a specific test specified via `make ftest FILTER=TestParam/test
 	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 gotestsum --packages ./... --rerun-fails=0 --format testname -- -p 1 -run "$(FILTER)" -timeout 60m
 
 fbench:				## Run a specific benchmark test specified via `make fbench FILTER=BenchmarkQuery`
-	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -benchmem -bench "$(FILTER)" -timeout 60m ./...
+	HISHTORY_FILTERED_TEST=1 TZ='America/Los_Angeles' HISHTORY_TEST=1 HISHTORY_SKIP_INIT_IMPORT=1 go test -benchmem -bench "$(FILTER)" -run='^$$' -timeout 60m github.com/ddworken/hishtory/client/ -cpuprofile=bench.cpuprof
 
 backup:				## Backup the local hishtory install. It is recommended to do this before doing any local dev or running any integration tests.
 	rm -rf ~/.hishtory.bak || true 
