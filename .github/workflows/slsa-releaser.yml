@@ -142,12 +142,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: hishtory-darwin-arm64
+          name: hishtory-darwin-arm64-signed
           path: hishtory-darwin-arm64
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: hishtory-darwin-amd64
+          name: hishtory-darwin-amd64-signed
           path: hishtory-darwin-amd64
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -199,7 +199,8 @@ jobs:
           name: hishtory-linux-arm64.intoto.jsonl
       - uses: actions/download-artifact@v4
         with:
-          name: hishtory-darwin-amd64
+          name: hishtory-darwin-amd64-signed
+          path: hishtory-darwin-amd64
       - uses: actions/download-artifact@v4
         with:
           name: hishtory-darwin-amd64.intoto.jsonl
@@ -208,7 +209,8 @@ jobs:
           name: hishtory-darwin-amd64-unsigned
       - uses: actions/download-artifact@v4
         with:
-          name: hishtory-darwin-arm64
+          name: hishtory-darwin-arm64-signed
+          path: hishtory-darwin-arm64
       - uses: actions/download-artifact@v4
         with:
           name: hishtory-darwin-arm64.intoto.jsonl
