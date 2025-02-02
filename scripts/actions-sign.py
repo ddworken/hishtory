@@ -3,8 +3,8 @@ import time
 import subprocess
 
 def main():
-    assertPresentAndNotAscii("hishtory-darwin-arm64")
-    assertPresentAndNotAscii("hishtory-darwin-amd64")
+    assertPresentAndNotAscii("hishtory-darwin-arm64-bin")
+    assertPresentAndNotAscii("hishtory-darwin-amd64-bin")
     
     print("before sha1sum:")
     os.system("sha1sum hishtory-* 2>&1")
@@ -17,6 +17,8 @@ def main():
     print("signing...")
     os.system("""
     set -emo pipefail
+    mv hishtory-darwin-arm64-bin hishtory-darwin-arm64
+    mv hishtory-darwin-amd64-bin hishtory-darwin-amd64
     cp hishtory-darwin-arm64 hishtory-darwin-arm64-unsigned
     cp hishtory-darwin-amd64 hishtory-darwin-amd64-unsigned
     echo $MACOS_CERTIFICATE | base64 -d > certificate.p12

@@ -9,7 +9,7 @@ flags:
 goos: darwin
 goarch: arm64
 
-binary: hishtory-{{ .Os }}-{{ .Arch }}
+binary: hishtory-{{ .Os }}-{{ .Arch }}-bin
 
 ldflags:
   - '{{ .Env.VERSION_LDFLAGS }}'
