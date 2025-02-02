@@ -8,6 +8,7 @@ ALL_FILES = ['hishtory-linux-amd64', 'hishtory-linux-arm64', 'hishtory-darwin-am
 
 def validate_slsa(hishtory_binary: str) -> None:
     assert os.path.exists(hishtory_binary)
+    assertPresentAndNotAscii(hishtory_binary)
     subprocess.check_output(['chmod', "+x", hishtory_binary])
     for filename in ALL_FILES:
         try:
@@ -62,6 +63,13 @@ def validate_hishtory_status(filename: str, deep_validation: bool) -> None:
         assert f"hiSHtory: {version}" in status, status
     else:
         assert "hiSHtory: " in status, status
+
+def assertPresentAndNotAscii(fn):
+    if not os.path.exists(fn):
+        raise Exception(f"{fn=} does not exist, did it fail to download?")
+    out = subprocess.check_output(["file", fn]).decode('utf-8')
+    if "ASCII text" in out:
+        raise Exception(f"{fn=} is of type {out}")
 
 def main() -> None:
     print("Starting validation of MacOS signatures")
