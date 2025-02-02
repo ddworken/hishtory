@@ -168,6 +168,7 @@ type TmuxCommand struct {
 	ResizeX    int
 	ResizeY    int
 	ExtraDelay float64
+	NoSleep    bool
 }
 
 func captureTerminalOutputWithShellName(t testing.TB, tester shellTester, overriddenShellName string, commands []string) string {
@@ -246,7 +247,9 @@ func buildTmuxInputCommands(t testing.TB, captureConfig TmuxCaptureConfig) strin
 		if cmd.ExtraDelay != 0 {
 			fullCommand += fmt.Sprintf(" sleep %f\n", cmd.ExtraDelay)
 		}
-		fullCommand += " sleep " + sleepAmount + "\n"
+		if !cmd.NoSleep {
+			fullCommand += " sleep " + sleepAmount + "\n"
+		}
 	}
 	fullCommand += " sleep 2.5\n"
 	if testutils.IsGithubAction() {
