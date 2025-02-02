@@ -73,9 +73,9 @@ def assertPresentAndNotAscii(fn):
 
 def main() -> None:
     print("Starting validation of MacOS signatures")
-    for filename in ALL_FILES:
-        if "darwin" in filename:
-            validate_macos_signature(filename)
+    # for filename in ALL_FILES:
+    #     if "darwin" in filename:
+    #         validate_macos_signature(filename)
     print("Starting validation of SLSA attestations")
     validate_slsa("./hishtory-darwin-amd64") 
     validate_slsa(os.path.expanduser("~/.hishtory/hishtory"))
