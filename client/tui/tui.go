@@ -836,7 +836,12 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	dr.Messages.Ids = append(dr.Messages.Ids,
 		shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 	)
-	return lib.SendDeletionRequest(ctx, dr)
+	err := lib.SendDeletionRequest(ctx, dr)
+	if err != nil {
+		return err
+	}
+
+	return lib.ClearSearchCache(ctx)
 }
 
 func configureColorProfile(ctx context.Context) {

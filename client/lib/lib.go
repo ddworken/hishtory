@@ -823,6 +823,13 @@ type searchResult struct {
 
 var SEARCH_CACHE *cache.LoadableCache[*searchResult]
 
+func ClearSearchCache(ctx context.Context) error {
+	if SEARCH_CACHE == nil {
+		return nil
+	}
+	return SEARCH_CACHE.Clear(ctx)
+}
+
 func SearchWithCache(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
 	if SEARCH_CACHE == nil {
 		loadFunction := func(ctx context.Context, key any) (*searchResult, []store.Option, error) {
