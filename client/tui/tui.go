@@ -220,7 +220,9 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		// Kick off an async query to getRows() so that we can start our DB query in the background
 		// before bubbletea actually invokes our tea.Msg. This reduces latency between key presses
 		// and results being displayed.
-		go getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+		go func() {
+			_, _, _ = getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+		}()
 
 		return func() tea.Msg {
 			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
