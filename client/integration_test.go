@@ -3639,6 +3639,9 @@ func TestDefaultSearchColumnsAddDelete(t *testing.T) {
 }
 
 func TestTuiBench(t *testing.T) {
+	if testutils.IsGithubAction() {
+		t.Skip("Skipping benchmarking test in Github Actions")
+	}
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 	createSyntheticImportEntries(t, 10000)
