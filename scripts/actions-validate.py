@@ -7,6 +7,7 @@ import os
 ALL_FILES = ['hishtory-linux-amd64', 'hishtory-linux-arm64', 'hishtory-darwin-amd64', 'hishtory-darwin-arm64']
 
 def validate_slsa(hishtory_binary: str) -> None:
+    print(f"Validating SLSA attestations with {hishtory_binary=}")
     assert os.path.exists(hishtory_binary)
     assertPresentAndNotAscii(hishtory_binary)
     subprocess.check_output(['chmod', "+x", hishtory_binary])
