@@ -22,7 +22,7 @@ var NUM_TEST_RETRIES map[string]int
 
 var UNUSED_GOLDENS []string = []string{
 	"testCustomColumns-query-isAction=false", "testCustomColumns-tquery-bash",
-	"testCustomColumns-tquery-zsh",
+	"testCustomColumns-tquery-zsh", "TestTuiBench-Query",
 }
 
 func main() {

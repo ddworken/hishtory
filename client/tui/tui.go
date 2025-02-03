@@ -210,13 +210,21 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 			query = *m.runQuery
 		}
 		queryId := allocateQueryId()
+		conf := hctx.GetConf(m.ctx)
+		defaultFilter := conf.DefaultFilter
+		if m.queryInput.Prompt == "" {
+			// The default filter was cleared for this session, so don't apply it
+			defaultFilter = ""
+		}
+
+		// Kick off an async query to getRows() so that we can start our DB query in the background
+		// before bubbletea actually invokes our tea.Msg. This reduces latency between key presses
+		// and results being displayed.
+		go func() {
+			_, _, _ = getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+		}()
+
 		return func() tea.Msg {
-			conf := hctx.GetConf(m.ctx)
-			defaultFilter := conf.DefaultFilter
-			if m.queryInput.Prompt == "" {
-				// The default filter was cleared for this session, so don't apply it
-				defaultFilter = ""
-			}
 			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
 			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil, false}
 		}
@@ -504,13 +512,17 @@ func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellNa
 	return rows, entries, nil
 }
 
+func TestOnlyGetRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
+	return getRows(ctx, columnNames, shellName, defaultFilter, query, numEntries)
+}
+
 func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if config.AiCompletion && strings.HasPrefix(query, "?") && len(query) > 1 {
 		return getRowsFromAiSuggestions(ctx, columnNames, shellName, query)
 	}
-	searchResults, err := lib.Search(ctx, db, defaultFilter+" "+query, numEntries)
+	searchResults, err := lib.SearchWithCache(ctx, db, defaultFilter+" "+query, numEntries)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -824,7 +836,12 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	dr.Messages.Ids = append(dr.Messages.Ids,
 		shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 	)
-	return lib.SendDeletionRequest(ctx, dr)
+	err := lib.SendDeletionRequest(ctx, dr)
+	if err != nil {
+		return err
+	}
+
+	return lib.ClearSearchCache(ctx)
 }
 
 func configureColorProfile(ctx context.Context) {

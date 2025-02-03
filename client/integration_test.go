@@ -21,6 +21,7 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/client/tui"
 	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/ai"
 	"github.com/ddworken/hishtory/shared/testutils"
@@ -3146,17 +3147,20 @@ func BenchmarkQuery(b *testing.B) {
 	numImported, err := lib.ImportHistory(ctx, false, true)
 	require.NoError(b, err)
 	require.GreaterOrEqual(b, numImported, numSyntheticEntries)
+	db := hctx.GetDb(ctx)
+	for i := range 1000 {
+		e := testutils.MakeFakeHistoryEntry(strings.Repeat(fmt.Sprintf("this is a long command %d", i), 100))
+		require.NoError(b, db.Create(e).Error)
+	}
 
 	// Benchmark it
 	for n := 0; n < b.N; n++ {
+		ctx := hctx.MakeContext()
 		// Benchmarked code:
 		b.StartTimer()
-		ctx := hctx.MakeContext()
-		err := lib.RetrieveAdditionalEntriesFromRemote(ctx, "tui")
-		require.NoError(b, err)
-		_, err = lib.Search(ctx, hctx.GetDb(ctx), "echo", 100)
-		require.NoError(b, err)
+		_, err := lib.Search(ctx, hctx.GetDb(ctx), "this is a long command 123", 100)
 		b.StopTimer()
+		require.NoError(b, err)
 	}
 }
 
@@ -3632,6 +3636,73 @@ func TestDefaultSearchColumnsAddDelete(t *testing.T) {
 	tester.RunInteractiveShell(t, ` hishtory config-delete default-search-columns 'hostname'`)
 	out = tester.RunInteractiveShell(t, ` hishtory config-get default-search-columns`)
 	require.Equal(t, out, "command current_working_directory \n")
+}
+
+func TestTuiBench(t *testing.T) {
+	if testutils.IsGithubAction() {
+		t.Skip("Skipping benchmarking test in Github Actions")
+	}
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	createSyntheticImportEntries(t, 10000)
+	tester, _, _ := setupTestTui(t, Online)
+	ctx := hctx.MakeContext()
+	numImported, err := lib.ImportHistory(ctx, false, true)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, numImported, 10000)
+	db := hctx.GetDb(ctx)
+	for i := range 1000 {
+		e := testutils.MakeFakeHistoryEntry(strings.Repeat(fmt.Sprintf("this is a long command %d", i), 2))
+		require.NoError(t, db.Create(e).Error)
+	}
+
+	for range 30 {
+		out := captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 100, 20, []TmuxCommand{
+			{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1},
+			{Keys: "t", NoSleep: true},
+			{Keys: "h", NoSleep: true},
+			{Keys: "i", NoSleep: true},
+			{Keys: "s", NoSleep: true},
+			{Keys: "SPACE", NoSleep: true},
+			{Keys: "i", NoSleep: true},
+			{Keys: "s", NoSleep: true},
+			{Keys: "SPACE", NoSleep: true},
+			{Keys: "1", NoSleep: true},
+			{Keys: "2", NoSleep: true},
+			{Keys: "3", NoSleep: true},
+		})
+		testutils.CompareGoldens(t, out, "TestTuiBench-Query")
+	}
+}
+
+func BenchmarkGetRows(b *testing.B) {
+	b.StopTimer()
+	// Setup with an install with a lot of entries
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(b)()
+	testutils.ResetLocalState(b)
+	installHishtory(b, tester, "")
+	numSyntheticEntries := 100_000
+	createSyntheticImportEntries(b, numSyntheticEntries)
+	ctx := hctx.MakeContext()
+	numImported, err := lib.ImportHistory(ctx, false, true)
+	require.NoError(b, err)
+	require.GreaterOrEqual(b, numImported, numSyntheticEntries)
+	db := hctx.GetDb(ctx)
+	for i := range 1000 {
+		e := testutils.MakeFakeHistoryEntry(strings.Repeat(fmt.Sprintf("this is a long command %d", i), 100))
+		require.NoError(b, db.Create(e).Error)
+	}
+	config := hctx.GetConf(ctx)
+
+	// Benchmark it
+	for n := 0; n < b.N; n++ {
+		// Benchmarked code:
+		b.StartTimer()
+		_, _, err := tui.TestOnlyGetRows(ctx, config.DisplayedColumns, "bash", "", "this is a long command 123", 100)
+		b.StopTimer()
+		require.NoError(b, err)
+	}
 }
 
 // TODO: somehow test/confirm that hishtory works even if only bash/only zsh is installed

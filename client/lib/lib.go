@@ -28,6 +28,10 @@ import (
 	"github.com/ddworken/hishtory/shared"
 
 	"github.com/araddon/dateparse"
+	"github.com/dgraph-io/ristretto"
+	"github.com/eko/gocache/lib/v4/cache"
+	"github.com/eko/gocache/lib/v4/store"
+	ristretto_store "github.com/eko/gocache/store/ristretto/v4"
 	"github.com/google/uuid"
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/exp/slices"
@@ -769,7 +773,7 @@ func where(tx *gorm.DB, s string, args ...any) *gorm.DB {
 
 func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
 	tokens := tokenize(query)
-	tx := db.Model(&data.HistoryEntry{}).Where("true")
+	tx := db.Model(&data.HistoryEntry{}).WithContext(ctx).Where("true")
 	for _, token := range tokens {
 		if strings.HasPrefix(token, "-") {
 			if token == "-" {
@@ -805,6 +809,56 @@ func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*
 		}
 	}
 	return tx, nil
+}
+
+type searchQuery struct {
+	query string
+	limit int
+}
+
+type searchResult struct {
+	results []*data.HistoryEntry
+	err     error
+}
+
+var SEARCH_CACHE *cache.LoadableCache[*searchResult]
+
+func ClearSearchCache(ctx context.Context) error {
+	if SEARCH_CACHE == nil {
+		return nil
+	}
+	return SEARCH_CACHE.Clear(ctx)
+}
+
+func SearchWithCache(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
+	if SEARCH_CACHE == nil {
+		loadFunction := func(ctx context.Context, key any) (*searchResult, []store.Option, error) {
+			sq := key.(searchQuery)
+			results, err := Search(ctx, db, sq.query, sq.limit)
+			return &searchResult{results, err}, []store.Option{store.WithCost(1), store.WithExpiration(time.Second * 3)}, nil
+		}
+
+		ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
+			NumCounters: 1000,
+			MaxCost:     100,
+			BufferItems: 64,
+		})
+		if err != nil {
+			panic(err)
+		}
+		ristrettoStore := ristretto_store.NewRistretto(ristrettoCache)
+
+		cacheManager := cache.NewLoadable[*searchResult](
+			loadFunction,
+			cache.New[*searchResult](ristrettoStore),
+		)
+		SEARCH_CACHE = cacheManager
+	}
+	res, err := SEARCH_CACHE.Get(ctx, searchQuery{query, limit})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get from cache: %w", err)
+	}
+	return res.results, res.err
 }
 
 func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
