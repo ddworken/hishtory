@@ -224,8 +224,8 @@ jobs:
           unset HISHTORY_TEST
           mv hishtory-darwin-amd64/hishtory-darwin-amd64 /tmp/t; rm -r hishtory-darwin-amd64; mv /tmp/t hishtory-darwin-amd64
           mv hishtory-darwin-arm64/hishtory-darwin-arm64 /tmp/t; rm -r hishtory-darwin-arm64; mv /tmp/t hishtory-darwin-arm64
-          # python3 scripts/actions-validate.py
-          # echo DONE > hishtory-release-validation-completed
+          python3 scripts/actions-validate.py
+          echo DONE > hishtory-release-validation-completed
       - name: Setup tmate session
         # if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
