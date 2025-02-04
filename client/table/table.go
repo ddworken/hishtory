@@ -4,12 +4,19 @@
 package table
 
 import (
+	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dgraph-io/ristretto"
+	"github.com/eko/gocache/lib/v4/cache"
+	"github.com/eko/gocache/lib/v4/store"
+	ristretto_store "github.com/eko/gocache/store/ristretto/v4"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -353,13 +360,46 @@ func (m *Model) ColIndex(n int) int {
 	}
 }
 
+var RUNE_WIDTH_CACHE *cache.LoadableCache[int]
+
+func RuneWidthWithCache(s string) int {
+	if RUNE_WIDTH_CACHE == nil {
+		loadFunction := func(ctx context.Context, key any) (int, []store.Option, error) {
+			s := key.(string)
+			r := runewidth.StringWidth(s)
+			return r, []store.Option{store.WithCost(1), store.WithExpiration(time.Second * 3)}, nil
+		}
+
+		ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
+			NumCounters: 1000,
+			MaxCost:     1000,
+			BufferItems: 64,
+		})
+		if err != nil {
+			panic(fmt.Errorf("unexpected error: failed to create cache for rune width: %w", err))
+		}
+		ristrettoStore := ristretto_store.NewRistretto(ristrettoCache)
+
+		cacheManager := cache.NewLoadable[int](
+			loadFunction,
+			cache.New[int](ristrettoStore),
+		)
+		RUNE_WIDTH_CACHE = cacheManager
+	}
+	r, err := RUNE_WIDTH_CACHE.Get(context.Background(), s)
+	if err != nil {
+		panic(fmt.Errorf("unexpected error: failed to query cache for rune width: %w", err))
+	}
+	return r
+}
+
 // Gets the maximum useful horizontal scroll
 func (m *Model) MaxHScroll() int {
 	maxWidth := 0
 	index := m.ColIndex(m.hcol)
 	for _, row := range m.rows {
 		for _, value := range row {
-			maxWidth = max(runewidth.StringWidth(value), maxWidth)
+			maxWidth = max(RuneWidthWithCache(value), maxWidth)
 		}
 	}
 	return max(maxWidth-m.cols[index].Width+2, 0)
@@ -481,7 +521,7 @@ func (m Model) headersView() string {
 func (m *Model) columnNeedsScrolling(columnIdxToCheck int) bool {
 	for rowIdx := m.start; rowIdx < m.end; rowIdx++ {
 		for columnIdx, value := range m.rows[rowIdx] {
-			if columnIdx == columnIdxToCheck && runewidth.StringWidth(value) > m.cols[columnIdx].Width {
+			if columnIdx == columnIdxToCheck && RuneWidthWithCache(value) > m.cols[columnIdx].Width {
 				return true
 			}
 		}
