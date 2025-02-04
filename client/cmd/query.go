@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/ddworken/hishtory/client/data"
@@ -50,6 +51,12 @@ var tqueryCmd = &cobra.Command{
 	Long:               strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "tquery"),
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
+		if os.Getenv("HISHTORY_CPU_PROFILE") != "" {
+			f, err := os.Create(os.Getenv("HISHTORY_CPU_PROFILE"))
+			lib.CheckFatalError(err)
+			lib.CheckFatalError(pprof.StartCPUProfile(f))
+			defer pprof.StopCPUProfile()
+		}
 		ctx := hctx.MakeContext()
 		shellName := "bash"
 		if os.Getenv("HISHTORY_SHELL_NAME") != "" {
