@@ -648,7 +648,7 @@ func testRepeatedCommandThenQuery(t *testing.T, tester shellTester) {
 	}
 
 	// Run a command many times
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		tester.RunInteractiveShell(t, fmt.Sprintf("echo mycommand-%d", i))
 	}
 
@@ -688,7 +688,7 @@ func testRepeatedCommandAndQuery(t *testing.T, tester shellTester) {
 	}
 
 	// Run a command many times
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		tester.RunInteractiveShell(t, fmt.Sprintf("echo mycommand-%d", i))
 		out = hishtoryQuery(t, tester, fmt.Sprintf("mycommand-%d", i))
 		if strings.Count(out, "\n") != 3 {
@@ -707,7 +707,7 @@ func testRepeatedEnableDisable(t *testing.T, tester shellTester) {
 	installHishtory(t, tester, "")
 
 	// Run a command many times
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		tester.RunInteractiveShell(t, fmt.Sprintf(`echo mycommand-%d
  hishtory disable
 echo shouldnotshowup
@@ -767,7 +767,7 @@ echo hello2
 func waitForBackgroundSavesToComplete(t testing.TB) {
 	lastOut := ""
 	lastErr := ""
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		cmd := exec.Command(getPidofCommand(), "hishtory")
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
@@ -2942,7 +2942,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 	conf, err := hctx.GetConfig()
 	require.NoError(t, err)
 	var doneWg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		doneWg.Add(1)
 		go func(i int) {
 			// Make a new config of a varied length

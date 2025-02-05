@@ -530,7 +530,7 @@ func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter
 	var filteredData []*data.HistoryEntry
 	seenCommands := make(map[string]bool)
 
-	for i := 0; i < numEntries; i++ {
+	for i := range numEntries {
 		if i < len(searchResults) {
 			entry := searchResults[i]
 
@@ -1011,5 +1011,4 @@ func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string)
 	return nil
 }
 
-// TODO: support custom key bindings
 // TODO: make the help page wrap
