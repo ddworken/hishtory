@@ -1065,7 +1065,7 @@ func splitEscaped(query string, separator rune, maxSplit int) []string {
 	runeQuery := []rune(query)
 	isInDoubleQuotedString := false
 	isInSingleQuotedString := false
-	for i := 0; i < len(runeQuery); i++ {
+	for i := range len(runeQuery) {
 		if (maxSplit < 0 || splits < maxSplit) && runeQuery[i] == separator && !isInSingleQuotedString && !isInDoubleQuotedString {
 			if string(token) != "" {
 				tokens = append(tokens, string(token))
@@ -1120,7 +1120,7 @@ func heuristicIgnoreUnclosedQuote(isCurrentlyInQuotedString bool, quoteType rune
 
 func containsUnescaped(query, token string) bool {
 	runeQuery := []rune(query)
-	for i := 0; i < len(runeQuery); i++ {
+	for i := range len(runeQuery) {
 		if runeQuery[i] == '\\' && i+1 < len(runeQuery) {
 			i++
 		} else if string(runeQuery[i:i+len(token)]) == token {

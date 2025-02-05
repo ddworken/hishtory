@@ -214,7 +214,7 @@ func checkError(err error) {
 }
 
 func buildServer() string {
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		wd, err := os.Getwd()
 		if err != nil {
 			panic(fmt.Sprintf("failed to getwd: %v", err))
