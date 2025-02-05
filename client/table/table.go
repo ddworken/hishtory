@@ -5,9 +5,10 @@ package table
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/ddworken/hishtory/client/hctx"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -376,7 +377,8 @@ func RuneWidthWithCache(s string) int {
 			BufferItems: 64,
 		})
 		if err != nil {
-			panic(fmt.Errorf("unexpected error: failed to create cache for rune width: %w", err))
+			hctx.GetLogger().Warnf("unexpected error: failed to create cache for rune width: %v", err)
+			return runewidth.StringWidth(s)
 		}
 		ristrettoStore := ristretto_store.NewRistretto(ristrettoCache)
 
@@ -388,7 +390,49 @@ func RuneWidthWithCache(s string) int {
 	}
 	r, err := RUNE_WIDTH_CACHE.Get(context.Background(), s)
 	if err != nil {
-		panic(fmt.Errorf("unexpected error: failed to query cache for rune width: %w", err))
+		hctx.GetLogger().Warnf("unexpected error: failed to query cache for rune width: %v", err)
+		return runewidth.StringWidth(s)
+	}
+	return r
+}
+
+var RUNE_TRUNCATE_CACHE *cache.LoadableCache[string]
+
+type runeTruncateRequest struct {
+	s    string
+	w    int
+	tail string
+}
+
+func RuneTruncateWithCache(s string, w int, tail string) string {
+	if RUNE_TRUNCATE_CACHE == nil {
+		loadFunction := func(ctx context.Context, key any) (string, []store.Option, error) {
+			r := key.(runeTruncateRequest)
+			t := runewidth.Truncate(r.s, r.w, r.tail)
+			return t, []store.Option{store.WithCost(1), store.WithExpiration(time.Second * 3)}, nil
+		}
+
+		ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
+			NumCounters: 1000,
+			MaxCost:     1000,
+			BufferItems: 64,
+		})
+		if err != nil {
+			hctx.GetLogger().Warnf("unexpected error: failed to create cache for rune truncate: %v", err)
+			return runewidth.Truncate(s, w, tail)
+		}
+		ristrettoStore := ristretto_store.NewRistretto(ristrettoCache)
+
+		cacheManager := cache.NewLoadable[string](
+			loadFunction,
+			cache.New[string](ristrettoStore),
+		)
+		RUNE_TRUNCATE_CACHE = cacheManager
+	}
+	r, err := RUNE_TRUNCATE_CACHE.Get(context.Background(), runeTruncateRequest{s, w, tail})
+	if err != nil {
+		hctx.GetLogger().Warnf("unexpected error: failed to query cache for rune truncate: %v", err)
+		return runewidth.Truncate(s, w, tail)
 	}
 	return r
 }
@@ -512,7 +556,7 @@ func (m Model) headersView() string {
 	s := make([]string, 0, len(m.cols))
 	for _, col := range m.cols {
 		style := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true)
-		renderedCell := style.Render(runewidth.Truncate(col.Title, col.Width, "…"))
+		renderedCell := style.Render(RuneTruncateWithCache(col.Title, col.Width, "…"))
 		s = append(s, m.styles.Header.Render(renderedCell))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Left, s...)
@@ -543,9 +587,9 @@ func (m *Model) renderRow(rowID int) string {
 
 		var renderedCell string
 		if m.columnNeedsScrolling(i) && m.hcursor > 0 {
-			renderedCell = style.Render(runewidth.Truncate(runewidth.TruncateLeft(value, m.hcursor, "…"), m.cols[i].Width, "…"))
+			renderedCell = style.Render(RuneTruncateWithCache(runewidth.TruncateLeft(value, m.hcursor, "…"), m.cols[i].Width, "…"))
 		} else {
-			renderedCell = style.Render(runewidth.Truncate(value, m.cols[i].Width, "…"))
+			renderedCell = style.Render(RuneTruncateWithCache(value, m.cols[i].Width, "…"))
 		}
 		renderedCell = m.styles.renderCell(*m, renderedCell, position)
 		s = append(s, renderedCell)
