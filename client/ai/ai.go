@@ -70,7 +70,7 @@ func augmentQuery(ctx context.Context, query string) string {
 			return query
 		}
 		lines := strings.Split(string(contents), "\n")
-		trimmed := lines[:min(5, len(lines))]
+		trimmed := lines[:min(10, len(lines))]
 		newQuery += strings.Join(trimmed, "\n")
 		newQuery += "\n...```\n\n"
 	}
