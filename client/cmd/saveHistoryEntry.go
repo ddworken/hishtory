@@ -306,10 +306,21 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) error {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
-	if len(dumpRequests) > 0 {
-		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "newclient"))
-		entries, err := lib.Search(ctx, db, "", 0)
+	if len(dumpRequests) == 0 {
+		return nil
+	}
+	if config.IsOffline {
+		return nil
+	}
+	lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "newclient"))
+	chunkSize := 1000
+	offset := 0
+	for {
+		entries, err := lib.SearchWithOffset(ctx, db, "", chunkSize, offset)
 		lib.CheckFatalError(err)
+		if len(entries) == 0 {
+			break
+		}
 		var encEntries []*shared.EncHistoryEntry
 		for _, entry := range entries {
 			enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
@@ -319,12 +330,16 @@ func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest)
 		reqBody, err := json.Marshal(encEntries)
 		lib.CheckFatalError(err)
 		for _, dumpRequest := range dumpRequests {
-			if !config.IsOffline {
-				// TODO: Test whether this fails if the data is extremely large? It may need to be chunked
-				_, err := lib.ApiPost(ctx, "/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
-				lib.CheckFatalError(err)
-			}
+			_, err := lib.ApiPost(ctx, "/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId+"&is_chunk=true", "application/json", reqBody)
+			lib.CheckFatalError(err)
 		}
+	}
+	// Send a final dump response without the `is_chunk` param so that the backend knows we're done
+	reqBody, err := json.Marshal([]*shared.EncHistoryEntry{})
+	lib.CheckFatalError(err)
+	for _, dumpRequest := range dumpRequests {
+		_, err := lib.ApiPost(ctx, "/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId+"&is_chunk=true", "application/json", reqBody)
+		lib.CheckFatalError(err)
 	}
 	return nil
 }
