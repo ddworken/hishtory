@@ -75,6 +75,7 @@ func augmentQuery(ctx context.Context, query string) string {
 		newQuery += "\n...```\n\n"
 	}
 	newQuery += query
+
 	return newQuery
 }
 
