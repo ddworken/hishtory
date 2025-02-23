@@ -105,11 +105,11 @@ jobs:
       with:
         name: goldens-used-${{ matrix.os }}-${{ matrix.test_shard }}
         path: /tmp/goldens-used.txt
-    # - name: Setup tmate session
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
-    #   with:
-    #     limit-access-to-actor: true
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
   check-goldens:
     runs-on: ubuntu-latest
     needs: test
