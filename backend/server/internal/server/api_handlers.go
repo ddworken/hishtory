@@ -142,6 +142,7 @@ func (s *Server) apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 	userId := getRequiredQueryParam(r, "user_id")
 	srcDeviceId := getRequiredQueryParam(r, "source_device_id")
 	requestingDeviceId := getRequiredQueryParam(r, "requesting_device_id")
+	isChunk := getOptionalQueryParam(r, "is_chunk", s.isTestEnvironment) == "true"
 	var entries []*shared.EncHistoryEntry
 	err := json.NewDecoder(r.Body).Decode(&entries)
 	if err != nil {
@@ -159,8 +160,10 @@ func (s *Server) apiSubmitDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = s.db.AddHistoryEntries(r.Context(), entries...)
 	checkGormError(err)
-	err = s.db.DumpRequestDeleteForUserAndDevice(r.Context(), userId, requestingDeviceId)
-	checkGormError(err)
+	if !isChunk {
+		err = s.db.DumpRequestDeleteForUserAndDevice(r.Context(), userId, requestingDeviceId)
+		checkGormError(err)
+	}
 
 	version := getHishtoryVersion(r)
 	remoteIPAddr := getRemoteAddr(r)
