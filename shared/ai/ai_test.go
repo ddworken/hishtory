@@ -13,7 +13,7 @@ import (
 // A basic sanity test that our integration with the OpenAI API is correct and is returning reasonable results (at least for a very basic query)
 func TestLiveOpenAiApi(t *testing.T) {
 	if os.Getenv("OPENAI_API_KEY") == "" {
-		if testutils.IsGithubAction() {
+		if testutils.IsGithubAction() && testutils.GetCurrentGitBranch(t) == testutils.DefaultGitBranchName {
 			t.Fatal("OPENAI_API_KEY is not set, cannot run TestLiveOpenAiApi")
 		} else {
 			t.Skip("Skipping test since OPENAI_API_KEY is not set")

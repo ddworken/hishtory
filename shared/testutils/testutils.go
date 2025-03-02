@@ -425,3 +425,17 @@ func GetOsVersion(t *testing.T) string {
 	version := unix.ByteSliceToString(uts.Release[:])
 	return strings.Split(version, ".")[0]
 }
+
+const DefaultGitBranchName = "master"
+
+func GetCurrentGitBranch(t *testing.T) string {
+	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("failed to get current git branch: %v", err)
+	}
+
+	return strings.TrimSpace(out.String())
+}
