@@ -296,6 +296,7 @@ func configureFish(homedir, binaryPath string, skipConfigModification bool) erro
 	if fishIsConfigured {
 		return nil
 	}
+
 	// Add to fishrc
 	if _, err := exec.LookPath("fish"); err != nil && skipConfigModification {
 		// fish is not installed, so avoid prompting the user to configure fish
@@ -313,15 +314,21 @@ func getFishConfigFragment(homedir string) string {
 }
 
 func isFishConfigured(homedir string) (bool, error) {
-	_, err := os.Stat(path.Join(homedir, ".config/fish/config.fish"))
+	fishConfigPath := ".config/fish/config.fish"
+	_, err := os.Stat(path.Join(homedir, fishConfigPath))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	fishConfig, err := os.ReadFile(path.Join(homedir, ".config/fish/config.fish"))
+
+	fishConfig, err := os.ReadFile(path.Join(homedir, fishConfigPath))
 	if err != nil {
-		return false, fmt.Errorf("failed to read ~/.config/fish/config.fish: %w", err)
+		return false, fmt.Errorf("failed to read %s: %w",
+			fishConfigPath, err)
 	}
-	return strings.Contains(string(fishConfig), getFishConfigFragment(homedir)), nil
+
+	return strings.Contains(string(fishConfig),
+		getFishConfigFragment(homedir),
+	), nil
 }
 
 func getZshConfigPath(homedir string) string {
@@ -338,7 +345,9 @@ func configureZshrc(homedir, binaryPath string, skipConfigModification bool) err
 		}
 		configContents = testConfig
 	}
-	err := os.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
+
+	zshConfigPath := getZshConfigPath(homedir)
+	err := os.WriteFile(zshConfigPath, []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %w", err)
 	}
@@ -350,8 +359,11 @@ func configureZshrc(homedir, binaryPath string, skipConfigModification bool) err
 	if zshIsConfigured {
 		return nil
 	}
+
 	// Add to zshrc
-	return addToShellConfig(getZshRcPath(homedir), getZshConfigFragment(homedir), skipConfigModification)
+	return addToShellConfig(getZshRcPath(homedir),
+		getZshConfigFragment(homedir),
+		skipConfigModification)
 }
 
 func getZshRcPath(homedir string) string {
@@ -374,7 +386,7 @@ func isZshConfigured(homedir string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to read zshrc: %w", err)
 	}
-	return strings.Contains(string(bashrc), getZshConfigFragment(homedir)), nil
+	return strings.Contains(string(zshrc), getZshConfigFragment(homedir)), nil
 }
 
 func getBashConfigPath(homedir string) string {
@@ -391,6 +403,7 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 		}
 		configContents = testConfig
 	}
+
 	err := os.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.sh file: %w", err)
@@ -400,12 +413,14 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 	if err != nil {
 		return fmt.Errorf("failed to check ~/.bashrc: %w", err)
 	}
+
 	if !bashRcIsConfigured {
 		err = addToShellConfig(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir), skipConfigModification)
 		if err != nil {
 			return err
 		}
 	}
+
 	// Check if we need to configure the bash_profile and configure it if so
 	if doesBashProfileNeedConfig(homedir) {
 		_, err := os.Stat(path.Join(homedir, ".bash_profile"))
