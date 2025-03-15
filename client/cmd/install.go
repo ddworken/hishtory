@@ -370,7 +370,7 @@ func isZshConfigured(homedir string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
-	bashrc, err := os.ReadFile(getZshRcPath(homedir))
+	zshrc, err := os.ReadFile(getZshRcPath(homedir))
 	if err != nil {
 		return false, fmt.Errorf("failed to read zshrc: %w", err)
 	}
