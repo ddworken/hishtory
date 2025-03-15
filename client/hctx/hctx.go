@@ -149,14 +149,6 @@ func GetDb(ctx context.Context) *gorm.DB {
 	panic(fmt.Errorf("failed to find db in ctx"))
 }
 
-func GetHome(ctx context.Context) string {
-	v := ctx.Value(HomedirCtxKey)
-	if v != nil {
-		return v.(string)
-	}
-	panic(fmt.Errorf("failed to find homedir in ctx"))
-}
-
 type ClientConfig struct {
 	// The user secret that is used to derive encryption keys for syncing history entries
 	UserSecret string `json:"user_secret" yaml:"-"`
