@@ -175,5 +175,11 @@ func GetHishtoryPath() string {
 	if hishtoryPath != "" {
 		return hishtoryPath
 	}
-	return defaultHishtoryPath
+
+	UserHome, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%s/%s", UserHome, defaultHishtoryPath)
 }

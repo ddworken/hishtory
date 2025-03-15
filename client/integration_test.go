@@ -264,9 +264,7 @@ func testBasicUserFlow(t *testing.T, tester shellTester, onlineStatus OnlineStat
 	}
 
 	// Assert that hishtory is correctly using the dev config.sh
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
-	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
+	dat, err := os.ReadFile(path.Join(data.GetHishtoryPath(), "config.sh"))
 	require.NoError(t, err, "failed to read config.sh")
 	require.NotContains(t, string(dat), "# Background Run", "config.sh is the prod version when it shouldn't be")
 
@@ -865,9 +863,7 @@ CGO_ENABLED=0 `+goBinPath+` build -o /tmp/client
 	userSecret := matches[1]
 
 	// Assert that config.sh isn't the dev version
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
-	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"))
+	dat, err := os.ReadFile(path.Join(data.GetHishtoryPath(), "config.sh"))
 	require.NoError(t, err, "failed to read config.sh")
 	require.NotContains(t, string(dat), "except it doesn't run the save process in the background", "config.sh is the testing version when it shouldn't be")
 
@@ -1255,9 +1251,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 	installHishtory(t, tester, "")
 
 	// Add a HISTTIMEFORMAT to the bashrc
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
-	f, err := os.OpenFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
+	f, err := os.OpenFile(path.Join(data.GetHishtoryPath(), "config.sh"),
 		os.O_APPEND|os.O_WRONLY, 0o644)
 	require.NoError(t, err)
 	defer f.Close()
@@ -1274,9 +1268,7 @@ func TestStripBashTimePrefix(t *testing.T) {
 	}
 
 	// Update it to another complex one
-	homedir, err = os.UserHomeDir()
-	require.NoError(t, err)
-	f, err = os.OpenFile(path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
+	f, err = os.OpenFile(path.Join(data.GetHishtoryPath(), "config.sh"),
 		os.O_APPEND|os.O_WRONLY, 0o644)
 	require.NoError(t, err)
 	defer f.Close()
@@ -1614,9 +1606,7 @@ func clearControlRSearchFromConfig(t testing.TB) {
 	configContents, err := hctx.GetConfigContents()
 	require.NoError(t, err)
 	configContents = []byte(strings.ReplaceAll(string(configContents), "enable_control_r_search", "something-else"))
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
-	err = os.WriteFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH), configContents, 0o644)
+	err = os.WriteFile(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH), configContents, 0o644)
 	require.NoError(t, err)
 }
 

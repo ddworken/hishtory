@@ -161,14 +161,16 @@ func warnIfUnsupportedBashVersion() error {
 }
 
 func install(secretKey string, offline, skipConfigModification bool) error {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %w", err)
-	}
-	err = hctx.MakeHishtoryDir()
+	err := hctx.MakeHishtoryDir()
 	if err != nil {
 		return err
 	}
+
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
 	path, err := installBinary(homedir)
 	if err != nil {
 		return err
@@ -246,7 +248,7 @@ func handleUpgradedFeatures() error {
 func installBinary(homedir string) (string, error) {
 	clientPath, err := exec.LookPath("hishtory")
 	if err != nil {
-		clientPath = path.Join(homedir, data.GetHishtoryPath(), "hishtory")
+		clientPath = path.Join(data.GetHishtoryPath(), "hishtory")
 	}
 	if _, err := os.Stat(clientPath); err == nil {
 		err = syscall.Unlink(clientPath)
@@ -266,7 +268,7 @@ func installBinary(homedir string) (string, error) {
 }
 
 func getFishConfigPath(homedir string) string {
-	return path.Join(homedir, data.GetHishtoryPath(), "config.fish")
+	return path.Join(data.GetHishtoryPath(), "config.fish")
 }
 
 func configureFish(homedir, binaryPath string, skipConfigModification bool) error {
@@ -309,7 +311,7 @@ func configureFish(homedir, binaryPath string, skipConfigModification bool) erro
 }
 
 func getFishConfigFragment(homedir string) string {
-	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getFishConfigPath(homedir) + "\n"
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(data.GetHishtoryPath()) + "\"\nsource " + getFishConfigPath(homedir) + "\n"
 }
 
 func isFishConfigured(homedir string) (bool, error) {
@@ -325,7 +327,7 @@ func isFishConfigured(homedir string) (bool, error) {
 }
 
 func getZshConfigPath(homedir string) string {
-	return path.Join(homedir, data.GetHishtoryPath(), "config.zsh")
+	return path.Join(data.GetHishtoryPath(), "config.zsh")
 }
 
 func configureZshrc(homedir, binaryPath string, skipConfigModification bool) error {
@@ -362,7 +364,7 @@ func getZshRcPath(homedir string) string {
 }
 
 func getZshConfigFragment(homedir string) string {
-	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getZshConfigPath(homedir) + "\n"
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(data.GetHishtoryPath()) + "\"\nsource " + getZshConfigPath(homedir) + "\n"
 }
 
 func isZshConfigured(homedir string) (bool, error) {
@@ -378,7 +380,7 @@ func isZshConfigured(homedir string) (bool, error) {
 }
 
 func getBashConfigPath(homedir string) string {
-	return path.Join(homedir, data.GetHishtoryPath(), "config.sh")
+	return path.Join(data.GetHishtoryPath(), "config.sh")
 }
 
 func configureBashrc(homedir, binaryPath string, skipConfigModification bool) error {
@@ -462,7 +464,7 @@ func convertToRelativePath(path string) string {
 }
 
 func getBashConfigFragment(homedir string) string {
-	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
+	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(data.GetHishtoryPath()) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
 }
 
 func isBashRcConfigured(homedir string) (bool, error) {
@@ -556,8 +558,12 @@ func copyFile(src, dst string) error {
 }
 
 func uninstall(ctx context.Context) error {
-	homedir := hctx.GetHome(ctx)
-	err := stripLines(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	err = stripLines(path.Join(homedir, ".bashrc"), getBashConfigFragment(homedir))
 	if err != nil {
 		return err
 	}
@@ -569,7 +575,7 @@ func uninstall(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
+	err = os.RemoveAll(path.Join(data.GetHishtoryPath()))
 	if err != nil {
 		return err
 	}
