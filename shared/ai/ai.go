@@ -56,7 +56,7 @@ type TestOnlyOverrideAiSuggestionRequest struct {
 
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
-func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
+func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) (suggestions []string, usage OpenAiUsage, err error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
 	}

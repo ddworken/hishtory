@@ -480,14 +480,12 @@ func renderNullableTable(m model, helpText string) string {
 	return baseStyle.Render(m.table.View())
 }
 
-func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellName, query string) ([]table.Row, []*data.HistoryEntry, error) {
+func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellName, query string) (rows []table.Row, entries []*data.HistoryEntry, err error) {
 	suggestions, err := ai.DebouncedGetAiSuggestions(ctx, shellName, strings.TrimPrefix(query, "?"), 5)
 	if err != nil {
 		hctx.GetLogger().Warnf("failed to get AI query suggestions: %v", err)
 		return nil, nil, fmt.Errorf("failed to get AI query suggestions: %w", err)
 	}
-	var rows []table.Row
-	var entries []*data.HistoryEntry
 	for _, suggestion := range suggestions {
 		entry := data.HistoryEntry{
 			LocalUsername:           "OpenAI",
@@ -512,11 +510,11 @@ func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellNa
 	return rows, entries, nil
 }
 
-func TestOnlyGetRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
+func TestOnlyGetRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) (rows []table.Row, entries []*data.HistoryEntry, err error) {
 	return getRows(ctx, columnNames, shellName, defaultFilter, query, numEntries)
 }
 
-func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) ([]table.Row, []*data.HistoryEntry, error) {
+func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter, query string, numEntries int) (rows []table.Row, entries []*data.HistoryEntry, err error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if config.AiCompletion && strings.HasPrefix(query, "?") && len(query) > 1 {
@@ -526,7 +524,6 @@ func getRows(ctx context.Context, columnNames []string, shellName, defaultFilter
 	if err != nil {
 		return nil, nil, err
 	}
-	var rows []table.Row
 	var filteredData []*data.HistoryEntry
 	seenCommands := make(map[string]bool)
 
@@ -573,13 +570,13 @@ func calculateColumnWidths(rows []table.Row, numColumns int) []int {
 	return neededColumnWidth
 }
 
-func getTerminalSize() (int, int, error) {
+func getTerminalSize() (width int, height int, err error) {
 	return term.GetSize(2)
 }
 
 var bigQueryResults []table.Row
 
-func makeTableColumns(ctx context.Context, shellName string, columnNames []string, rows []table.Row) ([]table.Column, error) {
+func makeTableColumns(ctx context.Context, shellName string, columnNames []string, rows []table.Row) (cols []table.Column, err error) {
 	// Handle an initial query with no results
 	if len(rows) == 0 || len(rows[0]) == 0 {
 		allRows, _, err := getRows(ctx, columnNames, shellName, hctx.GetConf(ctx).DefaultFilter, "", 25)
@@ -689,7 +686,7 @@ func getNumEntriesNeeded(ctx context.Context) int {
 	return getTableHeight(ctx) * 5
 }
 
-func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.Model, error) {
+func makeTable(ctx context.Context, shellName string, rows []table.Row) (model table.Model, err error) {
 	config := hctx.GetConf(ctx)
 	columns, err := makeTableColumns(ctx, shellName, config.DisplayedColumns, rows)
 	if err != nil {
@@ -816,7 +813,7 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 	return t, nil
 }
 
-func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
+func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) (err error) {
 	db := hctx.GetDb(ctx)
 	// Delete locally
 	r := db.Model(&data.HistoryEntry{}).Where("device_id = ? AND end_time = ?", entry.DeviceId, entry.EndTime).Delete(&data.HistoryEntry{})
@@ -836,7 +833,7 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 	dr.Messages.Ids = append(dr.Messages.Ids,
 		shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 	)
-	err := lib.SendDeletionRequest(ctx, dr)
+	err = lib.SendDeletionRequest(ctx, dr)
 	if err != nil {
 		return err
 	}
@@ -903,9 +900,7 @@ func configureColorProfile(ctx context.Context) {
 	}
 }
 
-func buildInitialQueryWithSearchEscaping(initialQueryArray []string) (string, error) {
-	var initialQuery string
-
+func buildInitialQueryWithSearchEscaping(initialQueryArray []string) (initialQuery string, err error) {
 	for i, queryChunk := range initialQueryArray {
 		if i != 0 {
 			initialQuery += " "
@@ -938,7 +933,7 @@ func allocateQueryId() int {
 	return LAST_DISPATCHED_QUERY_ID
 }
 
-func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string) error {
+func TuiQuery(ctx context.Context, shellName string, initialQueryArray []string) (err error) {
 	initialQueryArray = splitQueryArray(initialQueryArray)
 	initialQueryWithEscaping, err := buildInitialQueryWithSearchEscaping(initialQueryArray)
 	if err != nil {

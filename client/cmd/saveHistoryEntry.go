@@ -58,7 +58,7 @@ var presaveHistoryEntryCmd = &cobra.Command{
 	},
 }
 
-func maybeSubmitPendingDeletionRequests(ctx context.Context) error {
+func maybeSubmitPendingDeletionRequests(ctx context.Context) (err error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil
@@ -84,7 +84,7 @@ func maybeSubmitPendingDeletionRequests(ctx context.Context) error {
 	return hctx.SetConfig(config)
 }
 
-func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
+func maybeUploadSkippedHistoryEntries(ctx context.Context) (err error) {
 	config := hctx.GetConf(ctx)
 	if !config.HaveMissedUploads {
 		return nil
@@ -226,7 +226,7 @@ func saveHistoryEntry(ctx context.Context) {
 	}
 }
 
-func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetry bool) error {
+func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetry bool) (err error) {
 	db := hctx.GetDb(ctx)
 
 	// Create the query to find the presaved entries
@@ -270,7 +270,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 	}
 
 	// Delete presaved entries locally
-	deletePresavedEntryFunc := func() error {
+	deletePresavedEntryFunc := func() (err error) {
 		res := matchingEntryQuery.Delete(&data.HistoryEntry{})
 		if res.Error != nil {
 			return fmt.Errorf("failed to delete pre-saved history entry (expected command=%#v): %w", entry.Command, res.Error)
@@ -303,7 +303,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 	return nil
 }
 
-func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) error {
+func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) (err error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if len(dumpRequests) > 0 {
@@ -329,7 +329,7 @@ func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest)
 	return nil
 }
 
-func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
+func buildPreArgsHistoryEntry(ctx context.Context) (entryPtr *data.HistoryEntry, err error) {
 	var entry data.HistoryEntry
 
 	// user
@@ -371,7 +371,7 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 	return &entry, nil
 }
 
-func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
+func buildHistoryEntry(ctx context.Context, args []string) (entryPtr *data.HistoryEntry, err error) {
 	if len(args) < 6 {
 		hctx.GetLogger().Warnf("buildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
 		return nil, nil
@@ -410,9 +410,9 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	return entry, nil
 }
 
-func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave bool) (string, error) {
+func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave bool) (cmd string, err error) {
 	if shell == "bash" {
-		cmd, err := getLastCommand(arg)
+		cmd, err = getLastCommand(arg)
 		if cmd == "" {
 			return "", nil
 		}
@@ -433,7 +433,7 @@ func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave boo
 		}
 		return cmd, nil
 	} else if shell == "zsh" || shell == "fish" {
-		cmd := trimTrailingWhitespace(arg)
+		cmd = trimTrailingWhitespace(arg)
 		if strings.HasPrefix(cmd, " ") {
 			// Don't save commands that start with a space
 			return "", nil
@@ -448,7 +448,7 @@ func trimTrailingWhitespace(s string) string {
 	return strings.TrimSuffix(strings.TrimSuffix(s, "\n"), " ")
 }
 
-func buildCustomColumns(ctx context.Context) (data.CustomColumns, error) {
+func buildCustomColumns(ctx context.Context) (cols data.CustomColumns, err error) {
 	ccs := data.CustomColumns{}
 	config := hctx.GetConf(ctx)
 	for _, cc := range config.CustomColumns {
@@ -557,7 +557,7 @@ func buildRegexFromTimeFormat(timeFormat string) string {
 	return expectedRegex
 }
 
-func maybeSkipBashHistTimePrefix(cmdLine string) (string, error) {
+func maybeSkipBashHistTimePrefix(cmdLine string) (str string, err error) {
 	format := os.Getenv("HISTTIMEFORMAT")
 	if format == "" {
 		return cmdLine, nil
@@ -584,7 +584,7 @@ func parseCrossPlatformTime(data string) time.Time {
 	}
 }
 
-func getLastCommand(history string) (string, error) {
+func getLastCommand(history string) (lastCmd string, err error) {
 	if history == "" {
 		return "", nil
 	}
@@ -599,7 +599,7 @@ func getLastCommand(history string) (string, error) {
 	return split[1], nil
 }
 
-func shouldSkipHiddenCommand(ctx context.Context, historyLine string, isPresave bool) (bool, error) {
+func shouldSkipHiddenCommand(ctx context.Context, historyLine string, isPresave bool) (skip bool, err error) {
 	config := hctx.GetConf(ctx)
 	if isPresave && config.LastPreSavedHistoryLine == historyLine {
 		return true, nil
@@ -612,19 +612,19 @@ func shouldSkipHiddenCommand(ctx context.Context, historyLine string, isPresave 
 	} else {
 		config.LastSavedHistoryLine = historyLine
 	}
-	err := hctx.SetConfig(config)
+	err = hctx.SetConfig(config)
 	if err != nil {
 		return false, err
 	}
 	return false, nil
 }
 
-func getCwd(ctx context.Context) (string, string, error) {
-	cwd, err := getCwdWithoutSubstitution()
+func getCwd(ctx context.Context) (cwd string, homedir string, err error) {
+	cwd, err = getCwdWithoutSubstitution()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get cwd for last command: %w", err)
 	}
-	homedir := hctx.GetHome(ctx)
+	homedir = hctx.GetHome(ctx)
 	if cwd == homedir {
 		return "~/", homedir, nil
 	}
@@ -634,8 +634,8 @@ func getCwd(ctx context.Context) (string, string, error) {
 	return cwd, homedir, nil
 }
 
-func getCwdWithoutSubstitution() (string, error) {
-	cwd, err := os.Getwd()
+func getCwdWithoutSubstitution() (cwd string, err error) {
+	cwd, err = os.Getwd()
 	if err == nil {
 		return cwd, nil
 	}

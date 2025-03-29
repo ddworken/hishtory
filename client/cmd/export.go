@@ -25,17 +25,16 @@ var exportJsonCmd = &cobra.Command{
 	},
 }
 
-func structToMap(entry data.HistoryEntry) (map[string]interface{}, error) {
+func structToMap(entry data.HistoryEntry) (m map[string]interface{}, err error) {
 	inrec, err := json.Marshal(entry)
 	if err != nil {
 		return nil, err
 	}
-	var m map[string]interface{}
 	err = json.Unmarshal(inrec, &m)
 	return m, err
 }
 
-func exportToJson(ctx context.Context, w io.Writer) error {
+func exportToJson(ctx context.Context, w io.Writer) (err error) {
 	db := hctx.GetDb(ctx)
 	chunkSize := 1000
 	offset := 0

@@ -47,10 +47,10 @@ var syncingCmd = &cobra.Command{
 	},
 }
 
-func switchToOnline(ctx context.Context) error {
+func switchToOnline(ctx context.Context) (err error) {
 	config := hctx.GetConf(ctx)
 	config.IsOffline = false
-	err := hctx.SetConfig(config)
+	err = hctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to switch device to online due to error while setting config: %w", err)
 	}
@@ -65,10 +65,10 @@ func switchToOnline(ctx context.Context) error {
 	return nil
 }
 
-func switchToOffline(ctx context.Context) error {
+func switchToOffline(ctx context.Context) (err error) {
 	config := hctx.GetConf(ctx)
 	config.IsOffline = true
-	err := hctx.SetConfig(config)
+	err = hctx.SetConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to switch device to offline due to error while setting config: %w", err)
 	}

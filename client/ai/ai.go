@@ -19,7 +19,7 @@ import (
 
 var mostRecentQuery string
 
-func DebouncedGetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
+func DebouncedGetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) (suggestions []string, err error) {
 	mostRecentQuery = query
 	time.Sleep(time.Millisecond * 300)
 	if mostRecentQuery == query {
@@ -78,7 +78,7 @@ func augmentQuery(ctx context.Context, query string) string {
 	return newQuery
 }
 
-func GetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
+func GetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) (suggestions []string, err error) {
 	if os.Getenv("OPENAI_API_KEY") == "" && hctx.GetConf(ctx).AiCompletionEndpoint == ai.DefaultOpenAiEndpoint {
 		return GetAiSuggestionsViaHishtoryApi(ctx, shellName, augmentQuery(ctx, query), numberCompletions)
 	} else {
@@ -107,7 +107,7 @@ func getOsName() string {
 	}
 }
 
-func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
+func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string, numberCompletions int) (suggestions []string, err error) {
 	hctx.GetLogger().Infof("Running OpenAI query for %#v via hishtory server", query)
 	req := ai.AiSuggestionRequest{
 		DeviceId:          hctx.GetConf(ctx).DeviceId,

@@ -64,7 +64,7 @@ func GetLogger() *logrus.Logger {
 	return hishtoryLogger
 }
 
-func MakeHishtoryDir() error {
+func MakeHishtoryDir() (err error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %w", err)
@@ -76,7 +76,7 @@ func MakeHishtoryDir() error {
 	return nil
 }
 
-func OpenLocalSqliteDb() (*gorm.DB, error) {
+func OpenLocalSqliteDb() (dbPtr *gorm.DB, err error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user's home directory: %w", err)
@@ -96,11 +96,11 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	)
 	dbFilePath := path.Join(homedir, data.GetHishtoryPath(), data.DB_PATH)
 	dsn := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL", dbFilePath)
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
+	dbPtr, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{SkipDefaultTransaction: true, Logger: newLogger})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 	}
-	tx, err := db.DB()
+	tx, err := dbPtr.DB()
 	if err != nil {
 		return nil, err
 	}
@@ -108,13 +108,13 @@ func OpenLocalSqliteDb() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.AutoMigrate(&data.HistoryEntry{})
-	db.Exec("PRAGMA journal_mode = WAL")
-	db.Exec("pragma mmap_size = 268435456")
-	db.Exec("CREATE INDEX IF NOT EXISTS start_time_index ON history_entries(start_time)")
-	db.Exec("CREATE INDEX IF NOT EXISTS end_time_index ON history_entries(end_time)")
-	db.Exec("CREATE INDEX IF NOT EXISTS entry_id_index ON history_entries(entry_id)")
-	return db, nil
+	dbPtr.AutoMigrate(&data.HistoryEntry{})
+	dbPtr.Exec("PRAGMA journal_mode = WAL")
+	dbPtr.Exec("pragma mmap_size = 268435456")
+	dbPtr.Exec("CREATE INDEX IF NOT EXISTS start_time_index ON history_entries(start_time)")
+	dbPtr.Exec("CREATE INDEX IF NOT EXISTS end_time_index ON history_entries(end_time)")
+	dbPtr.Exec("CREATE INDEX IF NOT EXISTS entry_id_index ON history_entries(entry_id)")
+	return dbPtr, nil
 }
 
 type hishtoryContextKey string
@@ -240,12 +240,12 @@ type CustomColumnDefinition struct {
 	ColumnCommand string `json:"column_command"`
 }
 
-func GetConfigContents() ([]byte, error) {
+func GetConfigContents() (dat []byte, err error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve homedir: %w", err)
 	}
-	dat, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
+	dat, err = os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
 	if err != nil {
 		files, err := os.ReadDir(path.Join(homedir, data.GetHishtoryPath()))
 		if err != nil {
@@ -269,12 +269,11 @@ func GetDefaultColorScheme() ColorScheme {
 	}
 }
 
-func GetConfig() (ClientConfig, error) {
+func GetConfig() (config ClientConfig, err error) {
 	data, err := GetConfigContents()
 	if err != nil {
 		return ClientConfig{}, err
 	}
-	var config ClientConfig
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return ClientConfig{}, fmt.Errorf("failed to parse config file: %w", err)
@@ -307,7 +306,7 @@ func GetConfig() (ClientConfig, error) {
 	return config, nil
 }
 
-func SetConfig(config *ClientConfig) error {
+func SetConfig(config *ClientConfig) (err error) {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
@@ -333,7 +332,7 @@ func SetConfig(config *ClientConfig) error {
 	return nil
 }
 
-func InitConfig() error {
+func InitConfig() (err error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return err

@@ -48,7 +48,7 @@ var importJsonCmd = &cobra.Command{
 	},
 }
 
-func importFromJson(ctx context.Context) (int, error) {
+func importFromJson(ctx context.Context) (lenEntries int, err error) {
 	// Get the data needed for filling in any missing columns
 	currentUser, err := user.Current()
 	if err != nil {

@@ -51,20 +51,19 @@ var validateBinaryCmd = &cobra.Command{
 	},
 }
 
-func GetDownloadData(ctx context.Context) (shared.UpdateInfo, error) {
+func GetDownloadData(ctx context.Context) (data shared.UpdateInfo, err error) {
 	respBody, err := lib.ApiGet(ctx, "/api/v1/download")
 	if err != nil {
 		return shared.UpdateInfo{}, fmt.Errorf("failed to download update info: %w", err)
 	}
-	var downloadData shared.UpdateInfo
-	err = json.Unmarshal(respBody, &downloadData)
+	err = json.Unmarshal(respBody, &data)
 	if err != nil {
 		return shared.UpdateInfo{}, fmt.Errorf("failed to parse update info: %w", err)
 	}
-	return downloadData, nil
+	return data, nil
 }
 
-func update(ctx context.Context) error {
+func update(ctx context.Context) (err error) {
 	// Download the binary
 	downloadData, err := GetDownloadData(ctx)
 	if err != nil {
@@ -127,7 +126,7 @@ func update(ctx context.Context) error {
 	return nil
 }
 
-func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared.UpdateInfo) error {
+func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared.UpdateInfo) (err error) {
 	// On Mac, binary verification is a bit more complicated since mac binaries are code
 	// signed. To verify a signed binary, we:
 	// 1. Download the unsigned binary
@@ -139,7 +138,6 @@ func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared
 	// Step 1: Download the "unsigned" binary that actually has an ad-hoc signature from the
 	// go compiler.
 	unsignedBinaryPath := binaryPath + "-unsigned"
-	var err error = nil
 	unsignedUrl := ""
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
 		unsignedUrl = downloadData.DarwinAmd64UnsignedUrl
@@ -161,10 +159,10 @@ func verifyBinaryMac(ctx context.Context, binaryPath string, downloadData shared
 	return verifyBinaryAgainstUnsignedBinaryForMac(ctx, binaryPath, unsignedBinaryPath, getTmpClientPath()+".intoto.jsonl", getPossiblyOverriddenVersion(downloadData))
 }
 
-func verifyBinaryAgainstUnsignedBinaryForMac(ctx context.Context, binaryPath, unsignedBinaryPath, attestationPath, version string) error {
+func verifyBinaryAgainstUnsignedBinaryForMac(ctx context.Context, binaryPath, unsignedBinaryPath, attestationPath, version string) (err error) {
 	// Step 2: Create the .nosig files that have no signatures whatsoever
 	noSigSuffix := ".nosig"
-	err := stripCodeSignature(binaryPath, binaryPath+noSigSuffix)
+	err = stripCodeSignature(binaryPath, binaryPath+noSigSuffix)
 	if err != nil {
 		return err
 	}
@@ -183,7 +181,7 @@ func verifyBinaryAgainstUnsignedBinaryForMac(ctx context.Context, binaryPath, un
 	return lib.VerifyBinary(ctx, unsignedBinaryPath, attestationPath, version)
 }
 
-func assertIdenticalBinaries(bin1Path, bin2Path string) error {
+func assertIdenticalBinaries(bin1Path, bin2Path string) (err error) {
 	bin1, err := os.ReadFile(bin1Path)
 	if err != nil {
 		return err
@@ -212,8 +210,8 @@ func assertIdenticalBinaries(bin1Path, bin2Path string) error {
 	return nil
 }
 
-func stripCodeSignature(inPath, outPath string) error {
-	_, err := exec.LookPath("codesign_allocate")
+func stripCodeSignature(inPath, outPath string) (err error) {
+	_, err = exec.LookPath("codesign_allocate")
 	if err != nil {
 		return fmt.Errorf("your system is missing the codesign_allocate tool, so we can't verify the SLSA attestation (you can bypass this by setting `export HISHTORY_DISABLE_SLSA_ATTESTATION=true` in your shell)")
 	}
@@ -229,7 +227,7 @@ func stripCodeSignature(inPath, outPath string) error {
 	return nil
 }
 
-func downloadFiles(updateInfo shared.UpdateInfo) error {
+func downloadFiles(updateInfo shared.UpdateInfo) (err error) {
 	clientUrl := ""
 	clientProvenanceUrl := ""
 	if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
@@ -254,7 +252,7 @@ func downloadFiles(updateInfo shared.UpdateInfo) error {
 		clientUrl = strings.ReplaceAll(clientUrl, updateInfo.Version, forcedVersion)
 		clientProvenanceUrl = strings.ReplaceAll(clientProvenanceUrl, updateInfo.Version, forcedVersion)
 	}
-	err := downloadFile(getTmpClientPath(), clientUrl)
+	err = downloadFile(getTmpClientPath(), clientUrl)
 	if err != nil {
 		return err
 	}
@@ -280,7 +278,7 @@ func getTmpClientPath() string {
 	return path.Join(tmpDir, "hishtory-client")
 }
 
-func downloadFile(filename, url string) error {
+func downloadFile(filename, url string) (err error) {
 	// Support simulating network errors for the purposes of testing
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")

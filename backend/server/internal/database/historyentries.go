@@ -9,9 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func (db *DB) CountApproximateHistoryEntries(ctx context.Context) (int64, error) {
-	var numDbEntries int64
-	err := db.WithContext(ctx).Raw("SELECT reltuples::bigint FROM pg_class WHERE relname = 'enc_history_entries'").Row().Scan(&numDbEntries)
+func (db *DB) CountApproximateHistoryEntries(ctx context.Context) (numDbEntries int64, err error) {
+	err = db.WithContext(ctx).Raw("SELECT reltuples::bigint FROM pg_class WHERE relname = 'enc_history_entries'").Row().Scan(&numDbEntries)
 	if err != nil {
 		return 0, fmt.Errorf("DB Error: %w", err)
 	}
@@ -19,7 +18,7 @@ func (db *DB) CountApproximateHistoryEntries(ctx context.Context) (int64, error)
 	return numDbEntries, nil
 }
 
-func (db *DB) AllHistoryEntriesForUser(ctx context.Context, userID string) ([]*shared.EncHistoryEntry, error) {
+func (db *DB) AllHistoryEntriesForUser(ctx context.Context, userID string) (dedupedEntries []*shared.EncHistoryEntry, err error) {
 	var historyEntries []*shared.EncHistoryEntry
 	tx := db.WithContext(ctx).Where("user_id = ?", userID).Find(&historyEntries)
 
@@ -34,7 +33,7 @@ func (db *DB) AllHistoryEntriesForUser(ctx context.Context, userID string) ([]*s
 	}
 
 	// Convert the map back to a slice
-	dedupedEntries := make([]*shared.EncHistoryEntry, 0, len(uniqueEntries))
+	dedupedEntries = make([]*shared.EncHistoryEntry, 0, len(uniqueEntries))
 	for _, entry := range uniqueEntries {
 		dedupedEntries = append(dedupedEntries, entry)
 	}
@@ -42,8 +41,7 @@ func (db *DB) AllHistoryEntriesForUser(ctx context.Context, userID string) ([]*s
 	return dedupedEntries, nil
 }
 
-func (db *DB) HistoryEntriesForDevice(ctx context.Context, deviceID string, limit int) ([]*shared.EncHistoryEntry, error) {
-	var historyEntries []*shared.EncHistoryEntry
+func (db *DB) HistoryEntriesForDevice(ctx context.Context, deviceID string, limit int) (historyEntries []*shared.EncHistoryEntry, err error) {
 	tx := db.WithContext(ctx).Where("device_id = ? AND read_count < ? AND NOT is_from_same_device", deviceID, limit).Find(&historyEntries)
 
 	if tx.Error != nil {
@@ -53,7 +51,7 @@ func (db *DB) HistoryEntriesForDevice(ctx context.Context, deviceID string, limi
 	return historyEntries, nil
 }
 
-func (db *DB) AddHistoryEntries(ctx context.Context, entries ...*shared.EncHistoryEntry) error {
+func (db *DB) AddHistoryEntries(ctx context.Context, entries ...*shared.EncHistoryEntry) (err error) {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, entry := range entries {
 			resp := tx.Create(&entry)
@@ -65,7 +63,7 @@ func (db *DB) AddHistoryEntries(ctx context.Context, entries ...*shared.EncHisto
 	})
 }
 
-func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, sourceDeviceId string, devices []*Device, entries []*shared.EncHistoryEntry) error {
+func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, sourceDeviceId string, devices []*Device, entries []*shared.EncHistoryEntry) (err error) {
 	chunkSize := 1000
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, device := range devices {
@@ -85,7 +83,7 @@ func (db *DB) AddHistoryEntriesForAllDevices(ctx context.Context, sourceDeviceId
 	})
 }
 
-func (db *DB) Unsafe_DeleteAllHistoryEntries(ctx context.Context) error {
+func (db *DB) Unsafe_DeleteAllHistoryEntries(ctx context.Context) (err error) {
 	tx := db.WithContext(ctx).Exec("DELETE FROM enc_history_entries")
 	if tx.Error != nil {
 		return fmt.Errorf("tx.Error: %w", tx.Error)
@@ -94,6 +92,6 @@ func (db *DB) Unsafe_DeleteAllHistoryEntries(ctx context.Context) error {
 	return nil
 }
 
-func (db *DB) IncrementEntryReadCountsForDevice(ctx context.Context, deviceID string) error {
+func (db *DB) IncrementEntryReadCountsForDevice(ctx context.Context, deviceID string) (err error) {
 	return db.WithContext(ctx).Exec("UPDATE enc_history_entries SET read_count = read_count + 1 WHERE device_id = ?", deviceID).Error
 }

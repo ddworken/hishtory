@@ -166,7 +166,7 @@ func query(ctx context.Context, query string) {
 	lib.CheckFatalError(DisplayResults(ctx, data, numResults))
 }
 
-func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResults int) error {
+func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResults int) (err error) {
 	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
 
@@ -213,7 +213,7 @@ func stringArrayToAnyArray(arr []string) []any {
 	return ret
 }
 
-func displayBannerIfSet(ctx context.Context) error {
+func displayBannerIfSet(ctx context.Context) (err error) {
 	respBody, err := lib.GetBanner(ctx)
 	if lib.IsOfflineError(ctx, err) {
 		return nil

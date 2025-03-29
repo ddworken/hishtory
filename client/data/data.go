@@ -50,7 +50,7 @@ type CustomColumn struct {
 	Val  string `json:"value"`
 }
 
-func (c *CustomColumns) Scan(value any) error {
+func (c *CustomColumns) Scan(value any) (err error) {
 	bytes, ok := value.([]byte)
 	if !ok {
 		return fmt.Errorf("failed to unmarshal CustomColumns value %#v", value)
@@ -59,7 +59,7 @@ func (c *CustomColumns) Scan(value any) error {
 	return json.Unmarshal(bytes, c)
 }
 
-func (c CustomColumns) Value() (driver.Value, error) {
+func (c CustomColumns) Value() (val driver.Value, err error) {
 	return json.Marshal(c)
 }
 
@@ -81,25 +81,25 @@ func EncryptionKey(userSecret string) []byte {
 	return sha256hmac(userSecret, KdfEncryptionKey)
 }
 
-func makeAead(userSecret string) (cipher.AEAD, error) {
+func makeAead(userSecret string) (aead cipher.AEAD, err error) {
 	key := EncryptionKey(userSecret)
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	aead, err := cipher.NewGCM(block)
+	aead, err = cipher.NewGCM(block)
 	if err != nil {
 		return nil, err
 	}
 	return aead, nil
 }
 
-func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, error) {
+func Encrypt(userSecret string, data, additionalData []byte) (ciphertext []byte, nonce []byte, err error) {
 	aead, err := makeAead(userSecret)
 	if err != nil {
 		return []byte{}, []byte{}, fmt.Errorf("failed to make AEAD: %w", err)
 	}
-	nonce := make([]byte, 12)
+	nonce = make([]byte, 12)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return []byte{}, []byte{}, fmt.Errorf("failed to read a nonce: %w", err)
 	}
@@ -113,7 +113,7 @@ func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, er
 	// this issue through a synthetic IV. For now, I haven't prioritized this since the risk here is quite
 	// low and migrating hishtory to support a new and old AEAD scheme would be a bit of a pain. But if
 	// anyone is ever concerned about this or disagrees with this logic, please open a GH issue!
-	ciphertext := aead.Seal(nil, nonce, data, additionalData)
+	ciphertext = aead.Seal(nil, nonce, data, additionalData)
 	_, err = aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
 		return []byte{}, []byte{}, fmt.Errorf("failed to open AEAD: %w", err)
@@ -121,19 +121,19 @@ func Encrypt(userSecret string, data, additionalData []byte) ([]byte, []byte, er
 	return ciphertext, nonce, nil
 }
 
-func Decrypt(userSecret string, data, additionalData, nonce []byte) ([]byte, error) {
+func Decrypt(userSecret string, data, additionalData, nonce []byte) (plaintext []byte, err error) {
 	aead, err := makeAead(userSecret)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to make AEAD: %w", err)
 	}
-	plaintext, err := aead.Open(nil, nonce, data, additionalData)
+	plaintext, err = aead.Open(nil, nonce, data, additionalData)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to decrypt: %w", err)
 	}
 	return plaintext, nil
 }
 
-func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (shared.EncHistoryEntry, error) {
+func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (history shared.EncHistoryEntry, err error) {
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return shared.EncHistoryEntry{}, err
@@ -152,7 +152,7 @@ func EncryptHistoryEntry(userSecret string, entry HistoryEntry) (shared.EncHisto
 	}, nil
 }
 
-func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (HistoryEntry, error) {
+func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (decryptedEntry HistoryEntry, err error) {
 	if entry.UserId != UserId(userSecret) {
 		return HistoryEntry{}, fmt.Errorf("refusing to decrypt history entry with mismatching UserId")
 	}
@@ -160,7 +160,6 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	if err != nil {
 		return HistoryEntry{}, nil
 	}
-	var decryptedEntry HistoryEntry
 	err = json.Unmarshal(plaintext, &decryptedEntry)
 	if err != nil {
 		return HistoryEntry{}, nil
@@ -171,7 +170,7 @@ func DecryptHistoryEntry(userSecret string, entry shared.EncHistoryEntry) (Histo
 	return decryptedEntry, nil
 }
 
-func ValidateHishtoryPath() error {
+func ValidateHishtoryPath() (err error) {
 	hishtoryPath := os.Getenv("HISHTORY_PATH")
 	if strings.HasPrefix(hishtoryPath, "/") {
 		return fmt.Errorf("HISHTORY_PATH must be a relative path")

@@ -85,14 +85,14 @@ type MessageIdentifier struct {
 	EntryId string `json:"entry_id"`
 }
 
-func (m *MessageIdentifiers) Scan(value any) error {
+func (m *MessageIdentifiers) Scan(value any) (err error) {
 	bytes, ok := value.([]byte)
 	if !ok {
 		return fmt.Errorf("failed to unmarshal JSONB value: %v", value)
 	}
 
 	result := MessageIdentifiers{}
-	err := json.Unmarshal(bytes, &result)
+	err = json.Unmarshal(bytes, &result)
 	*m = result
 	return err
 }

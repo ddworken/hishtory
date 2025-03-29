@@ -75,7 +75,7 @@ func TrackUsageData(v bool) Option {
 	}
 }
 
-func NewServer(db *database.DB, options ...Option) *Server {
+func NewServer(db *database.DB, options ...Option) (serverPtr *Server) {
 	srv := Server{db: db}
 	for _, option := range options {
 		option(&srv)
@@ -86,7 +86,7 @@ func NewServer(db *database.DB, options ...Option) *Server {
 	return &srv
 }
 
-func (s *Server) Run(ctx context.Context, addr string) error {
+func (s *Server) Run(ctx context.Context, addr string) (err error) {
 	mux := httptrace.NewServeMux()
 
 	if s.isProductionEnvironment {
@@ -157,7 +157,7 @@ func (s *Server) handleNonCriticalError(err error) {
 	}
 }
 
-func (s *Server) updateUsageData(ctx context.Context, version, remoteAddr, userId, deviceId string, numEntriesHandled int, isQuery bool) error {
+func (s *Server) updateUsageData(ctx context.Context, version, remoteAddr, userId, deviceId string, numEntriesHandled int, isQuery bool) (err error) {
 	if !s.trackUsageData {
 		return nil
 	}

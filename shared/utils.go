@@ -2,7 +2,7 @@ package shared
 
 import "sync"
 
-func ForEach[T any](arr []T, numThreads int, fn func(T) error) error {
+func ForEach[T any](arr []T, numThreads int, fn func(T) error) (err error) {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(arr))
 
