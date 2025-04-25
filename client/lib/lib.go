@@ -221,7 +221,10 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
 		return 0, nil
 	}
-	homedir := hctx.GetHome(ctx)
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return 0, err
+	}
 	inputFiles := []string{
 		filepath.Join(homedir, ".bash_history"),
 		filepath.Join(homedir, ".zsh_history"),

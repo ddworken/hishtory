@@ -58,7 +58,10 @@ func importFromJson(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	homedir := hctx.GetHome(ctx)
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return 0, err
+	}
 
 	// Build the entries
 	lines, err := lib.ReadStdin()

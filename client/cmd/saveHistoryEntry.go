@@ -624,7 +624,11 @@ func getCwd(ctx context.Context) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get cwd for last command: %w", err)
 	}
-	homedir := hctx.GetHome(ctx)
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", err
+	}
+
 	if cwd == homedir {
 		return "~/", homedir, nil
 	}

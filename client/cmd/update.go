@@ -95,10 +95,9 @@ func update(ctx context.Context) error {
 
 	// Unlink the existing binary so we can overwrite it even though it is still running
 	if runtime.GOOS == "linux" {
-		homedir := hctx.GetHome(ctx)
-		err = syscall.Unlink(path.Join(homedir, data.GetHishtoryPath(), "hishtory"))
+		err = syscall.Unlink(path.Join(data.GetHishtoryPath(), "hishtory"))
 		if err != nil {
-			return fmt.Errorf("failed to unlink %s for update: %w", path.Join(homedir, data.GetHishtoryPath(), "hishtory"), err)
+			return fmt.Errorf("failed to unlink %s for update: %w", path.Join(data.GetHishtoryPath(), "hishtory"), err)
 		}
 	}
 
