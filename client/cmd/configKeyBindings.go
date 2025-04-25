@@ -33,6 +33,7 @@ var getKeyBindingsCmd = &cobra.Command{
 		fmt.Println("jump-end-of-input: \t" + strings.Join(config.KeyBindings.JumpEndOfInput, " "))
 		fmt.Println("word-left: \t\t" + strings.Join(config.KeyBindings.WordLeft, " "))
 		fmt.Println("word-right: \t\t" + strings.Join(config.KeyBindings.WordRight, " "))
+		fmt.Println("hide-columns: \t\t" + strings.Join(config.KeyBindings.HideColumns, " "))
 	},
 }
 
@@ -78,6 +79,8 @@ var setKeyBindingsCmd = &cobra.Command{
 			config.KeyBindings.WordLeft = args[1:]
 		case "word-right":
 			config.KeyBindings.WordRight = args[1:]
+		case "hide-columns":
+			config.KeyBindings.HideColumns = args[1:]
 		default:
 			lib.CheckFatalError(fmt.Errorf("unknown action %q, run `hishtory config-get keybindings` to see the list of currently configured key bindings", args[0]))
 		}
