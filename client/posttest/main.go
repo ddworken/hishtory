@@ -142,7 +142,7 @@ func exportMetrics() {
 
 type eventHandler struct{}
 
-func (eventHandler) Event(event testjson.TestEvent, execution *testjson.Execution) error {
+func (eventHandler) Event(event testjson.TestEvent, execution *testjson.Execution) (err error) {
 	testIdentifier := event.Test
 	if event.Action == testjson.ActionFail {
 		fmt.Println("Recorded failure for " + testIdentifier)
@@ -157,6 +157,6 @@ func (eventHandler) Event(event testjson.TestEvent, execution *testjson.Executio
 	return nil
 }
 
-func (eventHandler) Err(text string) error {
+func (eventHandler) Err(text string) (err error) {
 	return fmt.Errorf("unexpected error when parsing test output: %v", text)
 }

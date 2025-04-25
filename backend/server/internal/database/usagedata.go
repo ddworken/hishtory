@@ -17,9 +17,7 @@ type UsageData struct {
 	Version           string    `json:"version"`
 }
 
-func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId string) ([]UsageData, error) {
-	var usageData []UsageData
-
+func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId string) (usageData []UsageData, err error) {
 	tx := db.DB.WithContext(ctx).Where("user_id = ? AND device_id = ?", userId, deviceId).Find(&usageData)
 	if tx.Error != nil {
 		return nil, fmt.Errorf("db.WithContext.Where.Find: %w", tx.Error)
@@ -32,7 +30,7 @@ func (db *DB) UsageDataFindByUserAndDevice(ctx context.Context, userId, deviceId
 	return usageData, nil
 }
 
-func (db *DB) CreateUsageData(ctx context.Context, usageData *UsageData) error {
+func (db *DB) CreateUsageData(ctx context.Context, usageData *UsageData) (err error) {
 	tx := db.DB.WithContext(ctx).Create(usageData)
 	if tx.Error != nil {
 		return fmt.Errorf("db.WithContext.Create: %w", tx.Error)
@@ -42,7 +40,7 @@ func (db *DB) CreateUsageData(ctx context.Context, usageData *UsageData) error {
 }
 
 // UpdateUsageData updates the entry for a given userID/deviceID pair with the lastUsed and lastIP values
-func (db *DB) UpdateUsageData(ctx context.Context, userId, deviceId string, lastUsed time.Time, lastIP string) error {
+func (db *DB) UpdateUsageData(ctx context.Context, userId, deviceId string, lastUsed time.Time, lastIP string) (err error) {
 	tx := db.DB.WithContext(ctx).Model(&UsageData{}).
 		Where("user_id = ? AND device_id = ?", userId, deviceId).
 		Update("last_used", lastUsed).
@@ -55,7 +53,7 @@ func (db *DB) UpdateUsageData(ctx context.Context, userId, deviceId string, last
 	return nil
 }
 
-func (db *DB) UpdateUsageDataForNumEntriesHandled(ctx context.Context, userId, deviceId string, numEntriesHandled int) error {
+func (db *DB) UpdateUsageDataForNumEntriesHandled(ctx context.Context, userId, deviceId string, numEntriesHandled int) (err error) {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET num_entries_handled = COALESCE(num_entries_handled, 0) + ? WHERE user_id = ? AND device_id = ?", numEntriesHandled, userId, deviceId)
 
 	if tx.Error != nil {
@@ -65,7 +63,7 @@ func (db *DB) UpdateUsageDataForNumEntriesHandled(ctx context.Context, userId, d
 	return nil
 }
 
-func (db *DB) UpdateUsageDataClientVersion(ctx context.Context, userID, deviceID, version string) error {
+func (db *DB) UpdateUsageDataClientVersion(ctx context.Context, userID, deviceID, version string) (err error) {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET version = ? WHERE user_id = ? AND device_id = ?", version, userID, deviceID)
 
 	if tx.Error != nil {
@@ -75,7 +73,7 @@ func (db *DB) UpdateUsageDataClientVersion(ctx context.Context, userID, deviceID
 	return nil
 }
 
-func (db *DB) UpdateUsageDataNumberQueries(ctx context.Context, userID, deviceID string) error {
+func (db *DB) UpdateUsageDataNumberQueries(ctx context.Context, userID, deviceID string) (err error) {
 	tx := db.DB.WithContext(ctx).Exec("UPDATE usage_data SET num_queries = COALESCE(num_queries, 0) + 1, last_queried = ? WHERE user_id = ? AND device_id = ?", time.Now(), userID, deviceID)
 
 	if tx.Error != nil {
@@ -112,9 +110,7 @@ const usageDataStatsQuery = `
 	ORDER BY registration_date
 	`
 
-func (db *DB) UsageDataStats(ctx context.Context) ([]*UsageDataStats, error) {
-	var resp []*UsageDataStats
-
+func (db *DB) UsageDataStats(ctx context.Context) (stats []*UsageDataStats, err error) {
 	rows, err := db.DB.WithContext(ctx).Raw(usageDataStatsQuery).Rows()
 	if err != nil {
 		return nil, fmt.Errorf("db.WithContext.Raw.Rows: %w", err)
@@ -138,13 +134,13 @@ func (db *DB) UsageDataStats(ctx context.Context) ([]*UsageDataStats, error) {
 			return nil, fmt.Errorf("rows.Scan: %w", err)
 		}
 
-		resp = append(resp, &usageData)
+		stats = append(stats, &usageData)
 	}
 
-	return resp, nil
+	return stats, nil
 }
 
-func (db *DB) UsageDataTotal(ctx context.Context) (int64, error) {
+func (db *DB) UsageDataTotal(ctx context.Context) (total int64, err error) {
 	type numEntriesProcessed struct {
 		Total int
 	}
@@ -158,8 +154,7 @@ func (db *DB) UsageDataTotal(ctx context.Context) (int64, error) {
 	return int64(nep.Total), nil
 }
 
-func (db *DB) CountActiveInstalls(ctx context.Context, since time.Duration) (int64, error) {
-	var activeInstalls int64
+func (db *DB) CountActiveInstalls(ctx context.Context, since time.Duration) (activeInstalls int64, err error) {
 	tx := db.WithContext(ctx).Model(&UsageData{}).Where("last_used > ?", time.Now().Add(-since)).Count(&activeInstalls)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
@@ -168,8 +163,7 @@ func (db *DB) CountActiveInstalls(ctx context.Context, since time.Duration) (int
 	return activeInstalls, nil
 }
 
-func (db *DB) CountQueryUsers(ctx context.Context, since time.Duration) (int64, error) {
-	var activeQueryUsers int64
+func (db *DB) CountQueryUsers(ctx context.Context, since time.Duration) (activeQueryUsers int64, err error) {
 	tx := db.WithContext(ctx).Model(&UsageData{}).Where("last_queried > ?", time.Now().Add(-since)).Count(&activeQueryUsers)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("tx.Error: %w", tx.Error)
@@ -178,8 +172,7 @@ func (db *DB) CountQueryUsers(ctx context.Context, since time.Duration) (int64, 
 	return activeQueryUsers, nil
 }
 
-func (db *DB) DateOfLastRegistration(ctx context.Context) (string, error) {
-	var lastRegistration string
+func (db *DB) DateOfLastRegistration(ctx context.Context) (lastRegistration string, err error) {
 	row := db.WithContext(ctx).Raw("SELECT to_char(max(registration_date), 'DD Month YYYY HH24:MI') FROM devices").Row()
 	if err := row.Scan(&lastRegistration); err != nil {
 		return "", fmt.Errorf("row.Scan: %w", err)

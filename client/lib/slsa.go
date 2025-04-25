@@ -20,7 +20,7 @@ import (
 
 var errUserAbortUpdate error = errors.New("update cancelled")
 
-func verify(ctx context.Context, provenance []byte, artifactHash, source, branch, versionTag string) error {
+func verify(ctx context.Context, provenance []byte, artifactHash, source, branch, versionTag string) (err error) {
 	provenanceOpts := &options.ProvenanceOpts{
 		ExpectedSourceURI: source,
 		ExpectedBranch:    &branch,
@@ -30,11 +30,11 @@ func verify(ctx context.Context, provenance []byte, artifactHash, source, branch
 		provenanceOpts.ExpectedVersionedTag = &versionTag
 	}
 	builderOpts := &options.BuilderOpts{}
-	_, _, err := verifiers.VerifyArtifact(ctx, provenance, artifactHash, provenanceOpts, builderOpts)
+	_, _, err = verifiers.VerifyArtifact(ctx, provenance, artifactHash, provenanceOpts, builderOpts)
 	return err
 }
 
-func checkForDowngrade(currentVersionS, newVersionS string) error {
+func checkForDowngrade(currentVersionS, newVersionS string) (err error) {
 	currentVersion, err := shared.ParseVersionString(currentVersionS)
 	if err != nil {
 		return fmt.Errorf("failed to parse current version string: %w", err)
@@ -49,7 +49,7 @@ func checkForDowngrade(currentVersionS, newVersionS string) error {
 	return nil
 }
 
-func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag string) error {
+func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag string) (err error) {
 	if os.Getenv("HISHTORY_DISABLE_SLSA_ATTESTATION") == "true" {
 		return nil
 	}
@@ -102,7 +102,7 @@ slsa_status_error_continue_update:
 	return verify(ctx, attestation, hash, "github.com/ddworken/hishtory", "master", versionTag)
 }
 
-func getFileHash(binaryPath string) (string, error) {
+func getFileHash(binaryPath string) (hash string, err error) {
 	binaryFile, err := os.Open(binaryPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read binary for verification purposes: %w", err)
@@ -113,11 +113,11 @@ func getFileHash(binaryPath string) (string, error) {
 	if _, err := io.Copy(hasher, binaryFile); err != nil {
 		return "", fmt.Errorf("failed to hash binary: %w", err)
 	}
-	hash := hex.EncodeToString(hasher.Sum(nil))
+	hash = hex.EncodeToString(hasher.Sum(nil))
 	return hash, nil
 }
 
-func HandleSlsaFailure(srcErr error) error {
+func HandleSlsaFailure(srcErr error) (err error) {
 	if errors.Is(srcErr, errUserAbortUpdate) {
 		return srcErr
 	}

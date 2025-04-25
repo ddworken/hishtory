@@ -26,7 +26,7 @@ type webUiData struct {
 	ColumnNames   []string
 }
 
-func getTableRowsForDisplay(ctx context.Context, searchQuery string) ([][]string, error) {
+func getTableRowsForDisplay(ctx context.Context, searchQuery string) (rows [][]string, err error) {
 	results, err := lib.Search(ctx, hctx.GetDb(ctx), searchQuery, 100)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func getTemplates() *template.Template {
 	return template.Must(template.ParseFS(templateFiles, "templates/*"))
 }
 
-func buildTableRows(ctx context.Context, entries []*data.HistoryEntry) ([][]string, error) {
+func buildTableRows(ctx context.Context, entries []*data.HistoryEntry) (rows [][]string, err error) {
 	columnNames := hctx.GetConf(ctx).DisplayedColumns
 	ret := make([][]string, 0)
 	for _, entry := range entries {

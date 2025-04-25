@@ -143,8 +143,8 @@ var uninstallCmd = &cobra.Command{
 	},
 }
 
-func warnIfUnsupportedBashVersion() error {
-	_, err := exec.LookPath("bash")
+func warnIfUnsupportedBashVersion() (err error) {
+	_, err = exec.LookPath("bash")
 	if err != nil {
 		// bash is not installed, do nothing
 		return nil
@@ -160,7 +160,7 @@ func warnIfUnsupportedBashVersion() error {
 	return nil
 }
 
-func install(secretKey string, offline, skipConfigModification bool) error {
+func install(secretKey string, offline, skipConfigModification bool) (err error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user's home directory: %w", err)
@@ -203,7 +203,7 @@ func install(secretKey string, offline, skipConfigModification bool) error {
 }
 
 // Handles people running `hishtory update` when the DB needs updating.
-func handleDbUpgrades(ctx context.Context) error {
+func handleDbUpgrades(ctx context.Context) (err error) {
 	db := hctx.GetDb(ctx)
 	return lib.RetryingDbFunction(func() error {
 		return db.Exec(`UPDATE history_entries SET entry_id = lower(hex(randomblob(12))) WHERE entry_id IS NULL`).Error
@@ -214,7 +214,7 @@ func handleDbUpgrades(ctx context.Context) error {
 // doesn't support certain config options that we now default to true. This ensures
 // that we can customize the behavior for upgrades while still respecting the option
 // if  someone has it explicitly set.
-func handleUpgradedFeatures() error {
+func handleUpgradedFeatures() (err error) {
 	configContents, err := hctx.GetConfigContents()
 	if err != nil {
 		// No config, so this is a new install and thus there is nothing to do
@@ -243,8 +243,8 @@ func handleUpgradedFeatures() error {
 	return hctx.SetConfig(&config)
 }
 
-func installBinary(homedir string) (string, error) {
-	clientPath, err := exec.LookPath("hishtory")
+func installBinary(homedir string) (clientPath string, err error) {
+	clientPath, err = exec.LookPath("hishtory")
 	if err != nil {
 		clientPath = path.Join(homedir, data.GetHishtoryPath(), "hishtory")
 	}
@@ -265,13 +265,13 @@ func installBinary(homedir string) (string, error) {
 	return clientPath, nil
 }
 
-func getFishConfigPath(homedir string) string {
+func getFishConfigPath(homedir string) (configPath string) {
 	return path.Join(homedir, data.GetHishtoryPath(), "config.fish")
 }
 
-func configureFish(homedir, binaryPath string, skipConfigModification bool) error {
+func configureFish(homedir, binaryPath string, skipConfigModification bool) (err error) {
 	// Check if fish is installed
-	_, err := exec.LookPath("fish")
+	_, err = exec.LookPath("fish")
 	if err != nil {
 		return nil
 	}
@@ -312,8 +312,8 @@ func getFishConfigFragment(homedir string) string {
 	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getFishConfigPath(homedir) + "\n"
 }
 
-func isFishConfigured(homedir string) (bool, error) {
-	_, err := os.Stat(path.Join(homedir, ".config/fish/config.fish"))
+func isFishConfigured(homedir string) (status bool, err error) {
+	_, err = os.Stat(path.Join(homedir, ".config/fish/config.fish"))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
@@ -328,7 +328,7 @@ func getZshConfigPath(homedir string) string {
 	return path.Join(homedir, data.GetHishtoryPath(), "config.zsh")
 }
 
-func configureZshrc(homedir, binaryPath string, skipConfigModification bool) error {
+func configureZshrc(homedir, binaryPath string, skipConfigModification bool) (err error) {
 	// Create the file we're going to source in our zshrc. Do this no matter what in case there are updates to it.
 	configContents := lib.ConfigZshContents
 	if os.Getenv("HISHTORY_TEST") != "" {
@@ -338,7 +338,7 @@ func configureZshrc(homedir, binaryPath string, skipConfigModification bool) err
 		}
 		configContents = testConfig
 	}
-	err := os.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
+	err = os.WriteFile(getZshConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.zsh file: %w", err)
 	}
@@ -365,8 +365,8 @@ func getZshConfigFragment(homedir string) string {
 	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getZshConfigPath(homedir) + "\n"
 }
 
-func isZshConfigured(homedir string) (bool, error) {
-	_, err := os.Stat(getZshRcPath(homedir))
+func isZshConfigured(homedir string) (status bool, err error) {
+	_, err = os.Stat(getZshRcPath(homedir))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
@@ -381,7 +381,7 @@ func getBashConfigPath(homedir string) string {
 	return path.Join(homedir, data.GetHishtoryPath(), "config.sh")
 }
 
-func configureBashrc(homedir, binaryPath string, skipConfigModification bool) error {
+func configureBashrc(homedir, binaryPath string, skipConfigModification bool) (err error) {
 	// Create the file we're going to source in our bashrc. Do this no matter what in case there are updates to it.
 	configContents := lib.ConfigShContents
 	if os.Getenv("HISHTORY_TEST") != "" {
@@ -391,7 +391,7 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 		}
 		configContents = testConfig
 	}
-	err := os.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
+	err = os.WriteFile(getBashConfigPath(homedir), []byte(configContents), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write config.sh file: %w", err)
 	}
@@ -433,7 +433,7 @@ func configureBashrc(homedir, binaryPath string, skipConfigModification bool) er
 	return nil
 }
 
-func addToShellConfig(shellConfigPath, configFragment string, skipConfigModification bool) error {
+func addToShellConfig(shellConfigPath, configFragment string, skipConfigModification bool) (err error) {
 	if skipConfigModification {
 		fmt.Printf("Please edit %q to add:\n\n```\n%s\n```\n\n", convertToRelativePath(shellConfigPath), strings.TrimSpace(configFragment))
 		return nil
@@ -465,8 +465,8 @@ func getBashConfigFragment(homedir string) string {
 	return "\n# Hishtory Config:\nexport PATH=\"$PATH:" + path.Join(homedir, data.GetHishtoryPath()) + "\"\nsource " + getBashConfigPath(homedir) + "\n"
 }
 
-func isBashRcConfigured(homedir string) (bool, error) {
-	_, err := os.Stat(path.Join(homedir, ".bashrc"))
+func isBashRcConfigured(homedir string) (status bool, err error) {
+	_, err = os.Stat(path.Join(homedir, ".bashrc"))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
@@ -491,8 +491,8 @@ func doesBashProfileNeedConfig(homedir string) bool {
 	return false
 }
 
-func isBashProfileConfigured(homedir string) (bool, error) {
-	_, err := os.Stat(path.Join(homedir, ".bash_profile"))
+func isBashProfileConfigured(homedir string) (status bool, err error) {
+	_, err = os.Stat(path.Join(homedir, ".bash_profile"))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
@@ -503,30 +503,30 @@ func isBashProfileConfigured(homedir string) (bool, error) {
 	return strings.Contains(string(bashrc), getBashConfigFragment(homedir)), nil
 }
 
-func tweakConfigForTests(configContents string) (string, error) {
+func tweakConfigForTests(configContents string) (config string, err error) {
 	substitutionCount := 0
 	removedCount := 0
-	ret := ""
+	config = ""
 	split := strings.Split(configContents, "\n")
 	for i, line := range split {
 		if strings.Contains(line, "# Background Run") {
-			ret += strings.ReplaceAll(split[i+1], "# hishtory", "hishtory")
+			config += strings.ReplaceAll(split[i+1], "# hishtory", "hishtory")
 			substitutionCount += 1
 		} else if strings.Contains(line, "# Foreground Run") {
 			removedCount += 1
 			continue
 		} else {
-			ret += line
+			config += line
 		}
-		ret += "\n"
+		config += "\n"
 	}
 	if !(substitutionCount == 2 && removedCount == 2) {
 		return "", fmt.Errorf("failed to find substitution line in configContents=%#v", configContents)
 	}
-	return ret, nil
+	return config, nil
 }
 
-func copyFile(src, dst string) error {
+func copyFile(src, dst string) (err error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -576,8 +576,8 @@ func uninstall(ctx context.Context) error {
 	return nil
 }
 
-func stripLines(filePath, lines string) error {
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+func stripLines(filePath, lines string) (err error) {
+	if _, err = os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
 		// File does not exist, nothing to do
 		return nil
 	}
@@ -601,7 +601,7 @@ func stripLines(filePath, lines string) error {
 	return os.WriteFile(filePath, []byte(ret), 0o644)
 }
 
-func setup(userSecret string, isOffline bool) error {
+func setup(userSecret string, isOffline bool) (err error) {
 	if userSecret == "" {
 		userSecret = uuid.Must(uuid.NewRandom()).String()
 	}
@@ -621,7 +621,7 @@ func setup(userSecret string, isOffline bool) error {
 		config.AiCompletion = false
 	}
 	config.EnablePresaving = true
-	err := hctx.SetConfig(&config)
+	err = hctx.SetConfig(&config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %w", err)
 	}
@@ -643,12 +643,12 @@ func setup(userSecret string, isOffline bool) error {
 	return registerAndBootstrapDevice(hctx.MakeContext(), &config, db, userSecret)
 }
 
-func registerAndBootstrapDevice(ctx context.Context, config *hctx.ClientConfig, db *gorm.DB, userSecret string) error {
+func registerAndBootstrapDevice(ctx context.Context, config *hctx.ClientConfig, db *gorm.DB, userSecret string) (err error) {
 	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
 	if isIntegrationTestDevice() {
 		registerPath += "&is_integration_test_device=true"
 	}
-	_, err := lib.ApiGet(ctx, registerPath)
+	_, err = lib.ApiGet(ctx, registerPath)
 	if err != nil {
 		return fmt.Errorf("failed to register device with backend: %w", err)
 	}

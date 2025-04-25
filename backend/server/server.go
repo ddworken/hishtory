@@ -43,7 +43,7 @@ func getLoggerConfig() logger.Interface {
 	})
 }
 
-func OpenDB() (*database.DB, error) {
+func OpenDB() (dbPtr *database.DB, err error) {
 	if isTestEnvironment() {
 		db, err := database.OpenSQLite("file::memory:?_journal_mode=WAL&cache=shared", &gorm.Config{Logger: getLoggerConfig()})
 		if err != nil {
@@ -70,10 +70,9 @@ func OpenDB() (*database.DB, error) {
 	config := gorm.Config{Logger: getLoggerConfig()}
 
 	fmt.Println("Connecting to DB")
-	var db *database.DB
 	if sqliteDb != "" {
 		var err error
-		db, err = database.OpenSQLite(sqliteDb, &config)
+		dbPtr, err = database.OpenSQLite(sqliteDb, &config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
@@ -84,18 +83,18 @@ func OpenDB() (*database.DB, error) {
 			postgresDb = os.Getenv("HISHTORY_POSTGRES_DB")
 		}
 
-		db, err = database.OpenPostgres(postgresDb, &config)
+		dbPtr, err = database.OpenPostgres(postgresDb, &config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the DB: %w", err)
 		}
 	}
 	if !isProductionEnvironment() {
 		fmt.Println("AutoMigrating DB tables")
-		err := db.AddDatabaseTables()
+		err := dbPtr.AddDatabaseTables()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
 		}
-		err = db.CreateIndices()
+		err = dbPtr.CreateIndices()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create indices: %w", err)
 		}
@@ -103,16 +102,16 @@ func OpenDB() (*database.DB, error) {
 	if os.Getenv("HISHTORY_COMPOSE_TEST") != "" {
 		// Run an extra round of migrations to test the migration code path to prevent issues like #241
 		fmt.Println("AutoMigrating DB tables a second time for test coverage")
-		err := db.AddDatabaseTables()
+		err := dbPtr.AddDatabaseTables()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create underlying DB tables: %w", err)
 		}
-		err = db.CreateIndices()
+		err = dbPtr.CreateIndices()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create indices: %w", err)
 		}
 	}
-	return db, nil
+	return dbPtr, nil
 }
 
 var (
@@ -120,7 +119,7 @@ var (
 	LAST_DEEP_CLEAN     = time.Unix(0, 0)
 )
 
-func cron(ctx context.Context, db *database.DB, stats *statsd.Client) error {
+func cron(ctx context.Context, db *database.DB, stats *statsd.Client) (err error) {
 	// Determine the latest released version of hishtory to serve via the /api/v1/download
 	// endpoint for hishtory updates.
 	if err := release.UpdateReleaseVersion(); err != nil {

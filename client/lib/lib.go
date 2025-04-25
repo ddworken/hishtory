@@ -76,7 +76,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	}
 }
 
-func getCustomColumnValue(ctx context.Context, header string, entry data.HistoryEntry) (string, error) {
+func getCustomColumnValue(ctx context.Context, header string, entry data.HistoryEntry) (val string, err error) {
 	for _, c := range entry.CustomColumns {
 		if strings.EqualFold(c.Name, header) {
 			return c.Val, nil
@@ -91,8 +91,7 @@ func getCustomColumnValue(ctx context.Context, header string, entry data.History
 	return "", fmt.Errorf("failed to find a column matching the column name %#v (is there a typo?)", header)
 }
 
-func BuildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry, commandRenderer func(string) string) ([]string, error) {
-	row := make([]string, 0)
+func BuildTableRow(ctx context.Context, columnNames []string, entry data.HistoryEntry, commandRenderer func(string) string) (row []string, err error) {
 	for _, header := range columnNames {
 		switch header {
 		case "Hostname", "hostname", "hn":
@@ -172,7 +171,7 @@ func isBashWeirdness(cmd string) bool {
 	return BASH_FIRST_COMMAND_BUG_REGEX.MatchString(cmd)
 }
 
-func countLinesInFile(filename string) (int, error) {
+func countLinesInFile(filename string) (count int, err error) {
 	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
 		return 0, nil
 	}
@@ -182,7 +181,7 @@ func countLinesInFile(filename string) (int, error) {
 	}
 	defer file.Close()
 	buf := make([]byte, 32*1024)
-	count := 0
+	count = 0
 	lineSep := []byte{'\n'}
 
 	for {
@@ -199,7 +198,7 @@ func countLinesInFile(filename string) (int, error) {
 	}
 }
 
-func countLinesInFiles(filenames ...string) (int, error) {
+func countLinesInFiles(filenames ...string) (count int, err error) {
 	total := 0
 	for _, f := range filenames {
 		l, err := countLinesInFile(f)
@@ -215,7 +214,7 @@ func countLinesInFiles(filenames ...string) (int, error) {
 // slow, and it is then worth displaying a progress bar.
 const NUM_IMPORTED_ENTRIES_SLOW int = 20_000
 
-func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error) {
+func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (count int, err error) {
 	config := hctx.GetConf(ctx)
 	if config.HaveCompletedInitialImport && !force {
 		// Don't run an import if we already have run one. This avoids importing the same entry multiple times.
@@ -353,7 +352,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 	return numEntriesImported, nil
 }
 
-func ReadStdin() ([]string, error) {
+func ReadStdin() (lines []string, err error) {
 	ret := make([]string, 0)
 	in := bufio.NewReader(os.Stdin)
 	for {
@@ -452,7 +451,7 @@ func GetServerHostname() string {
 	return DefaultServerHostname
 }
 
-func ApiGet(ctx context.Context, path string) ([]byte, error) {
+func ApiGet(ctx context.Context, path string) (resp []byte, err error) {
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
@@ -464,15 +463,15 @@ func ApiGet(ctx context.Context, path string) ([]byte, error) {
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	req.Header.Set("X-Hishtory-Device-Id", hctx.GetConf(ctx).DeviceId)
 	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
-	resp, err := GetHttpClient().Do(req)
+	respPtr, err := GetHttpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET %s%s: %w", GetServerHostname(), path, err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", GetServerHostname(), path, resp.StatusCode)
+	defer respPtr.Body.Close()
+	if respPtr.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to GET %s%s: status_code=%d", GetServerHostname(), path, respPtr.StatusCode)
 	}
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(respPtr.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body from GET %s%s: %w", GetServerHostname(), path, err)
 	}
@@ -481,7 +480,7 @@ func ApiGet(ctx context.Context, path string) ([]byte, error) {
 	return respBody, nil
 }
 
-func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]byte, error) {
+func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) (resp []byte, err error) {
 	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
 		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
 	}
@@ -494,15 +493,15 @@ func ApiPost(ctx context.Context, path, contentType string, reqBody []byte) ([]b
 	req.Header.Set("X-Hishtory-Version", "v0."+Version)
 	req.Header.Set("X-Hishtory-Device-Id", hctx.GetConf(ctx).DeviceId)
 	req.Header.Set("X-Hishtory-User-Id", data.UserId(hctx.GetConf(ctx).UserSecret))
-	resp, err := GetHttpClient().Do(req)
+	respPtr, err := GetHttpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to POST %s: %w", GetServerHostname()+path, err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to POST %s: status_code=%d", GetServerHostname()+path, resp.StatusCode)
+	defer respPtr.Body.Close()
+	if respPtr.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to POST %s: status_code=%d", GetServerHostname()+path, respPtr.StatusCode)
 	}
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(respPtr.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body from POST %s: %w", GetServerHostname()+path, err)
 	}
@@ -549,8 +548,7 @@ func normalizeEntryTimezone(entry data.HistoryEntry) data.HistoryEntry {
 
 const SQLITE_LOCKED_ERR_MSG = "database is locked ("
 
-func RetryingDbFunction(dbFunc func() error) error {
-	var err error = nil
+func RetryingDbFunction(dbFunc func() error) (err error) {
 	i := 0
 	for i = 0; i < 10; i++ {
 		err = dbFunc()
@@ -570,9 +568,7 @@ func RetryingDbFunction(dbFunc func() error) error {
 	return fmt.Errorf("failed to execute DB transaction even with %d retries: %w", i, err)
 }
 
-func RetryingDbFunctionWithResult[T any](dbFunc func() (T, error)) (T, error) {
-	var t T
-	var err error = nil
+func RetryingDbFunctionWithResult[T any](dbFunc func() (T, error)) (t T, err error) {
 	i := 0
 	for i = 0; i < 10; i++ {
 		t, err = dbFunc()
@@ -589,14 +585,14 @@ func RetryingDbFunctionWithResult[T any](dbFunc func() (T, error)) (T, error) {
 	return t, fmt.Errorf("failed to execute DB transaction even with %d retries: %w", i, err)
 }
 
-func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
+func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) (err error) {
 	entry = normalizeEntryTimezone(entry)
 	return RetryingDbFunction(func() error {
 		return db.Create(entry).Error
 	})
 }
 
-func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
+func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) (jsonValue []byte, err error) {
 	var encEntries []shared.EncHistoryEntry
 	for _, entry := range entries {
 		encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
@@ -606,14 +602,14 @@ func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) 
 		encEntry.DeviceId = config.DeviceId
 		encEntries = append(encEntries, encEntry)
 	}
-	jsonValue, err := json.Marshal(encEntries)
+	jsonValue, err = json.Marshal(encEntries)
 	if err != nil {
 		return jsonValue, fmt.Errorf("failed to marshal encrypted history entry: %w", err)
 	}
 	return jsonValue, nil
 }
 
-func Reupload(ctx context.Context) error {
+func Reupload(ctx context.Context) (err error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil
@@ -673,7 +669,7 @@ func Reupload(ctx context.Context) error {
 	}
 }
 
-func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string) error {
+func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string) (err error) {
 	db := hctx.GetDb(ctx)
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
@@ -701,7 +697,7 @@ func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string
 	return ProcessDeletionRequests(ctx)
 }
 
-func ProcessDeletionRequests(ctx context.Context) error {
+func ProcessDeletionRequests(ctx context.Context) (err error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil
@@ -721,7 +717,7 @@ func ProcessDeletionRequests(ctx context.Context) error {
 	return HandleDeletionRequests(ctx, deletionRequests)
 }
 
-func HandleDeletionRequests(ctx context.Context, deletionRequests []*shared.DeletionRequest) error {
+func HandleDeletionRequests(ctx context.Context, deletionRequests []*shared.DeletionRequest) (err error) {
 	db := hctx.GetDb(ctx)
 	for _, request := range deletionRequests {
 		for _, entry := range request.Messages.Ids {
@@ -739,7 +735,7 @@ func HandleDeletionRequests(ctx context.Context, deletionRequests []*shared.Dele
 	return nil
 }
 
-func GetBanner(ctx context.Context) ([]byte, error) {
+func GetBanner(ctx context.Context) (resp []byte, err error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return []byte{}, nil
@@ -771,7 +767,7 @@ func where(tx *gorm.DB, s string, args ...any) *gorm.DB {
 	return tx.Where(s, trimmedArgs...)
 }
 
-func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (*gorm.DB, error) {
+func MakeWhereQueryFromSearch(ctx context.Context, db *gorm.DB, query string) (dbPtr *gorm.DB, err error) {
 	tokens := tokenize(query)
 	tx := db.Model(&data.HistoryEntry{}).WithContext(ctx).Where("true")
 	for _, token := range tokens {
@@ -830,7 +826,7 @@ func ClearSearchCache(ctx context.Context) error {
 	return SEARCH_CACHE.Clear(ctx)
 }
 
-func SearchWithCache(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
+func SearchWithCache(ctx context.Context, db *gorm.DB, query string, limit int) (entries []*data.HistoryEntry, err error) {
 	if SEARCH_CACHE == nil {
 		loadFunction := func(ctx context.Context, key any) (*searchResult, []store.Option, error) {
 			sq := key.(searchQuery)
@@ -861,17 +857,17 @@ func SearchWithCache(ctx context.Context, db *gorm.DB, query string, limit int) 
 	return res.results, res.err
 }
 
-func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
+func Search(ctx context.Context, db *gorm.DB, query string, limit int) (entries []*data.HistoryEntry, err error) {
 	return SearchWithOffset(ctx, db, query, limit, 0)
 }
 
-func SearchWithOffset(ctx context.Context, db *gorm.DB, query string, limit, offset int) ([]*data.HistoryEntry, error) {
+func SearchWithOffset(ctx context.Context, db *gorm.DB, query string, limit, offset int) (entries []*data.HistoryEntry, err error) {
 	return retryingSearch(ctx, db, query, limit, offset, 0)
 }
 
 const SEARCH_RETRY_COUNT = 3
 
-func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offset, currentRetryNum int) ([]*data.HistoryEntry, error) {
+func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offset, currentRetryNum int) (entries []*data.HistoryEntry, err error) {
 	if ctx == nil && query != "" {
 		return nil, fmt.Errorf("lib.Search called with a nil context and a non-empty query (this should never happen)")
 	}
@@ -907,28 +903,28 @@ func retryingSearch(ctx context.Context, db *gorm.DB, query string, limit, offse
 
 var SUPPORTED_DEFAULT_COLUMNS = []string{"command", "hostname", "current_working_directory"}
 
-func parseNonAtomizedToken(ctx context.Context, token string) (string, []any, error) {
+func parseNonAtomizedToken(ctx context.Context, token string) (query string, args []any, err error) {
 	wildcardedToken := "%" + unescape(token) + "%"
-	query := "(false "
-	args := make([]any, 0)
+	queryStr := "(false "
+	argsStr := make([]any, 0)
 	for _, column := range hctx.GetConf(ctx).DefaultSearchColumns {
 		if slices.Contains(SUPPORTED_DEFAULT_COLUMNS, column) {
-			query += "OR " + column + " LIKE ? "
-			args = append(args, wildcardedToken)
+			queryStr += "OR " + column + " LIKE ? "
+			argsStr = append(argsStr, wildcardedToken)
 		} else {
 			q, a, err := buildCustomColumnSearchQuery(ctx, column, unescape(token))
 			if err != nil {
 				return "", nil, err
 			}
-			query += "OR " + q + " "
-			args = append(args, a...)
+			queryStr += "OR " + q + " "
+			argsStr = append(argsStr, a...)
 		}
 	}
-	query += ")"
-	return query, args, nil
+	queryStr += ")"
+	return queryStr, argsStr, nil
 }
 
-func parseAtomizedToken(ctx context.Context, token string) (string, any, any, error) {
+func parseAtomizedToken(ctx context.Context, token string) (query string, args any, args2 any, err error) {
 	splitToken := splitEscaped(token, ':', 2)
 	if len(splitToken) != 2 {
 		return "", nil, nil, fmt.Errorf("search query contains malformed search atom '%s'", token)
@@ -977,18 +973,18 @@ func parseAtomizedToken(ctx context.Context, token string) (string, any, any, er
 	case "command":
 		return "(instr(command, ?) > 0)", val, nil, nil
 	default:
-		q, args, err := buildCustomColumnSearchQuery(ctx, field, val)
+		query, args, err := buildCustomColumnSearchQuery(ctx, field, val)
 		if err != nil {
 			return "", nil, nil, err
 		}
 		if len(args) != 2 {
 			return "", nil, nil, fmt.Errorf("custom column search query returned an unexpected number of args: %d", len(args))
 		}
-		return q, args[0], args[1], nil
+		return query, args[0], args[1], nil
 	}
 }
 
-func buildCustomColumnSearchQuery(ctx context.Context, columnName, columnVal string) (string, []any, error) {
+func buildCustomColumnSearchQuery(ctx context.Context, columnName, columnVal string) (queryStr string, column []any, err error) {
 	knownCustomColumns, err := GetAllCustomColumnNames(ctx)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to get list of known custom columns: %w", err)
@@ -1000,7 +996,7 @@ func buildCustomColumnSearchQuery(ctx context.Context, columnName, columnVal str
 	return "EXISTS (SELECT 1 FROM json_each(custom_columns) WHERE json_extract(value, '$.name') = ? and instr(json_extract(value, '$.value'), ?) > 0)", []any{columnName, columnVal}, nil
 }
 
-func GetAllCustomColumnNames(ctx context.Context) ([]string, error) {
+func GetAllCustomColumnNames(ctx context.Context) (names []string, err error) {
 	knownCustomColumns := make([]string, 0)
 	// Get custom columns that are defined on this machine
 	conf := hctx.GetConf(ctx)
@@ -1008,7 +1004,7 @@ func GetAllCustomColumnNames(ctx context.Context) ([]string, error) {
 		knownCustomColumns = append(knownCustomColumns, c.ColumnName)
 	}
 	// Also get all ones that are in the DB
-	names, err := getAllCustomColumnNamesFromDb(ctx)
+	names, err = getAllCustomColumnNamesFromDb(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get custom column names from the DB: %w", err)
 	}
@@ -1018,7 +1014,7 @@ func GetAllCustomColumnNames(ctx context.Context) ([]string, error) {
 
 var cachedCustomColumnNames []string
 
-func getAllCustomColumnNamesFromDb(ctx context.Context) ([]string, error) {
+func getAllCustomColumnNamesFromDb(ctx context.Context) (names []string, err error) {
 	if len(cachedCustomColumnNames) > 0 {
 		// Note: We memoize this function since it is called repeatedly in the TUI and querying the
 		// entire DB for every updated search is quite inefficient. This is reasonable since the set
@@ -1144,7 +1140,7 @@ func unescape(query string) string {
 	return string(newQuery)
 }
 
-func SendDeletionRequest(ctx context.Context, deletionRequest shared.DeletionRequest) error {
+func SendDeletionRequest(ctx context.Context, deletionRequest shared.DeletionRequest) (err error) {
 	data, err := json.Marshal(deletionRequest)
 	if err != nil {
 		return err
@@ -1156,7 +1152,7 @@ func SendDeletionRequest(ctx context.Context, deletionRequest shared.DeletionReq
 	return nil
 }
 
-func CountStoredEntries(db *gorm.DB) (int64, error) {
+func CountStoredEntries(db *gorm.DB) (count int64, err error) {
 	return RetryingDbFunctionWithResult(func() (int64, error) {
 		var count int64
 		return count, db.Model(&data.HistoryEntry{}).Count(&count).Error

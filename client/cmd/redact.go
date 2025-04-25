@@ -46,7 +46,7 @@ var redactCmd = &cobra.Command{
 	},
 }
 
-func redact(ctx context.Context, query string, skipUserConfirmation, skipOnlineRedaction bool) error {
+func redact(ctx context.Context, query string, skipUserConfirmation, skipOnlineRedaction bool) (err error) {
 	tx, err := lib.MakeWhereQueryFromSearch(ctx, hctx.GetDb(ctx), query)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func redact(ctx context.Context, query string, skipUserConfirmation, skipOnlineR
 	return nil
 }
 
-func deleteOnRemoteInstances(ctx context.Context, historyEntries []*data.HistoryEntry) error {
+func deleteOnRemoteInstances(ctx context.Context, historyEntries []*data.HistoryEntry) (err error) {
 	config := hctx.GetConf(ctx)
 	if config.IsOffline {
 		return nil

@@ -42,23 +42,23 @@ func (b bashTester) RunInteractiveShell(t testing.TB, script string) string {
 	return out
 }
 
-func (b bashTester) RunInteractiveShellRelaxed(t testing.TB, script string) (string, error) {
+func (b bashTester) RunInteractiveShellRelaxed(t testing.TB, script string) (outStr string, err error) {
 	cmd := exec.Command("bash", "-i")
 	cmd.Stdin = strings.NewReader(script)
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("unexpected error when running commands, out=%#v, err=%#v: %w", stdout.String(), stderr.String(), err)
 	}
-	outStr := stdout.String()
+	outStr = stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error", "Ran command, but hishtory had a fatal error!")
 	return outStr, nil
 }
 
-func (b bashTester) RunInteractiveShellBackground(t testing.TB, script string) error {
+func (b bashTester) RunInteractiveShellBackground(t testing.TB, script string) (err error) {
 	cmd := exec.Command("bash", "-i")
 	// SetSid: true is required to prevent SIGTTIN signal killing the entire test
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -74,29 +74,29 @@ func (b bashTester) ShellName() string {
 
 type zshTester struct{}
 
-func (z zshTester) RunInteractiveShell(t testing.TB, script string) string {
+func (z zshTester) RunInteractiveShell(t testing.TB, script string) (res string) {
 	res, err := z.RunInteractiveShellRelaxed(t, "set -eo pipefail\n"+script)
 	require.NoError(t, err)
 	return res
 }
 
-func (z zshTester) RunInteractiveShellRelaxed(t testing.TB, script string) (string, error) {
+func (z zshTester) RunInteractiveShellRelaxed(t testing.TB, script string) (outStr string, err error) {
 	cmd := exec.Command("zsh", "-is")
 	cmd.Stdin = strings.NewReader(script)
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return stdout.String(), fmt.Errorf("unexpected error when running command=%#v, out=%#v, err=%#v: %w", script, stdout.String(), stderr.String(), err)
 	}
-	outStr := stdout.String()
+	outStr = stdout.String()
 	require.NotContains(t, outStr, "hishtory fatal error")
 	return outStr, nil
 }
 
-func (z zshTester) RunInteractiveShellBackground(t testing.TB, script string) error {
+func (z zshTester) RunInteractiveShellBackground(t testing.TB, script string) (err error) {
 	cmd := exec.Command("zsh", "-is")
 	cmd.Stdin = strings.NewReader(script)
 	cmd.Stdout = nil

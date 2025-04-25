@@ -19,7 +19,7 @@ type releaseInfo struct {
 
 const releaseURL = "https://api.github.com/repos/ddworken/hishtory/releases/latest"
 
-func UpdateReleaseVersion() error {
+func UpdateReleaseVersion() (err error) {
 	resp, err := http.Get(releaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to get latest release version: %w", err)
@@ -85,7 +85,7 @@ func decrementVersionIfInvalid(initialVersion string) string {
 	return initialVersion
 }
 
-func assertValidUpdate(updateInfo shared.UpdateInfo) error {
+func assertValidUpdate(updateInfo shared.UpdateInfo) (err error) {
 	urls := []string{
 		updateInfo.LinuxAmd64Url,
 		updateInfo.LinuxAmd64AttestationUrl,
@@ -114,7 +114,7 @@ func assertValidUpdate(updateInfo shared.UpdateInfo) error {
 	return nil
 }
 
-func decrementVersion(version string) (string, error) {
+func decrementVersion(version string) (parsedVersion string, err error) {
 	if version == "UNKNOWN" {
 		return "", fmt.Errorf("cannot decrement UNKNOWN")
 	}
