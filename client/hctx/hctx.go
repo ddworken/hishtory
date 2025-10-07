@@ -201,6 +201,8 @@ type ClientConfig struct {
 	IsOffline bool `json:"is_offline"`
 	// Whether duplicate commands should be displayed
 	FilterDuplicateCommands bool `json:"filter_duplicate_commands"`
+	// Whether to filter out commands that start with whitespace (space, tab, etc.)
+	FilterWhitespacePrefix bool `json:"filter_whitespace_prefix,omitempty"`
 	// A format string for the timestamp
 	TimestampFormat string `json:"timestamp_format"`
 	// Beta mode, enables unspecified additional beta features

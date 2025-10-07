@@ -159,8 +159,10 @@ func presaveHistoryEntry(ctx context.Context) {
 	cmd, err := extractCommandFromArg(ctx, shellName, os.Args[3] /* isPresave = */, true)
 	lib.CheckFatalError(err)
 	entry.Command = cmd
-	if strings.HasPrefix(entry.Command, " ") || strings.TrimSpace(entry.Command) == "" {
-		// Don't save commands that start with a space
+	if strings.TrimSpace(entry.Command) == "" {
+		return
+	}
+	if config.FilterWhitespacePrefix && len(entry.Command) > 0 && (entry.Command[0] == ' ' || entry.Command[0] == '\t') {
 		return
 	}
 	entry.StartTime = parseCrossPlatformTime(os.Args[4])
@@ -411,6 +413,7 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 }
 
 func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave bool) (string, error) {
+	config := hctx.GetConf(ctx)
 	if shell == "bash" {
 		cmd, err := getLastCommand(arg)
 		if cmd == "" {
@@ -423,19 +426,20 @@ func extractCommandFromArg(ctx context.Context, shell, arg string, isPresave boo
 		if err != nil {
 			return "", fmt.Errorf("failed to check if command was hidden: %w", err)
 		}
-		if shouldBeSkipped || strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
+		if shouldBeSkipped {
 			return "", nil
 		}
 		cmd, err = maybeSkipBashHistTimePrefix(cmd)
 		if err != nil {
 			return "", err
 		}
+		if config.FilterWhitespacePrefix && len(cmd) > 0 && (cmd[0] == ' ' || cmd[0] == '\t') {
+			return "", nil
+		}
 		return cmd, nil
 	} else if shell == "zsh" || shell == "fish" {
 		cmd := trimTrailingWhitespace(arg)
-		if strings.HasPrefix(cmd, " ") {
-			// Don't save commands that start with a space
+		if config.FilterWhitespacePrefix && len(cmd) > 0 && (cmd[0] == ' ' || cmd[0] == '\t') {
 			return "", nil
 		}
 		return cmd, nil

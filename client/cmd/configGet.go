@@ -63,6 +63,16 @@ var getFilterDuplicateCommandsCmd = &cobra.Command{
 	},
 }
 
+var getFilterWhitespacePrefixCmd = &cobra.Command{
+	Use:   "filter-whitespace-prefix",
+	Short: "Whether hishtory filters out commands that start with whitespace",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.FilterWhitespacePrefix)
+	},
+}
+
 var getEnableAiCompletion = &cobra.Command{
 	Use:   "ai-completion",
 	Short: "Enable AI completion for searches starting with '?'",
@@ -185,6 +195,7 @@ func init() {
 	rootCmd.AddCommand(configGetCmd)
 	configGetCmd.AddCommand(getEnableControlRCmd)
 	configGetCmd.AddCommand(getFilterDuplicateCommandsCmd)
+	configGetCmd.AddCommand(getFilterWhitespacePrefixCmd)
 	configGetCmd.AddCommand(getDisplayedColumnsCmd)
 	configGetCmd.AddCommand(getTimestampFormatCmd)
 	configGetCmd.AddCommand(getCustomColumnsCmd)
