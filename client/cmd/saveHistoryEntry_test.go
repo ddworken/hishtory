@@ -228,3 +228,81 @@ func TestMaybeSkipBashHistTimePrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestIsRedactCommand(t *testing.T) {
+	testcases := []struct {
+		command  string
+		expected bool
+	}{
+		// Basic redact commands
+		{"hishtory redact foo", true},
+		{"hishtory redact sensitive-term", true},
+		{"hishtory redact", true},
+		{"hishtory delete foo", true},
+		{"hishtory delete sensitive-term", true},
+
+		// With environment variables
+		{"HISHTORY_REDACT_FORCE=1 hishtory redact foo", true},
+		{"HISHTORY_REDACT_FORCE=true hishtory redact bar", true},
+		{"FOO=bar BAZ=qux hishtory redact test", true},
+		{"FOO=bar hishtory delete test", true},
+
+		// With leading/trailing whitespace
+		{"  hishtory redact foo  ", true},
+		{"  HISHTORY_REDACT_FORCE=1 hishtory redact foo  ", true},
+		{" hishtory delete bar ", true},
+
+		// Non-redact commands
+		{"hishtory query foo", false},
+		{"hishtory export", false},
+		{"hishtory status", false},
+		{"echo hishtory redact", false},
+		{"ls /tmp", false},
+		{"hishtory", false},
+		{"FOO=bar echo test", false},
+
+		// Edge cases
+		{"hishtoryredact", false},  // No space
+		{"hishtory  redact", true}, // Multiple spaces
+		{"", false},
+		{"   ", false},
+	}
+
+	for _, tc := range testcases {
+		actual := isRedactCommand(tc.command)
+		if actual != tc.expected {
+			t.Fatalf("isRedactCommand(%#v) returned %v (expected=%v)", tc.command, actual, tc.expected)
+		}
+	}
+}
+
+func TestBuildHistoryEntrySkipsRedactCommands(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	defer testutils.RunTestServer()()
+	require.NoError(t, setup("", false))
+
+	// Test that redact commands are not saved
+	testcases := []string{
+		"hishtory redact foo",
+		"hishtory delete bar",
+		"HISHTORY_REDACT_FORCE=1 hishtory redact sensitive",
+	}
+
+	for _, cmd := range testcases {
+		entry, err := buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "0", cmd, "1641774958"})
+		require.NoError(t, err)
+		if entry != nil {
+			t.Fatalf("expected redact command %#v to not be saved (entry should be nil), but got: %v", cmd, entry)
+		}
+	}
+
+	// Test that non-redact commands are still saved
+	entry, err := buildHistoryEntry(hctx.MakeContext(), []string{"unused", "saveHistoryEntry", "zsh", "0", "hishtory query foo", "1641774958"})
+	require.NoError(t, err)
+	if entry == nil {
+		t.Fatalf("expected non-redact command to be saved, but entry was nil")
+	}
+	if entry.Command != "hishtory query foo" {
+		t.Fatalf("expected command to be 'hishtory query foo', got: %#v", entry.Command)
+	}
+}

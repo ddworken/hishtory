@@ -163,6 +163,12 @@ func presaveHistoryEntry(ctx context.Context) {
 		// Don't save commands that start with a space
 		return
 	}
+
+	// Skip recording redact commands to avoid saving sensitive search terms
+	if isRedactCommand(entry.Command) {
+		return
+	}
+
 	entry.StartTime = parseCrossPlatformTime(os.Args[4])
 	entry.EndTime = time.Unix(0, 0).UTC()
 
@@ -371,6 +377,41 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 	return &entry, nil
 }
 
+func isRedactCommand(command string) bool {
+	// Trim leading and trailing whitespace
+	cmd := strings.TrimSpace(command)
+
+	// Strip leading environment variable assignments (e.g., "HISHTORY_REDACT_FORCE=1 hishtory redact")
+	// Environment variables are in the format KEY=VALUE and separated by spaces
+	for {
+		// Find the first space
+		spaceIdx := strings.Index(cmd, " ")
+		if spaceIdx == -1 {
+			break
+		}
+
+		// Check if the part before the space contains an equals sign (indicating an env var)
+		firstPart := cmd[:spaceIdx]
+		if strings.Contains(firstPart, "=") {
+			// This looks like an environment variable, skip it
+			cmd = strings.TrimSpace(cmd[spaceIdx+1:])
+		} else {
+			// Not an environment variable, we've found the actual command
+			break
+		}
+	}
+
+	// Split the command into words to check if it's a redact command
+	// This handles cases with multiple spaces between words
+	words := strings.Fields(cmd)
+	if len(words) < 2 {
+		return false
+	}
+
+	// Check if the command is "hishtory redact" or "hishtory delete"
+	return words[0] == "hishtory" && (words[1] == "redact" || words[1] == "delete")
+}
+
 func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
 		hctx.GetLogger().Warnf("buildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
@@ -404,6 +445,11 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	entry.Command = cmd
 	if strings.TrimSpace(entry.Command) == "" {
 		// Skip recording empty commands where the user just hits enter in their terminal
+		return nil, nil
+	}
+
+	// Skip recording redact commands to avoid saving sensitive search terms
+	if isRedactCommand(entry.Command) {
 		return nil, nil
 	}
 
