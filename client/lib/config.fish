@@ -1,6 +1,6 @@
 # For detecting color rendering support for this terminal, see #134
-hishtory getColorSupport
-export _hishtory_tui_color=$status
+set -gx _hishtory_tui_color (hishtory getColorSupport; echo $status)
+
 
 function _hishtory_post_exec --on-event fish_preexec 
     # Runs after <ENTER>, but before the command is executed
