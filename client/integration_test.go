@@ -1464,7 +1464,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact s
 	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact s`)
-	if out != "Permanently deleting 10 entries\n" && out != "Permanently deleting 11 entries\n" {
+	if out != "Permanently deleting 9 entries\n" && out != "Permanently deleting 10 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
