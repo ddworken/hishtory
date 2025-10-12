@@ -21,17 +21,14 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    tmpfs:
-      - /var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d hishtory"]
+      test: pg_isready -U postgres
       interval: 10s
-      timeout: 10s
-      start_period: 30s
-      retries: 5
+      timeout: 3s
   hishtory:
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - hishtory
     build:
