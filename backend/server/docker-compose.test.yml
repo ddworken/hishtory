@@ -1,0 +1,6 @@
+# Override for testing - uses tmpfs instead of persistent volume
+# to avoid permission issues in GitHub Actions
+services:
+  postgres:
+    volumes:
+      - /var/lib/postgresql/data  # Override with anonymous volume
