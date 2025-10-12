@@ -1,8 +1,8 @@
-bash-5.2$  source /Users/runner/.bashrc
-bash-5.2$ echo foo
+bash-5.3$  source /Users/runner/.bashrc
+bash-5.3$ echo foo
 foo
-bash-5.2$ hishtory
+bash-5.3$ hishtory
 bash: hishtory: command not found
-bash-5.2$ echo bar
+bash-5.3$ echo bar
 bar
-bash-5.2$
+bash-5.3$
