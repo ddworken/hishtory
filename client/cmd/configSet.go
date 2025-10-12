@@ -125,6 +125,23 @@ var setPresavingCmd = &cobra.Command{
 	},
 }
 
+var setFilterWhitespacePrefixCmd = &cobra.Command{
+	Use:       "filter-whitespace-prefix",
+	Short:     "Whether to filter out commands that start with whitespace (space, tab, etc.)",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		val := args[0]
+		if val != "true" && val != "false" {
+			log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.FilterWhitespacePrefix = (val == "true")
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setHighlightMatchesCmd = &cobra.Command{
 	Use:       "highlight-matches",
 	Short:     "Enable highlight-matches to enable highlighting of matches in the search results",
@@ -311,6 +328,7 @@ func init() {
 	rootCmd.AddCommand(configSetCmd)
 	configSetCmd.AddCommand(setEnableControlRCmd)
 	configSetCmd.AddCommand(setFilterDuplicateCommandsCmd)
+	configSetCmd.AddCommand(setFilterWhitespacePrefixCmd)
 	configSetCmd.AddCommand(setDisplayedColumnsCmd)
 	configSetCmd.AddCommand(setTimestampFormatCmd)
 	configSetCmd.AddCommand(setBetaModeCommand)
