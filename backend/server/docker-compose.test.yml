@@ -1,0 +1,10 @@
+# Override for testing - uses tmpfs for data directory
+# to avoid permission issues in GitHub Actions
+services:
+  postgres:
+    environment:
+      PGDATA: /tmp/pgdata  # Use tmpfs instead of volume
+    volumes: !reset []  # Remove persistent volume for testing
+  hishtory:
+    depends_on: !reset  # Remove service_healthy condition, use explicit wait in workflow
+      - postgres

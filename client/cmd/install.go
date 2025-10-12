@@ -240,6 +240,10 @@ func handleUpgradedFeatures() error {
 		// AI completion is not yet configured, disable it for upgrades since this is a new feature
 		config.AiCompletion = false
 	}
+	if !strings.Contains(string(configContents), "filter_whitespace_prefix") {
+		// Whitespace filtering is not yet configured, so enable it by default
+		config.FilterWhitespacePrefix = true
+	}
 	return hctx.SetConfig(&config)
 }
 
@@ -621,6 +625,7 @@ func setup(userSecret string, isOffline bool) error {
 		config.AiCompletion = false
 	}
 	config.EnablePresaving = true
+	config.FilterWhitespacePrefix = true
 	err := hctx.SetConfig(&config)
 	if err != nil {
 		return fmt.Errorf("failed to persist config to disk: %w", err)
