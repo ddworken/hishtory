@@ -24,7 +24,30 @@ jobs:
           sudo chmod 0755 -R /usr/share/zsh/  # Work around a weird bug where zsh on ubuntu actions gives that diretory 0777 which makes zsh refuse to start
           sudo hostname ghaction-runner-hostname  # Set a consistent hostname so we can run tests that depend on it
           docker compose -f backend/server/docker-compose.yml build
-          HISHTORY_COMPOSE_TEST=1 docker compose -f backend/server/docker-compose.yml up -d 
+          # Create and fix permissions on postgres volume before starting
+          docker volume create server_postgres-data
+          docker run --rm -v server_postgres-data:/var/lib/postgresql/data alpine sh -c "chmod 777 /var/lib/postgresql/data"
+          HISHTORY_COMPOSE_TEST=1 docker compose -f backend/server/docker-compose.yml up -d
+          # Debug: Check container status immediately after startup
+          echo "=== Container Status After Startup ==="
+          docker compose -f backend/server/docker-compose.yml ps
+          echo "=== Postgres Container Logs (first 50 lines) ==="
+          docker compose -f backend/server/docker-compose.yml logs postgres | head -50
+          # Wait for postgres to be healthy before continuing
+          echo "=== Waiting for postgres to be healthy ==="
+          timeout 90 bash -c 'counter=0; until docker compose -f backend/server/docker-compose.yml exec -T postgres pg_isready -U postgres -d hishtory 2>&1; do
+            counter=$((counter+1))
+            echo "Attempt $counter: postgres not ready yet, waiting 2s..."
+            if [ $counter -eq 5 ] || [ $counter -eq 15 ] || [ $counter -eq 30 ]; then
+              echo "=== Container status at attempt $counter ==="
+              docker compose -f backend/server/docker-compose.yml ps
+              echo "=== Postgres logs at attempt $counter ==="
+              docker compose -f backend/server/docker-compose.yml logs --tail=20 postgres
+            fi
+            sleep 2
+          done'
+          echo "=== Postgres is healthy! ==="
+          docker compose -f backend/server/docker-compose.yml ps
           export HISHTORY_SERVER=http://localhost
           go build
           ./hishtory install
@@ -52,6 +75,20 @@ jobs:
           ./hishtory status -v | grep 'Sync Server: http://localhost'
           # Show the full status output for debugging
           ./hishtory status -v
+    - name: Upload docker compose logs on failure
+      if: failure()
+      run: |
+          mkdir -p /tmp/docker-logs
+          docker compose -f backend/server/docker-compose.yml logs > /tmp/docker-logs/docker-compose-all.log 2>&1 || true
+          docker compose -f backend/server/docker-compose.yml logs postgres > /tmp/docker-logs/postgres.log 2>&1 || true
+          docker compose -f backend/server/docker-compose.yml ps > /tmp/docker-logs/container-status.txt 2>&1 || true
+          docker ps -a > /tmp/docker-logs/all-containers.txt 2>&1 || true
+    - name: Upload logs artifact
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-compose-logs
+        path: /tmp/docker-logs/
     # - name: Setup tmate session
     #   # if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
