@@ -26,7 +26,8 @@ jobs:
           docker compose -f backend/server/docker-compose.yml build
           # Create and fix permissions on postgres volume before starting
           docker volume create server_postgres-data
-          docker run --rm -v server_postgres-data:/var/lib/postgresql/data alpine sh -c "chmod 777 /var/lib/postgresql/data"
+          # Set ownership to postgres user (uid 999) and create pgdata directory
+          docker run --rm -v server_postgres-data:/var/lib/postgresql/data alpine sh -c "chown -R 999:999 /var/lib/postgresql/data && mkdir -p /var/lib/postgresql/data/pgdata && chown -R 999:999 /var/lib/postgresql/data/pgdata"
           HISHTORY_COMPOSE_TEST=1 docker compose -f backend/server/docker-compose.yml up -d
           # Debug: Check container status immediately after startup
           echo "=== Container Status After Startup ==="
