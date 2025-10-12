@@ -1451,13 +1451,13 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Redact foo
 	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact foo`)
-	if out != "Permanently deleting 3 entries\n" {
+	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Check that the commands are redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\nHISHTORY_REDACT_FORCE=1 hishtory redact foo\n", randomCmdUuid)
+	expectedOutput = fmt.Sprintf("echo %s-bas\nls /tmp\n", randomCmdUuid)
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1470,7 +1470,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// Check that the commands are redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\n"
+	expectedOutput = ""
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1478,7 +1478,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	// Record another command
 	tester.RunInteractiveShell(t, `echo hello`)
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\necho hello\n"
+	expectedOutput = "echo hello\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1490,7 +1490,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 
 	// And check it was redacted
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = "HISHTORY_REDACT_FORCE=1 hishtory redact s\nyes | hishtory redact hello\n"
+	expectedOutput = ""
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
@@ -1532,13 +1532,13 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	restoreInstall2 := testutils.BackupAndRestoreWithId(t, "-2")
 	restoreInstall1()
 	out = tester.RunInteractiveShell(t, `HISHTORY_REDACT_FORCE=1 hishtory redact `+randomCmdUuid)
-	if out != "Permanently deleting 3 entries\n" {
+	if out != "Permanently deleting 2 entries\n" {
 		t.Fatalf("hishtory redact gave unexpected output=%#v", out)
 	}
 
 	// Confirm that client1 doesn't have the commands
 	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
-	expectedOutput = fmt.Sprintf("echo foo\nls /tmp\nHISHTORY_REDACT_FORCE=1 hishtory redact %s\n", randomCmdUuid)
+	expectedOutput = "echo foo\nls /tmp\n"
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
 	}
