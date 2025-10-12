@@ -1469,7 +1469,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	}
 
 	// Check that the commands are redacted
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	out = tester.RunInteractiveShell(t, `hishtory export`)
 	expectedOutput = ""
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
@@ -1489,7 +1489,7 @@ ls /tmp`, randomCmdUuid, randomCmdUuid)
 	require.Regexp(t, regexp.MustCompile(`This will permanently delete (1|2) entries, are you sure\? \[y/N] `), out)
 
 	// And check it was redacted
-	out = tester.RunInteractiveShell(t, `hishtory export | grep -v pipefail`)
+	out = tester.RunInteractiveShell(t, `hishtory export`)
 	expectedOutput = ""
 	if diff := cmp.Diff(expectedOutput, out); diff != "" {
 		t.Fatalf("hishtory export mismatch (-expected +got):\n%s\nout=%#v", diff, out)
