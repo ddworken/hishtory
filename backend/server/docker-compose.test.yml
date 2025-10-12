@@ -1,7 +1,7 @@
-# Override for testing - uses tmpfs instead of persistent volume
+# Override for testing - uses tmpfs for data directory
 # to avoid permission issues in GitHub Actions
 services:
   postgres:
-    volumes: []  # Clear the volume mount
-    tmpfs:
-      - /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
+    environment:
+      PGDATA: /tmp/pgdata  # Use tmpfs instead of volume
+    volumes: !reset []  # Remove persistent volume for testing
