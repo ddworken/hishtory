@@ -2,5 +2,6 @@
 # to avoid permission issues in GitHub Actions
 services:
   postgres:
-    volumes:
-      - /var/lib/postgresql/data  # Override with anonymous volume
+    volumes: []  # Clear the volume mount
+    tmpfs:
+      - /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
