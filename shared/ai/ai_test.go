@@ -10,8 +10,9 @@ import (
 
 // A basic sanity test that our integration with the OpenAI API is correct and is returning reasonable results (at least for a very basic query)
 func TestLiveOpenAiApi(t *testing.T) {
-	if os.Getenv("OPENAI_API_KEY") == "" {
-		t.Skip("Skipping test since OPENAI_API_KEY is not set")
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" || !strings.HasPrefix(apiKey, "sk-") {
+		t.Skip("Skipping test since OPENAI_API_KEY is not set or invalid")
 	}
 	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.openai.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "", 3)
 	require.NoError(t, err)
@@ -26,8 +27,9 @@ func TestLiveOpenAiApi(t *testing.T) {
 
 // A basic sanity test that our integration with the Claude API is correct and is returning reasonable results (at least for a very basic query)
 func TestLiveClaudeApi(t *testing.T) {
-	if os.Getenv("ANTHROPIC_API_KEY") == "" {
-		t.Skip("Skipping test since ANTHROPIC_API_KEY is not set")
+	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	if apiKey == "" || !strings.HasPrefix(apiKey, "sk-ant-") {
+		t.Skip("Skipping test since ANTHROPIC_API_KEY is not set or invalid")
 	}
 	// Claude's OpenAI-compatible endpoint only supports n=1
 	// Explicitly specify a Claude model
