@@ -380,9 +380,8 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 }
 
 func isRedactCommand(command string) bool {
-	// Check if the command contains "hishtory redact" or "hishtory delete" at the start or after a pipe
-	// Use (^|\\|) to match start of string or pipe character, then optional whitespace and environment variables
-	matched, _ := regexp.MatchString(`(^|\|)\s*([A-Z_]+=\S+\s+)*hishtory\s+(redact|delete)`, command)
+	// Check if the command contains the pattern "hishtory" followed by whitespace followed by "redact" or "delete"
+	matched, _ := regexp.MatchString(`hishtory\s+(redact|delete)`, command)
 	return matched
 }
 
