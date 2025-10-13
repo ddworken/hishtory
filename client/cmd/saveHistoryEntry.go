@@ -410,8 +410,15 @@ func isRedactCommand(command string) bool {
 		return false
 	}
 
-	// Check if the command is "hishtory redact" or "hishtory delete"
-	return words[0] == "hishtory" && (words[1] == "redact" || words[1] == "delete")
+	// Check if "hishtory redact" or "hishtory delete" appears anywhere in the command
+	// This handles cases like "yes | hishtory redact foo" or "cat file | hishtory delete bar"
+	for i := 0; i < len(words)-1; i++ {
+		if words[i] == "hishtory" && (words[i+1] == "redact" || words[i+1] == "delete") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
