@@ -238,28 +238,29 @@ func TestIsRedactCommand(t *testing.T) {
 		{"hishtory redact foo", true},
 		{"hishtory redact sensitive-term", true},
 		{"hishtory redact", true},
+		{"hishtory delete foo", true},
+		{"hishtory delete sensitive-term", true},
 
 		// With environment variables
 		{"HISHTORY_REDACT_FORCE=1 hishtory redact foo", true},
 		{"HISHTORY_REDACT_FORCE=true hishtory redact bar", true},
 		{"FOO=bar BAZ=qux hishtory redact test", true},
+		{"FOO=bar hishtory delete test", true},
 
 		// With leading/trailing whitespace
 		{"  hishtory redact foo  ", true},
 		{"  HISHTORY_REDACT_FORCE=1 hishtory redact foo  ", true},
+		{" hishtory delete bar ", true},
 
 		// Non-redact commands
 		{"hishtory query foo", false},
 		{"hishtory export", false},
 		{"hishtory status", false},
 		{"echo hishtory redact", true},
+		{"echo hishtory delete", true},
 		{"ls /tmp", false},
 		{"hishtory", false},
 		{"FOO=bar echo test", false},
-		{"hishtory delete foo", false},
-		{"hishtory delete sensitive-term", false},
-		{"FOO=bar hishtory delete test", false},
-		{" hishtory delete bar ", false},
 
 		// Edge cases
 		{"hishtoryredact", false},  // No space
@@ -284,6 +285,7 @@ func TestBuildHistoryEntrySkipsRedactCommands(t *testing.T) {
 	// Test that redact commands are not saved
 	testcases := []string{
 		"hishtory redact foo",
+		"hishtory delete bar",
 		"HISHTORY_REDACT_FORCE=1 hishtory redact sensitive",
 	}
 
