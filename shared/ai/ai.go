@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -173,33 +174,61 @@ func makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiMo
 	return ret, apiResp.Usage, nil
 }
 
-// getMultipleClaudeCompletions makes multiple sequential API calls for Claude since it doesn't support n>1
-func getMultipleClaudeCompletions(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int, apiKey string) ([]string, OpenAiUsage, error) {
-	hctx.GetLogger().Infof("Making %d sequential Claude API calls for multiple completions", numberCompletions)
+// completionResult holds the result from a single API call in parallel execution
+type completionResult struct {
+	results []string
+	usage   OpenAiUsage
+	err     error
+	index   int
+}
 
+// getMultipleClaudeCompletions makes multiple parallel API calls for Claude since it doesn't support n>1
+func getMultipleClaudeCompletions(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int, apiKey string) ([]string, OpenAiUsage, error) {
+	hctx.GetLogger().Infof("Making %d parallel Claude API calls for multiple completions", numberCompletions)
+
+	// Create channel for results and WaitGroup for coordination
+	resultsChan := make(chan completionResult, numberCompletions)
+	var wg sync.WaitGroup
+
+	// Launch parallel API calls
+	for i := 0; i < numberCompletions; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			results, usage, err := makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiModel, ProviderAnthropic, apiKey)
+			resultsChan <- completionResult{results: results, usage: usage, err: err, index: index}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete and close channel
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	// Collect results
 	allResults := make([]string, 0, numberCompletions)
 	totalUsage := OpenAiUsage{}
 
-	for i := 0; i < numberCompletions; i++ {
-		results, usage, err := makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiModel, ProviderAnthropic, apiKey)
-		if err != nil {
-			return nil, totalUsage, fmt.Errorf("failed on completion %d/%d: %w", i+1, numberCompletions, err)
+	for result := range resultsChan {
+		if result.err != nil {
+			return nil, totalUsage, fmt.Errorf("failed on completion %d/%d: %w", result.index+1, numberCompletions, result.err)
 		}
 
 		// Add unique results
-		for _, result := range results {
-			if !slices.Contains(allResults, result) {
-				allResults = append(allResults, result)
+		for _, r := range result.results {
+			if !slices.Contains(allResults, r) {
+				allResults = append(allResults, r)
 			}
 		}
 
 		// Aggregate usage stats
-		totalUsage.PromptTokens += usage.PromptTokens
-		totalUsage.CompletionTokens += usage.CompletionTokens
-		totalUsage.TotalTokens += usage.TotalTokens
+		totalUsage.PromptTokens += result.usage.PromptTokens
+		totalUsage.CompletionTokens += result.usage.CompletionTokens
+		totalUsage.TotalTokens += result.usage.TotalTokens
 	}
 
-	hctx.GetLogger().Infof("For Claude query=%#v with %d completions ==> %#v (total tokens: %d)", query, numberCompletions, allResults, totalUsage.TotalTokens)
+	hctx.GetLogger().Infof("For Claude query=%#v with %d parallel completions ==> %#v (total tokens: %d)", query, numberCompletions, allResults, totalUsage.TotalTokens)
 	return allResults, totalUsage, nil
 }
 
