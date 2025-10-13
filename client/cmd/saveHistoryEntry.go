@@ -165,6 +165,12 @@ func presaveHistoryEntry(ctx context.Context) {
 	if config.FilterWhitespacePrefix && len(entry.Command) > 0 && (entry.Command[0] == ' ' || entry.Command[0] == '\t') {
 		return
 	}
+
+	// Skip recording redact commands to avoid saving sensitive search terms
+	if isRedactCommand(entry.Command) {
+		return
+	}
+
 	entry.StartTime = parseCrossPlatformTime(os.Args[4])
 	entry.EndTime = time.Unix(0, 0).UTC()
 
@@ -373,6 +379,12 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 	return &entry, nil
 }
 
+func isRedactCommand(command string) bool {
+	// Check if the command contains the pattern "hishtory" followed by whitespace followed by "redact" or "delete"
+	matched, _ := regexp.MatchString(`hishtory\s+(redact|delete)`, command)
+	return matched
+}
+
 func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
 	if len(args) < 6 {
 		hctx.GetLogger().Warnf("buildHistoryEntry called with args=%#v, which has too few entries! This can happen in specific edge cases for newly opened terminals and is likely not a problem.", args)
@@ -406,6 +418,11 @@ func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, 
 	entry.Command = cmd
 	if strings.TrimSpace(entry.Command) == "" {
 		// Skip recording empty commands where the user just hits enter in their terminal
+		return nil, nil
+	}
+
+	// Skip recording redact commands to avoid saving sensitive search terms
+	if isRedactCommand(entry.Command) {
 		return nil, nil
 	}
 

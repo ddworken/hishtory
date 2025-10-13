@@ -112,7 +112,6 @@ func fuzzTest(t *testing.T, tester shellTester, input string) {
 				filteredLines = append(filteredLines, line)
 			}
 			val = strings.Join(filteredLines, "\n")
-			val += `HISHTORY_REDACT_FORCE=1 hishtory redact ` + op.redactQuery + "\n"
 		}
 		keyToCommands[op.device.key] = val
 
