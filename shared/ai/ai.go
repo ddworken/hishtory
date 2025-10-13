@@ -122,6 +122,12 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overrid
 			return nil, OpenAiUsage{}, fmt.Errorf("ANTHROPIC_API_KEY or AI_API_KEY environment variable is not set")
 		}
 	}
+
+	// Claude's OpenAI-compatible endpoint only supports n=1
+	if provider == ProviderAnthropic && numberCompletions > 1 {
+		numberCompletions = 1
+	}
+
 	apiReqStr, err := json.Marshal(createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel, numberCompletions))
 	if err != nil {
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to serialize JSON for OpenAI API: %w", err)

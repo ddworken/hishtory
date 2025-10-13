@@ -39,7 +39,8 @@ func TestLiveClaudeApi(t *testing.T) {
 			t.Skip("Skipping test since ANTHROPIC_API_KEY is not set")
 		}
 	}
-	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "", 3)
+	// Claude's OpenAI-compatible endpoint only supports n=1
+	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "", 1)
 	require.NoError(t, err)
 	resultsContainsLs := false
 	for _, result := range results {
