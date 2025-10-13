@@ -73,6 +73,7 @@ jobs:
       env:
         DD_API_KEY: ${{ secrets.DD_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: |
           go install gotest.tools/gotestsum@bc98120
           NUM_TEST_SHARDS=5 CURRENT_SHARD_NUM=${{ matrix.test_shard }} make test
