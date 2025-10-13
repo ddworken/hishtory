@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,6 +20,9 @@ import (
 
 //go:embed templates
 var templateFiles embed.FS
+
+//go:embed static
+var staticFiles embed.FS
 
 type webUiData struct {
 	SearchQuery   string
@@ -140,6 +144,11 @@ func StartWebUiServer(ctx context.Context, port int, disableAuth bool, overriden
 	}
 	http.Handle("/", wba(http.HandlerFunc(webuiHandler)))
 	http.Handle("/htmx/results-table", wba(http.HandlerFunc(htmx_resultsTable)))
+	staticSubFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		return fmt.Errorf("failed to create sub filesystem: %w", err)
+	}
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSubFS))))
 
 	server := http.Server{
 		BaseContext: func(l net.Listener) context.Context { return ctx },

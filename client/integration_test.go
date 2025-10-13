@@ -3207,6 +3207,24 @@ func TestWebUi(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(respBody), "echo foobar")
 
+	// Check that static files are accessible
+	staticFiles := []string{
+		"http://localhost:8001/static/css/bootstrap.min.css",
+		"http://localhost:8001/static/js/htmx.min.js",
+		"http://localhost:8001/static/js/bootstrap.bundle.min.js",
+	}
+	for _, staticURL := range staticFiles {
+		req, err := http.NewRequest("GET", staticURL, nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, 200, resp.StatusCode, "Static file %s should be accessible", staticURL)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.NotEmpty(t, body, "Static file %s should not be empty", staticURL)
+	}
+
 	// And that it rejects requests without auth
 	resp, err = http.Get("http://localhost:8001?q=foobar")
 	require.NoError(t, err)
