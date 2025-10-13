@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/shared"
 
 	"golang.org/x/exp/slices"
 )
@@ -174,47 +174,39 @@ func makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiMo
 	return ret, apiResp.Usage, nil
 }
 
-// completionResult holds the result from a single API call in parallel execution
-type completionResult struct {
+// apiCallResult holds the result from a single API call
+type apiCallResult struct {
 	results []string
 	usage   OpenAiUsage
-	err     error
-	index   int
 }
 
 // getMultipleClaudeCompletions makes multiple parallel API calls for Claude since it doesn't support n>1
 func getMultipleClaudeCompletions(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int, apiKey string) ([]string, OpenAiUsage, error) {
 	hctx.GetLogger().Infof("Making %d parallel Claude API calls for multiple completions", numberCompletions)
 
-	// Create channel for results and WaitGroup for coordination
-	resultsChan := make(chan completionResult, numberCompletions)
-	var wg sync.WaitGroup
-
-	// Launch parallel API calls
+	// Create array of indices to map over
+	indices := make([]int, numberCompletions)
 	for i := 0; i < numberCompletions; i++ {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			results, usage, err := makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiModel, ProviderAnthropic, apiKey)
-			resultsChan <- completionResult{results: results, usage: usage, err: err, index: index}
-		}(i)
+		indices[i] = i
 	}
 
-	// Wait for all goroutines to complete and close channel
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
+	// Use ParallelMap to make concurrent API calls
+	results, err := shared.ParallelMap(indices, func(index int) (apiCallResult, error) {
+		results, usage, err := makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiModel, ProviderAnthropic, apiKey)
+		if err != nil {
+			return apiCallResult{}, fmt.Errorf("failed on completion %d/%d: %w", index+1, numberCompletions, err)
+		}
+		return apiCallResult{results: results, usage: usage}, nil
+	})
+	if err != nil {
+		return nil, OpenAiUsage{}, err
+	}
 
-	// Collect results
+	// Aggregate results and usage stats
 	allResults := make([]string, 0, numberCompletions)
 	totalUsage := OpenAiUsage{}
 
-	for result := range resultsChan {
-		if result.err != nil {
-			return nil, totalUsage, fmt.Errorf("failed on completion %d/%d: %w", result.index+1, numberCompletions, result.err)
-		}
-
+	for _, result := range results {
 		// Add unique results
 		for _, r := range result.results {
 			if !slices.Contains(allResults, r) {
