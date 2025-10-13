@@ -76,20 +76,38 @@ func getEnvWithFallbacks(keys ...string) string {
 	return ""
 }
 
-// GetAiProvider determines which AI provider to use based on environment variables and endpoint
+// GetAiProvider determines which AI provider to use based on endpoint and API key patterns
 func GetAiProvider(apiEndpoint string) AiProvider {
-	// Check for explicit API keys first
-	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+	// Check the endpoint first - if it's a known endpoint, use that provider
+	if apiEndpoint == DefaultClaudeEndpoint {
 		return ProviderAnthropic
 	}
-	if os.Getenv("OPENAI_API_KEY") != "" {
+	if apiEndpoint == DefaultOpenAiEndpoint {
 		return ProviderOpenAI
 	}
 
-	// Check generic AI_API_KEY and determine provider from endpoint
-	if getEnvWithFallbacks("AI_API_KEY") != "" {
-		if apiEndpoint == DefaultClaudeEndpoint {
+	// For unknown endpoints, auto-detect based on API key prefix
+	// Check ANTHROPIC_API_KEY
+	if anthropicKey := os.Getenv("ANTHROPIC_API_KEY"); anthropicKey != "" {
+		if len(anthropicKey) >= 7 && anthropicKey[:7] == "sk-ant-" {
 			return ProviderAnthropic
+		}
+	}
+
+	// Check OPENAI_API_KEY
+	if openaiKey := os.Getenv("OPENAI_API_KEY"); openaiKey != "" {
+		if len(openaiKey) >= 8 && openaiKey[:8] == "sk-proj-" {
+			return ProviderOpenAI
+		}
+	}
+
+	// Check generic AI_API_KEY
+	if genericKey := getEnvWithFallbacks("AI_API_KEY"); genericKey != "" {
+		if len(genericKey) >= 7 && genericKey[:7] == "sk-ant-" {
+			return ProviderAnthropic
+		}
+		if len(genericKey) >= 8 && genericKey[:8] == "sk-proj-" {
+			return ProviderOpenAI
 		}
 	}
 
