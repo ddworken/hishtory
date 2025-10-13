@@ -40,7 +40,8 @@ func TestLiveClaudeApi(t *testing.T) {
 		}
 	}
 	// Claude's OpenAI-compatible endpoint only supports n=1
-	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "", 1)
+	// Explicitly specify a Claude model
+	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "claude-sonnet-4-5", 1)
 	require.NoError(t, err)
 	resultsContainsLs := false
 	for _, result := range results {
