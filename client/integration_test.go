@@ -3675,6 +3675,85 @@ func TestTuiBench(t *testing.T) {
 	}
 }
 
+func TestFilterWhitespacePrefix(t *testing.T) {
+	// Setup
+	markTestForSharding(t, 18)
+	tester := zshTester{}
+	defer testutils.BackupAndRestore(t)()
+	installHishtory(t, tester, "")
+
+	// Check the default config value (should be true for new installs)
+	out := tester.RunInteractiveShell(t, `hishtory config-get filter-whitespace-prefix`)
+	require.Equal(t, "true\n", out)
+
+	// Record commands with and without whitespace prefix, filtering should be enabled by default
+	tester.RunInteractiveShell(t, `echo visible1
+ echo hidden_space
+	echo hidden_tab
+echo visible2`)
+
+	// Verify that space/tab prefixed commands are NOT in history
+	out = hishtoryQuery(t, tester, "-pipefail")
+	require.Contains(t, out, "echo visible1")
+	require.Contains(t, out, "echo visible2")
+	require.NotContains(t, out, "hidden_space")
+	require.NotContains(t, out, "hidden_tab")
+
+	// Check via export as well
+	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install'")
+	require.Contains(t, out, "echo visible1")
+	require.Contains(t, out, "echo visible2")
+	require.NotContains(t, out, "hidden_space")
+	require.NotContains(t, out, "hidden_tab")
+
+	// Disable the filtering
+	tester.RunInteractiveShell(t, `hishtory config-set filter-whitespace-prefix false`)
+
+	// Verify the config was updated
+	out = tester.RunInteractiveShell(t, `hishtory config-get filter-whitespace-prefix`)
+	require.Equal(t, "false\n", out)
+
+	// Record new commands with whitespace prefix, filtering is now disabled
+	tester.RunInteractiveShell(t, `echo visible3
+ echo nowvisible_space
+	echo nowvisible_tab
+echo visible4`)
+
+	// Verify that ALL commands are now in history
+	out = hishtoryQuery(t, tester, "-pipefail")
+	require.Contains(t, out, "echo visible3")
+	require.Contains(t, out, "echo nowvisible_space")
+	require.Contains(t, out, "echo nowvisible_tab")
+	require.Contains(t, out, "echo visible4")
+
+	// Check via export too
+	out = tester.RunInteractiveShell(t, "hishtory export | grep -v pipefail | grep -v '/tmp/client install' | grep -v 'config-'")
+	require.Contains(t, out, "echo visible3")
+	require.Contains(t, out, "echo nowvisible_space")
+	require.Contains(t, out, "echo nowvisible_tab")
+	require.Contains(t, out, "echo visible4")
+
+	// Re-enable the filtering
+	tester.RunInteractiveShell(t, `hishtory config-set filter-whitespace-prefix true`)
+
+	// Verify config was updated
+	out = tester.RunInteractiveShell(t, `hishtory config-get filter-whitespace-prefix`)
+	require.Equal(t, "true\n", out)
+
+	// Record new commands, filtering should be active again
+	tester.RunInteractiveShell(t, ` echo newhidden_space
+echo visible5`)
+
+	// Verify that new space-prefixed command is NOT saved, but visible5 is
+	out = hishtoryQuery(t, tester, "-pipefail")
+	require.NotContains(t, out, "newhidden_space")
+	require.Contains(t, out, "echo visible5")
+
+	// But previously saved space-prefixed commands (when filtering was disabled) should still be in history
+	require.Contains(t, out, "echo nowvisible_space")
+	require.Contains(t, out, "echo nowvisible_tab")
+}
+
 func BenchmarkGetRows(b *testing.B) {
 	b.StopTimer()
 	// Setup with an install with a lot of entries
