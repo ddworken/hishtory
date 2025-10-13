@@ -380,8 +380,8 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 }
 
 func isRedactCommand(command string) bool {
-	// Check if the command contains the pattern "hishtory" followed by whitespace followed by "redact" or "delete"
-	matched, _ := regexp.MatchString(`hishtory\s+(redact|delete)`, command)
+	// Check if the command contains the pattern "hishtory" followed by whitespace followed by "redact"
+	matched, _ := regexp.MatchString(`hishtory\s+redact`, command)
 	return matched
 }
 
