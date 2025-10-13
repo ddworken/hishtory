@@ -333,14 +333,28 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 		panic(fmt.Errorf("failed to count devices for user: %w", err))
 	}
 	if numDevices == 0 {
-		panic(fmt.Errorf("rejecting OpenAI request for user_id=%#v since it does not exist", req.UserId))
+		panic(fmt.Errorf("rejecting AI request for user_id=%#v since it does not exist", req.UserId))
 	}
-	suggestions, usage, err := ai.GetAiSuggestionsViaOpenAiApi(ai.DefaultOpenAiEndpoint, req.Query, req.ShellName, req.OsName, req.Model, req.NumberCompletions)
+
+	// Determine which AI provider endpoint to use based on server environment
+	endpoint := ai.DefaultOpenAiEndpoint
+	provider := ai.GetAiProvider(endpoint)
+	if provider == ai.ProviderAnthropic {
+		endpoint = ai.DefaultClaudeEndpoint
+	}
+
+	suggestions, usage, err := ai.GetAiSuggestionsViaOpenAiApi(endpoint, req.Query, req.ShellName, req.OsName, req.Model, req.NumberCompletions)
 	if err != nil {
-		panic(fmt.Errorf("failed to query OpenAI API: %w", err))
+		panic(fmt.Errorf("failed to query AI API: %w", err))
 	}
-	s.statsd.Incr("hishtory.openai.query", []string{}, float64(req.NumberCompletions))
-	s.statsd.Incr("hishtory.openai.tokens", []string{}, float64(usage.TotalTokens))
+
+	// Track metrics with provider-specific tags
+	providerTag := "provider:" + string(provider)
+	if s.statsd != nil {
+		s.statsd.Incr("hishtory.ai.query", []string{providerTag}, float64(req.NumberCompletions))
+		s.statsd.Incr("hishtory.ai.tokens", []string{providerTag}, float64(usage.TotalTokens))
+	}
+
 	var resp ai.AiSuggestionResponse
 	resp.Suggestions = suggestions
 	if err := json.NewEncoder(w).Encode(resp); err != nil {

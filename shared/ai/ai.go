@@ -15,7 +15,17 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-const DefaultOpenAiEndpoint = "https://api.openai.com/v1/chat/completions"
+const (
+	DefaultOpenAiEndpoint = "https://api.openai.com/v1/chat/completions"
+	DefaultClaudeEndpoint = "https://api.anthropic.com/v1/chat/completions"
+)
+
+type AiProvider string
+
+const (
+	ProviderOpenAI    AiProvider = "openai"
+	ProviderAnthropic AiProvider = "anthropic"
+)
 
 type openAiRequest struct {
 	Model             string          `json:"model"`
@@ -56,14 +66,61 @@ type TestOnlyOverrideAiSuggestionRequest struct {
 
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
 
+// getEnvWithFallbacks returns the first non-empty environment variable from the list
+func getEnvWithFallbacks(keys ...string) string {
+	for _, key := range keys {
+		if val := os.Getenv(key); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+// GetAiProvider determines which AI provider to use based on environment variables and endpoint
+func GetAiProvider(apiEndpoint string) AiProvider {
+	// Check for explicit API keys first
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		return ProviderAnthropic
+	}
+	if os.Getenv("OPENAI_API_KEY") != "" {
+		return ProviderOpenAI
+	}
+
+	// Check generic AI_API_KEY and determine provider from endpoint
+	if getEnvWithFallbacks("AI_API_KEY") != "" {
+		if apiEndpoint == DefaultClaudeEndpoint {
+			return ProviderAnthropic
+		}
+	}
+
+	// Default to OpenAI for backwards compatibility
+	return ProviderOpenAI
+}
+
+// getApiKey returns the appropriate API key based on the provider
+func getApiKey(provider AiProvider) string {
+	if provider == ProviderAnthropic {
+		return getEnvWithFallbacks("ANTHROPIC_API_KEY", "AI_API_KEY")
+	}
+	return getEnvWithFallbacks("OPENAI_API_KEY", "AI_API_KEY")
+}
+
 func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
 	}
-	hctx.GetLogger().Infof("Running OpenAI query for %#v", query)
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" && apiEndpoint == DefaultOpenAiEndpoint {
-		return nil, OpenAiUsage{}, fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+
+	provider := GetAiProvider(apiEndpoint)
+	hctx.GetLogger().Infof("Running AI query via %s for %#v", provider, query)
+
+	apiKey := getApiKey(provider)
+	if apiKey == "" {
+		if apiEndpoint == DefaultOpenAiEndpoint {
+			return nil, OpenAiUsage{}, fmt.Errorf("OPENAI_API_KEY or AI_API_KEY environment variable is not set")
+		}
+		if apiEndpoint == DefaultClaudeEndpoint {
+			return nil, OpenAiUsage{}, fmt.Errorf("ANTHROPIC_API_KEY or AI_API_KEY environment variable is not set")
+		}
 	}
 	apiReqStr, err := json.Marshal(createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel, numberCompletions))
 	if err != nil {
@@ -71,11 +128,18 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overrid
 	}
 	req, err := http.NewRequest(http.MethodPost, apiEndpoint, bytes.NewBuffer(apiReqStr))
 	if err != nil {
-		return nil, OpenAiUsage{}, fmt.Errorf("failed to create OpenAI API request: %w", err)
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to create AI API request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+
+	// Set authentication headers based on provider
 	if apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+		if provider == ProviderAnthropic {
+			req.Header.Set("x-api-key", apiKey)
+			req.Header.Set("anthropic-version", "2023-06-01")
+		} else {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
 	}
 	resp, err := lib.GetHttpClient().Do(req)
 	if err != nil {
@@ -129,29 +193,37 @@ func createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel string,
 		shellName = "bash"
 	}
 
-	// According to https://platform.openai.com/docs/models gpt-4o-mini is the best model
-	// by performance/price ratio.
-	model := "gpt-4o-mini"
-	if envModel := os.Getenv("OPENAI_API_MODEL"); envModel != "" {
+	// Determine the default model based on available API keys
+	defaultModel := "gpt-4o-mini"
+	if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
+		// If only Anthropic key is available, default to Claude
+		defaultModel = "claude-sonnet-4-5"
+	}
+
+	// Check for model override with generic env variable taking precedence
+	model := defaultModel
+	if envModel := getEnvWithFallbacks("AI_API_MODEL", "OPENAI_API_MODEL"); envModel != "" {
 		model = envModel
 	}
 	if overriddenOpenAiModel != "" {
 		model = overriddenOpenAiModel
 	}
 
-	if envNumberCompletions := os.Getenv("OPENAI_API_NUMBER_COMPLETIONS"); envNumberCompletions != "" {
+	// Check for number of completions override
+	if envNumberCompletions := getEnvWithFallbacks("AI_API_NUMBER_COMPLETIONS", "OPENAI_API_NUMBER_COMPLETIONS"); envNumberCompletions != "" {
 		n, err := strconv.Atoi(envNumberCompletions)
 		if err == nil {
 			numberCompletions = n
 		}
 	}
 
+	// Set default system prompt
 	defaultSystemPrompt := "You are an expert programmer that loves to help people with writing shell commands. " +
 		"You always reply with just a shell command and no additional context, information, or formatting. " +
 		"Your replies will be directly executed in " + shellName + " on " + osName +
 		", so ensure that they are correct and do not contain anything other than a shell command."
 
-	if systemPrompt := os.Getenv("OPENAI_API_SYSTEM_PROMPT"); systemPrompt != "" {
+	if systemPrompt := getEnvWithFallbacks("AI_API_SYSTEM_PROMPT", "OPENAI_API_SYSTEM_PROMPT"); systemPrompt != "" {
 		defaultSystemPrompt = systemPrompt
 	}
 
