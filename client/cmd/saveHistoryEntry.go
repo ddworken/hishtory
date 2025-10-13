@@ -403,18 +403,24 @@ func isRedactCommand(command string) bool {
 		}
 	}
 
-	// Split the command into words to check if it's a redact command
-	// This handles cases with multiple spaces between words
+	// Check if the command starts with "hishtory redact" or "hishtory delete"
+	// This handles the most common case (after env vars are stripped above)
 	words := strings.Fields(cmd)
-	if len(words) < 2 {
-		return false
+	if len(words) >= 2 && words[0] == "hishtory" && (words[1] == "redact" || words[1] == "delete") {
+		return true
 	}
 
-	// Check if "hishtory redact" or "hishtory delete" appears anywhere in the command
-	// This handles cases like "yes | hishtory redact foo" or "cat file | hishtory delete bar"
-	for i := 0; i < len(words)-1; i++ {
-		if words[i] == "hishtory" && (words[i+1] == "redact" || words[i+1] == "delete") {
-			return true
+	// Also check if "hishtory redact" or "hishtory delete" appears after a pipe
+	// This handles cases like "yes | hishtory redact foo"
+	// We split by pipe to get the command after the pipe
+	if strings.Contains(cmd, "|") {
+		parts := strings.Split(cmd, "|")
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			partWords := strings.Fields(part)
+			if len(partWords) >= 2 && partWords[0] == "hishtory" && (partWords[1] == "redact" || partWords[1] == "delete") {
+				return true
+			}
 		}
 	}
 
