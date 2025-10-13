@@ -380,51 +380,9 @@ func buildPreArgsHistoryEntry(ctx context.Context) (*data.HistoryEntry, error) {
 }
 
 func isRedactCommand(command string) bool {
-	// Trim leading and trailing whitespace
-	cmd := strings.TrimSpace(command)
-
-	// Strip leading environment variable assignments (e.g., "HISHTORY_REDACT_FORCE=1 hishtory redact")
-	// Environment variables are in the format KEY=VALUE and separated by spaces
-	for {
-		// Find the first space
-		spaceIdx := strings.Index(cmd, " ")
-		if spaceIdx == -1 {
-			break
-		}
-
-		// Check if the part before the space contains an equals sign (indicating an env var)
-		firstPart := cmd[:spaceIdx]
-		if strings.Contains(firstPart, "=") {
-			// This looks like an environment variable, skip it
-			cmd = strings.TrimSpace(cmd[spaceIdx+1:])
-		} else {
-			// Not an environment variable, we've found the actual command
-			break
-		}
-	}
-
-	// Check if the command starts with "hishtory redact" or "hishtory delete"
-	// This handles the most common case (after env vars are stripped above)
-	words := strings.Fields(cmd)
-	if len(words) >= 2 && words[0] == "hishtory" && (words[1] == "redact" || words[1] == "delete") {
-		return true
-	}
-
-	// Also check if "hishtory redact" or "hishtory delete" appears after a pipe
-	// This handles cases like "yes | hishtory redact foo"
-	// We split by pipe to get the command after the pipe
-	if strings.Contains(cmd, "|") {
-		parts := strings.Split(cmd, "|")
-		for _, part := range parts {
-			part = strings.TrimSpace(part)
-			partWords := strings.Fields(part)
-			if len(partWords) >= 2 && partWords[0] == "hishtory" && (partWords[1] == "redact" || partWords[1] == "delete") {
-				return true
-			}
-		}
-	}
-
-	return false
+	// Check if the command contains the pattern "hishtory" followed by whitespace followed by "redact"
+	matched, _ := regexp.MatchString(`hishtory\s+redact`, command)
+	return matched
 }
 
 func buildHistoryEntry(ctx context.Context, args []string) (*data.HistoryEntry, error) {
