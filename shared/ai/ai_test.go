@@ -31,10 +31,10 @@ func TestLiveClaudeApi(t *testing.T) {
 	if apiKey == "" || !strings.HasPrefix(apiKey, "sk-ant-") {
 		t.Skip("Skipping test since ANTHROPIC_API_KEY is not set or invalid")
 	}
-	// Claude's OpenAI-compatible endpoint only supports n=1
-	// Explicitly specify a Claude model
-	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "claude-sonnet-4-5", 1)
+	// Test multiple completions - Claude doesn't support n>1 natively, so we make multiple API calls
+	results, usage, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "claude-sonnet-4-5", 3)
 	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(results), 1, "expected at least 1 result")
 	resultsContainsLs := false
 	for _, result := range results {
 		if strings.Contains(result, "ls") {
@@ -42,4 +42,6 @@ func TestLiveClaudeApi(t *testing.T) {
 		}
 	}
 	require.Truef(t, resultsContainsLs, "expected results=%#v to contain ls", results)
+	// Verify usage stats were aggregated (should have tokens from 3 API calls)
+	require.Greater(t, usage.TotalTokens, 0, "expected non-zero token usage")
 }

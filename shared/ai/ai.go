@@ -123,6 +123,86 @@ func getApiKey(provider AiProvider) string {
 	return getEnvWithFallbacks("OPENAI_API_KEY", "AI_API_KEY")
 }
 
+// makeSingleApiCall makes a single API call with n=1 and returns the results
+func makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, provider AiProvider, apiKey string) ([]string, OpenAiUsage, error) {
+	apiReqStr, err := json.Marshal(createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel, 1))
+	if err != nil {
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to serialize JSON for AI API: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, apiEndpoint, bytes.NewBuffer(apiReqStr))
+	if err != nil {
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to create AI API request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Set authentication headers based on provider
+	if apiKey != "" {
+		if provider == ProviderAnthropic {
+			req.Header.Set("x-api-key", apiKey)
+			req.Header.Set("anthropic-version", "2023-06-01")
+		} else {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+	}
+	resp, err := lib.GetHttpClient().Do(req)
+	if err != nil {
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to query AI API: %w", err)
+	}
+	defer resp.Body.Close()
+	bodyText, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to read AI API response: %w", err)
+	}
+	if resp.StatusCode == 429 {
+		return nil, OpenAiUsage{}, fmt.Errorf("received 429 error code from AI API (is your API key valid?)")
+	}
+	var apiResp openAiResponse
+	err = json.Unmarshal(bodyText, &apiResp)
+	if err != nil {
+		return nil, OpenAiUsage{}, fmt.Errorf("failed to parse AI API response=%#v: %w", string(bodyText), err)
+	}
+	if len(apiResp.Choices) == 0 {
+		return nil, OpenAiUsage{}, fmt.Errorf("AI API returned zero choices, parsed resp=%#v, resp body=%#v, resp.StatusCode=%d", apiResp, bodyText, resp.StatusCode)
+	}
+	ret := make([]string, 0)
+	for _, item := range apiResp.Choices {
+		if !slices.Contains(ret, item.Message.Content) {
+			ret = append(ret, item.Message.Content)
+		}
+	}
+	return ret, apiResp.Usage, nil
+}
+
+// getMultipleClaudeCompletions makes multiple sequential API calls for Claude since it doesn't support n>1
+func getMultipleClaudeCompletions(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int, apiKey string) ([]string, OpenAiUsage, error) {
+	hctx.GetLogger().Infof("Making %d sequential Claude API calls for multiple completions", numberCompletions)
+
+	allResults := make([]string, 0, numberCompletions)
+	totalUsage := OpenAiUsage{}
+
+	for i := 0; i < numberCompletions; i++ {
+		results, usage, err := makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiModel, ProviderAnthropic, apiKey)
+		if err != nil {
+			return nil, totalUsage, fmt.Errorf("failed on completion %d/%d: %w", i+1, numberCompletions, err)
+		}
+
+		// Add unique results
+		for _, result := range results {
+			if !slices.Contains(allResults, result) {
+				allResults = append(allResults, result)
+			}
+		}
+
+		// Aggregate usage stats
+		totalUsage.PromptTokens += usage.PromptTokens
+		totalUsage.CompletionTokens += usage.CompletionTokens
+		totalUsage.TotalTokens += usage.TotalTokens
+	}
+
+	hctx.GetLogger().Infof("For Claude query=%#v with %d completions ==> %#v (total tokens: %d)", query, numberCompletions, allResults, totalUsage.TotalTokens)
+	return allResults, totalUsage, nil
+}
+
 func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
 		return results, OpenAiUsage{}, nil
@@ -141,9 +221,10 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overrid
 		}
 	}
 
-	// Claude's OpenAI-compatible endpoint only supports n=1
+	// Claude's OpenAI-compatible endpoint only supports n=1 per request
+	// For multiple completions, we make multiple sequential API calls
 	if provider == ProviderAnthropic && numberCompletions > 1 {
-		numberCompletions = 1
+		return getMultipleClaudeCompletions(apiEndpoint, query, shellName, osName, overriddenOpenAiModel, numberCompletions, apiKey)
 	}
 
 	apiReqStr, err := json.Marshal(createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel, numberCompletions))
