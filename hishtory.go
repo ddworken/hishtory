@@ -2,12 +2,9 @@ package main
 
 import (
 	"github.com/ddworken/hishtory/client/cmd"
-	"github.com/ddworken/hishtory/client/data"
-	"github.com/ddworken/hishtory/client/lib"
 )
 
 func main() {
-	lib.CheckFatalError(data.ValidateHishtoryPath())
 	cmd.Execute()
 }
 

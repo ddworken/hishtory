@@ -23,6 +23,28 @@ hishtory init $YOUR_HISHTORY_SECRET
 
 Now if you press `Control+R` on first computer, you can automatically see the commands you've run on all your other computers!
 
+### Manual installation
+
+Custom install path
+```bash
+HISHTORY_PATH="$HOME/.local/share/hishtory" hishtory install
+```
+
+Sync disabled
+```bash
+hishtory hishtory install --offline
+```
+
+Do not modify shell startup rc files on install
+```bash
+hishtory install --skip-config-modification
+```
+
+Do not modify shell startup rc files on update
+```bash
+hishtory install --skip-update-config-modification
+```
+
 ## Features
 
 ### Querying
@@ -230,7 +252,7 @@ Note that this uses [HTTP Basic Auth](https://en.wikipedia.org/wiki/Basic_access
 <details>
 <summary>Customizing the install folder</summary><blockquote>
 
-By default, hiSHtory is installed in `~/.hishtory/`. If you want to customize this, you can do so by setting the `HISHTORY_PATH` environment variable to a path relative to your home directory (e.g. `export HISHTORY_PATH=.config/hishtory`). This must be set both when you install hiSHtory and when you use hiSHtory, so it is recommend to set it in your `.bashrc`/`.zshrc`/`.fishrc` before installing hiSHtory. 
+By default, hiSHtory is installed in `~/.hishtory/`. If you want to customize this, you can do so by setting the `HISHTORY_PATH` environment variable to an absolute path (e.g. `export HISHTORY_PATH=$HOME/.config/hishtory`). This must be set both when you install hiSHtory and when you use hiSHtory, so it is recommend to set it in your `.bashrc`/`.zshrc`/`.fishrc` before installing hiSHtory. 
 
 </blockquote></details>
 

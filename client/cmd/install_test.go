@@ -18,14 +18,14 @@ func TestSetup(t *testing.T) {
 
 	homedir, err := os.UserHomeDir()
 	require.NoError(t, err)
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
+	if _, err := os.Stat(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
 	require.NoError(t, setup("", false))
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
+	if _, err := os.Stat(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
+	data, err := os.ReadFile(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH))
 	require.NoError(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))
@@ -42,14 +42,14 @@ func TestSetupOffline(t *testing.T) {
 
 	homedir, err := os.UserHomeDir()
 	require.NoError(t, err)
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
+	if _, err := os.Stat(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH)); err == nil {
 		t.Fatalf("hishtory secret file already exists!")
 	}
 	require.NoError(t, setup("", true))
-	if _, err := os.Stat(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
+	if _, err := os.Stat(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH)); err != nil {
 		t.Fatalf("hishtory secret file does not exist after Setup()!")
 	}
-	data, err := os.ReadFile(path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH))
+	data, err := os.ReadFile(path.Join(data.GetHishtoryPath(), data.CONFIG_PATH))
 	require.NoError(t, err)
 	if len(data) < 10 {
 		t.Fatalf("hishtory secret has unexpected length: %d", len(data))

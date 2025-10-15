@@ -51,11 +51,9 @@ func getInitialWd() string {
 }
 
 func ResetLocalState(t testing.TB) {
-	homedir, err := os.UserHomeDir()
-	require.NoError(t, err)
 	persistLog()
 	_ = BackupAndRestoreWithId(t, "-reset-local-state")
-	_ = os.RemoveAll(path.Join(homedir, data.GetHishtoryPath()))
+	_ = os.RemoveAll(path.Join(data.GetHishtoryPath()))
 }
 
 func BackupAndRestore(t testing.TB) func() {
@@ -75,17 +73,17 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 	require.NoError(t, err)
 	initialWd, err := os.Getwd()
 	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()+".test"), os.ModePerm))
+	require.NoError(t, os.MkdirAll(path.Join(data.GetHishtoryPath()+".test"), os.ModePerm))
 
 	renameFiles := []string{
-		path.Join(homedir, data.GetHishtoryPath(), data.DB_PATH),
-		path.Join(homedir, data.GetHishtoryPath(), DB_WAL_PATH),
-		path.Join(homedir, data.GetHishtoryPath(), DB_SHM_PATH),
-		path.Join(homedir, data.GetHishtoryPath(), data.CONFIG_PATH),
-		path.Join(homedir, data.GetHishtoryPath(), "config.sh"),
-		path.Join(homedir, data.GetHishtoryPath(), "config.zsh"),
-		path.Join(homedir, data.GetHishtoryPath(), "config.fish"),
-		path.Join(homedir, data.GetHishtoryPath(), "hishtory"),
+		path.Join(data.GetHishtoryPath(), data.DB_PATH),
+		path.Join(data.GetHishtoryPath(), DB_WAL_PATH),
+		path.Join(data.GetHishtoryPath(), DB_SHM_PATH),
+		path.Join(data.GetHishtoryPath(), data.CONFIG_PATH),
+		path.Join(data.GetHishtoryPath(), "config.sh"),
+		path.Join(data.GetHishtoryPath(), "config.zsh"),
+		path.Join(data.GetHishtoryPath(), "config.fish"),
+		path.Join(data.GetHishtoryPath(), "hishtory"),
 		path.Join(homedir, ".bash_history"),
 		path.Join(homedir, ".zsh_history"),
 		path.Join(homedir, ".zhistory"),
@@ -118,8 +116,8 @@ func BackupAndRestoreWithId(t testing.TB, id string) func() {
 			t.Fatalf("failed to execute killall hishtory, stdout=%#v: %v", string(stdout), err)
 		}
 		persistLog()
-		require.NoError(t, os.RemoveAll(path.Join(homedir, data.GetHishtoryPath())))
-		require.NoError(t, os.MkdirAll(path.Join(homedir, data.GetHishtoryPath()), os.ModePerm))
+		require.NoError(t, os.RemoveAll(path.Join(data.GetHishtoryPath())))
+		require.NoError(t, os.MkdirAll(path.Join(data.GetHishtoryPath()), os.ModePerm))
 		for _, file := range renameFiles {
 			checkError(os.Rename(getBackPath(file, id), file))
 		}
@@ -350,9 +348,7 @@ func TestLog(t testing.TB, line string) {
 }
 
 func persistLog() {
-	homedir, err := os.UserHomeDir()
-	checkError(err)
-	fp := path.Join(homedir, data.GetHishtoryPath(), "hishtory.log")
+	fp := path.Join(data.GetHishtoryPath(), "hishtory.log")
 	log, err := os.ReadFile(fp)
 	if err != nil {
 		return
