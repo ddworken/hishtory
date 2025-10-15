@@ -99,6 +99,9 @@ type model struct {
 
 	// Whether we've finished the first load of results. If we haven't, we refuse to run additional queries to avoid race conditions with how we handle invalid initial queries.
 	hasFinishedFirstLoad bool
+
+	// Hide columns flag
+	hideColumns bool
 }
 
 type (
@@ -217,15 +220,20 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 			defaultFilter = ""
 		}
 
+		displayedColumns := conf.DisplayedColumns
+		if m.hideColumns { // to not fetch more than we need
+			displayedColumns = []string{"Command"}
+		}
+
 		// Kick off an async query to getRows() so that we can start our DB query in the background
 		// before bubbletea actually invokes our tea.Msg. This reduces latency between key presses
 		// and results being displayed.
 		go func() {
-			_, _, _ = getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+			_, _, _ = getRows(m.ctx, displayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
 		}()
 
 		return func() tea.Msg {
-			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+			rows, entries, searchErr := getRows(m.ctx, displayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
 			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil, false}
 		}
 	}
@@ -295,6 +303,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
+			return m, nil
+		case key.Matches(msg, loadedKeyBindings.HideColumns):
+			m.hideColumns = !m.hideColumns
+
+			if m.hideColumns {
+				m.table.ToggleHideColumns()
+			} else { // since we un-hide columns, we need to update the table
+				cmd := runQueryAndUpdateTable(m, true, true)
+				preventTableOverscrolling(m)
+				return m, cmd
+			}
+
 			return m, nil
 		default:
 			pendingCommands := tea.Batch()
@@ -708,8 +728,9 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 			key.WithKeys("end"),
 			key.WithHelp("end", "go to end"),
 		),
-		MoveLeft:  loadedKeyBindings.TableLeft,
-		MoveRight: loadedKeyBindings.TableRight,
+		MoveLeft:    loadedKeyBindings.TableLeft,
+		MoveRight:   loadedKeyBindings.TableRight,
+		HideColumns: loadedKeyBindings.HideColumns,
 	}
 	_, terminalHeight, err := getTerminalSize()
 	if err != nil {
