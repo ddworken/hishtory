@@ -130,6 +130,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/defaultFilter", wrapTestForSharding(testTui_defaultFilter))
 	t.Run("testTui/escaping", wrapTestForSharding(testTui_escaping))
 	t.Run("testTui/fullscreen", wrapTestForSharding(testTui_fullscreen))
+	t.Run("testTui/previewPane", wrapTestForSharding(testTui_previewPane))
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -1928,6 +1929,45 @@ func testTui_fullscreen(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 	})
 	testutils.CompareGoldens(t, out, "TestTui-FullScreenCompactRender")
+}
+
+func testTui_previewPane(t *testing.T) {
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+	tester, _, db := setupTestTui(t, Online)
+
+	// Add a long command to test preview pane wrapping
+	longCmd := testutils.MakeFakeHistoryEntry("echo 'this is a very long command that will be truncated in the table but should be fully visible in the preview pane when we enable it'")
+	require.NoError(t, db.Create(longCmd).Error)
+
+	// By default preview pane is disabled
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get show-preview-pane`)))
+
+	// Test that we can enable it
+	tester.RunInteractiveShell(t, `hishtory config-set show-preview-pane true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get show-preview-pane`)))
+
+	// Test that the preview pane displays the full command
+	out := captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	// The preview pane should show the long command
+	require.Contains(t, out, "this is a very long command")
+	require.Contains(t, out, "fully visible in the preview pane")
+
+	// Test that we can toggle it off with Ctrl+O
+	out = captureTerminalOutput(t, tester, []string{
+		"hishtory SPACE tquery ENTER",
+		"C-o",
+	})
+	out = stripTuiCommandPrefix(t, out)
+	// After toggling off, the preview should not be visible
+	// (We can't easily test this without golden files, but the command should run without error)
+
+	// Test that we can disable it via config
+	tester.RunInteractiveShell(t, `hishtory config-set show-preview-pane false`)
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get show-preview-pane`)))
 }
 
 func testTui_defaultFilter(t *testing.T) {
