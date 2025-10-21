@@ -294,6 +294,19 @@ var setFullScreenCmd = &cobra.Command{
 	},
 }
 
+var setShowPreviewPaneCmd = &cobra.Command{
+	Use:       "show-preview-pane",
+	Short:     "Configure whether to show a preview pane displaying the full currently selected command",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.ShowPreviewPane = args[0] == "true"
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 func validateDefaultSearchColumns(ctx context.Context, columns []string) error {
 	customColNames, err := lib.GetAllCustomColumnNames(ctx)
 	if err != nil {
@@ -341,6 +354,7 @@ func init() {
 	configSetCmd.AddCommand(compactMode)
 	configSetCmd.AddCommand(setLogLevelCmd)
 	configSetCmd.AddCommand(setFullScreenCmd)
+	configSetCmd.AddCommand(setShowPreviewPaneCmd)
 	configSetCmd.AddCommand(setDefaultSearchColumns)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedText)
 	setColorSchemeCmd.AddCommand(setColorSchemeSelectedBackground)

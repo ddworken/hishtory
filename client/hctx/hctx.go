@@ -229,6 +229,8 @@ type ClientConfig struct {
 	// Columns that are used for default searches.
 	// See https://github.com/ddworken/hishtory/issues/268 for context on this.
 	DefaultSearchColumns []string `json:"default_search_columns"`
+	// Whether to show a preview pane for the currently selected command
+	ShowPreviewPane bool `json:"show_preview_pane"`
 }
 
 type ColorScheme struct {
