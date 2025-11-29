@@ -79,12 +79,28 @@ func augmentQuery(ctx context.Context, query string) string {
 }
 
 func GetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
-	if os.Getenv("OPENAI_API_KEY") == "" && hctx.GetConf(ctx).AiCompletionEndpoint == ai.DefaultOpenAiEndpoint {
-		return GetAiSuggestionsViaHishtoryApi(ctx, shellName, augmentQuery(ctx, query), numberCompletions)
-	} else {
-		suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(hctx.GetConf(ctx).AiCompletionEndpoint, augmentQuery(ctx, query), shellName, getOsName(), os.Getenv("OPENAI_API_MODEL"), numberCompletions)
-		return suggestions, err
+	// Determine which API key is available
+	hasOpenAiKey := os.Getenv("OPENAI_API_KEY") != ""
+	hasAnthropicKey := os.Getenv("ANTHROPIC_API_KEY") != ""
+	hasGenericKey := os.Getenv("AI_API_KEY") != ""
+
+	// Get the configured endpoint
+	endpoint := hctx.GetConf(ctx).AiCompletionEndpoint
+
+	// Check if we should use the hishtory proxy API (no API keys set and using default endpoints)
+	if !hasOpenAiKey && !hasAnthropicKey && !hasGenericKey {
+		if endpoint == ai.DefaultOpenAiEndpoint || endpoint == ai.DefaultClaudeEndpoint {
+			return GetAiSuggestionsViaHishtoryApi(ctx, shellName, augmentQuery(ctx, query), numberCompletions)
+		}
 	}
+
+	// Use direct API call with the configured endpoint
+	modelOverride := os.Getenv("AI_API_MODEL")
+	if modelOverride == "" {
+		modelOverride = os.Getenv("OPENAI_API_MODEL")
+	}
+	suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(endpoint, augmentQuery(ctx, query), shellName, getOsName(), modelOverride, numberCompletions)
+	return suggestions, err
 }
 
 func getOsName() string {
@@ -108,7 +124,14 @@ func getOsName() string {
 }
 
 func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
-	hctx.GetLogger().Infof("Running OpenAI query for %#v via hishtory server", query)
+	hctx.GetLogger().Infof("Running AI query for %#v via hishtory server", query)
+
+	// Get model override with generic env variable taking precedence
+	modelOverride := os.Getenv("AI_API_MODEL")
+	if modelOverride == "" {
+		modelOverride = os.Getenv("OPENAI_API_MODEL")
+	}
+
 	req := ai.AiSuggestionRequest{
 		DeviceId:          hctx.GetConf(ctx).DeviceId,
 		UserId:            data.UserId(hctx.GetConf(ctx).UserSecret),
@@ -116,7 +139,7 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string
 		NumberCompletions: numberCompletions,
 		OsName:            getOsName(),
 		ShellName:         shellName,
-		Model:             os.Getenv("OPENAI_API_MODEL"),
+		Model:             modelOverride,
 	}
 	reqData, err := json.Marshal(req)
 	if err != nil {
@@ -131,6 +154,6 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse /api/v1/ai-suggest response: %w", err)
 	}
-	hctx.GetLogger().Infof("For OpenAI query=%#v ==> %#v", query, resp.Suggestions)
+	hctx.GetLogger().Infof("For AI query=%#v ==> %#v", query, resp.Suggestions)
 	return resp.Suggestions, nil
 }

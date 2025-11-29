@@ -298,7 +298,12 @@ func GetConfig() (ClientConfig, error) {
 		config.ColorScheme.BorderColor = GetDefaultColorScheme().BorderColor
 	}
 	if config.AiCompletionEndpoint == "" {
-		config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+		// Default to the appropriate endpoint based on available API keys
+		if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
+			config.AiCompletionEndpoint = "https://api.anthropic.com/v1/chat/completions"
+		} else {
+			config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+		}
 	}
 	if config.LogLevel == logrus.Level(0) {
 		config.LogLevel = logrus.InfoLevel
