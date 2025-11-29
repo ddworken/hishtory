@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -125,4 +126,39 @@ func Chunks[k any](slice []k, chunkSize int) [][]k {
 		chunks = append(chunks, slice[i:end])
 	}
 	return chunks
+}
+
+// SyncBackend defines the interface for syncing history entries.
+// This interface is in shared to avoid circular imports between hctx and backend packages.
+type SyncBackend interface {
+	// RegisterDevice registers a new device for the user.
+	RegisterDevice(ctx context.Context, userId, deviceId string) error
+
+	// Bootstrap returns all history entries for a user (used when initializing a new device).
+	Bootstrap(ctx context.Context, userId, deviceId string) ([]*EncHistoryEntry, error)
+
+	// SubmitEntries submits new encrypted history entries and fans them out to all devices.
+	// Returns dump requests and deletion requests that need to be processed.
+	SubmitEntries(ctx context.Context, entries []*EncHistoryEntry, sourceDeviceId string) (*SubmitResponse, error)
+
+	// SubmitDump handles bulk transfer of entries to a requesting device (responds to DumpRequest).
+	SubmitDump(ctx context.Context, entries []*EncHistoryEntry, userId, requestingDeviceId, sourceDeviceId string) error
+
+	// QueryEntries retrieves new entries for this device (entries not yet synced).
+	QueryEntries(ctx context.Context, deviceId, userId string) ([]*EncHistoryEntry, error)
+
+	// GetDeletionRequests returns pending deletion requests for a device.
+	GetDeletionRequests(ctx context.Context, userId, deviceId string) ([]*DeletionRequest, error)
+
+	// AddDeletionRequest adds a deletion request to be propagated to all devices.
+	AddDeletionRequest(ctx context.Context, request DeletionRequest) error
+
+	// Uninstall removes a device and its pending data.
+	Uninstall(ctx context.Context, userId, deviceId string) error
+
+	// Ping checks if the backend is reachable.
+	Ping(ctx context.Context) error
+
+	// Type returns the backend type identifier ("http" or "s3").
+	Type() string
 }

@@ -430,7 +430,7 @@ const DefaultGitBranchName = "master"
 
 // MinIO test configuration
 const (
-	MinioEndpoint        = "http://localhost:9000"
+	MinioEndpoint        = "http://127.0.0.1:9000"
 	MinioAccessKeyID     = "minioadmin"
 	MinioSecretAccessKey = "minioadmin"
 	MinioBucket          = "hishtory-test"

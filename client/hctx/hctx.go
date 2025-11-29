@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ddworken/hishtory/client/backend"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/tui/keybindings"
 	"github.com/ddworken/hishtory/shared"
@@ -173,16 +172,16 @@ func GetHome(ctx context.Context) string {
 
 // GetBackend returns the sync backend from context.
 // Returns nil if no backend has been set (caller should handle this case).
-func GetBackend(ctx context.Context) backend.SyncBackend {
+func GetBackend(ctx context.Context) shared.SyncBackend {
 	v := ctx.Value(BackendCtxKey)
 	if v != nil {
-		return v.(backend.SyncBackend)
+		return v.(shared.SyncBackend)
 	}
 	return nil
 }
 
 // WithBackend returns a new context with the backend set.
-func WithBackend(ctx context.Context, b backend.SyncBackend) context.Context {
+func WithBackend(ctx context.Context, b shared.SyncBackend) context.Context {
 	return context.WithValue(ctx, BackendCtxKey, b)
 }
 

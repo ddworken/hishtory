@@ -572,8 +572,12 @@ func GetSyncBackend(ctx context.Context) (backend.SyncBackend, context.Context) 
 
 	b, err := backend.NewBackendFromConfig(ctx, cfg)
 	if err != nil {
-		// Fall back to HTTP backend if there's a configuration error
-		hctx.GetLogger().Warnf("Failed to create configured backend, falling back to HTTP: %v", err)
+		// If user explicitly configured a non-HTTP backend, fail loudly rather than
+		// silently falling back to HTTP (which could sync data to unexpected places)
+		if config.BackendType != "" && config.BackendType != "http" {
+			CheckFatalError(fmt.Errorf("failed to create %s backend: %w", config.BackendType, err))
+		}
+		// For default/HTTP backend, create it directly
 		b = backend.NewHTTPBackend(
 			backend.WithVersion(Version),
 			backend.WithHeadersCallback(func() (string, string) {

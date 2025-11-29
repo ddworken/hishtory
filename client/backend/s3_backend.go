@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -20,10 +21,24 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
+// readCountLimit is the number of times an entry can be read before it is deleted.
+// This matches the HTTP backend behavior (see backend/server/internal/server/api_handlers.go).
+const readCountLimit = 5
+
+// s3API defines the S3 operations used by S3Backend.
+// This interface allows for dependency injection of mock clients in tests.
+type s3API interface {
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	HeadBucket(ctx context.Context, params *s3.HeadBucketInput, optFns ...func(*s3.Options)) (*s3.HeadBucketOutput, error)
+	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+}
+
 // S3Backend implements SyncBackend by storing data directly in an S3 bucket.
 // This allows users to self-host their history sync without running a server.
 type S3Backend struct {
-	client *s3.Client
+	client s3API
 	bucket string
 	prefix string // optional path prefix within bucket
 	userId string // derived from user secret, used as folder name
@@ -87,6 +102,13 @@ func (b *S3Backend) key(parts ...string) string {
 }
 
 // RegisterDevice registers a new device for the user.
+//
+// Known limitation: This function uses a read-modify-write pattern on devices.json
+// which is not atomic. If two devices register simultaneously, one registration could
+// be lost. In practice, this is rare since device registration typically happens once
+// during initial setup. If a device fails to register, re-running the setup will
+// succeed. A proper fix would require S3 conditional writes (ETags) or an external
+// locking mechanism (e.g., DynamoDB), which adds significant complexity.
 func (b *S3Backend) RegisterDevice(ctx context.Context, userId, deviceId string) error {
 	// Get current devices list
 	devices, err := b.getDevices(ctx)
@@ -131,7 +153,7 @@ func (b *S3Backend) RegisterDevice(ctx context.Context, userId, deviceId string)
 }
 
 // Bootstrap returns all history entries for a user.
-func (b *S3Backend) Bootstrap(ctx context.Context, userId, deviceId string) ([]*shared.EncHistoryEntry, error) {
+func (b *S3Backend) Bootstrap(ctx context.Context, _, _ string) ([]*shared.EncHistoryEntry, error) {
 	entriesPrefix := b.key("entries") + "/"
 	objects, err := b.listObjects(ctx, entriesPrefix)
 	if err != nil {
@@ -145,11 +167,13 @@ func (b *S3Backend) Bootstrap(ctx context.Context, userId, deviceId string) ([]*
 	for _, obj := range objects {
 		data, err := b.getObject(ctx, *obj.Key)
 		if err != nil {
-			continue // Skip entries we can't read
+			hctx.GetLogger().Warnf("S3Backend.Bootstrap: failed to read entry %s: %v", *obj.Key, err)
+			continue
 		}
 
 		var entry shared.EncHistoryEntry
 		if err := json.Unmarshal(data, &entry); err != nil {
+			hctx.GetLogger().Warnf("S3Backend.Bootstrap: failed to unmarshal entry %s: %v", *obj.Key, err)
 			continue
 		}
 
@@ -230,7 +254,7 @@ func (b *S3Backend) SubmitEntries(ctx context.Context, entries []*shared.EncHist
 }
 
 // SubmitDump handles bulk transfer of entries to a requesting device.
-func (b *S3Backend) SubmitDump(ctx context.Context, entries []*shared.EncHistoryEntry, userId, requestingDeviceId, sourceDeviceId string) error {
+func (b *S3Backend) SubmitDump(ctx context.Context, entries []*shared.EncHistoryEntry, _, requestingDeviceId, sourceDeviceId string) error {
 	// Write all entries to requesting device's inbox
 	for _, entry := range entries {
 		entryCopy := *entry
@@ -251,7 +275,10 @@ func (b *S3Backend) SubmitDump(ctx context.Context, entries []*shared.EncHistory
 }
 
 // QueryEntries retrieves new entries for a device.
-func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, userId string) ([]*shared.EncHistoryEntry, error) {
+// Entries are kept until they have been read readCountLimit times, matching
+// the HTTP backend behavior. This prevents data loss if the client crashes
+// after receiving entries but before persisting them locally.
+func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, _ string) ([]*shared.EncHistoryEntry, error) {
 	inboxPrefix := b.key("inbox", deviceId) + "/"
 	objects, err := b.listObjects(ctx, inboxPrefix)
 	if err != nil {
@@ -259,37 +286,51 @@ func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, userId string) (
 	}
 
 	var entries []*shared.EncHistoryEntry
-	var keysToDelete []string
 
 	for _, obj := range objects {
 		data, err := b.getObject(ctx, *obj.Key)
 		if err != nil {
-			continue // Skip entries we can't read
+			hctx.GetLogger().Warnf("S3Backend.QueryEntries: failed to read entry %s: %v", *obj.Key, err)
+			continue
 		}
 
 		var entry shared.EncHistoryEntry
 		if err := json.Unmarshal(data, &entry); err != nil {
+			hctx.GetLogger().Warnf("S3Backend.QueryEntries: failed to unmarshal entry %s: %v", *obj.Key, err)
 			continue
 		}
 
+		// Skip entries that have already been read enough times
+		if entry.ReadCount >= readCountLimit {
+			// Clean up: delete entries that have exceeded the read count
+			_ = b.deleteObject(ctx, *obj.Key)
+			continue
+		}
+
+		// Increment read count and include in results
 		entry.ReadCount++
 		entries = append(entries, &entry)
 
-		// Mark for deletion after successful read
-		// In S3 model, we delete from inbox after reading
-		keysToDelete = append(keysToDelete, *obj.Key)
-	}
-
-	// Delete processed entries from inbox
-	for _, key := range keysToDelete {
-		_ = b.deleteObject(ctx, key) // Best effort deletion
+		// Update the entry in S3 with incremented read count, or delete if limit reached
+		if entry.ReadCount >= readCountLimit {
+			_ = b.deleteObject(ctx, *obj.Key)
+		} else {
+			// Write back with updated read count
+			updatedData, err := json.Marshal(&entry)
+			if err == nil {
+				_ = b.putObject(ctx, *obj.Key, updatedData)
+			}
+		}
 	}
 
 	return entries, nil
 }
 
 // GetDeletionRequests returns pending deletion requests for a device.
-func (b *S3Backend) GetDeletionRequests(ctx context.Context, userId, deviceId string) ([]*shared.DeletionRequest, error) {
+// Deletion requests are kept until they have been read readCountLimit times,
+// matching the HTTP backend behavior. This prevents data loss if the client
+// crashes after receiving requests but before processing them locally.
+func (b *S3Backend) GetDeletionRequests(ctx context.Context, _, deviceId string) ([]*shared.DeletionRequest, error) {
 	prefix := b.key("deletions", deviceId) + "/"
 	objects, err := b.listObjects(ctx, prefix)
 	if err != nil {
@@ -300,19 +341,37 @@ func (b *S3Backend) GetDeletionRequests(ctx context.Context, userId, deviceId st
 	for _, obj := range objects {
 		data, err := b.getObject(ctx, *obj.Key)
 		if err != nil {
+			hctx.GetLogger().Warnf("S3Backend.GetDeletionRequests: failed to read request %s: %v", *obj.Key, err)
 			continue
 		}
 
 		var req shared.DeletionRequest
 		if err := json.Unmarshal(data, &req); err != nil {
+			hctx.GetLogger().Warnf("S3Backend.GetDeletionRequests: failed to unmarshal request %s: %v", *obj.Key, err)
 			continue
 		}
 
+		// Skip requests that have already been read enough times
+		if req.ReadCount >= readCountLimit {
+			// Clean up: delete requests that have exceeded the read count
+			_ = b.deleteObject(ctx, *obj.Key)
+			continue
+		}
+
+		// Increment read count and include in results
 		req.ReadCount++
 		requests = append(requests, &req)
 
-		// Delete after reading
-		_ = b.deleteObject(ctx, *obj.Key)
+		// Update the request in S3 with incremented read count, or delete if limit reached
+		if req.ReadCount >= readCountLimit {
+			_ = b.deleteObject(ctx, *obj.Key)
+		} else {
+			// Write back with updated read count
+			updatedData, err := json.Marshal(&req)
+			if err == nil {
+				_ = b.putObject(ctx, *obj.Key, updatedData)
+			}
+		}
 	}
 
 	return requests, nil
@@ -365,7 +424,7 @@ func (b *S3Backend) AddDeletionRequest(ctx context.Context, request shared.Delet
 }
 
 // Uninstall removes a device and its pending data.
-func (b *S3Backend) Uninstall(ctx context.Context, userId, deviceId string) error {
+func (b *S3Backend) Uninstall(ctx context.Context, _, deviceId string) error {
 	// Remove device from devices list
 	deviceList, err := b.getDevices(ctx)
 	if err != nil {
@@ -502,9 +561,10 @@ func (b *S3Backend) getObject(ctx context.Context, key string) ([]byte, error) {
 
 func (b *S3Backend) putObject(ctx context.Context, key string, data []byte) error {
 	_, err := b.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(b.bucket),
-		Key:    aws.String(key),
-		Body:   bytes.NewReader(data),
+		Bucket:      aws.String(b.bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(data),
+		ContentType: aws.String("application/json"),
 	})
 	return err
 }
@@ -519,18 +579,23 @@ func (b *S3Backend) deleteObject(ctx context.Context, key string) error {
 
 func (b *S3Backend) listObjects(ctx context.Context, prefix string) ([]types.Object, error) {
 	var objects []types.Object
+	var continuationToken *string
 
-	paginator := s3.NewListObjectsV2Paginator(b.client, &s3.ListObjectsV2Input{
-		Bucket: aws.String(b.bucket),
-		Prefix: aws.String(prefix),
-	})
-
-	for paginator.HasMorePages() {
-		page, err := paginator.NextPage(ctx)
+	for {
+		output, err := b.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(b.bucket),
+			Prefix:            aws.String(prefix),
+			ContinuationToken: continuationToken,
+		})
 		if err != nil {
 			return nil, err
 		}
-		objects = append(objects, page.Contents...)
+		objects = append(objects, output.Contents...)
+
+		if !aws.ToBool(output.IsTruncated) {
+			break
+		}
+		continuationToken = output.NextContinuationToken
 	}
 
 	return objects, nil
