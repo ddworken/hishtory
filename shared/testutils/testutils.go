@@ -439,7 +439,14 @@ const (
 
 // RunMinioServer starts a MinIO server for S3 backend testing.
 // It uses Docker to run MinIO and creates a test bucket.
+// If Docker is not available, it prints a warning and returns a no-op cleanup function.
 func RunMinioServer() func() {
+	// Check if Docker is available
+	if _, err := exec.LookPath("docker"); err != nil {
+		fmt.Println("WARNING: Docker not available, skipping MinIO server startup. S3 tests will be skipped.")
+		return func() {}
+	}
+
 	// Kill any existing MinIO container
 	_ = exec.Command("docker", "rm", "-f", "hishtory-minio-test").Run()
 
@@ -457,7 +464,8 @@ func RunMinioServer() func() {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		panic(fmt.Sprintf("failed to start MinIO container: %v, stdout=%s, stderr=%s", err, stdout.String(), stderr.String()))
+		fmt.Printf("WARNING: Failed to start MinIO container: %v. S3 tests will be skipped.\n", err)
+		return func() {}
 	}
 
 	// Wait for MinIO to be ready
