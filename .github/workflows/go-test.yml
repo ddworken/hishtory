@@ -51,7 +51,7 @@ jobs:
       run: |
 
           # Install our dependencies
-          brew install fish tmux bash
+          brew install fish tmux bash minio minio-mc
 
           # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname
