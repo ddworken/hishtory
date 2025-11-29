@@ -129,6 +129,10 @@ func TestParam(t *testing.T) {
 	}
 	t.Run("testTabCompletion/fish", wrapTestForSharding(func(t *testing.T) { testTabCompletion(t, zshTester{}, "fish") }))
 	t.Run("testPresaving/fish", wrapTestForSharding(func(t *testing.T) { testPresaving(t, zshTester{}, "fish") }))
+	t.Run("testUpdateWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testUpdateWithS3Backend(t, zshTester{}) }))
+	t.Run("testRedactionWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testRedactionWithS3Backend(t, zshTester{}) }))
+	t.Run("testMultipleDevicesWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testMultipleDevicesWithS3Backend(t, zshTester{}) }))
+	t.Run("testS3BackendErrorHandling/zsh", wrapTestForSharding(func(t *testing.T) { testS3BackendErrorHandling(t, zshTester{}) }))
 	t.Run("testControlR/fish", wrapTestForSharding(func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) }))
 	t.Run("testTui/search/online", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Online) }))
 	t.Run("testTui/search/offline", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Offline) }))
@@ -323,6 +327,244 @@ func testSyncWithS3Backend(t *testing.T, tester shellTester) {
 	// Verify device 1 still has its original commands
 	out = hishtoryQuery(t, tester, "s3unique")
 	require.Contains(t, out, "echo s3uniquecommand", "Device 1 should still have s3uniquecommand")
+}
+
+// testUpdateWithS3Backend tests that `hishtory update` works correctly when the S3 backend is configured.
+// The update functionality uses the HTTP API directly (not the SyncBackend), so updates should work
+// regardless of the sync backend configuration.
+func testUpdateWithS3Backend(t *testing.T, tester shellTester) {
+	// Skip if S3 tests are not enabled
+	if !isS3TestEnabled() {
+		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
+	}
+	if !testutils.IsOnline() {
+		t.Skip("skipping because we're currently offline")
+	}
+	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
+		t.Skip("skipping on linux/arm64 which is unsupported")
+	}
+
+	// Set up
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory from local build
+	userSecret := installHishtory(t, tester, "")
+
+	// Configure S3 backend
+	configureS3Backend(t)
+
+	// Verify S3 backend is configured
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+	require.Equal(t, "s3", config.BackendType, "Expected S3 backend to be configured")
+
+	// Run a command to verify hishtory is working
+	tester.RunInteractiveShell(t, "echo before_update")
+	out := hishtoryQuery(t, tester, "before_update")
+	require.Contains(t, out, "echo before_update", "Should have command before update")
+
+	// Run hishtory update - this should work even with S3 backend configured
+	// The update goes from v0.Unknown (local build) to the latest release
+	out = tester.RunInteractiveShell(t, " hishtory update")
+	require.Regexp(t, regexp.MustCompile(`Successfully updated hishtory from v0\.[a-zA-Z0-9]+ to v0\.[0-9]+`), out, "Update should succeed with S3 backend")
+
+	// Verify hishtory still works after update
+	tester.RunInteractiveShell(t, "echo after_update")
+	out = hishtoryQuery(t, tester, "after_update")
+	require.Contains(t, out, "echo after_update", "Should have command after update")
+
+	// Verify we can still see old commands (history is preserved across updates)
+	out = hishtoryQuery(t, tester, "before_update")
+	require.Contains(t, out, "echo before_update", "Should still have command from before update")
+
+	// Check status shows correct user secret
+	out = tester.RunInteractiveShell(t, "hishtory status")
+	require.Contains(t, out, userSecret, "Status should show correct user secret after update")
+
+	// Note: The S3 backend config will NOT be preserved after update if the release version
+	// doesn't have S3 support yet. Once S3 support is released, the config will be preserved.
+	// This is expected behavior since JSON unmarshalling drops unknown fields.
+}
+
+// testRedactionWithS3Backend tests that redacting (deleting) commands works correctly
+// when using the S3 sync backend. Redacted commands should be removed from all devices.
+func testRedactionWithS3Backend(t *testing.T, tester shellTester) {
+	// Skip if S3 tests are not enabled
+	if !isS3TestEnabled() {
+		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
+	}
+
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory on device 1 and configure S3 backend
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+
+	// Record some commands on device 1
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3redact-%s-keep", randomUuid))
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3redact-%s-delete1", randomUuid))
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3redact-%s-delete2", randomUuid))
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3redact-%s-keep2", randomUuid))
+
+	// Verify all commands are recorded
+	out := hishtoryQuery(t, tester, "s3redact-"+randomUuid[:8])
+	require.Contains(t, out, "s3redact-"+randomUuid+"-keep", "Should have keep command")
+	require.Contains(t, out, "s3redact-"+randomUuid+"-delete1", "Should have delete1 command")
+	require.Contains(t, out, "s3redact-"+randomUuid+"-delete2", "Should have delete2 command")
+	require.Contains(t, out, "s3redact-"+randomUuid+"-keep2", "Should have keep2 command")
+
+	// Set up device 2 with same user secret and S3 backend
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Verify device 2 can see all commands
+	out = hishtoryQuery(t, tester, "s3redact-"+randomUuid[:8])
+	require.Contains(t, out, "s3redact-"+randomUuid+"-delete1", "Device 2 should see delete1 command")
+	require.Contains(t, out, "s3redact-"+randomUuid+"-delete2", "Device 2 should see delete2 command")
+
+	// Redact commands containing "delete" from device 2
+	out = tester.RunInteractiveShell(t, fmt.Sprintf("HISHTORY_REDACT_FORCE=1 hishtory redact s3redact-%s-delete", randomUuid))
+	require.Contains(t, out, "Permanently deleting 2 entries", "Should redact 2 entries")
+
+	// Verify device 2 no longer has the deleted commands
+	out = hishtoryQuery(t, tester, "s3redact-"+randomUuid[:8])
+	require.Contains(t, out, "s3redact-"+randomUuid+"-keep", "Device 2 should still have keep command")
+	require.Contains(t, out, "s3redact-"+randomUuid+"-keep2", "Device 2 should still have keep2 command")
+	require.NotContains(t, out, "s3redact-"+randomUuid+"-delete1", "Device 2 should not have delete1 command")
+	require.NotContains(t, out, "s3redact-"+randomUuid+"-delete2", "Device 2 should not have delete2 command")
+
+	// Switch back to device 1 and verify it also lost the redacted commands after sync
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 1 should no longer have the deleted commands (they were removed from S3)
+	out = hishtoryQuery(t, tester, "s3redact-"+randomUuid[:8])
+	require.Contains(t, out, "s3redact-"+randomUuid+"-keep", "Device 1 should still have keep command")
+	require.Contains(t, out, "s3redact-"+randomUuid+"-keep2", "Device 1 should still have keep2 command")
+	require.NotContains(t, out, "s3redact-"+randomUuid+"-delete1", "Device 1 should not have delete1 command after sync")
+	require.NotContains(t, out, "s3redact-"+randomUuid+"-delete2", "Device 1 should not have delete2 command after sync")
+}
+
+// testMultipleDevicesWithS3Backend tests syncing between more than 2 devices using the S3 backend.
+func testMultipleDevicesWithS3Backend(t *testing.T, tester shellTester) {
+	// Skip if S3 tests are not enabled
+	if !isS3TestEnabled() {
+		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
+	}
+
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory on device 1 and configure S3 backend
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+
+	// Record command on device 1
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3multi-%s-device1", randomUuid))
+
+	// Verify device 1 has its command
+	out := hishtoryQuery(t, tester, "s3multi-"+randomUuid[:8])
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device1", "Device 1 should have its command")
+
+	// Set up device 2
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 2 should see device 1's command
+	out = hishtoryQuery(t, tester, "s3multi-"+randomUuid[:8])
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device1", "Device 2 should see device 1's command")
+
+	// Record command on device 2
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3multi-%s-device2", randomUuid))
+
+	// Set up device 3
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 3 should see commands from both device 1 and 2
+	out = hishtoryQuery(t, tester, "s3multi-"+randomUuid[:8])
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device1", "Device 3 should see device 1's command")
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device2", "Device 3 should see device 2's command")
+
+	// Record command on device 3
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3multi-%s-device3", randomUuid))
+
+	// Set up device 4
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 4 should see commands from all devices
+	out = hishtoryQuery(t, tester, "s3multi-"+randomUuid[:8])
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device1", "Device 4 should see device 1's command")
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device2", "Device 4 should see device 2's command")
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device3", "Device 4 should see device 3's command")
+
+	// Go back to device 1 and verify it sees all commands
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	out = hishtoryQuery(t, tester, "s3multi-"+randomUuid[:8])
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device1", "Device 1 should see its own command")
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device2", "Device 1 should see device 2's command")
+	require.Contains(t, out, "s3multi-"+randomUuid+"-device3", "Device 1 should see device 3's command")
+}
+
+// testS3BackendErrorHandling tests graceful error handling when S3 is unavailable.
+func testS3BackendErrorHandling(t *testing.T, tester shellTester) {
+	// Skip if S3 tests are not enabled
+	if !isS3TestEnabled() {
+		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
+	}
+
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory on device 1 and configure S3 backend
+	_ = installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+
+	// Record some commands while S3 is working
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3error-%s-before", randomUuid))
+
+	// Verify command is recorded
+	out := hishtoryQuery(t, tester, "s3error-"+randomUuid[:8])
+	require.Contains(t, out, "s3error-"+randomUuid+"-before", "Should have command before error")
+
+	// Configure S3 backend with invalid endpoint to simulate unavailability
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+	config.S3Config.Endpoint = "http://invalid-endpoint:9999"
+	err := hctx.SetConfig(config)
+	require.NoError(t, err, "Should be able to update config")
+
+	// Running commands should still work (saved locally, sync will fail gracefully)
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3error-%s-during", randomUuid))
+
+	// Local query should still work even if S3 is unreachable
+	out = hishtoryQuery(t, tester, "s3error-"+randomUuid[:8])
+	require.Contains(t, out, "s3error-"+randomUuid+"-before", "Should still have before command locally")
+	require.Contains(t, out, "s3error-"+randomUuid+"-during", "Should have during command locally")
+
+	// Restore valid S3 endpoint
+	config.S3Config.Endpoint = testutils.MinioEndpoint
+	err = hctx.SetConfig(config)
+	require.NoError(t, err, "Should be able to restore config")
+
+	// After restoring, commands should sync
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3error-%s-after", randomUuid))
+
+	// All commands should be available
+	out = hishtoryQuery(t, tester, "s3error-"+randomUuid[:8])
+	require.Contains(t, out, "s3error-"+randomUuid+"-before", "Should have before command")
+	require.Contains(t, out, "s3error-"+randomUuid+"-during", "Should have during command")
+	require.Contains(t, out, "s3error-"+randomUuid+"-after", "Should have after command")
 }
 
 func installWithOnlineStatus(t testing.TB, tester shellTester, onlineStatus OnlineStatus) string {
