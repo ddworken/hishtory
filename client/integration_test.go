@@ -133,6 +133,7 @@ func TestParam(t *testing.T) {
 	t.Run("testRedactionWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testRedactionWithS3Backend(t, zshTester{}) }))
 	t.Run("testMultipleDevicesWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testMultipleDevicesWithS3Backend(t, zshTester{}) }))
 	t.Run("testS3BackendErrorHandling/zsh", wrapTestForSharding(func(t *testing.T) { testS3BackendErrorHandling(t, zshTester{}) }))
+	t.Run("testDumpRequestWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testDumpRequestWithS3Backend(t, zshTester{}) }))
 	t.Run("testControlR/fish", wrapTestForSharding(func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) }))
 	t.Run("testTui/search/online", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Online) }))
 	t.Run("testTui/search/offline", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Offline) }))
@@ -565,6 +566,108 @@ func testS3BackendErrorHandling(t *testing.T, tester shellTester) {
 	require.Contains(t, out, "s3error-"+randomUuid+"-before", "Should have before command")
 	require.Contains(t, out, "s3error-"+randomUuid+"-during", "Should have during command")
 	require.Contains(t, out, "s3error-"+randomUuid+"-after", "Should have after command")
+}
+
+// testDumpRequestWithS3Backend tests the dump request bootstrapping flow with the S3 backend.
+// When a new device joins, it creates a dump request. When an existing device submits entries,
+// it sees the pending dump request and sends its history to the new device.
+func testDumpRequestWithS3Backend(t *testing.T, tester shellTester) {
+	// Skip if S3 tests are not enabled
+	if !isS3TestEnabled() {
+		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
+	}
+
+	// Setup
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory on device 1 and configure S3 backend
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+
+	// Get device 1's ID for later verification
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+	device1Id := config.DeviceId
+	require.NotEmpty(t, device1Id, "Device 1 should have a device ID")
+
+	// Record some commands on device 1
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3dump-%s-cmd1", randomUuid))
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3dump-%s-cmd2", randomUuid))
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3dump-%s-cmd3", randomUuid))
+
+	// Verify device 1 has all commands
+	out := hishtoryQuery(t, tester, "s3dump-"+randomUuid[:8])
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd1", "Device 1 should have cmd1")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd2", "Device 1 should have cmd2")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd3", "Device 1 should have cmd3")
+
+	// Save device 1's state
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "-device1")
+
+	// Install hishtory on device 2 with same secret and S3 backend
+	// This should create a dump request for device 1 to fulfill
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Get device 2's ID
+	ctx = hctx.MakeContext()
+	config = hctx.GetConf(ctx)
+	device2Id := config.DeviceId
+	require.NotEmpty(t, device2Id, "Device 2 should have a device ID")
+	require.NotEqual(t, device1Id, device2Id, "Devices should have different IDs")
+
+	// Device 2 initially should have the commands from bootstrap (S3 backend fetches all entries)
+	// But there may be a dump request pending for device 1 to respond to
+	out = hishtoryQuery(t, tester, "s3dump-"+randomUuid[:8])
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd1", "Device 2 should see cmd1 after bootstrap")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd2", "Device 2 should see cmd2 after bootstrap")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd3", "Device 2 should see cmd3 after bootstrap")
+
+	// Record a command on device 2
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3dump-%s-device2cmd", randomUuid))
+
+	// Verify device 2 has its own command plus device 1's commands
+	out = hishtoryQuery(t, tester, "s3dump-"+randomUuid[:8])
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd1", "Device 2 should have cmd1")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd2", "Device 2 should have cmd2")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd3", "Device 2 should have cmd3")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-device2cmd", "Device 2 should have its own command")
+
+	// Save device 2's state
+	restoreDevice2 := testutils.BackupAndRestoreWithId(t, "-device2")
+
+	// Restore device 1 and run a command to trigger dump request processing
+	restoreDevice1()
+
+	// Device 1 runs a command which should trigger processing the dump request
+	tester.RunInteractiveShell(t, fmt.Sprintf("echo s3dump-%s-device1after", randomUuid))
+
+	// Verify device 1 has all commands including device 2's
+	out = hishtoryQuery(t, tester, "s3dump-"+randomUuid[:8])
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd1", "Device 1 should still have cmd1")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd2", "Device 1 should still have cmd2")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-cmd3", "Device 1 should still have cmd3")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-device1after", "Device 1 should have its new command")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-device2cmd", "Device 1 should see device 2's command")
+
+	// Restore device 2 and verify it sees device 1's new command
+	restoreDevice2()
+
+	// Run a query to trigger sync
+	out = hishtoryQuery(t, tester, "s3dump-"+randomUuid[:8])
+	require.Contains(t, out, "s3dump-"+randomUuid+"-device1after", "Device 2 should see device 1's new command")
+	require.Contains(t, out, "s3dump-"+randomUuid+"-device2cmd", "Device 2 should still have its own command")
+
+	// Verify total count - should have 5 unique commands with this UUID prefix
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	cmdCount := 0
+	for _, line := range lines {
+		if strings.Contains(line, "s3dump-"+randomUuid) && strings.Contains(line, "echo") {
+			cmdCount++
+		}
+	}
+	require.Equal(t, 5, cmdCount, "Should have exactly 5 echo commands with our UUID")
 }
 
 func installWithOnlineStatus(t testing.TB, tester shellTester, onlineStatus OnlineStatus) string {
