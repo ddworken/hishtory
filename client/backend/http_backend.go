@@ -141,8 +141,8 @@ func (b *HTTPBackend) SubmitDump(ctx context.Context, entries []*shared.EncHisto
 }
 
 // QueryEntries retrieves new entries for a specific device.
-func (b *HTTPBackend) QueryEntries(ctx context.Context, deviceId, userId string) ([]*shared.EncHistoryEntry, error) {
-	path := "/api/v1/query?device_id=" + deviceId + "&user_id=" + userId
+func (b *HTTPBackend) QueryEntries(ctx context.Context, deviceId, userId, queryReason string) ([]*shared.EncHistoryEntry, error) {
+	path := "/api/v1/query?device_id=" + deviceId + "&user_id=" + userId + "&queryReason=" + queryReason
 	respBody, err := b.apiGet(ctx, path)
 	if err != nil {
 		return nil, err

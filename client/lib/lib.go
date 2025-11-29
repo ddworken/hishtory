@@ -558,9 +558,15 @@ func IsOfflineError(ctx context.Context, err error) bool {
 }
 
 // CanReachBackend checks if the configured sync backend is reachable.
-// It uses the backend's Ping method which works for both HTTP and S3 backends.
+// For HTTP backends, uses the original ApiGet ping method to maintain compatibility.
+// For S3 backends, uses the backend's Ping method.
 func CanReachBackend(ctx context.Context) bool {
 	b, ctx := GetSyncBackend(ctx)
+	if b.Type() == "http" {
+		// Use the original HTTP check for compatibility
+		return CanReachHishtoryServer(ctx)
+	}
+	// For S3 and other backends, use the Ping method
 	return b.Ping(ctx) == nil
 }
 
@@ -770,7 +776,7 @@ func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string
 	}
 
 	b, ctx := GetSyncBackend(ctx)
-	retrievedEntries, err := b.QueryEntries(ctx, config.DeviceId, data.UserId(config.UserSecret))
+	retrievedEntries, err := b.QueryEntries(ctx, config.DeviceId, data.UserId(config.UserSecret), queryReason)
 	if IsOfflineError(ctx, err) {
 		return nil
 	}

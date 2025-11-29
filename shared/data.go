@@ -145,7 +145,8 @@ type SyncBackend interface {
 	SubmitDump(ctx context.Context, entries []*EncHistoryEntry, userId, requestingDeviceId, sourceDeviceId string) error
 
 	// QueryEntries retrieves new entries for this device (entries not yet synced).
-	QueryEntries(ctx context.Context, deviceId, userId string) ([]*EncHistoryEntry, error)
+	// The queryReason is used for logging/debugging purposes.
+	QueryEntries(ctx context.Context, deviceId, userId, queryReason string) ([]*EncHistoryEntry, error)
 
 	// GetDeletionRequests returns pending deletion requests for a device.
 	GetDeletionRequests(ctx context.Context, userId, deviceId string) ([]*DeletionRequest, error)

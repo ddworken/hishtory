@@ -314,7 +314,7 @@ func TestS3BackendSubmitEntries(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		// Verify entry is in device2's inbox (not device1's)
-		device2Entries, err := b.QueryEntries(ctx, "device2", "user123")
+		device2Entries, err := b.QueryEntries(ctx, "device2", "user123", "test")
 		require.NoError(t, err)
 		found := false
 		for _, e := range device2Entries {
@@ -325,7 +325,7 @@ func TestS3BackendSubmitEntries(t *testing.T) {
 		assert.True(t, found, "Entry should be in device2's inbox")
 
 		// Device1 should NOT have the entry in its inbox
-		device1Entries, err := b.QueryEntries(ctx, "device1", "user123")
+		device1Entries, err := b.QueryEntries(ctx, "device1", "user123", "test")
 		require.NoError(t, err)
 		for _, e := range device1Entries {
 			assert.NotEqual(t, "entry1", e.EncryptedId, "Source device should not receive its own entry")
@@ -391,7 +391,7 @@ func TestS3BackendQueryEntries(t *testing.T) {
 		require.NoError(t, b.putObject(ctx, inboxKey, entryData))
 
 		// First query should return the entry with ReadCount=1
-		entries, err := b.QueryEntries(ctx, "device1", "user123")
+		entries, err := b.QueryEntries(ctx, "device1", "user123", "test")
 		require.NoError(t, err)
 		assert.Len(t, entries, 1)
 		assert.Equal(t, "entry1", entries[0].EncryptedId)
@@ -406,7 +406,7 @@ func TestS3BackendQueryEntries(t *testing.T) {
 
 		// Query 4 more times (reads 2-5)
 		for i := 2; i <= readCountLimit; i++ {
-			entries, err = b.QueryEntries(ctx, "device1", "user123")
+			entries, err = b.QueryEntries(ctx, "device1", "user123", "test")
 			require.NoError(t, err)
 			if i < readCountLimit {
 				assert.Len(t, entries, 1, "Read %d should still return entry", i)
@@ -419,7 +419,7 @@ func TestS3BackendQueryEntries(t *testing.T) {
 		assert.Error(t, err, "Entry should be deleted after reaching read count limit")
 
 		// Subsequent queries should return empty
-		entries, err = b.QueryEntries(ctx, "device1", "user123")
+		entries, err = b.QueryEntries(ctx, "device1", "user123", "test")
 		require.NoError(t, err)
 		assert.Empty(t, entries)
 	})
@@ -427,7 +427,7 @@ func TestS3BackendQueryEntries(t *testing.T) {
 	t.Run("empty inbox returns empty slice", func(t *testing.T) {
 		b := NewTestableS3Backend("user123", "")
 
-		entries, err := b.QueryEntries(ctx, "device1", "user123")
+		entries, err := b.QueryEntries(ctx, "device1", "user123", "test")
 		require.NoError(t, err)
 		assert.Empty(t, entries)
 	})
@@ -448,7 +448,7 @@ func TestS3BackendQueryEntries(t *testing.T) {
 		require.NoError(t, b.putObject(ctx, inboxKey, entryData))
 
 		// Query should not return the entry (it's at limit)
-		entries, err := b.QueryEntries(ctx, "device1", "user123")
+		entries, err := b.QueryEntries(ctx, "device1", "user123", "test")
 		require.NoError(t, err)
 		assert.Empty(t, entries)
 

@@ -176,7 +176,7 @@ func TestS3Integration_SubmitEntries(t *testing.T) {
 		assert.True(t, found, "Entry should be in main entries store")
 
 		// Verify entry is in device2's inbox (not device1's)
-		device2Entries, err := backend.QueryEntries(ctx, "device2", userId)
+		device2Entries, err := backend.QueryEntries(ctx, "device2", userId, "test")
 		require.NoError(t, err)
 		found = false
 		for _, e := range device2Entries {
@@ -189,7 +189,7 @@ func TestS3Integration_SubmitEntries(t *testing.T) {
 		assert.True(t, found, "Entry should be in device2's inbox")
 
 		// Device1 (source) should NOT have the entry in its inbox
-		device1Entries, err := backend.QueryEntries(ctx, "device1", userId)
+		device1Entries, err := backend.QueryEntries(ctx, "device1", userId, "test")
 		require.NoError(t, err)
 		for _, e := range device1Entries {
 			assert.NotEqual(t, "entry-"+entryId, e.EncryptedId, "Source device should not receive its own entry")
@@ -268,7 +268,7 @@ func TestS3Integration_QueryEntries(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("returns entries and increments ReadCount", func(t *testing.T) {
-		result, err := backend.QueryEntries(ctx, "device2", userId)
+		result, err := backend.QueryEntries(ctx, "device2", userId, "test")
 		require.NoError(t, err)
 
 		found := false
@@ -285,7 +285,7 @@ func TestS3Integration_QueryEntries(t *testing.T) {
 		// Read count is already 1 from previous test, so we need 4 more reads to hit the limit
 		// Reads 2, 3, 4 should still return the entry
 		for i := 2; i < 5; i++ {
-			result, err := backend.QueryEntries(ctx, "device2", userId)
+			result, err := backend.QueryEntries(ctx, "device2", userId, "test")
 			require.NoError(t, err)
 
 			found := false
@@ -299,7 +299,7 @@ func TestS3Integration_QueryEntries(t *testing.T) {
 		}
 
 		// Read 5 (the limit) - entry is returned but then deleted
-		result, err := backend.QueryEntries(ctx, "device2", userId)
+		result, err := backend.QueryEntries(ctx, "device2", userId, "test")
 		require.NoError(t, err)
 		found := false
 		for _, e := range result {
@@ -311,7 +311,7 @@ func TestS3Integration_QueryEntries(t *testing.T) {
 		assert.True(t, found, "Read 5 should still return the entry")
 
 		// Read 6 - entry should be gone now
-		result, err = backend.QueryEntries(ctx, "device2", userId)
+		result, err = backend.QueryEntries(ctx, "device2", userId, "test")
 		require.NoError(t, err)
 		for _, e := range result {
 			assert.NotEqual(t, "query-entry-"+entryId, e.EncryptedId, "Entry should be deleted after reaching read count limit")
@@ -320,7 +320,7 @@ func TestS3Integration_QueryEntries(t *testing.T) {
 
 	t.Run("empty inbox returns empty slice", func(t *testing.T) {
 		emptyBackend := newTestBackend(t, "empty-user-"+uuid.New().String()[:8])
-		result, err := emptyBackend.QueryEntries(ctx, "nonexistent-device", "empty-user")
+		result, err := emptyBackend.QueryEntries(ctx, "nonexistent-device", "empty-user", "test")
 		require.NoError(t, err)
 		assert.Empty(t, result)
 	})
@@ -423,7 +423,7 @@ func TestS3Integration_DumpRequestFlow(t *testing.T) {
 		require.NoError(t, err)
 
 		// Device2 should now have entries in its inbox
-		device2Entries, err := backend.QueryEntries(ctx, "device2", userId)
+		device2Entries, err := backend.QueryEntries(ctx, "device2", userId, "test")
 		require.NoError(t, err)
 
 		foundIds := make(map[string]bool)
@@ -457,7 +457,7 @@ func TestS3Integration_DeletionRequests(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clear any pending entries from device2's inbox (from the dump request)
-	_, _ = backend.QueryEntries(ctx, "device2", userId)
+	_, _ = backend.QueryEntries(ctx, "device2", userId, "test")
 
 	// Submit entries
 	entryId := uuid.New().String()[:8]
@@ -468,7 +468,7 @@ func TestS3Integration_DeletionRequests(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clear device2's inbox again
-	_, _ = backend.QueryEntries(ctx, "device2", userId)
+	_, _ = backend.QueryEntries(ctx, "device2", userId, "test")
 
 	t.Run("AddDeletionRequest fans out to devices", func(t *testing.T) {
 		delReq := shared.DeletionRequest{
@@ -564,7 +564,7 @@ func TestS3Integration_Uninstall(t *testing.T) {
 		assert.Equal(t, "device1", devices.Devices[0].DeviceId)
 
 		// Verify inbox is cleaned up (QueryEntries should return empty for device2)
-		entries, err := backend.QueryEntries(ctx, "device2", userId)
+		entries, err := backend.QueryEntries(ctx, "device2", userId, "test")
 		require.NoError(t, err)
 		assert.Empty(t, entries, "Device2's inbox should be cleaned up")
 
@@ -619,7 +619,7 @@ func TestS3Integration_FullSyncWorkflow(t *testing.T) {
 
 	// Step 4: Device 2 queries and gets all history
 	t.Log("Step 4: Device 2 queries entries")
-	device2Entries, err := backend.QueryEntries(ctx, "device2", userId)
+	device2Entries, err := backend.QueryEntries(ctx, "device2", userId, "test")
 	require.NoError(t, err)
 
 	foundIds := make(map[string]bool)
@@ -640,7 +640,7 @@ func TestS3Integration_FullSyncWorkflow(t *testing.T) {
 
 	// Step 6: Device 1 queries and gets device 2's command
 	t.Log("Step 6: Device 1 queries entries")
-	device1Entries, err := backend.QueryEntries(ctx, "device1", userId)
+	device1Entries, err := backend.QueryEntries(ctx, "device1", userId, "test")
 	require.NoError(t, err)
 
 	found := false
@@ -704,7 +704,7 @@ func TestS3Integration_ConcurrentDevices(t *testing.T) {
 	require.NoError(t, err)
 
 	// Backend2 should be able to query the entry from device2's inbox
-	result, err := backend2.QueryEntries(ctx, "device2", userId)
+	result, err := backend2.QueryEntries(ctx, "device2", userId, "test")
 	require.NoError(t, err)
 
 	found := false

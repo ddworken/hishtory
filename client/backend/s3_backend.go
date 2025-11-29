@@ -278,7 +278,7 @@ func (b *S3Backend) SubmitDump(ctx context.Context, entries []*shared.EncHistory
 // Entries are kept until they have been read readCountLimit times, matching
 // the HTTP backend behavior. This prevents data loss if the client crashes
 // after receiving entries but before persisting them locally.
-func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, _ string) ([]*shared.EncHistoryEntry, error) {
+func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, _, _ string) ([]*shared.EncHistoryEntry, error) {
 	inboxPrefix := b.key("inbox", deviceId) + "/"
 	objects, err := b.listObjects(ctx, inboxPrefix)
 	if err != nil {

@@ -144,7 +144,7 @@ func TestHTTPBackendQueryEntries(t *testing.T) {
 	defer server.Close()
 
 	b := NewHTTPBackend(WithServerURL(server.URL))
-	result, err := b.QueryEntries(context.Background(), "device1", "user1")
+	result, err := b.QueryEntries(context.Background(), "device1", "user1", "test")
 	require.NoError(t, err)
 	assert.Len(t, result, 2)
 }
@@ -241,7 +241,7 @@ func TestHTTPBackendErrorHandling(t *testing.T) {
 	})
 
 	t.Run("QueryEntries error", func(t *testing.T) {
-		_, err := b.QueryEntries(context.Background(), "device1", "user1")
+		_, err := b.QueryEntries(context.Background(), "device1", "user1", "test")
 		assert.Error(t, err)
 	})
 
