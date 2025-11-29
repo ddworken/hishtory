@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -124,6 +125,10 @@ func TestParam(t *testing.T) {
 	t.Run("testMultipleDevicesWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testMultipleDevicesWithS3Backend(t, zshTester{}) }))
 	t.Run("testS3BackendErrorHandling/zsh", wrapTestForSharding(func(t *testing.T) { testS3BackendErrorHandling(t, zshTester{}) }))
 	t.Run("testDumpRequestWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testDumpRequestWithS3Backend(t, zshTester{}) }))
+	t.Run("testOfflineAccumulationWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testOfflineAccumulationWithS3Backend(t, zshTester{}) }))
+	t.Run("testConcurrentWritesWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testConcurrentWritesWithS3Backend(t, zshTester{}) }))
+	t.Run("testPresavingWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testPresavingWithS3Backend(t, zshTester{}) }))
+	t.Run("testImportWithS3Backend/zsh", wrapTestForSharding(func(t *testing.T) { testImportWithS3Backend(t, zshTester{}) }))
 	t.Run("testControlR/fish", wrapTestForSharding(func(t *testing.T) { testControlR(t, bashTester{}, "fish", Online) }))
 	t.Run("testTui/search/online", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Online) }))
 	t.Run("testTui/search/offline", wrapTestForSharding(func(t *testing.T) { testTui_search(t, Offline) }))
@@ -628,6 +633,283 @@ func testDumpRequestWithS3Backend(t *testing.T, tester shellTester) {
 		}
 	}
 	require.Equal(t, 5, cmdCount, "Should have exactly 5 echo commands with our UUID")
+}
+
+func testOfflineAccumulationWithS3Backend(t *testing.T, tester shellTester) {
+	// This test verifies that when S3 becomes unavailable, commands are stored locally,
+	// and when S3 becomes available again, they sync properly to other devices.
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory with S3 backend on device 1
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+
+	// Record a command while S3 is available
+	tester.RunInteractiveShell(t, `echo s3offline-`+randomUuid+`-online1`)
+
+	// Verify the command is recorded locally
+	out := tester.RunInteractiveShell(t, `hishtory export | grep s3offline-`+randomUuid)
+	require.Contains(t, out, "s3offline-"+randomUuid+"-online1")
+
+	// Back up device 1 state
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "device1-offline")
+
+	// Set up device 2 with S3 backend
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 2 should see device 1's command after sync
+	out = hishtoryQuery(t, tester, "s3offline-"+randomUuid)
+	require.Contains(t, out, "s3offline-"+randomUuid+"-online1", "Device 2 should see device 1's online command")
+
+	// Back up device 2 state
+	restoreDevice2 := testutils.BackupAndRestoreWithId(t, "device2-offline")
+
+	// Go back to device 1
+	restoreDevice1()
+
+	// Simulate S3 being unavailable by setting HaveMissedUploads flag
+	// and recording commands that won't sync immediately
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+	config.HaveMissedUploads = true
+	require.NoError(t, hctx.SetConfig(config))
+
+	// Record commands while "offline" (with HaveMissedUploads set)
+	tester.RunInteractiveShell(t, `echo s3offline-`+randomUuid+`-accumulated1`)
+	tester.RunInteractiveShell(t, `echo s3offline-`+randomUuid+`-accumulated2`)
+	tester.RunInteractiveShell(t, `echo s3offline-`+randomUuid+`-accumulated3`)
+
+	// Verify commands are stored locally
+	out = tester.RunInteractiveShell(t, `hishtory export | grep s3offline-`+randomUuid)
+	require.Contains(t, out, "s3offline-"+randomUuid+"-accumulated1")
+	require.Contains(t, out, "s3offline-"+randomUuid+"-accumulated2")
+	require.Contains(t, out, "s3offline-"+randomUuid+"-accumulated3")
+
+	// Simulate coming back online by clearing HaveMissedUploads and triggering a sync
+	ctx = hctx.MakeContext()
+	config = hctx.GetConf(ctx)
+	config.HaveMissedUploads = false
+	require.NoError(t, hctx.SetConfig(config))
+
+	// Force a sync by running a query (which triggers the sync mechanism)
+	_ = hishtoryQuery(t, tester, "s3offline-"+randomUuid)
+
+	// Record one more command to trigger upload of accumulated entries
+	tester.RunInteractiveShell(t, `echo s3offline-`+randomUuid+`-afteronline`)
+
+	// Give sync time to complete
+	time.Sleep(500 * time.Millisecond)
+
+	// Switch to device 2 and verify all commands synced
+	testutils.BackupAndRestoreWithId(t, "device1-offline-final")
+	restoreDevice2()
+
+	// Query on device 2 to trigger sync and check
+	out = hishtoryQuery(t, tester, "s3offline-"+randomUuid)
+	require.Contains(t, out, "s3offline-"+randomUuid+"-online1", "Device 2 should see online1")
+	require.Contains(t, out, "s3offline-"+randomUuid+"-accumulated1", "Device 2 should see accumulated1")
+	require.Contains(t, out, "s3offline-"+randomUuid+"-accumulated2", "Device 2 should see accumulated2")
+	require.Contains(t, out, "s3offline-"+randomUuid+"-accumulated3", "Device 2 should see accumulated3")
+	require.Contains(t, out, "s3offline-"+randomUuid+"-afteronline", "Device 2 should see afteronline")
+}
+
+func testConcurrentWritesWithS3Backend(t *testing.T, tester shellTester) {
+	// This test verifies that multiple devices can write to S3 concurrently
+	// without data loss or corruption.
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory with S3 backend on device 1
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+
+	// Back up device 1
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "concurrent-device1")
+
+	// Set up device 2
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+	restoreDevice2 := testutils.BackupAndRestoreWithId(t, "concurrent-device2")
+
+	// Set up device 3
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+	restoreDevice3 := testutils.BackupAndRestoreWithId(t, "concurrent-device3")
+
+	// Record commands from each device sequentially
+	// Device 1
+	restoreDevice1()
+	for i := 1; i <= 5; i++ {
+		tester.RunInteractiveShell(t, fmt.Sprintf(`echo concurrent-%s-device1-cmd%d`, randomUuid[:8], i))
+	}
+	testutils.BackupAndRestoreWithId(t, "concurrent-device1-final")
+
+	// Device 2
+	restoreDevice2()
+	for i := 1; i <= 5; i++ {
+		tester.RunInteractiveShell(t, fmt.Sprintf(`echo concurrent-%s-device2-cmd%d`, randomUuid[:8], i))
+	}
+	testutils.BackupAndRestoreWithId(t, "concurrent-device2-final")
+
+	// Device 3
+	restoreDevice3()
+	for i := 1; i <= 5; i++ {
+		tester.RunInteractiveShell(t, fmt.Sprintf(`echo concurrent-%s-device3-cmd%d`, randomUuid[:8], i))
+	}
+
+	// Now verify from device 3 that all entries synced
+	out := hishtoryQuery(t, tester, "concurrent-"+randomUuid[:8])
+
+	// Count entries from each device
+	device1Count := strings.Count(out, "concurrent-"+randomUuid[:8]+"-device1")
+	device2Count := strings.Count(out, "concurrent-"+randomUuid[:8]+"-device2")
+	device3Count := strings.Count(out, "concurrent-"+randomUuid[:8]+"-device3")
+
+	require.Equal(t, 5, device1Count, "Should have 5 entries from device 1")
+	require.Equal(t, 5, device2Count, "Should have 5 entries from device 2")
+	require.Equal(t, 5, device3Count, "Should have 5 entries from device 3")
+
+	// Verify specific entries exist
+	for device := 1; device <= 3; device++ {
+		for cmd := 1; cmd <= 5; cmd++ {
+			expected := fmt.Sprintf("concurrent-%s-device%d-cmd%d", randomUuid[:8], device, cmd)
+			require.Contains(t, out, expected, "Missing entry: %s", expected)
+		}
+	}
+}
+
+func testPresavingWithS3Backend(t *testing.T, tester shellTester) {
+	// This test verifies that presaving (recording commands before they complete)
+	// works correctly with the S3 backend and syncs to other devices.
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory with S3 backend
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+
+	// Enable presaving (it's enabled by default, but let's be explicit)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get presaving`)))
+	tester.RunInteractiveShell(t, `hishtory config-set presaving true`)
+
+	// Start a command that will take a long time to execute in the background
+	require.NoError(t, os.Chdir("/"))
+	require.NoError(t, tester.RunInteractiveShellBackground(t, `sleep 13371337`))
+	time.Sleep(time.Millisecond * 500)
+
+	// Verify the presaved command shows up locally
+	out := tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	require.Contains(t, out, "sleep 13371337", "Presaved command should be in local export")
+
+	// Record a unique command to ensure sync is triggered
+	tester.RunInteractiveShell(t, `echo presave-s3-`+randomUuid)
+
+	// Back up device 1 state
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "presave-device1")
+
+	// Set up device 2 with S3 backend
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 2 should see the presaved command from device 1 via S3
+	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	require.Contains(t, out, "sleep 13371337", "Device 2 should see presaved command via S3")
+
+	// Device 2 should also see the unique command
+	out = hishtoryQuery(t, tester, "presave-s3-"+randomUuid)
+	require.Contains(t, out, "presave-s3-"+randomUuid, "Device 2 should see unique command via S3")
+
+	// Record a command on device 2
+	tester.RunInteractiveShell(t, `echo presave-s3-device2-`+randomUuid)
+
+	// Go back to device 1 and verify device 2's command synced
+	testutils.BackupAndRestoreWithId(t, "presave-device2")
+	restoreDevice1()
+
+	// Query to trigger sync
+	out = hishtoryQuery(t, tester, "presave-s3-device2-"+randomUuid)
+	require.Contains(t, out, "presave-s3-device2-"+randomUuid, "Device 1 should see device 2's command")
+
+	// And verify the presaved command is still there on device 1
+	out = tester.RunInteractiveShell(t, ` hishtory export sleep -export`)
+	require.Contains(t, out, "sleep 13371337", "Presaved command should still be in export")
+}
+
+func testImportWithS3Backend(t *testing.T, tester shellTester) {
+	// This test verifies that importing history from bash_history works correctly
+	// with the S3 backend and that imported entries sync to other devices.
+	defer testutils.BackupAndRestore(t)()
+
+	// Create synthetic import entries before installing hishtory
+	numSyntheticEntries := 50
+	randomUuid := uuid.Must(uuid.NewRandom()).String()
+	homedir, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	f, err := os.OpenFile(path.Join(homedir, ".bash_history"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	require.NoError(t, err)
+	for i := 1; i <= numSyntheticEntries; i++ {
+		_, err := f.WriteString(fmt.Sprintf("echo import-s3-%s-cmd%d\n", randomUuid[:8], i))
+		require.NoError(t, err)
+	}
+	require.NoError(t, f.Close())
+
+	// Install hishtory with S3 backend
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+
+	// Run the import
+	ctx := hctx.MakeContext()
+	numImported, err := lib.ImportHistory(ctx, false, true)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, numImported, numSyntheticEntries, "Should import at least %d entries", numSyntheticEntries)
+
+	// Verify entries are in local database
+	out := tester.RunInteractiveShell(t, ` hishtory export | grep import-s3-`+randomUuid[:8]+` | wc -l`)
+	count, err := strconv.Atoi(strings.TrimSpace(out))
+	require.NoError(t, err)
+	require.Equal(t, numSyntheticEntries, count, "Should have %d imported entries locally", numSyntheticEntries)
+
+	// Back up device 1 state
+	restoreDevice1 := testutils.BackupAndRestoreWithId(t, "import-device1")
+
+	// Set up device 2 with S3 backend
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 2 should see all imported entries from device 1
+	out = tester.RunInteractiveShell(t, ` hishtory export | grep import-s3-`+randomUuid[:8]+` | wc -l`)
+	count, err = strconv.Atoi(strings.TrimSpace(out))
+	require.NoError(t, err)
+	require.Equal(t, numSyntheticEntries, count, "Device 2 should see all %d imported entries via S3", numSyntheticEntries)
+
+	// Verify specific entries exist on device 2
+	out = tester.RunInteractiveShell(t, ` hishtory export | grep import-s3-`+randomUuid[:8])
+	require.Contains(t, out, fmt.Sprintf("import-s3-%s-cmd1", randomUuid[:8]), "Should have first imported command")
+	require.Contains(t, out, fmt.Sprintf("import-s3-%s-cmd25", randomUuid[:8]), "Should have middle imported command")
+	require.Contains(t, out, fmt.Sprintf("import-s3-%s-cmd50", randomUuid[:8]), "Should have last imported command")
+
+	// Record a new command on device 2
+	tester.RunInteractiveShell(t, `echo import-s3-`+randomUuid[:8]+`-device2cmd`)
+
+	// Back up device 2 state
+	testutils.BackupAndRestoreWithId(t, "import-device2")
+
+	// Go back to device 1 and verify sync
+	restoreDevice1()
+
+	// Query to trigger sync
+	out = hishtoryQuery(t, tester, "import-s3-"+randomUuid[:8]+"-device2cmd")
+	require.Contains(t, out, "import-s3-"+randomUuid[:8]+"-device2cmd", "Device 1 should see device 2's command")
+
+	// All imported entries should still be there (use GreaterOrEqual to account for any extra commands)
+	out = tester.RunInteractiveShell(t, ` hishtory export | grep 'echo import-s3-`+randomUuid[:8]+`' | wc -l`)
+	count, err = strconv.Atoi(strings.TrimSpace(out))
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, count, numSyntheticEntries+1, "Device 1 should have imported entries plus device 2's command")
 }
 
 func installWithOnlineStatus(t testing.TB, tester shellTester, onlineStatus OnlineStatus) string {
