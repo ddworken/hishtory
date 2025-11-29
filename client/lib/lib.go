@@ -61,8 +61,6 @@ var ImportBatchSize = 100
 var maxSupportedLineLengthForImport = 512_000
 
 func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
-	// Normalize timezone before checking to match how entries are stored
-	entry = normalizeEntryTimezone(entry)
 	tx := db.Where("local_username = ?", entry.LocalUsername)
 	tx = tx.Where("hostname = ?", entry.Hostname)
 	tx = tx.Where("command = ?", entry.Command)
@@ -74,7 +72,7 @@ func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
 	var results []data.HistoryEntry
 	tx.Limit(1).Find(&results)
 	if len(results) == 0 {
-		db.Create(entry)
+		db.Create(normalizeEntryTimezone(entry))
 		// TODO: check the error here and bubble it up
 	}
 }

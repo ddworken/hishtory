@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/ddworken/hishtory/client/backend"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -114,25 +115,6 @@ const (
 	Online OnlineStatus = iota
 	Offline
 )
-
-// BackendType represents the sync backend type for integration tests
-type BackendType int64
-
-const (
-	HTTPBackendType BackendType = iota
-	S3BackendType
-)
-
-func (b BackendType) String() string {
-	switch b {
-	case HTTPBackendType:
-		return "http"
-	case S3BackendType:
-		return "s3"
-	default:
-		return "unknown"
-	}
-}
 
 func assertOnlineStatus(t testing.TB, onlineStatus OnlineStatus) {
 	config := hctx.GetConf(hctx.MakeContext())
@@ -416,7 +398,7 @@ func configureS3Backend(t testing.TB) {
 }
 
 // installWithOnlineStatusAndBackend installs hishtory with specified online status and optionally configures S3 backend
-func installWithOnlineStatusAndBackend(t testing.TB, tester shellTester, onlineStatus OnlineStatus, backendType BackendType) string {
+func installWithOnlineStatusAndBackend(t testing.TB, tester shellTester, onlineStatus OnlineStatus, backendType backend.BackendType) string {
 	var userSecret string
 	if onlineStatus == Online {
 		userSecret = installHishtory(t, tester, "")
@@ -425,7 +407,7 @@ func installWithOnlineStatusAndBackend(t testing.TB, tester shellTester, onlineS
 	}
 
 	// If S3 backend requested and not offline, configure it
-	if backendType == S3BackendType && onlineStatus == Online {
+	if backendType == backend.BackendTypeS3 && onlineStatus == Online {
 		configureS3Backend(t)
 	}
 

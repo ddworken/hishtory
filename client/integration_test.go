@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ddworken/hishtory/client/backend"
 	"github.com/ddworken/hishtory/client/cmd"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
@@ -264,7 +265,7 @@ func testSyncWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory on "device 1" and configure S3 backend
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 
 	// Verify S3 backend is configured
 	ctx := hctx.MakeContext()
@@ -379,7 +380,7 @@ func testRedactionWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory on device 1 and configure S3 backend
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 
 	// Record some commands on device 1
 	randomUuid := uuid.Must(uuid.NewRandom()).String()
@@ -435,7 +436,7 @@ func testMultipleDevicesWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory on device 1 and configure S3 backend
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 
 	// Record command on device 1
 	randomUuid := uuid.Must(uuid.NewRandom()).String()
@@ -498,7 +499,7 @@ func testS3BackendErrorHandling(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory on device 1 and configure S3 backend
-	_ = installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	_ = installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 
 	// Record some commands while S3 is working
 	randomUuid := uuid.Must(uuid.NewRandom()).String()
@@ -546,7 +547,7 @@ func testDumpRequestWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory on device 1 and configure S3 backend
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 
 	// Get device 1's ID for later verification
 	ctx := hctx.MakeContext()
@@ -641,7 +642,7 @@ func testOfflineAccumulationWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory with S3 backend on device 1
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 	randomUuid := uuid.Must(uuid.NewRandom()).String()
 
 	// Record a command while S3 is available
@@ -721,7 +722,7 @@ func testConcurrentWritesWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory with S3 backend on device 1
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 	randomUuid := uuid.Must(uuid.NewRandom()).String()
 
 	// Back up device 1
@@ -805,7 +806,7 @@ func testPresavingWithS3Backend(t *testing.T, tester shellTester) {
 	defer testutils.BackupAndRestore(t)()
 
 	// Install hishtory with S3 backend
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 	randomUuid := uuid.Must(uuid.NewRandom()).String()
 
 	// Enable presaving (it's enabled by default, but let's be explicit)
@@ -876,7 +877,7 @@ func testImportWithS3Backend(t *testing.T, tester shellTester) {
 	require.NoError(t, f.Close())
 
 	// Install hishtory with S3 backend
-	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, backend.BackendTypeS3)
 
 	// Run the import
 	ctx := hctx.MakeContext()
