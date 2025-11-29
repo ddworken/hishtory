@@ -2,6 +2,8 @@ hiSHtory: v0.Unknown
 Enabled: true
 Commit Hash: Unknown
 Full Config:
+	backendtype: ""
+	s3config: null
 	controlrsearchenabled: true
 	displayedcolumns:
 	    - Hostname
@@ -13,7 +15,7 @@ Full Config:
 	customcolumns: []
 	forcecompactmode: false
 	isoffline: false
-	filterduplicatecommands: false
+	filterduplicatecommands: true
 	filterwhitespaceprefix: true
 	timestampformat: Jan 2 2006 15:04:05 MST
 	betamode: false

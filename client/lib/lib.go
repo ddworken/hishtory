@@ -582,6 +582,7 @@ func GetSyncBackend(ctx context.Context) (backend.SyncBackend, context.Context) 
 		UserId:      data.UserId(config.UserSecret),
 		DeviceId:    config.DeviceId,
 		Version:     Version,
+		HTTPClient:  GetHttpClient(),
 	}
 
 	// Add S3 config if applicable
@@ -603,6 +604,7 @@ func GetSyncBackend(ctx context.Context) (backend.SyncBackend, context.Context) 
 		// For default/HTTP backend, create it directly
 		b = backend.NewHTTPBackend(
 			backend.WithVersion(Version),
+			backend.WithHTTPClient(GetHttpClient()),
 			backend.WithHeadersCallback(func() (string, string) {
 				return config.DeviceId, data.UserId(config.UserSecret)
 			}),

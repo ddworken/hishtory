@@ -208,7 +208,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Drop any entries from pre-saving since they're no longer needed
 	if config.EnablePresaving {
-		lib.CheckFatalError(deletePresavedEntries(ctx, entry, false))
+		lib.CheckFatalError(deletePresavedEntries(ctx, entry, 0))
 	}
 
 	// Persist it locally
@@ -233,7 +233,7 @@ func saveHistoryEntry(ctx context.Context) {
 	}
 }
 
-func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetry bool) error {
+func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryCount int) error {
 	db := hctx.GetDb(ctx)
 
 	// Create the query to find the presaved entries
@@ -266,14 +266,18 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, isRetr
 		//
 		// We want to ensure this isn't case #2. There isn't a great way to do this, but we can just retry
 		// this function after a short delay. If it still is empty, then we assume we are in case #1.
-		if isRetry {
-			// Already retried, assume we're in case #1
-			hctx.GetLogger().Warnf("failed to find presaved entry matching cmd=%#v even with retry, skipping delete", entry.Command)
+		// We retry up to 3 times with increasing delays since presaving can take 1+ seconds when uploading
+		// to remote backends (especially S3).
+		const maxRetries = 3
+		if retryCount >= maxRetries {
+			// Already retried max times, assume we're in case #1
+			hctx.GetLogger().Warnf("failed to find presaved entry matching cmd=%#v after %d retries, skipping delete", entry.Command, maxRetries)
 			return nil
-		} else {
-			time.Sleep(500 * time.Millisecond)
-			return deletePresavedEntries(ctx, entry, true)
 		}
+		// Use exponential backoff: 500ms, 1000ms, 2000ms
+		sleepDuration := time.Duration(500<<retryCount) * time.Millisecond
+		time.Sleep(sleepDuration)
+		return deletePresavedEntries(ctx, entry, retryCount+1)
 	}
 
 	// Delete presaved entries locally

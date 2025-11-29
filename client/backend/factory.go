@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"net/http"
 )
 
 // Config holds the minimal configuration needed to create a backend.
@@ -26,6 +27,9 @@ type Config struct {
 	S3Endpoint  string
 	S3AccessKey string
 	S3Prefix    string
+
+	// HTTPClient is the HTTP client to use for HTTP backends (required for offline builds)
+	HTTPClient *http.Client
 }
 
 // NewBackendFromConfig creates the appropriate sync backend based on configuration.
@@ -46,12 +50,16 @@ func NewBackendFromConfig(ctx context.Context, cfg Config) (SyncBackend, error) 
 
 	case BackendTypeHTTP, "":
 		// Default to HTTP backend
-		return NewHTTPBackend(
+		opts := []HTTPBackendOption{
 			WithVersion(cfg.Version),
 			WithHeadersCallback(func() (string, string) {
 				return cfg.DeviceId, cfg.UserId
 			}),
-		), nil
+		}
+		if cfg.HTTPClient != nil {
+			opts = append(opts, WithHTTPClient(cfg.HTTPClient))
+		}
+		return NewHTTPBackend(opts...), nil
 
 	default:
 		return nil, fmt.Errorf("unknown backend type: %q", cfg.BackendType)

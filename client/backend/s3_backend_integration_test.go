@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -22,11 +21,19 @@ func TestMain(m *testing.M) {
 	cleanup := testutils.RunMinioServer()
 	defer cleanup()
 
-	// Skip S3 integration tests on macOS in GitHub Actions if MinIO isn't available
-	// (Docker/colima is flaky on macOS runners)
-	if testutils.IsGithubAction() && runtime.GOOS == "darwin" && !testutils.IsMinioRunning() {
-		fmt.Println("Skipping S3 integration tests: MinIO not available on macOS in GitHub Actions")
-		os.Exit(0)
+	// Wait a bit more for MinIO to be ready, then check if it's actually running
+	time.Sleep(2 * time.Second)
+
+	// Skip S3 integration tests if MinIO isn't available
+	// This can happen on macOS in GitHub Actions where Docker/colima is flaky
+	if !testutils.IsMinioRunning() {
+		if testutils.IsGithubAction() {
+			fmt.Println("Skipping S3 integration tests: MinIO not available (Docker may not be working)")
+			os.Exit(0)
+		}
+		// Locally, we want to fail so developers know something is wrong
+		fmt.Println("ERROR: MinIO is not running. Please ensure Docker is running and try again.")
+		os.Exit(1)
 	}
 
 	os.Exit(m.Run())
