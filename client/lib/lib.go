@@ -516,27 +516,56 @@ func IsOfflineError(ctx context.Context, err error) bool {
 	if err == nil {
 		return false
 	}
-	if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
-		strings.Contains(err.Error(), ": no such host") ||
-		strings.Contains(err.Error(), "connect: network is unreachable") ||
-		strings.Contains(err.Error(), "read: connection reset by peer") ||
-		strings.Contains(err.Error(), ": EOF") ||
-		strings.Contains(err.Error(), ": status_code=502") ||
-		strings.Contains(err.Error(), ": status_code=503") ||
-		strings.Contains(err.Error(), ": i/o timeout") ||
-		strings.Contains(err.Error(), "connect: operation timed out") ||
-		strings.Contains(err.Error(), "net/http: TLS handshake timeout") ||
-		strings.Contains(err.Error(), "connect: connection refused") {
+	errStr := err.Error()
+
+	// Common network errors (shared between HTTP and S3)
+	if strings.Contains(errStr, ": no such host") ||
+		strings.Contains(errStr, "connect: network is unreachable") ||
+		strings.Contains(errStr, "read: connection reset by peer") ||
+		strings.Contains(errStr, ": EOF") ||
+		strings.Contains(errStr, ": i/o timeout") ||
+		strings.Contains(errStr, "connect: operation timed out") ||
+		strings.Contains(errStr, "net/http: TLS handshake timeout") ||
+		strings.Contains(errStr, "connect: connection refused") ||
+		strings.Contains(errStr, "dial tcp") {
 		return true
 	}
-	if !CanReachHishtoryServer(ctx) {
-		// If the backend server is down, then treat all errors as offline errors
+
+	// HTTP backend specific errors
+	if strings.Contains(errStr, ": status_code=502") ||
+		strings.Contains(errStr, ": status_code=503") {
+		return true
+	}
+
+	// S3/AWS SDK specific errors
+	if strings.Contains(errStr, "RequestCanceled") ||
+		strings.Contains(errStr, "connection reset by peer") ||
+		strings.Contains(errStr, "use of closed network connection") ||
+		strings.Contains(errStr, "net/http: request canceled") ||
+		strings.Contains(errStr, "context deadline exceeded") ||
+		strings.Contains(errStr, "no route to host") ||
+		strings.Contains(errStr, "UnknownEndpoint") ||
+		strings.Contains(errStr, "could not resolve endpoint") {
+		return true
+	}
+
+	if !CanReachBackend(ctx) {
+		// If the backend is unreachable, then treat all errors as offline errors
 		return true
 	}
 	// A truly unexpected error, bubble this up
 	return false
 }
 
+// CanReachBackend checks if the configured sync backend is reachable.
+// It uses the backend's Ping method which works for both HTTP and S3 backends.
+func CanReachBackend(ctx context.Context) bool {
+	b, ctx := GetSyncBackend(ctx)
+	return b.Ping(ctx) == nil
+}
+
+// CanReachHishtoryServer checks if the HTTP hishtory server is reachable.
+// Deprecated: Use CanReachBackend instead, which works with any backend type.
 func CanReachHishtoryServer(ctx context.Context) bool {
 	_, err := ApiGet(ctx, "/api/v1/ping")
 	return err == nil
