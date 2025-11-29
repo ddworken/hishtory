@@ -16,20 +16,11 @@ import (
 
 // TestMain starts MinIO for S3 integration tests
 func TestMain(m *testing.M) {
-	// Start MinIO for S3 backend tests if HISHTORY_TEST_S3 is set
-	if os.Getenv("HISHTORY_TEST_S3") != "" {
-		cleanup := testutils.RunMinioServer()
-		defer cleanup()
-	}
+	// Start MinIO for S3 backend tests
+	cleanup := testutils.RunMinioServer()
+	defer cleanup()
 
 	os.Exit(m.Run())
-}
-
-// skipIfS3NotEnabled skips the test if HISHTORY_TEST_S3 is not set
-func skipIfS3NotEnabled(t *testing.T) {
-	if os.Getenv("HISHTORY_TEST_S3") == "" {
-		t.Skip("Skipping S3 integration test - set HISHTORY_TEST_S3=1 to enable")
-	}
 }
 
 // newTestS3Config returns an S3Config for connecting to the test MinIO server
@@ -54,8 +45,6 @@ func newTestBackend(t *testing.T, userId string) *S3Backend {
 
 // TestS3Integration_NewBackendAndPing tests creating an S3 backend and verifying bucket access
 func TestS3Integration_NewBackendAndPing(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-" + uuid.New().String()[:8]
 
@@ -71,8 +60,6 @@ func TestS3Integration_NewBackendAndPing(t *testing.T) {
 }
 
 func TestS3Integration_PingFailsWithInvalidBucket(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	cfg := newTestS3Config()
 	cfg.Bucket = "nonexistent-bucket-" + uuid.New().String()
@@ -87,8 +74,6 @@ func TestS3Integration_PingFailsWithInvalidBucket(t *testing.T) {
 
 // TestS3Integration_RegisterDevice tests device registration functionality
 func TestS3Integration_RegisterDevice(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-" + uuid.New().String()[:8]
 
@@ -151,8 +136,6 @@ func TestS3Integration_RegisterDevice(t *testing.T) {
 
 // TestS3Integration_SubmitEntries tests entry submission with fan-out to devices
 func TestS3Integration_SubmitEntries(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -245,8 +228,6 @@ func TestS3Integration_SubmitEntries(t *testing.T) {
 
 // TestS3Integration_SubmitEntriesNoDevices tests that SubmitEntries fails when no devices are registered
 func TestS3Integration_SubmitEntriesNoDevices(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-nodevices-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -262,8 +243,6 @@ func TestS3Integration_SubmitEntriesNoDevices(t *testing.T) {
 
 // TestS3Integration_QueryEntries tests querying entries from device inbox
 func TestS3Integration_QueryEntries(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-query-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -349,8 +328,6 @@ func TestS3Integration_QueryEntries(t *testing.T) {
 
 // TestS3Integration_Bootstrap tests bootstrapping all entries for a user
 func TestS3Integration_Bootstrap(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-bootstrap-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -407,8 +384,6 @@ func TestS3Integration_Bootstrap(t *testing.T) {
 
 // TestS3Integration_DumpRequestFlow tests the complete dump request workflow
 func TestS3Integration_DumpRequestFlow(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-dump-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -471,8 +446,6 @@ func TestS3Integration_DumpRequestFlow(t *testing.T) {
 
 // TestS3Integration_DeletionRequests tests deletion request creation and retrieval
 func TestS3Integration_DeletionRequests(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-del-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -552,8 +525,6 @@ func TestS3Integration_DeletionRequests(t *testing.T) {
 
 // TestS3Integration_Uninstall tests device uninstallation and cleanup
 func TestS3Integration_Uninstall(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-uninstall-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -606,8 +577,6 @@ func TestS3Integration_Uninstall(t *testing.T) {
 
 // TestS3Integration_FullSyncWorkflow tests a complete sync workflow across multiple devices
 func TestS3Integration_FullSyncWorkflow(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-fullsync-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)
@@ -700,8 +669,6 @@ func TestS3Integration_FullSyncWorkflow(t *testing.T) {
 
 // TestS3Integration_ConcurrentDevices tests concurrent operations from multiple "backends"
 func TestS3Integration_ConcurrentDevices(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-concurrent-" + uuid.New().String()[:8]
 
@@ -752,8 +719,6 @@ func TestS3Integration_ConcurrentDevices(t *testing.T) {
 
 // TestS3Integration_MultipleEntriesSameTimestamp tests handling of multiple entries with similar timestamps
 func TestS3Integration_MultipleEntriesSameTimestamp(t *testing.T) {
-	skipIfS3NotEnabled(t)
-
 	ctx := context.Background()
 	userId := "test-user-timestamp-" + uuid.New().String()[:8]
 	backend := newTestBackend(t, userId)

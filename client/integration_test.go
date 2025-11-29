@@ -36,13 +36,6 @@ func skipSlowTests() bool {
 	return os.Getenv("FAST") != ""
 }
 
-func isS3TestEnabled() bool {
-	return os.Getenv("HISHTORY_TEST_S3") != ""
-}
-
-// minioCleanup holds the MinIO cleanup function, if MinIO was started
-var minioCleanup func()
-
 func TestMain(m *testing.M) {
 	// Configure key environment variables
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
@@ -53,11 +46,8 @@ func TestMain(m *testing.M) {
 	// Start the test server
 	defer testutils.RunTestServer()()
 
-	// Start MinIO for S3 backend tests if HISHTORY_TEST_S3 is set
-	if os.Getenv("HISHTORY_TEST_S3") != "" {
-		minioCleanup = testutils.RunMinioServer()
-		defer minioCleanup()
-	}
+	// Start MinIO for S3 backend tests
+	defer testutils.RunMinioServer()()
 
 	// Build the client so it is available in /tmp/client
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -264,13 +254,7 @@ yes | hishtory init `+userSecret)
 }
 
 // testSyncWithS3Backend tests that history entries sync correctly via the S3 backend.
-// This test requires HISHTORY_TEST_S3=1 to be set and MinIO to be running.
 func testSyncWithS3Backend(t *testing.T, tester shellTester) {
-	// Skip if S3 tests are not enabled
-	if !isS3TestEnabled() {
-		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
-	}
-
 	// Set up
 	defer testutils.BackupAndRestore(t)()
 
@@ -334,10 +318,6 @@ func testSyncWithS3Backend(t *testing.T, tester shellTester) {
 // The update functionality uses the HTTP API directly (not the SyncBackend), so updates should work
 // regardless of the sync backend configuration.
 func testUpdateWithS3Backend(t *testing.T, tester shellTester) {
-	// Skip if S3 tests are not enabled
-	if !isS3TestEnabled() {
-		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
-	}
 	if !testutils.IsOnline() {
 		t.Skip("skipping because we're currently offline")
 	}
@@ -390,11 +370,6 @@ func testUpdateWithS3Backend(t *testing.T, tester shellTester) {
 // testRedactionWithS3Backend tests that redacting (deleting) commands works correctly
 // when using the S3 sync backend. Redacted commands should be removed from all devices.
 func testRedactionWithS3Backend(t *testing.T, tester shellTester) {
-	// Skip if S3 tests are not enabled
-	if !isS3TestEnabled() {
-		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
@@ -451,11 +426,6 @@ func testRedactionWithS3Backend(t *testing.T, tester shellTester) {
 
 // testMultipleDevicesWithS3Backend tests syncing between more than 2 devices using the S3 backend.
 func testMultipleDevicesWithS3Backend(t *testing.T, tester shellTester) {
-	// Skip if S3 tests are not enabled
-	if !isS3TestEnabled() {
-		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
@@ -519,11 +489,6 @@ func testMultipleDevicesWithS3Backend(t *testing.T, tester shellTester) {
 
 // testS3BackendErrorHandling tests graceful error handling when S3 is unavailable.
 func testS3BackendErrorHandling(t *testing.T, tester shellTester) {
-	// Skip if S3 tests are not enabled
-	if !isS3TestEnabled() {
-		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
@@ -572,11 +537,6 @@ func testS3BackendErrorHandling(t *testing.T, tester shellTester) {
 // When a new device joins, it creates a dump request. When an existing device submits entries,
 // it sees the pending dump request and sends its history to the new device.
 func testDumpRequestWithS3Backend(t *testing.T, tester shellTester) {
-	// Skip if S3 tests are not enabled
-	if !isS3TestEnabled() {
-		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
-	}
-
 	// Setup
 	defer testutils.BackupAndRestore(t)()
 
