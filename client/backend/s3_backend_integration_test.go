@@ -2,7 +2,9 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -19,6 +21,13 @@ func TestMain(m *testing.M) {
 	// Start MinIO for S3 backend tests
 	cleanup := testutils.RunMinioServer()
 	defer cleanup()
+
+	// Skip S3 integration tests on macOS in GitHub Actions if MinIO isn't available
+	// (Docker/colima is flaky on macOS runners)
+	if testutils.IsGithubAction() && runtime.GOOS == "darwin" && !testutils.IsMinioRunning() {
+		fmt.Println("Skipping S3 integration tests: MinIO not available on macOS in GitHub Actions")
+		os.Exit(0)
+	}
 
 	os.Exit(m.Run())
 }

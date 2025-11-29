@@ -444,6 +444,36 @@ func (b *S3Backend) AddDeletionRequest(ctx context.Context, request shared.Delet
 		}
 	}
 
+	// Also delete entries from all device inboxes
+	// This ensures presaved entries (and other deleted entries) are removed from inboxes
+	if len(idsToDelete) > 0 {
+		for _, device := range deviceList.Devices {
+			inboxPrefix := b.key("inbox", device.DeviceId) + "/"
+			objects, err := b.listObjects(ctx, inboxPrefix)
+			if err != nil {
+				// Log but don't fail - inbox cleanup is best effort
+				hctx.GetLogger().Warnf("S3Backend.AddDeletionRequest: failed to list inbox for device %s: %v", device.DeviceId, err)
+				continue
+			}
+
+			var inboxKeysToDelete []string
+			for _, obj := range objects {
+				for id := range idsToDelete {
+					if strings.Contains(*obj.Key, "_"+id+".json") {
+						inboxKeysToDelete = append(inboxKeysToDelete, *obj.Key)
+						break
+					}
+				}
+			}
+
+			if len(inboxKeysToDelete) > 0 {
+				if err := b.deleteObjects(ctx, inboxKeysToDelete); err != nil {
+					hctx.GetLogger().Warnf("S3Backend.AddDeletionRequest: failed to delete inbox entries for device %s: %v", device.DeviceId, err)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -760,19 +760,37 @@ func testConcurrentWritesWithS3Backend(t *testing.T, tester shellTester) {
 		tester.RunInteractiveShell(t, fmt.Sprintf(`echo concurrent-%s-device3-cmd%d`, randomUuid[:8], i))
 	}
 
-	// Now verify from device 3 that all entries synced
-	out := hishtoryQuery(t, tester, "concurrent-"+randomUuid[:8])
+	// Now verify from device 3 that all entries synced - the key test is that no data is lost
+	out := tester.RunInteractiveShell(t, ` hishtory export | grep 'concurrent-`+randomUuid[:8]+`'`)
 
-	// Count entries from each device
-	device1Count := strings.Count(out, "concurrent-"+randomUuid[:8]+"-device1")
-	device2Count := strings.Count(out, "concurrent-"+randomUuid[:8]+"-device2")
-	device3Count := strings.Count(out, "concurrent-"+randomUuid[:8]+"-device3")
+	// Debug: print the actual output and count lines
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	t.Logf("Total lines in export: %d", len(lines))
+	t.Logf("Export output:\n%s", out)
 
-	require.Equal(t, 5, device1Count, "Should have 5 entries from device 1")
-	require.Equal(t, 5, device2Count, "Should have 5 entries from device 2")
-	require.Equal(t, 5, device3Count, "Should have 5 entries from device 3")
+	// Count entries from each device by counting lines
+	device1Count := 0
+	device2Count := 0
+	device3Count := 0
+	for _, line := range lines {
+		if strings.Contains(line, "-device1-") {
+			device1Count++
+		}
+		if strings.Contains(line, "-device2-") {
+			device2Count++
+		}
+		if strings.Contains(line, "-device3-") {
+			device3Count++
+		}
+	}
+	t.Logf("Device counts: device1=%d, device2=%d, device3=%d", device1Count, device2Count, device3Count)
 
-	// Verify specific entries exist
+	// Verify exact counts - duplicates would be a bug
+	require.Equal(t, 5, device1Count, "Should have exactly 5 entries from device 1 (no duplicates)")
+	require.Equal(t, 5, device2Count, "Should have exactly 5 entries from device 2 (no duplicates)")
+	require.Equal(t, 5, device3Count, "Should have exactly 5 entries from device 3 (no duplicates)")
+
+	// Verify all 15 specific entries exist (5 from each device)
 	for device := 1; device <= 3; device++ {
 		for cmd := 1; cmd <= 5; cmd++ {
 			expected := fmt.Sprintf("concurrent-%s-device%d-cmd%d", randomUuid[:8], device, cmd)
