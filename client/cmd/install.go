@@ -679,16 +679,6 @@ func registerAndBootstrapDevice(ctx context.Context, config *hctx.ClientConfig, 
 	return nil
 }
 
-func isIntegrationTestDevice() bool {
-	if os.Getenv("HISHTORY_TEST") != "" {
-		return true
-	}
-	if os.Getenv("GITHUB_ACTION_REPOSITORY") == "ddworken/hishtory" {
-		return true
-	}
-	return false
-}
-
 func init() {
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(initCmd)

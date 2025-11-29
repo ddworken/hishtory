@@ -374,19 +374,6 @@ func installHishtory(t testing.TB, tester shellTester, userSecret string) string
 	return matches[1]
 }
 
-// installHishtoryWithBackendType installs hishtory and optionally configures it for S3 backend
-func installHishtoryWithBackendType(t testing.TB, tester shellTester, userSecret string, backendType BackendType) string {
-	// First do the standard install
-	secret := installHishtory(t, tester, userSecret)
-
-	// If S3 backend requested, configure it
-	if backendType == S3BackendType {
-		configureS3Backend(t)
-	}
-
-	return secret
-}
-
 // configureS3Backend configures the current device to use the S3 sync backend with the test MinIO server
 func configureS3Backend(t testing.TB) {
 	ctx := hctx.MakeContext()
@@ -404,6 +391,28 @@ func configureS3Backend(t testing.TB) {
 
 	err := hctx.SetConfig(config)
 	require.NoError(t, err, "failed to configure S3 backend")
+
+	// Refresh context to pick up new config
+	ctx = hctx.MakeContext()
+	b, ctx := lib.GetSyncBackend(ctx)
+	config = hctx.GetConf(ctx)
+	userId := data.UserId(config.UserSecret)
+
+	// Register the device with the S3 backend
+	err = b.RegisterDevice(ctx, userId, config.DeviceId)
+	require.NoError(t, err, "failed to register device with S3 backend")
+
+	// Bootstrap: retrieve all existing entries from S3
+	retrievedEntries, err := b.Bootstrap(ctx, userId, config.DeviceId)
+	require.NoError(t, err, "failed to bootstrap from S3 backend")
+
+	// Add bootstrapped entries to the local database
+	db := hctx.GetDb(ctx)
+	for _, entry := range retrievedEntries {
+		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
+		require.NoError(t, err, "failed to decrypt history entry from S3")
+		lib.AddToDbIfNew(db, decEntry)
+	}
 }
 
 // installWithOnlineStatusAndBackend installs hishtory with specified online status and optionally configures S3 backend

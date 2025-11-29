@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ddworken/hishtory/shared"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/ddworken/hishtory/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -92,17 +93,6 @@ func (m *MockS3Client) ListObjectsV2(ctx context.Context, input *s3.ListObjectsV
 		}
 	}
 	return objects, nil
-}
-
-// createTestS3Backend creates an S3Backend with a mock client for testing.
-func createTestS3Backend(mockClient *MockS3Client, userId string) *S3Backend {
-	return &S3Backend{
-		client: nil, // Will be replaced by mockClient methods
-		bucket: "test-bucket",
-		prefix: "",
-		userId: userId,
-		// We'll use a wrapper approach
-	}
 }
 
 // TestableS3Backend wraps S3Backend to use mock client for testing.

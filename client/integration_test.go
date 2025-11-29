@@ -294,7 +294,7 @@ func testSyncWithS3Backend(t *testing.T, tester shellTester) {
 	testutils.ResetLocalState(t)
 
 	// Install on device 2 with same user secret and S3 backend
-	installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	installHishtory(t, tester, userSecret)
 	configureS3Backend(t)
 
 	// After re-configuring S3 backend, manually sync to get entries from S3

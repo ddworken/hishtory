@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +50,7 @@ func TestHTTPBackendBootstrap(t *testing.T) {
 		assert.Equal(t, "user123", r.URL.Query().Get("user_id"))
 		assert.Equal(t, "device456", r.URL.Query().Get("device_id"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(entries)
+		_ = json.NewEncoder(w).Encode(entries)
 	}))
 	defer server.Close()
 
@@ -88,7 +89,7 @@ func TestHTTPBackendSubmitEntries(t *testing.T) {
 		assert.Len(t, received, 1)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(expectedResp)
+		_ = json.NewEncoder(w).Encode(expectedResp)
 	}))
 	defer server.Close()
 
@@ -138,7 +139,7 @@ func TestHTTPBackendQueryEntries(t *testing.T) {
 		assert.Equal(t, "device1", r.URL.Query().Get("device_id"))
 		assert.Equal(t, "user1", r.URL.Query().Get("user_id"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(entries)
+		_ = json.NewEncoder(w).Encode(entries)
 	}))
 	defer server.Close()
 
@@ -158,7 +159,7 @@ func TestHTTPBackendGetDeletionRequests(t *testing.T) {
 		assert.Equal(t, "user1", r.URL.Query().Get("user_id"))
 		assert.Equal(t, "device1", r.URL.Query().Get("device_id"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(requests)
+		_ = json.NewEncoder(w).Encode(requests)
 	}))
 	defer server.Close()
 
