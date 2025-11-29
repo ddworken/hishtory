@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -17,6 +18,20 @@ import (
 
 // TestMain starts MinIO for S3 integration tests
 func TestMain(m *testing.M) {
+	// Skip S3 integration tests on macOS in GitHub Actions entirely
+	// Docker/colima is too flaky to reliably run these tests there
+	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
+		fmt.Println("Skipping S3 integration tests: Docker/colima is flaky on macOS GitHub Actions")
+		os.Exit(0)
+	}
+
+	// S3 backend integration tests run in shard 3
+	// Skip this entire test file if we're in sharded mode and not shard 3
+	if testutils.IsShardedTestRun() && testutils.CurrentShardNumber() != 3 {
+		fmt.Println("Skipping S3 integration tests: not shard 3")
+		os.Exit(0)
+	}
+
 	// Start MinIO for S3 backend tests
 	cleanup := testutils.RunMinioServer()
 	defer cleanup()
@@ -25,7 +40,6 @@ func TestMain(m *testing.M) {
 	time.Sleep(2 * time.Second)
 
 	// Skip S3 integration tests if MinIO isn't available
-	// This can happen on macOS in GitHub Actions where Docker/colima is flaky
 	if !testutils.IsMinioRunning() {
 		if testutils.IsGithubAction() {
 			fmt.Println("Skipping S3 integration tests: MinIO not available (Docker may not be working)")
