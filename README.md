@@ -190,6 +190,8 @@ A few configuration options:
 <details>
 <summary>S3 Backend (Serverless Self-Hosting)</summary><blockquote>
 
+> **Beta Feature:** The S3 backend is currently in beta. While functional, it may have rough edges. Please report any issues on GitHub.
+
 As an alternative to running your own hiSHtory server, you can sync your history directly via an S3 bucket (or any S3-compatible storage like MinIO, Backblaze B2, etc.). This gives you full control over your data without needing to run a server.
 
 **Setup:**
