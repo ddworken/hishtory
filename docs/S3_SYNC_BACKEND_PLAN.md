@@ -4,6 +4,10 @@
 
 This document outlines a detailed plan for implementing an alternate syncing backend built on top of Amazon S3 (or S3-compatible storage like MinIO, Backblaze B2, Wasabi, etc.). This would allow users to self-host their history sync without running the hishtory server, using only an S3 bucket.
 
+**Key Design Principle**: The interface is defined on the **client side**. The client will have two implementations:
+1. `HTTPBackend` - wraps the existing HTTP API calls to the hishtory server
+2. `S3Backend` - implements sync directly against an S3 bucket
+
 ## Goals
 
 1. **Self-hosted simplicity**: Users can sync history using only an S3 bucket - no server required
@@ -19,16 +23,29 @@ The existing sync architecture (see `client/lib/lib.go` and `backend/server/inte
 - **Server-based fan-out model**: When Device A submits an entry, the server creates copies for all devices (A, B, C, etc.)
 - **Encrypted entries**: `shared.EncHistoryEntry` contains AES-256-GCM encrypted data
 - **Device registration**: Devices register with server, which tracks all devices per user
-- **Read tracking**: Server tracks which entries have been read by each device
+- **Read tracking**: Server tracks which entries have been read by each device (`read_count` field)
 - **Deletion propagation**: Deletion requests are distributed to all devices
 
-Key API endpoints:
-- `/api/v1/register` - Register new device
-- `/api/v1/submit` - Submit new history entries (fan-out to all devices)
-- `/api/v1/query` - Retrieve entries for a specific device
-- `/api/v1/bootstrap` - Get all entries for new device initialization
-- `/api/v1/add-deletion-request` - Request entry deletion across devices
-- `/api/v1/get-deletion-requests` - Get pending deletion requests
+### Client API Usage (from code review)
+
+| Endpoint | Client Usage Location | Purpose |
+|----------|----------------------|---------|
+| `/api/v1/register` | `client/cmd/install.go:656` | Register new device |
+| `/api/v1/bootstrap` | `client/cmd/install.go:661` | Get all entries for new device |
+| `/api/v1/submit` | `client/cmd/saveHistoryEntry.go:108,187,219` | Submit new entries |
+| `/api/v1/submit-dump` | `client/cmd/saveHistoryEntry.go:332` | Bulk transfer to requesting device |
+| `/api/v1/query` | `client/lib/lib.go:682` | Get new entries for device |
+| `/api/v1/get-deletion-requests` | `client/lib/lib.go:709` | Get pending deletions |
+| `/api/v1/add-deletion-request` | `client/lib/lib.go:1152` | Add deletion request |
+| `/api/v1/uninstall` | `client/cmd/install.go:137`, `client/cmd/syncing.go:75` | Unregister device |
+| `/api/v1/ping` | `client/lib/lib.go:540` | Health check |
+
+### Endpoints NOT part of sync (separate concerns)
+- `/api/v1/banner` - Server messaging (not needed for S3)
+- `/api/v1/download` - Update info (not needed for S3)
+- `/api/v1/ai-suggest` - AI completion (separate service)
+- `/api/v1/slsa-status` - Update verification (separate service)
+- `/api/v1/feedback` - Analytics (optional, can be no-op for S3)
 
 ## S3 Data Model Design
 
@@ -129,43 +146,82 @@ import (
     "github.com/ddworken/hishtory/shared"
 )
 
-// SyncBackend defines the interface for syncing history entries
+// SyncBackend defines the interface for syncing history entries.
+// This interface is implemented by:
+//   - HTTPBackend: wraps existing API calls to api.hishtory.dev
+//   - S3Backend: syncs directly to an S3 bucket
 type SyncBackend interface {
-    // Register a new device for the user
+    // RegisterDevice registers a new device for the user.
+    // For HTTP: POST /api/v1/register?user_id=...&device_id=...
+    // For S3: Creates device entry in devices.json, may create dump request
     RegisterDevice(ctx context.Context, userId, deviceId string) error
 
-    // Submit encrypted history entries (distributes to all devices)
-    SubmitEntries(ctx context.Context, entries []*shared.EncHistoryEntry, sourceDeviceId string) (*shared.SubmitResponse, error)
-
-    // Query entries pending for a specific device
-    QueryEntries(ctx context.Context, deviceId, userId string) ([]*shared.EncHistoryEntry, error)
-
-    // Bootstrap a new device with all existing entries
+    // Bootstrap returns all history entries for a user (used when initializing a new device).
+    // For HTTP: GET /api/v1/bootstrap?user_id=...&device_id=...
+    // For S3: Lists and returns all entries from entries/ prefix
     Bootstrap(ctx context.Context, userId, deviceId string) ([]*shared.EncHistoryEntry, error)
 
-    // Add a deletion request
-    AddDeletionRequest(ctx context.Context, request shared.DeletionRequest) error
+    // SubmitEntries submits new encrypted history entries and fans them out to all devices.
+    // Returns dump requests and deletion requests that need to be processed.
+    // For HTTP: POST /api/v1/submit?source_device_id=...
+    // For S3: Writes entry to entries/, creates inbox entries for other devices
+    SubmitEntries(ctx context.Context, entries []*shared.EncHistoryEntry, sourceDeviceId string) (*shared.SubmitResponse, error)
 
-    // Get pending deletion requests for a device
+    // SubmitDump handles bulk transfer of entries to a requesting device (responds to DumpRequest).
+    // For HTTP: POST /api/v1/submit-dump?user_id=...&requesting_device_id=...&source_device_id=...
+    // For S3: Writes entries to requesting device's inbox, clears dump request
+    SubmitDump(ctx context.Context, entries []*shared.EncHistoryEntry, userId, requestingDeviceId, sourceDeviceId string) error
+
+    // QueryEntries retrieves new entries for this device (entries not yet synced).
+    // For HTTP: GET /api/v1/query?device_id=...&user_id=...
+    // For S3: Lists and returns entries from inbox/{device_id}/, marks as read
+    QueryEntries(ctx context.Context, deviceId, userId string) ([]*shared.EncHistoryEntry, error)
+
+    // GetDeletionRequests returns pending deletion requests for a device.
+    // For HTTP: GET /api/v1/get-deletion-requests?user_id=...&device_id=...
+    // For S3: Lists and returns from deletions/{device_id}/
     GetDeletionRequests(ctx context.Context, userId, deviceId string) ([]*shared.DeletionRequest, error)
 
-    // Uninstall/unregister a device
+    // AddDeletionRequest adds a deletion request to be propagated to all devices.
+    // For HTTP: POST /api/v1/add-deletion-request
+    // For S3: Creates deletion request files in deletions/{device_id}/ for each device
+    AddDeletionRequest(ctx context.Context, request shared.DeletionRequest) error
+
+    // Uninstall removes a device and its pending data.
+    // For HTTP: POST /api/v1/uninstall?user_id=...&device_id=...
+    // For S3: Removes device from devices.json, cleans up inbox and deletion requests
     Uninstall(ctx context.Context, userId, deviceId string) error
 
-    // Health check
+    // Ping checks if the backend is reachable.
+    // For HTTP: GET /api/v1/ping
+    // For S3: HeadBucket or similar S3 operation
     Ping(ctx context.Context) error
 
-    // Get type identifier
+    // Type returns the backend type identifier ("http" or "s3").
     Type() string
 }
 ```
 
 #### 1.2 HTTP Backend Implementation (`client/backend/http_backend.go`)
 
-Wrap existing `ApiGet`/`ApiPost` functions into the new interface:
+Wrap existing `ApiGet`/`ApiPost` functions into the new interface. This is largely a refactoring of existing code from `client/lib/lib.go`:
 
 ```go
 package backend
+
+import (
+    "bytes"
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "os"
+    "time"
+
+    "github.com/ddworken/hishtory/client/hctx"
+    "github.com/ddworken/hishtory/shared"
+)
 
 type HTTPBackend struct {
     serverURL string
@@ -173,24 +229,242 @@ type HTTPBackend struct {
 }
 
 func NewHTTPBackend(serverURL string) *HTTPBackend {
+    if serverURL == "" {
+        serverURL = getServerHostname()
+    }
     return &HTTPBackend{
         serverURL: serverURL,
         client:    &http.Client{Timeout: 30 * time.Second},
     }
 }
 
+func getServerHostname() string {
+    if server := os.Getenv("HISHTORY_SERVER"); server != "" {
+        return server
+    }
+    return "https://api.hishtory.dev"
+}
+
 func (b *HTTPBackend) Type() string {
     return "http"
 }
 
-// Implement all interface methods wrapping existing API calls...
+func (b *HTTPBackend) RegisterDevice(ctx context.Context, userId, deviceId string) error {
+    path := "/api/v1/register?user_id=" + userId + "&device_id=" + deviceId
+    _, err := b.apiGet(ctx, path)
+    return err
+}
+
+func (b *HTTPBackend) Bootstrap(ctx context.Context, userId, deviceId string) ([]*shared.EncHistoryEntry, error) {
+    path := "/api/v1/bootstrap?user_id=" + userId + "&device_id=" + deviceId
+    respBody, err := b.apiGet(ctx, path)
+    if err != nil {
+        return nil, err
+    }
+    var entries []*shared.EncHistoryEntry
+    if err := json.Unmarshal(respBody, &entries); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal bootstrap response: %w", err)
+    }
+    return entries, nil
+}
+
+func (b *HTTPBackend) SubmitEntries(ctx context.Context, entries []*shared.EncHistoryEntry, sourceDeviceId string) (*shared.SubmitResponse, error) {
+    jsonValue, err := json.Marshal(entries)
+    if err != nil {
+        return nil, err
+    }
+    path := "/api/v1/submit?source_device_id=" + sourceDeviceId
+    respBody, err := b.apiPost(ctx, path, "application/json", jsonValue)
+    if err != nil {
+        return nil, err
+    }
+    var resp shared.SubmitResponse
+    if err := json.Unmarshal(respBody, &resp); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal submit response: %w", err)
+    }
+    return &resp, nil
+}
+
+func (b *HTTPBackend) SubmitDump(ctx context.Context, entries []*shared.EncHistoryEntry, userId, requestingDeviceId, sourceDeviceId string) error {
+    jsonValue, err := json.Marshal(entries)
+    if err != nil {
+        return err
+    }
+    path := "/api/v1/submit-dump?user_id=" + userId + "&requesting_device_id=" + requestingDeviceId + "&source_device_id=" + sourceDeviceId
+    _, err = b.apiPost(ctx, path, "application/json", jsonValue)
+    return err
+}
+
+func (b *HTTPBackend) QueryEntries(ctx context.Context, deviceId, userId string) ([]*shared.EncHistoryEntry, error) {
+    path := "/api/v1/query?device_id=" + deviceId + "&user_id=" + userId
+    respBody, err := b.apiGet(ctx, path)
+    if err != nil {
+        return nil, err
+    }
+    var entries []*shared.EncHistoryEntry
+    if err := json.Unmarshal(respBody, &entries); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal query response: %w", err)
+    }
+    return entries, nil
+}
+
+func (b *HTTPBackend) GetDeletionRequests(ctx context.Context, userId, deviceId string) ([]*shared.DeletionRequest, error) {
+    path := "/api/v1/get-deletion-requests?user_id=" + userId + "&device_id=" + deviceId
+    respBody, err := b.apiGet(ctx, path)
+    if err != nil {
+        return nil, err
+    }
+    var requests []*shared.DeletionRequest
+    if err := json.Unmarshal(respBody, &requests); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal deletion requests: %w", err)
+    }
+    return requests, nil
+}
+
+func (b *HTTPBackend) AddDeletionRequest(ctx context.Context, request shared.DeletionRequest) error {
+    jsonValue, err := json.Marshal(request)
+    if err != nil {
+        return err
+    }
+    _, err = b.apiPost(ctx, "/api/v1/add-deletion-request", "application/json", jsonValue)
+    return err
+}
+
+func (b *HTTPBackend) Uninstall(ctx context.Context, userId, deviceId string) error {
+    path := "/api/v1/uninstall?user_id=" + userId + "&device_id=" + deviceId
+    _, err := b.apiPost(ctx, path, "application/json", []byte{})
+    return err
+}
+
+func (b *HTTPBackend) Ping(ctx context.Context) error {
+    _, err := b.apiGet(ctx, "/api/v1/ping")
+    return err
+}
+
+// apiGet and apiPost are internal helpers (similar to existing lib.ApiGet/ApiPost)
+func (b *HTTPBackend) apiGet(ctx context.Context, path string) ([]byte, error) {
+    req, err := http.NewRequestWithContext(ctx, "GET", b.serverURL+path, nil)
+    if err != nil {
+        return nil, err
+    }
+    b.setHeaders(ctx, req)
+    resp, err := b.client.Do(req)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    if resp.StatusCode != 200 {
+        return nil, fmt.Errorf("HTTP %d from GET %s", resp.StatusCode, path)
+    }
+    return io.ReadAll(resp.Body)
+}
+
+func (b *HTTPBackend) apiPost(ctx context.Context, path, contentType string, body []byte) ([]byte, error) {
+    req, err := http.NewRequestWithContext(ctx, "POST", b.serverURL+path, bytes.NewBuffer(body))
+    if err != nil {
+        return nil, err
+    }
+    req.Header.Set("Content-Type", contentType)
+    b.setHeaders(ctx, req)
+    resp, err := b.client.Do(req)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    if resp.StatusCode != 200 {
+        return nil, fmt.Errorf("HTTP %d from POST %s", resp.StatusCode, path)
+    }
+    return io.ReadAll(resp.Body)
+}
+
+func (b *HTTPBackend) setHeaders(ctx context.Context, req *http.Request) {
+    // These headers are used for logging/analytics on the server side
+    // They can be obtained from context if needed
+    req.Header.Set("X-Hishtory-Version", "v0.TODO")
+    // Device ID and User ID could be passed via context or method params
+}
 ```
 
-#### 1.3 Refactor `client/lib/lib.go`
+#### 1.3 Refactor Client Code to Use Backend Interface
 
-- Extract API calls into the HTTP backend implementation
-- Modify sync functions to use the backend interface
-- Add backend selection based on configuration
+The following files need modification to use the `SyncBackend` interface:
+
+**`client/lib/lib.go`** - Core sync functions:
+```go
+// Before: Direct API calls
+func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string) error {
+    respBody, err := ApiGet(ctx, "/api/v1/query?device_id="+config.DeviceId+"...")
+    // ...
+}
+
+// After: Use backend interface
+func RetrieveAdditionalEntriesFromRemote(ctx context.Context, backend SyncBackend, queryReason string) error {
+    entries, err := backend.QueryEntries(ctx, config.DeviceId, data.UserId(config.UserSecret))
+    // ...
+}
+```
+
+**`client/cmd/saveHistoryEntry.go`** - Entry submission:
+```go
+// Before (line 108, 187, 219):
+_, err = lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, ...)
+
+// After:
+backend := hctx.GetBackend(ctx)
+resp, err := backend.SubmitEntries(ctx, encEntries, config.DeviceId)
+```
+
+**`client/cmd/install.go`** - Registration and bootstrap:
+```go
+// Before (line 656):
+_, err := lib.ApiGet(ctx, registerPath)
+respBody, err := lib.ApiGet(ctx, "/api/v1/bootstrap?...")
+
+// After:
+backend := hctx.GetBackend(ctx)
+err := backend.RegisterDevice(ctx, userId, deviceId)
+entries, err := backend.Bootstrap(ctx, userId, deviceId)
+```
+
+**`client/hctx/hctx.go`** - Add backend to context:
+```go
+type backendCtxKeyType string
+const BackendCtxKey backendCtxKeyType = "backend"
+
+func GetBackend(ctx context.Context) backend.SyncBackend {
+    v := ctx.Value(BackendCtxKey)
+    if v != nil {
+        return v.(backend.SyncBackend)
+    }
+    // Default to HTTP backend
+    return backend.NewHTTPBackend("")
+}
+
+func MakeContext() context.Context {
+    // ... existing code ...
+
+    // Initialize backend based on config
+    var syncBackend backend.SyncBackend
+    if config.BackendType == "s3" && config.S3Config != nil {
+        syncBackend = backend.NewS3Backend(config.S3Config)
+    } else {
+        syncBackend = backend.NewHTTPBackend("")
+    }
+    ctx = context.WithValue(ctx, BackendCtxKey, syncBackend)
+    return ctx
+}
+```
+
+**Files requiring changes (summary):**
+
+| File | Changes Required |
+|------|-----------------|
+| `client/lib/lib.go` | Replace `ApiGet`/`ApiPost` with backend calls in: `RetrieveAdditionalEntriesFromRemote`, `ProcessDeletionRequests`, `SendDeletionRequest`, `Reupload`, `CanReachHishtoryServer` |
+| `client/cmd/saveHistoryEntry.go` | Replace submit calls (lines 108, 187, 219, 332) |
+| `client/cmd/install.go` | Replace register/bootstrap (lines 656, 661) |
+| `client/cmd/syncing.go` | Replace uninstall call (line 75) |
+| `client/hctx/hctx.go` | Add `BackendType`, `S3Config` to `ClientConfig`, add `GetBackend()` |
+| `client/tui/tui.go` | Replace deletion request call (line 839) |
 
 ### Phase 2: Implement S3 Backend
 
@@ -200,34 +474,86 @@ func (b *HTTPBackend) Type() string {
 package backend
 
 import (
+    "bytes"
     "context"
+    "encoding/json"
+    "fmt"
+    "path"
+    "strings"
+    "time"
+
+    "github.com/aws/aws-sdk-go-v2/aws"
+    "github.com/aws/aws-sdk-go-v2/config"
+    "github.com/aws/aws-sdk-go-v2/credentials"
     "github.com/aws/aws-sdk-go-v2/service/s3"
     "github.com/ddworken/hishtory/shared"
 )
 
 type S3Backend struct {
-    client     *s3.Client
-    bucket     string
-    prefix     string  // optional path prefix within bucket
-    userId     string
+    client *s3.Client
+    bucket string
+    prefix string // optional path prefix within bucket (e.g., "hishtory/")
+    userId string // derived from user secret, used as folder name
 }
 
 type S3Config struct {
-    Bucket          string
-    Region          string
-    Endpoint        string  // for S3-compatible services
-    AccessKeyID     string
-    SecretAccessKey string
-    Prefix          string
+    Bucket          string `json:"bucket"`
+    Region          string `json:"region"`
+    Endpoint        string `json:"endpoint,omitempty"`         // for S3-compatible services
+    AccessKeyID     string `json:"access_key_id,omitempty"`    // optional if using IAM/env
+    SecretAccessKey string `json:"-"`                          // from env var HISHTORY_S3_SECRET_ACCESS_KEY
+    Prefix          string `json:"prefix,omitempty"`           // optional path prefix
 }
 
-func NewS3Backend(ctx context.Context, config S3Config, userId string) (*S3Backend, error) {
-    // Initialize AWS SDK v2 client with config
-    // Support custom endpoints for MinIO, Backblaze, etc.
+func NewS3Backend(cfg *S3Config, userId string) (*S3Backend, error) {
+    // Build AWS config
+    var opts []func(*config.LoadOptions) error
+    opts = append(opts, config.WithRegion(cfg.Region))
+
+    // Custom credentials if provided
+    if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
+        opts = append(opts, config.WithCredentialsProvider(
+            credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
+        ))
+    }
+
+    awsCfg, err := config.LoadDefaultConfig(context.Background(), opts...)
+    if err != nil {
+        return nil, fmt.Errorf("failed to load AWS config: %w", err)
+    }
+
+    // Build S3 client options
+    var s3Opts []func(*s3.Options)
+    if cfg.Endpoint != "" {
+        s3Opts = append(s3Opts, func(o *s3.Options) {
+            o.BaseEndpoint = aws.String(cfg.Endpoint)
+            o.UsePathStyle = true // Required for MinIO and most S3-compatible services
+        })
+    }
+
+    client := s3.NewFromConfig(awsCfg, s3Opts...)
+
+    return &S3Backend{
+        client: client,
+        bucket: cfg.Bucket,
+        prefix: strings.TrimSuffix(cfg.Prefix, "/"),
+        userId: userId,
+    }, nil
 }
 
 func (b *S3Backend) Type() string {
     return "s3"
+}
+
+// Helper to build S3 key paths
+func (b *S3Backend) key(parts ...string) string {
+    allParts := []string{}
+    if b.prefix != "" {
+        allParts = append(allParts, b.prefix)
+    }
+    allParts = append(allParts, b.userId)
+    allParts = append(allParts, parts...)
+    return path.Join(allParts...)
 }
 ```
 
@@ -236,22 +562,118 @@ func (b *S3Backend) Type() string {
 **Device Registration:**
 ```go
 func (b *S3Backend) RegisterDevice(ctx context.Context, userId, deviceId string) error {
-    // 1. Check if devices.json exists, download it
-    // 2. Add new device to list
-    // 3. Upload updated devices.json
-    // 4. If this is not the first device, mark existing entries for sync
+    // 1. Get current devices list (with optimistic locking via ETag)
+    devices, etag, err := b.getDevices(ctx)
+    if err != nil && !isNotFoundError(err) {
+        return fmt.Errorf("failed to get devices: %w", err)
+    }
+
+    // 2. Check if this is a new device
+    isNewDevice := true
+    existingDeviceCount := len(devices)
+    for _, d := range devices {
+        if d.DeviceId == deviceId {
+            isNewDevice = false
+            break
+        }
+    }
+
+    if isNewDevice {
+        // 3. Add new device
+        devices = append(devices, DeviceInfo{
+            DeviceId:         deviceId,
+            UserId:           userId,
+            RegistrationDate: time.Now().UTC(),
+        })
+
+        // 4. Save updated devices list (with conditional write)
+        if err := b.putDevices(ctx, devices, etag); err != nil {
+            return fmt.Errorf("failed to save devices: %w", err)
+        }
+
+        // 5. If there are existing devices, create a dump request
+        if existingDeviceCount > 0 {
+            dumpReq := &shared.DumpRequest{
+                UserId:             userId,
+                RequestingDeviceId: deviceId,
+                RequestTime:        time.Now().UTC(),
+            }
+            if err := b.createDumpRequest(ctx, dumpReq); err != nil {
+                return fmt.Errorf("failed to create dump request: %w", err)
+            }
+        }
+    }
+
+    return nil
 }
 ```
 
 **Submit Entries:**
 ```go
 func (b *S3Backend) SubmitEntries(ctx context.Context, entries []*shared.EncHistoryEntry, sourceDeviceId string) (*shared.SubmitResponse, error) {
+    if len(entries) == 0 {
+        return &shared.SubmitResponse{}, nil
+    }
+
     // 1. Get list of all devices
-    // 2. For each entry:
-    //    a. Upload to entries/{date}/{entry_id}.json
-    //    b. For each device (except source), create inbox entry
-    // 3. Check for pending dump requests and deletion requests
-    // 4. Return SubmitResponse with dump/deletion requests
+    devices, _, err := b.getDevices(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get devices: %w", err)
+    }
+    if len(devices) == 0 {
+        return nil, fmt.Errorf("no devices registered for user")
+    }
+
+    // 2. For each entry, write to main entries store and each device's inbox
+    for _, entry := range entries {
+        entryKey := b.key("entries", entry.Date.Format("2006-01-02"), entry.EncryptedId+".json")
+        entryData, err := json.Marshal(entry)
+        if err != nil {
+            return nil, fmt.Errorf("failed to marshal entry: %w", err)
+        }
+
+        // Write to entries/ (master copy)
+        if err := b.putObject(ctx, entryKey, entryData); err != nil {
+            return nil, fmt.Errorf("failed to write entry: %w", err)
+        }
+
+        // Write to each device's inbox (except source device)
+        for _, device := range devices {
+            entryCopy := *entry
+            entryCopy.DeviceId = device.DeviceId
+            entryCopy.IsFromSameDevice = (device.DeviceId == sourceDeviceId)
+
+            // Skip writing to inbox if from same device (optimization)
+            // The server stores these for bootstrap, but inbox is for sync
+            if entryCopy.IsFromSameDevice {
+                continue
+            }
+
+            inboxKey := b.key("inbox", device.DeviceId, entry.Date.Format("20060102T150405")+"_"+entry.EncryptedId+".json")
+            inboxData, err := json.Marshal(&entryCopy)
+            if err != nil {
+                return nil, fmt.Errorf("failed to marshal inbox entry: %w", err)
+            }
+            if err := b.putObject(ctx, inboxKey, inboxData); err != nil {
+                return nil, fmt.Errorf("failed to write inbox entry: %w", err)
+            }
+        }
+    }
+
+    // 3. Check for pending dump requests and deletion requests for source device
+    resp := &shared.SubmitResponse{}
+
+    dumpReqs, err := b.getDumpRequests(ctx, sourceDeviceId)
+    if err == nil {
+        resp.DumpRequests = dumpReqs
+    }
+
+    delReqs, err := b.GetDeletionRequests(ctx, b.userId, sourceDeviceId)
+    if err == nil {
+        resp.DeletionRequests = delReqs
+    }
+
+    return resp, nil
 }
 ```
 
@@ -259,9 +681,47 @@ func (b *S3Backend) SubmitEntries(ctx context.Context, entries []*shared.EncHist
 ```go
 func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, userId string) ([]*shared.EncHistoryEntry, error) {
     // 1. List objects in inbox/{device_id}/
-    // 2. Download and parse each entry
+    inboxPrefix := b.key("inbox", deviceId) + "/"
+    objects, err := b.listObjects(ctx, inboxPrefix)
+    if err != nil {
+        return nil, fmt.Errorf("failed to list inbox: %w", err)
+    }
+
+    // 2. Download and parse each entry (with read count tracking)
+    var entries []*shared.EncHistoryEntry
+    var keysToDelete []string
+
+    for _, obj := range objects {
+        data, err := b.getObject(ctx, obj.Key)
+        if err != nil {
+            continue // Skip entries we can't read
+        }
+
+        var entry shared.EncHistoryEntry
+        if err := json.Unmarshal(data, &entry); err != nil {
+            continue
+        }
+
+        // Skip entries from same device (shouldn't be in inbox, but defensive)
+        if entry.IsFromSameDevice {
+            keysToDelete = append(keysToDelete, obj.Key)
+            continue
+        }
+
+        entry.ReadCount++
+        entries = append(entries, &entry)
+
+        // Mark for deletion after successful read (read_count equivalent)
+        // In S3 model, we delete from inbox after reading
+        keysToDelete = append(keysToDelete, obj.Key)
+    }
+
     // 3. Delete processed entries from inbox
-    // 4. Return entries
+    for _, key := range keysToDelete {
+        _ = b.deleteObject(ctx, key) // Best effort deletion
+    }
+
+    return entries, nil
 }
 ```
 
@@ -269,8 +729,174 @@ func (b *S3Backend) QueryEntries(ctx context.Context, deviceId, userId string) (
 ```go
 func (b *S3Backend) Bootstrap(ctx context.Context, userId, deviceId string) ([]*shared.EncHistoryEntry, error) {
     // 1. List all objects in entries/
-    // 2. Download and parse each entry
-    // 3. Return all entries
+    entriesPrefix := b.key("entries") + "/"
+    objects, err := b.listObjects(ctx, entriesPrefix)
+    if err != nil {
+        return nil, fmt.Errorf("failed to list entries: %w", err)
+    }
+
+    // 2. Download and parse each entry (deduplicate by EncryptedId)
+    seen := make(map[string]bool)
+    var entries []*shared.EncHistoryEntry
+
+    for _, obj := range objects {
+        data, err := b.getObject(ctx, obj.Key)
+        if err != nil {
+            continue
+        }
+
+        var entry shared.EncHistoryEntry
+        if err := json.Unmarshal(data, &entry); err != nil {
+            continue
+        }
+
+        // Deduplicate (same logic as server's AllHistoryEntriesForUser)
+        if seen[entry.EncryptedId] {
+            continue
+        }
+        seen[entry.EncryptedId] = true
+        entries = append(entries, &entry)
+    }
+
+    return entries, nil
+}
+```
+
+**Submit Dump (respond to DumpRequest):**
+```go
+func (b *S3Backend) SubmitDump(ctx context.Context, entries []*shared.EncHistoryEntry, userId, requestingDeviceId, sourceDeviceId string) error {
+    // Write all entries to requesting device's inbox
+    for _, entry := range entries {
+        entryCopy := *entry
+        entryCopy.DeviceId = requestingDeviceId
+
+        inboxKey := b.key("inbox", requestingDeviceId, entry.Date.Format("20060102T150405")+"_"+entry.EncryptedId+".json")
+        data, err := json.Marshal(&entryCopy)
+        if err != nil {
+            return fmt.Errorf("failed to marshal entry: %w", err)
+        }
+        if err := b.putObject(ctx, inboxKey, data); err != nil {
+            return fmt.Errorf("failed to write inbox entry: %w", err)
+        }
+    }
+
+    // Clear the dump request
+    return b.deleteDumpRequest(ctx, requestingDeviceId)
+}
+```
+
+**Deletion Requests:**
+```go
+func (b *S3Backend) AddDeletionRequest(ctx context.Context, request shared.DeletionRequest) error {
+    // Get all devices to fan out the deletion request
+    devices, _, err := b.getDevices(ctx)
+    if err != nil {
+        return fmt.Errorf("failed to get devices: %w", err)
+    }
+
+    // Create deletion request for each device
+    for _, device := range devices {
+        reqCopy := request
+        reqCopy.DestinationDeviceId = device.DeviceId
+        reqCopy.ReadCount = 0
+
+        key := b.key("deletions", device.DeviceId, fmt.Sprintf("%d_%s.json", time.Now().UnixNano(), request.Messages.Ids[0].EntryId))
+        data, err := json.Marshal(&reqCopy)
+        if err != nil {
+            return fmt.Errorf("failed to marshal deletion request: %w", err)
+        }
+        if err := b.putObject(ctx, key, data); err != nil {
+            return fmt.Errorf("failed to write deletion request: %w", err)
+        }
+    }
+
+    // Also delete the entries from the main entries store
+    for _, msg := range request.Messages.Ids {
+        // Find and delete matching entries (by date or entry ID)
+        entriesPrefix := b.key("entries") + "/"
+        objects, _ := b.listObjects(ctx, entriesPrefix)
+        for _, obj := range objects {
+            if strings.Contains(obj.Key, msg.EntryId) {
+                _ = b.deleteObject(ctx, obj.Key)
+            }
+        }
+    }
+
+    return nil
+}
+
+func (b *S3Backend) GetDeletionRequests(ctx context.Context, userId, deviceId string) ([]*shared.DeletionRequest, error) {
+    prefix := b.key("deletions", deviceId) + "/"
+    objects, err := b.listObjects(ctx, prefix)
+    if err != nil {
+        return nil, err
+    }
+
+    var requests []*shared.DeletionRequest
+    for _, obj := range objects {
+        data, err := b.getObject(ctx, obj.Key)
+        if err != nil {
+            continue
+        }
+
+        var req shared.DeletionRequest
+        if err := json.Unmarshal(data, &req); err != nil {
+            continue
+        }
+
+        req.ReadCount++
+        requests = append(requests, &req)
+
+        // Delete after reading (equivalent to incrementing read_count past threshold)
+        _ = b.deleteObject(ctx, obj.Key)
+    }
+
+    return requests, nil
+}
+```
+
+**Uninstall and Ping:**
+```go
+func (b *S3Backend) Uninstall(ctx context.Context, userId, deviceId string) error {
+    // 1. Remove device from devices list
+    devices, etag, err := b.getDevices(ctx)
+    if err != nil {
+        return err
+    }
+
+    newDevices := make([]DeviceInfo, 0, len(devices))
+    for _, d := range devices {
+        if d.DeviceId != deviceId {
+            newDevices = append(newDevices, d)
+        }
+    }
+
+    if err := b.putDevices(ctx, newDevices, etag); err != nil {
+        return err
+    }
+
+    // 2. Clean up inbox
+    inboxPrefix := b.key("inbox", deviceId) + "/"
+    objects, _ := b.listObjects(ctx, inboxPrefix)
+    for _, obj := range objects {
+        _ = b.deleteObject(ctx, obj.Key)
+    }
+
+    // 3. Clean up deletion requests
+    delPrefix := b.key("deletions", deviceId) + "/"
+    objects, _ = b.listObjects(ctx, delPrefix)
+    for _, obj := range objects {
+        _ = b.deleteObject(ctx, obj.Key)
+    }
+
+    return nil
+}
+
+func (b *S3Backend) Ping(ctx context.Context) error {
+    _, err := b.client.HeadBucket(ctx, &s3.HeadBucketInput{
+        Bucket: aws.String(b.bucket),
+    })
+    return err
 }
 ```
 
@@ -453,24 +1079,34 @@ hishtory migrate-backend s3 \
 
 | File | Description |
 |------|-------------|
-| `client/backend/backend.go` | Backend interface definition |
-| `client/backend/http_backend.go` | HTTP backend implementation (refactored from lib.go) |
+| `client/backend/backend.go` | `SyncBackend` interface definition |
+| `client/backend/http_backend.go` | HTTP backend implementation (wraps existing API calls) |
 | `client/backend/s3_backend.go` | S3 backend implementation |
+| `client/backend/s3_helpers.go` | S3 helper functions (putObject, getObject, listObjects, etc.) |
 | `client/backend/s3_backend_test.go` | S3 backend unit tests |
-| `client/backend/s3_config.go` | S3 configuration structures |
-| `client/cmd/migrate.go` | Migration command implementation |
+| `client/cmd/configBackend.go` | CLI commands for backend configuration |
 | `docs/S3_BACKEND.md` | User documentation for S3 setup |
 
 ### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `client/hctx/hctx.go` | Add S3Config to ClientConfig |
-| `client/lib/lib.go` | Refactor to use backend interface |
-| `client/cmd/install.go` | Add S3 backend initialization |
-| `client/cmd/configSet.go` | Add S3 configuration commands |
-| `go.mod` | Add AWS SDK v2 dependency |
-| `.github/workflows/go-test.yml` | Add MinIO integration tests |
+| `client/hctx/hctx.go` | Add `BackendType`, `S3Config` to `ClientConfig`; add `GetBackend()` function |
+| `client/lib/lib.go` | Replace direct `ApiGet`/`ApiPost` calls with backend interface in sync functions |
+| `client/cmd/saveHistoryEntry.go` | Use `backend.SubmitEntries()` instead of `ApiPost` (lines 108, 187, 219, 332) |
+| `client/cmd/install.go` | Use `backend.RegisterDevice()` and `backend.Bootstrap()` (lines 656, 661) |
+| `client/cmd/syncing.go` | Use `backend.Uninstall()` (line 75) |
+| `client/tui/tui.go` | Use `backend.AddDeletionRequest()` (line 839) |
+| `go.mod` | Add `github.com/aws/aws-sdk-go-v2` dependencies |
+| `.github/workflows/go-test.yml` | Add MinIO service for S3 integration tests |
+
+### Behavioral Changes
+
+The refactoring maintains exact behavioral parity for HTTP backend users:
+- All existing `ApiGet`/`ApiPost` calls map 1:1 to `HTTPBackend` methods
+- Error handling and retry logic remains in the calling code
+- `IsOfflineError()` continues to work for detecting network issues
+- No changes to encryption/decryption (handled by calling code, not backend)
 
 ## Security Considerations
 
