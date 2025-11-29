@@ -323,7 +323,7 @@ func createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel string,
 	defaultModel := "gpt-4o-mini"
 	if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
 		// If only Anthropic key is available, default to Claude
-		defaultModel = "claude-sonnet-4-5"
+		defaultModel = "claude-haiku-4-5-20251001"
 	}
 
 	// Check for model override with generic env variable taking precedence

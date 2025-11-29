@@ -12,6 +12,9 @@ import (
 func TestLiveOpenAiApi(t *testing.T) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" || !strings.HasPrefix(apiKey, "sk-") {
+		if os.Getenv("GITHUB_ACTIONS") != "" {
+			t.Fatal("OPENAI_API_KEY must be set in GitHub Actions")
+		}
 		t.Skip("Skipping test since OPENAI_API_KEY is not set or invalid")
 	}
 	results, _, err := GetAiSuggestionsViaOpenAiApi("https://api.openai.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "", 3)
@@ -29,10 +32,13 @@ func TestLiveOpenAiApi(t *testing.T) {
 func TestLiveClaudeApi(t *testing.T) {
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if apiKey == "" || !strings.HasPrefix(apiKey, "sk-ant-") {
+		if os.Getenv("GITHUB_ACTIONS") != "" {
+			t.Fatal("ANTHROPIC_API_KEY must be set in GitHub Actions")
+		}
 		t.Skip("Skipping test since ANTHROPIC_API_KEY is not set or invalid")
 	}
 	// Test multiple completions - Claude doesn't support n>1 natively, so we make multiple API calls
-	results, usage, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "claude-sonnet-4-5", 3)
+	results, usage, err := GetAiSuggestionsViaOpenAiApi("https://api.anthropic.com/v1/chat/completions", "list files in the current directory", "bash", "Linux", "claude-haiku-4-5-20251001", 3)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(results), 1, "expected at least 1 result")
 	resultsContainsLs := false
