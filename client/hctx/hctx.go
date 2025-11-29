@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ddworken/hishtory/client/backend"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/tui/keybindings"
 	"github.com/ddworken/hishtory/shared"
@@ -123,6 +124,7 @@ const (
 	ConfigCtxKey  hishtoryContextKey = "config"
 	DbCtxKey      hishtoryContextKey = "db"
 	HomedirCtxKey hishtoryContextKey = "homedir"
+	BackendCtxKey hishtoryContextKey = "backend"
 )
 
 func MakeContext() context.Context {
@@ -169,6 +171,21 @@ func GetHome(ctx context.Context) string {
 	panic(fmt.Errorf("failed to find homedir in ctx"))
 }
 
+// GetBackend returns the sync backend from context.
+// Returns nil if no backend has been set (caller should handle this case).
+func GetBackend(ctx context.Context) backend.SyncBackend {
+	v := ctx.Value(BackendCtxKey)
+	if v != nil {
+		return v.(backend.SyncBackend)
+	}
+	return nil
+}
+
+// WithBackend returns a new context with the backend set.
+func WithBackend(ctx context.Context, b backend.SyncBackend) context.Context {
+	return context.WithValue(ctx, BackendCtxKey, b)
+}
+
 type ClientConfig struct {
 	// The user secret that is used to derive encryption keys for syncing history entries
 	UserSecret string `json:"user_secret" yaml:"-"`
@@ -176,6 +193,12 @@ type ClientConfig struct {
 	IsEnabled bool `json:"is_enabled" yaml:"-"`
 	// A device ID used to track which history entry came from which device for remote syncing
 	DeviceId string `json:"device_id" yaml:"-"`
+
+	// Backend configuration for syncing
+	// BackendType specifies the sync backend: "http" (default) or "s3"
+	BackendType string `json:"backend_type,omitempty"`
+	// S3Config holds configuration for the S3 backend (only used when BackendType is "s3")
+	S3Config *S3BackendConfig `json:"s3_config,omitempty"`
 	// Used for skipping history entries prefixed with a space in bash
 	LastPreSavedHistoryLine string `json:"last_presaved_history_line" yaml:"-"`
 	// Used for skipping history entries prefixed with a space in bash
@@ -240,6 +263,21 @@ type ColorScheme struct {
 type CustomColumnDefinition struct {
 	ColumnName    string `json:"column_name"`
 	ColumnCommand string `json:"column_command"`
+}
+
+// S3BackendConfig holds configuration for the S3 sync backend.
+// This is stored in the client config file (except for SecretAccessKey).
+type S3BackendConfig struct {
+	// Bucket is the S3 bucket name (required)
+	Bucket string `json:"bucket"`
+	// Region is the AWS region (required)
+	Region string `json:"region"`
+	// Endpoint is a custom S3-compatible endpoint (optional, for MinIO, Backblaze, etc.)
+	Endpoint string `json:"endpoint,omitempty"`
+	// AccessKeyID is the AWS access key ID (optional if using IAM roles or env vars)
+	AccessKeyID string `json:"access_key_id,omitempty"`
+	// Prefix is an optional path prefix within the bucket (e.g., "hishtory/")
+	Prefix string `json:"prefix,omitempty"`
 }
 
 func GetConfigContents() ([]byte, error) {

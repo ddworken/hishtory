@@ -101,11 +101,14 @@ func maybeUploadSkippedHistoryEntries(ctx context.Context) error {
 		return fmt.Errorf("failed to retrieve history entries that haven't been uploaded yet: %w", err)
 	}
 	hctx.GetLogger().Infof("Uploading %d history entries that previously failed to upload (query=%#v)\n", len(entries), query)
-	jsonValue, err := lib.EncryptAndMarshal(config, entries)
+
+	encEntries, err := lib.EncryptEntries(config, entries)
 	if err != nil {
 		return err
 	}
-	_, err = lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+
+	b, ctx := lib.GetSyncBackend(ctx)
+	_, err = b.SubmitEntries(ctx, encEntries, config.DeviceId)
 	if err != nil {
 		// Failed to upload the history entry, so we must still be offline. So just return nil and we'll try again later.
 		return nil
@@ -182,9 +185,10 @@ func presaveHistoryEntry(ctx context.Context) {
 
 	// And persist it remotely
 	if !config.IsOffline {
-		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
+		encEntries, err := lib.EncryptEntries(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
-		_, err = lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		b, ctx := lib.GetSyncBackend(ctx)
+		_, err = b.SubmitEntries(ctx, encEntries, config.DeviceId)
 		handlePotentialUploadFailure(ctx, err, config, entry.StartTime)
 	}
 }
@@ -214,16 +218,12 @@ func saveHistoryEntry(ctx context.Context) {
 
 	// Persist it remotely
 	if !config.IsOffline {
-		jsonValue, err := lib.EncryptAndMarshal(config, []*data.HistoryEntry{entry})
+		encEntries, err := lib.EncryptEntries(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
-		w, err := lib.ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+		b, ctx := lib.GetSyncBackend(ctx)
+		submitResponse, err := b.SubmitEntries(ctx, encEntries, config.DeviceId)
 		handlePotentialUploadFailure(ctx, err, config, entry.StartTime)
-		if err == nil {
-			submitResponse := shared.SubmitResponse{}
-			err := json.Unmarshal(w, &submitResponse)
-			if err != nil {
-				lib.CheckFatalError(fmt.Errorf("failed to deserialize response from /api/v1/submit: %w", err))
-			}
+		if err == nil && submitResponse != nil {
 			lib.CheckFatalError(lib.HandleDeletionRequests(ctx, submitResponse.DeletionRequests))
 			lib.CheckFatalError(handleDumpRequests(ctx, submitResponse.DumpRequests))
 		}
@@ -318,18 +318,15 @@ func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest)
 		lib.CheckFatalError(lib.RetrieveAdditionalEntriesFromRemote(ctx, "newclient"))
 		entries, err := lib.Search(ctx, db, "", 0)
 		lib.CheckFatalError(err)
-		var encEntries []*shared.EncHistoryEntry
-		for _, entry := range entries {
-			enc, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-			lib.CheckFatalError(err)
-			encEntries = append(encEntries, &enc)
-		}
-		reqBody, err := json.Marshal(encEntries)
+
+		encEntries, err := lib.EncryptEntries(config, entries)
 		lib.CheckFatalError(err)
+
+		b, ctx := lib.GetSyncBackend(ctx)
 		for _, dumpRequest := range dumpRequests {
 			if !config.IsOffline {
 				// TODO: Test whether this fails if the data is extremely large? It may need to be chunked
-				_, err := lib.ApiPost(ctx, "/api/v1/submit-dump?user_id="+dumpRequest.UserId+"&requesting_device_id="+dumpRequest.RequestingDeviceId+"&source_device_id="+config.DeviceId, "application/json", reqBody)
+				err := b.SubmitDump(ctx, encEntries, dumpRequest.UserId, dumpRequest.RequestingDeviceId, config.DeviceId)
 				lib.CheckFatalError(err)
 			}
 		}

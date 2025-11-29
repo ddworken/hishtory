@@ -134,7 +134,10 @@ var uninstallCmd = &cobra.Command{
 		lib.CheckFatalError(err)
 		_, _ = lib.ApiPost(ctx, "/api/v1/feedback", "application/json", reqBody)
 		lib.CheckFatalError(uninstall(ctx))
-		_, err = lib.ApiPost(ctx, "/api/v1/uninstall?user_id="+data.UserId(hctx.GetConf(ctx).UserSecret)+"&device_id="+hctx.GetConf(ctx).DeviceId, "application/json", []byte{})
+		// Notify backend of uninstall
+		b, ctx := lib.GetSyncBackend(ctx)
+		config := hctx.GetConf(ctx)
+		err = b.Uninstall(ctx, data.UserId(config.UserSecret), config.DeviceId)
 		if err == nil {
 			fmt.Println("Successfully uninstalled hishtory, please restart your terminal...")
 		} else {
@@ -649,24 +652,21 @@ func setup(userSecret string, isOffline bool) error {
 }
 
 func registerAndBootstrapDevice(ctx context.Context, config *hctx.ClientConfig, db *gorm.DB, userSecret string) error {
-	registerPath := "/api/v1/register?user_id=" + data.UserId(userSecret) + "&device_id=" + config.DeviceId
-	if isIntegrationTestDevice() {
-		registerPath += "&is_integration_test_device=true"
-	}
-	_, err := lib.ApiGet(ctx, registerPath)
-	if err != nil {
+	// Get the sync backend
+	b, ctx := lib.GetSyncBackend(ctx)
+	userId := data.UserId(userSecret)
+
+	// Register the device
+	if err := b.RegisterDevice(ctx, userId, config.DeviceId); err != nil {
 		return fmt.Errorf("failed to register device with backend: %w", err)
 	}
 
-	respBody, err := lib.ApiGet(ctx, "/api/v1/bootstrap?user_id="+data.UserId(userSecret)+"&device_id="+config.DeviceId)
+	// Bootstrap: retrieve all entries
+	retrievedEntries, err := b.Bootstrap(ctx, userId, config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap device from the backend: %w", err)
 	}
-	var retrievedEntries []*shared.EncHistoryEntry
-	err = json.Unmarshal(respBody, &retrievedEntries)
-	if err != nil {
-		return fmt.Errorf("failed to load JSON response: %w", err)
-	}
+
 	hctx.GetLogger().Infof("Bootstrapping new device: Found %d entries", len(retrievedEntries))
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)

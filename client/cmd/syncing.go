@@ -72,7 +72,8 @@ func switchToOffline(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to switch device to offline due to error while setting config: %w", err)
 	}
-	_, err = lib.ApiPost(ctx, "/api/v1/uninstall?user_id="+data.UserId(hctx.GetConf(ctx).UserSecret)+"&device_id="+hctx.GetConf(ctx).DeviceId, "application/json", []byte{})
+	b, ctx := lib.GetSyncBackend(ctx)
+	err = b.Uninstall(ctx, data.UserId(config.UserSecret), config.DeviceId)
 	if err != nil {
 		return fmt.Errorf("failed to switch device to offline due to error while deleting sync state: %w", err)
 	}
