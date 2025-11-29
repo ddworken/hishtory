@@ -115,6 +115,25 @@ const (
 	Offline
 )
 
+// BackendType represents the sync backend type for integration tests
+type BackendType int64
+
+const (
+	HTTPBackendType BackendType = iota
+	S3BackendType
+)
+
+func (b BackendType) String() string {
+	switch b {
+	case HTTPBackendType:
+		return "http"
+	case S3BackendType:
+		return "s3"
+	default:
+		return "unknown"
+	}
+}
+
 func assertOnlineStatus(t testing.TB, onlineStatus OnlineStatus) {
 	config := hctx.GetConf(hctx.MakeContext())
 	if onlineStatus == Online && config.IsOffline {
@@ -353,6 +372,55 @@ func installHishtory(t testing.TB, tester shellTester, userSecret string) string
 		t.Fatalf("Failed to extract userSecret from output=%#v: matches=%#v", out, matches)
 	}
 	return matches[1]
+}
+
+// installHishtoryWithBackendType installs hishtory and optionally configures it for S3 backend
+func installHishtoryWithBackendType(t testing.TB, tester shellTester, userSecret string, backendType BackendType) string {
+	// First do the standard install
+	secret := installHishtory(t, tester, userSecret)
+
+	// If S3 backend requested, configure it
+	if backendType == S3BackendType {
+		configureS3Backend(t)
+	}
+
+	return secret
+}
+
+// configureS3Backend configures the current device to use the S3 sync backend with the test MinIO server
+func configureS3Backend(t testing.TB) {
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+
+	// Configure S3 backend settings
+	config.BackendType = "s3"
+	config.S3Config = &hctx.S3BackendConfig{
+		Bucket:      testutils.MinioBucket,
+		Region:      testutils.MinioRegion,
+		Endpoint:    testutils.MinioEndpoint,
+		AccessKeyID: testutils.MinioAccessKeyID,
+		Prefix:      "",
+	}
+
+	err := hctx.SetConfig(config)
+	require.NoError(t, err, "failed to configure S3 backend")
+}
+
+// installWithOnlineStatusAndBackend installs hishtory with specified online status and optionally configures S3 backend
+func installWithOnlineStatusAndBackend(t testing.TB, tester shellTester, onlineStatus OnlineStatus, backendType BackendType) string {
+	var userSecret string
+	if onlineStatus == Online {
+		userSecret = installHishtory(t, tester, "")
+	} else {
+		userSecret = installHishtory(t, tester, "--offline")
+	}
+
+	// If S3 backend requested and not offline, configure it
+	if backendType == S3BackendType && onlineStatus == Online {
+		configureS3Backend(t)
+	}
+
+	return userSecret
 }
 
 func stripShellPrefix(out string) string {

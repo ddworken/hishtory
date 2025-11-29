@@ -428,6 +428,70 @@ func GetOsVersion(t *testing.T) string {
 
 const DefaultGitBranchName = "master"
 
+// MinIO test configuration
+const (
+	MinioEndpoint        = "http://localhost:9000"
+	MinioAccessKeyID     = "minioadmin"
+	MinioSecretAccessKey = "minioadmin"
+	MinioBucket          = "hishtory-test"
+	MinioRegion          = "us-east-1"
+)
+
+// RunMinioServer starts a MinIO server for S3 backend testing.
+// It uses Docker to run MinIO and creates a test bucket.
+func RunMinioServer() func() {
+	// Kill any existing MinIO container
+	_ = exec.Command("docker", "rm", "-f", "hishtory-minio-test").Run()
+
+	// Start MinIO container
+	cmd := exec.Command("docker", "run", "-d",
+		"--name", "hishtory-minio-test",
+		"-p", "9000:9000",
+		"-p", "9001:9001",
+		"-e", "MINIO_ROOT_USER="+MinioAccessKeyID,
+		"-e", "MINIO_ROOT_PASSWORD="+MinioSecretAccessKey,
+		"minio/minio", "server", "/data", "--console-address", ":9001",
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		panic(fmt.Sprintf("failed to start MinIO container: %v, stdout=%s, stderr=%s", err, stdout.String(), stderr.String()))
+	}
+
+	// Wait for MinIO to be ready
+	time.Sleep(3 * time.Second)
+
+	// Create the test bucket using mc (MinIO client) in container
+	createBucketCmd := exec.Command("docker", "exec", "hishtory-minio-test",
+		"mc", "alias", "set", "local", "http://localhost:9000", MinioAccessKeyID, MinioSecretAccessKey)
+	_ = createBucketCmd.Run()
+
+	createBucketCmd = exec.Command("docker", "exec", "hishtory-minio-test",
+		"mc", "mb", "local/"+MinioBucket, "--ignore-existing")
+	_ = createBucketCmd.Run()
+
+	// Set HISHTORY_S3_SECRET_ACCESS_KEY environment variable for tests
+	os.Setenv("HISHTORY_S3_SECRET_ACCESS_KEY", MinioSecretAccessKey)
+
+	return func() {
+		// Stop and remove the container
+		_ = exec.Command("docker", "rm", "-f", "hishtory-minio-test").Run()
+		os.Unsetenv("HISHTORY_S3_SECRET_ACCESS_KEY")
+	}
+}
+
+// IsMinioRunning checks if the MinIO server is running and accessible
+func IsMinioRunning() bool {
+	resp, err := http.Get(MinioEndpoint + "/minio/health/live")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == 200
+}
+
 func GetCurrentGitBranch(t *testing.T) string {
 	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
 	var out bytes.Buffer

@@ -36,6 +36,13 @@ func skipSlowTests() bool {
 	return os.Getenv("FAST") != ""
 }
 
+func isS3TestEnabled() bool {
+	return os.Getenv("HISHTORY_TEST_S3") != ""
+}
+
+// minioCleanup holds the MinIO cleanup function, if MinIO was started
+var minioCleanup func()
+
 func TestMain(m *testing.M) {
 	// Configure key environment variables
 	defer testutils.BackupAndRestoreEnv("HISHTORY_TEST")()
@@ -45,6 +52,12 @@ func TestMain(m *testing.M) {
 
 	// Start the test server
 	defer testutils.RunTestServer()()
+
+	// Start MinIO for S3 backend tests if HISHTORY_TEST_S3 is set
+	if os.Getenv("HISHTORY_TEST_S3") != "" {
+		minioCleanup = testutils.RunMinioServer()
+		defer minioCleanup()
+	}
 
 	// Build the client so it is available in /tmp/client
 	cmd := exec.Command("go", "build", "-o", "/tmp/client")
@@ -87,6 +100,7 @@ func TestParam(t *testing.T) {
 		t.Run("testIntegration/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testIntegration(t, tester, Online) }))
 		t.Run("testIntegration/offline/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testIntegration(t, tester, Offline) }))
 		t.Run("testIntegrationWithNewDevice/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testIntegrationWithNewDevice(t, tester) }))
+		t.Run("testSyncWithS3Backend/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testSyncWithS3Backend(t, tester) }))
 		t.Run("testHishtoryBackgroundSaving/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testHishtoryBackgroundSaving(t, tester) }))
 		t.Run("testDisplayTable/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testDisplayTable(t, tester) }))
 		t.Run("testTableDisplayCwd/"+tester.ShellName(), wrapTestForSharding(func(t *testing.T) { testTableDisplayCwd(t, tester) }))
@@ -242,6 +256,73 @@ yes | hishtory init `+userSecret)
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
+}
+
+// testSyncWithS3Backend tests that history entries sync correctly via the S3 backend.
+// This test requires HISHTORY_TEST_S3=1 to be set and MinIO to be running.
+func testSyncWithS3Backend(t *testing.T, tester shellTester) {
+	// Skip if S3 tests are not enabled
+	if !isS3TestEnabled() {
+		t.Skip("Skipping S3 backend test - set HISHTORY_TEST_S3=1 to enable")
+	}
+
+	// Set up
+	defer testutils.BackupAndRestore(t)()
+
+	// Install hishtory on "device 1" and configure S3 backend
+	userSecret := installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+
+	// Verify S3 backend is configured
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+	require.Equal(t, "s3", config.BackendType, "Expected S3 backend to be configured")
+	require.NotNil(t, config.S3Config, "Expected S3Config to be set")
+	require.Equal(t, testutils.MinioBucket, config.S3Config.Bucket, "Expected MinIO bucket")
+
+	// Run some commands on device 1
+	tester.RunInteractiveShell(t, "echo s3command1")
+	tester.RunInteractiveShell(t, "echo s3command2")
+	tester.RunInteractiveShell(t, "echo s3uniquecommand")
+
+	// Verify commands are recorded locally
+	out := hishtoryQuery(t, tester, "s3")
+	require.Contains(t, out, "echo s3command1", "Device 1 should have s3command1")
+	require.Contains(t, out, "echo s3command2", "Device 1 should have s3command2")
+	require.Contains(t, out, "echo s3uniquecommand", "Device 1 should have s3uniquecommand")
+
+	// Simulate "device 2": reset local state but use same user secret
+	testutils.ResetLocalState(t)
+
+	// Install on device 2 with same user secret and S3 backend
+	installWithOnlineStatusAndBackend(t, tester, Online, S3BackendType)
+	configureS3Backend(t)
+
+	// After re-configuring S3 backend, manually sync to get entries from S3
+	// The hishtory query command should trigger a sync
+	out = hishtoryQuery(t, tester, "s3unique")
+
+	// Verify that device 2 can see commands from device 1 via S3
+	require.Contains(t, out, "echo s3uniquecommand", "Device 2 should see s3uniquecommand synced from S3")
+
+	// Run a new command on device 2
+	tester.RunInteractiveShell(t, "echo s3device2command")
+
+	// Verify device 2's command is recorded
+	out = hishtoryQuery(t, tester, "s3device2")
+	require.Contains(t, out, "echo s3device2command", "Device 2 should have s3device2command")
+
+	// Now switch back to device 1 (simulate by resetting and re-installing)
+	testutils.ResetLocalState(t)
+	installHishtory(t, tester, userSecret)
+	configureS3Backend(t)
+
+	// Device 1 should now see device 2's command after sync
+	out = hishtoryQuery(t, tester, "s3device2")
+	require.Contains(t, out, "echo s3device2command", "Device 1 should see s3device2command synced from S3")
+
+	// Verify device 1 still has its original commands
+	out = hishtoryQuery(t, tester, "s3unique")
+	require.Contains(t, out, "echo s3uniquecommand", "Device 1 should still have s3uniquecommand")
 }
 
 func installWithOnlineStatus(t testing.TB, tester shellTester, onlineStatus OnlineStatus) string {
