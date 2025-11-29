@@ -3558,12 +3558,12 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 	ctx := hctx.MakeContext()
 
 	// By default, when the hishtory server is up, then IsOfflineError checks the error msg
-	require.True(t, lib.CanReachHishtoryServer(ctx))
+	require.True(t, lib.CanReachBackend(ctx))
 	require.False(t, lib.IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
 
 	// When the hishtory server is down, then all error messages are treated as being due to offline errors
 	os.Setenv("HISHTORY_SIMULATE_NETWORK_ERROR", "1")
-	require.False(t, lib.CanReachHishtoryServer(ctx))
+	require.False(t, lib.CanReachBackend(ctx))
 	require.True(t, lib.IsOfflineError(ctx, fmt.Errorf("unchecked error type")))
 }
 

@@ -195,6 +195,9 @@ func (b *HTTPBackend) Ping(ctx context.Context) error {
 
 // apiGet performs a GET request to the server.
 func (b *HTTPBackend) apiGet(ctx context.Context, path string) ([]byte, error) {
+	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
+		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
+	}
 	req, err := http.NewRequestWithContext(ctx, "GET", b.serverURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GET request: %w", err)
@@ -217,6 +220,9 @@ func (b *HTTPBackend) apiGet(ctx context.Context, path string) ([]byte, error) {
 
 // apiPost performs a POST request to the server.
 func (b *HTTPBackend) apiPost(ctx context.Context, path, contentType string, body []byte) ([]byte, error) {
+	if os.Getenv("HISHTORY_SIMULATE_NETWORK_ERROR") != "" {
+		return nil, fmt.Errorf("simulated network error: dial tcp: lookup api.hishtory.dev")
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", b.serverURL+path, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create POST request: %w", err)
