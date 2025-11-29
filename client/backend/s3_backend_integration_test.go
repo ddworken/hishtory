@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -798,7 +799,7 @@ func TestS3Integration_BatchDeletionOver1000Entries(t *testing.T) {
 	entries := make([]*shared.EncHistoryEntry, numEntries)
 	for i := 0; i < numEntries; i++ {
 		entries[i] = &shared.EncHistoryEntry{
-			EncryptedId:   "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + itoa(i),
+			EncryptedId:   "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + strconv.Itoa(i),
 			Date:          timestamp,
 			DeviceId:      "device1",
 			UserId:        userId,
@@ -826,7 +827,7 @@ func TestS3Integration_BatchDeletionOver1000Entries(t *testing.T) {
 	idsToDelete := make([]shared.MessageIdentifier, 0, numEntries/2)
 	for i := 0; i < numEntries; i += 2 {
 		idsToDelete = append(idsToDelete, shared.MessageIdentifier{
-			EntryId: "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + itoa(i),
+			EntryId: "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + strconv.Itoa(i),
 		})
 	}
 
@@ -853,7 +854,7 @@ func TestS3Integration_BatchDeletionOver1000Entries(t *testing.T) {
 	deletedCount := 0
 	remainingCount := 0
 	for i := 0; i < numEntries; i++ {
-		entryId := "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + itoa(i)
+		entryId := "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + strconv.Itoa(i)
 		if i%2 == 0 {
 			// Should be deleted
 			if !remainingIds[entryId] {
@@ -870,17 +871,4 @@ func TestS3Integration_BatchDeletionOver1000Entries(t *testing.T) {
 	t.Logf("Verified: %d entries deleted, %d entries remain", deletedCount, remainingCount)
 	assert.Equal(t, numEntries/2, deletedCount, "Half the entries should be deleted")
 	assert.Equal(t, numEntries/2, remainingCount, "Half the entries should remain")
-}
-
-// itoa is a simple int to string converter to avoid importing strconv
-func itoa(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	var result []byte
-	for i > 0 {
-		result = append([]byte{byte('0' + i%10)}, result...)
-		i /= 10
-	}
-	return string(result)
 }

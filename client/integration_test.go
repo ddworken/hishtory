@@ -1749,7 +1749,7 @@ echo other`)
 }
 
 func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
-	markTestForSharding(t, 0)
+	testutils.MarkTestForSharding(t, 0)
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("HISHTORY_PATH")()
 	altHishtoryPath := ".other-path"
@@ -1764,7 +1764,7 @@ func TestInstallViaPythonScriptWithCustomHishtoryPath(t *testing.T) {
 }
 
 func TestInstallViaPythonScriptInOfflineMode(t *testing.T) {
-	markTestForSharding(t, 1)
+	testutils.MarkTestForSharding(t, 1)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -1823,7 +1823,7 @@ func testInstallViaPythonScriptChild(t *testing.T, tester shellTester, onlineSta
 }
 
 func TestInstallViaPythonScriptFromHead(t *testing.T) {
-	markTestForSharding(t, 2)
+	testutils.MarkTestForSharding(t, 2)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -1935,7 +1935,7 @@ func testHelpCommand(t *testing.T, tester shellTester) {
 
 func TestStripBashTimePrefix(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 4)
+	testutils.MarkTestForSharding(t, 4)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -2339,7 +2339,7 @@ func testHandleUpgradedFeatures(t *testing.T, tester shellTester) {
 
 func TestFish(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 5)
+	testutils.MarkTestForSharding(t, 5)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -3451,7 +3451,7 @@ echo bar`)
 
 func TestTimestampFormat(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 6)
+	testutils.MarkTestForSharding(t, 6)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -3489,7 +3489,7 @@ func TestTimestampFormat(t *testing.T) {
 
 func TestSortByConsistentTimezone(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 7)
+	testutils.MarkTestForSharding(t, 7)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -3529,7 +3529,7 @@ func TestSortByConsistentTimezone(t *testing.T) {
 
 func TestZDotDir(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 8)
+	testutils.MarkTestForSharding(t, 8)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	defer testutils.BackupAndRestoreEnv("ZDOTDIR")()
@@ -3564,7 +3564,7 @@ func TestZDotDir(t *testing.T) {
 
 func TestRemoveDuplicateRows(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 9)
+	testutils.MarkTestForSharding(t, 9)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -3619,7 +3619,7 @@ echo foo`)
 
 func TestSetConfigNoCorruption(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 10)
+	testutils.MarkTestForSharding(t, 10)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -3654,7 +3654,7 @@ func TestSetConfigNoCorruption(t *testing.T) {
 // Test that the config retrieved from the context is a reference and there are no consistency issues with it getting out of sync
 func TestCtxConfigIsReference(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 11)
+	testutils.MarkTestForSharding(t, 11)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")
@@ -3766,7 +3766,7 @@ func createSyntheticImportEntries(t testing.TB, numSyntheticEntries int) {
 
 func TestImportHistory(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 11)
+	testutils.MarkTestForSharding(t, 11)
 	tester := bashTester{}
 	defer testutils.BackupAndRestore(t)()
 	userSecret := installHishtory(t, tester, "")
@@ -3851,7 +3851,7 @@ func BenchmarkQuery(b *testing.B) {
 }
 
 func TestAugmentedIsOfflineError(t *testing.T) {
-	markTestForSharding(t, 12)
+	testutils.MarkTestForSharding(t, 12)
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, zshTester{}, "")
 	defer testutils.BackupAndRestoreEnv("HISHTORY_SIMULATE_NETWORK_ERROR")()
@@ -3868,7 +3868,7 @@ func TestAugmentedIsOfflineError(t *testing.T) {
 }
 
 func TestWebUi(t *testing.T) {
-	markTestForSharding(t, 13)
+	testutils.MarkTestForSharding(t, 13)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -3926,7 +3926,7 @@ func TestWebUi(t *testing.T) {
 }
 
 func TestForceInit(t *testing.T) {
-	markTestForSharding(t, 13)
+	testutils.MarkTestForSharding(t, 13)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	initialSecret := installHishtory(t, tester, "")
@@ -3947,7 +3947,7 @@ func TestForceInit(t *testing.T) {
 }
 
 func TestBashOrderingBug(t *testing.T) {
-	markTestForSharding(t, 15)
+	testutils.MarkTestForSharding(t, 15)
 	defer testutils.BackupAndRestore(t)()
 	tester := bashTester{}
 	installHishtory(t, tester, "")
@@ -3959,7 +3959,7 @@ func TestBashOrderingBug(t *testing.T) {
 }
 
 func TestChangeSyncingStatus(t *testing.T) {
-	markTestForSharding(t, 15)
+	testutils.MarkTestForSharding(t, 15)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -4021,7 +4021,7 @@ func TestChangeSyncingStatus(t *testing.T) {
 }
 
 func TestInstallSkipConfigModification(t *testing.T) {
-	markTestForSharding(t, 14)
+	testutils.MarkTestForSharding(t, 14)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -4046,7 +4046,7 @@ func TestInstallSkipConfigModification(t *testing.T) {
 }
 
 func TestConfigLogLevel(t *testing.T) {
-	markTestForSharding(t, 16)
+	testutils.MarkTestForSharding(t, 16)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4071,7 +4071,7 @@ func TestConfigLogLevel(t *testing.T) {
 }
 
 func TestSanitizeEscapeCodes(t *testing.T) {
-	markTestForSharding(t, 17)
+	testutils.MarkTestForSharding(t, 17)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4091,7 +4091,7 @@ func TestCreatedBashProfileSourcesProfile(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		t.Skip("hishtory doesn't create .bash_profile on linux")
 	}
-	markTestForSharding(t, 18)
+	testutils.MarkTestForSharding(t, 18)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	homedir, err := os.UserHomeDir()
@@ -4118,7 +4118,7 @@ func TestExistingBashProfileDoesNotSourceProfile(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		t.Skip("hishtory doesn't create .bash_profile on linux")
 	}
-	markTestForSharding(t, 18)
+	testutils.MarkTestForSharding(t, 18)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	homedir, err := os.UserHomeDir()
@@ -4142,7 +4142,7 @@ func TestExistingBashProfileDoesNotSourceProfile(t *testing.T) {
 }
 
 func TestStatusFullConfig(t *testing.T) {
-	markTestForSharding(t, 19)
+	testutils.MarkTestForSharding(t, 19)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4153,7 +4153,7 @@ func TestStatusFullConfig(t *testing.T) {
 }
 
 func TestExportJson(t *testing.T) {
-	markTestForSharding(t, 20)
+	testutils.MarkTestForSharding(t, 20)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4175,7 +4175,7 @@ func TestExportJson(t *testing.T) {
 }
 
 func TestImportJson(t *testing.T) {
-	markTestForSharding(t, 20)
+	testutils.MarkTestForSharding(t, 20)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4190,7 +4190,7 @@ func TestImportJson(t *testing.T) {
 }
 
 func TestOfflineClient(t *testing.T) {
-	markTestForSharding(t, 21)
+	testutils.MarkTestForSharding(t, 21)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 
@@ -4232,7 +4232,7 @@ func TestOfflineClient(t *testing.T) {
 }
 
 func TestDefaultSearchColumns(t *testing.T) {
-	markTestForSharding(t, 21)
+	testutils.MarkTestForSharding(t, 21)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4308,7 +4308,7 @@ func TestDefaultSearchColumns(t *testing.T) {
 }
 
 func TestDefaultSearchColumnsAddDelete(t *testing.T) {
-	markTestForSharding(t, 21)
+	testutils.MarkTestForSharding(t, 21)
 	defer testutils.BackupAndRestore(t)()
 	tester := zshTester{}
 	installHishtory(t, tester, "")
@@ -4370,7 +4370,7 @@ func TestTuiBench(t *testing.T) {
 
 func TestFilterWhitespacePrefix(t *testing.T) {
 	// Setup
-	markTestForSharding(t, 18)
+	testutils.MarkTestForSharding(t, 18)
 	tester := zshTester{}
 	defer testutils.BackupAndRestore(t)()
 	installHishtory(t, tester, "")

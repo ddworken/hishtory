@@ -457,49 +457,9 @@ func wrapTestForSharding(test func(t *testing.T)) func(t *testing.T) {
 	shardNumberAllocator += 1
 	return func(t *testing.T) {
 		testShardNumber := shardNumberAllocator
-		markTestForSharding(t, testShardNumber)
+		testutils.MarkTestForSharding(t, testShardNumber)
 		test(t)
 	}
 }
 
 var shardNumberAllocator int = 0
-
-// Returns whether this is a sharded test run. false during all normal non-github action operations.
-func isShardedTestRun() bool {
-	return numTestShards() != -1 && currentShardNumber() != -1
-}
-
-// Get the total number of test shards
-func numTestShards() int {
-	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
-	if numTestShardsStr == "" {
-		return -1
-	}
-	numTestShards, err := strconv.Atoi(numTestShardsStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse NUM_TEST_SHARDS: %v", err))
-	}
-	return numTestShards
-}
-
-// Get the current shard number
-func currentShardNumber() int {
-	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
-	if currentShardNumberStr == "" {
-		return -1
-	}
-	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse CURRENT_SHARD_NUM: %v", err))
-	}
-	return currentShardNumber
-}
-
-// Mark the given test for sharding with the given test ID number.
-func markTestForSharding(t *testing.T, testShardNumber int) {
-	if isShardedTestRun() {
-		if testShardNumber%numTestShards() != currentShardNumber() {
-			t.Skip("Skipping sharded test")
-		}
-	}
-}
