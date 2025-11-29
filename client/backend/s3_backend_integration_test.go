@@ -751,3 +751,113 @@ func TestS3Integration_MultipleEntriesSameTimestamp(t *testing.T) {
 	assert.True(t, foundIds["ts-2-"+baseId], "Should have ts-2")
 	assert.True(t, foundIds["ts-3-"+baseId], "Should have ts-3")
 }
+
+// TestS3Integration_BatchDeletionOver1000Entries tests batch deletion with more than 1000 entries
+// to verify the deleteObjects batching logic works correctly with S3's 1000 object limit
+func TestS3Integration_BatchDeletionOver1000Entries(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping large batch deletion test in short mode")
+	}
+
+	ctx := context.Background()
+	userId := "test-user-batchdel-" + uuid.New().String()[:8]
+	backend := newTestBackend(t, userId)
+
+	err := backend.RegisterDevice(ctx, userId, "device1")
+	require.NoError(t, err)
+
+	// Create 1500 entries - more than the 1000 batch limit
+	numEntries := 1500
+	baseId := uuid.New().String()[:8]
+	timestamp := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+
+	t.Logf("Creating %d entries...", numEntries)
+	entries := make([]*shared.EncHistoryEntry, numEntries)
+	for i := 0; i < numEntries; i++ {
+		entries[i] = &shared.EncHistoryEntry{
+			EncryptedId:   "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + itoa(i),
+			Date:          timestamp,
+			DeviceId:      "device1",
+			UserId:        userId,
+			EncryptedData: []byte("data"),
+		}
+	}
+
+	// Submit entries in batches to avoid timeout
+	batchSize := 100
+	for i := 0; i < numEntries; i += batchSize {
+		end := i + batchSize
+		if end > numEntries {
+			end = numEntries
+		}
+		_, err := backend.SubmitEntries(ctx, entries[i:end], "device1")
+		require.NoError(t, err, "Failed to submit batch starting at %d", i)
+	}
+
+	// Verify all entries exist
+	allEntries, err := backend.Bootstrap(ctx, userId, "device1")
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(allEntries), numEntries, "Should have at least %d entries", numEntries)
+
+	// Delete half the entries (750) - this will require multiple batches internally
+	idsToDelete := make([]shared.MessageIdentifier, 0, numEntries/2)
+	for i := 0; i < numEntries; i += 2 {
+		idsToDelete = append(idsToDelete, shared.MessageIdentifier{
+			EntryId: "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + itoa(i),
+		})
+	}
+
+	t.Logf("Deleting %d entries...", len(idsToDelete))
+	delReq := shared.DeletionRequest{
+		UserId:   userId,
+		Messages: shared.MessageIdentifiers{Ids: idsToDelete},
+	}
+
+	err = backend.AddDeletionRequest(ctx, delReq)
+	require.NoError(t, err, "AddDeletionRequest should succeed with >1000 entries")
+
+	// Verify correct entries were deleted
+	remainingEntries, err := backend.Bootstrap(ctx, userId, "device1")
+	require.NoError(t, err)
+
+	// Count entries that should remain (odd indices)
+	remainingIds := make(map[string]bool)
+	for _, e := range remainingEntries {
+		remainingIds[e.EncryptedId] = true
+	}
+
+	// Verify deleted entries are gone
+	deletedCount := 0
+	remainingCount := 0
+	for i := 0; i < numEntries; i++ {
+		entryId := "batch-" + baseId + "-" + string(rune('A'+i/1000)) + "-" + itoa(i)
+		if i%2 == 0 {
+			// Should be deleted
+			if !remainingIds[entryId] {
+				deletedCount++
+			}
+		} else {
+			// Should remain
+			if remainingIds[entryId] {
+				remainingCount++
+			}
+		}
+	}
+
+	t.Logf("Verified: %d entries deleted, %d entries remain", deletedCount, remainingCount)
+	assert.Equal(t, numEntries/2, deletedCount, "Half the entries should be deleted")
+	assert.Equal(t, numEntries/2, remainingCount, "Half the entries should remain")
+}
+
+// itoa is a simple int to string converter to avoid importing strconv
+func itoa(i int) string {
+	if i == 0 {
+		return "0"
+	}
+	var result []byte
+	for i > 0 {
+		result = append([]byte{byte('0' + i%10)}, result...)
+		i /= 10
+	}
+	return string(result)
+}

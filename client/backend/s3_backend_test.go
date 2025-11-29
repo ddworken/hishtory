@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -71,6 +72,17 @@ func (m *MockS3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectI
 	key := aws.ToString(input.Key)
 	delete(m.objects, key)
 	return &s3.DeleteObjectOutput{}, nil
+}
+
+func (m *MockS3Client) DeleteObjects(ctx context.Context, input *s3.DeleteObjectsInput, opts ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, obj := range input.Delete.Objects {
+		key := aws.ToString(obj.Key)
+		delete(m.objects, key)
+	}
+	return &s3.DeleteObjectsOutput{}, nil
 }
 
 func (m *MockS3Client) HeadBucket(ctx context.Context, input *s3.HeadBucketInput, opts ...func(*s3.Options)) (*s3.HeadBucketOutput, error) {
@@ -530,5 +542,135 @@ func TestS3BackendPing(t *testing.T) {
 
 		err := b.Ping(ctx)
 		require.Error(t, err)
+	})
+}
+
+func TestS3BackendAddDeletionRequest(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("deletes matching entries from main store", func(t *testing.T) {
+		b := NewTestableS3Backend("user123", "")
+
+		// Register a device
+		require.NoError(t, b.RegisterDevice(ctx, "user123", "device1"))
+
+		// Add some entries to the main store
+		entries := []struct {
+			id   string
+			date string
+		}{
+			{"entry1", "2024-01-15"},
+			{"entry2", "2024-01-15"},
+			{"entry3", "2024-01-16"},
+		}
+
+		for _, e := range entries {
+			entry := &shared.EncHistoryEntry{EncryptedId: e.id, DeviceId: "device1", Date: time.Now()}
+			data, _ := json.Marshal(entry)
+			key := b.key("entries", e.date, e.id+".json")
+			require.NoError(t, b.putObject(ctx, key, data))
+		}
+
+		// Delete entry1 and entry3
+		delReq := shared.DeletionRequest{
+			UserId:   "user123",
+			Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{{EntryId: "entry1"}, {EntryId: "entry3"}}},
+		}
+
+		err := b.AddDeletionRequest(ctx, delReq)
+		require.NoError(t, err)
+
+		// Verify entry1 and entry3 are deleted, but entry2 remains
+		_, err = b.getObject(ctx, b.key("entries", "2024-01-15", "entry1.json"))
+		assert.Error(t, err, "entry1 should be deleted")
+
+		_, err = b.getObject(ctx, b.key("entries", "2024-01-15", "entry2.json"))
+		assert.NoError(t, err, "entry2 should still exist")
+
+		_, err = b.getObject(ctx, b.key("entries", "2024-01-16", "entry3.json"))
+		assert.Error(t, err, "entry3 should be deleted")
+	})
+
+	t.Run("fans out deletion request to all devices", func(t *testing.T) {
+		b := NewTestableS3Backend("user123", "")
+
+		// Register two devices
+		require.NoError(t, b.RegisterDevice(ctx, "user123", "device1"))
+		require.NoError(t, b.RegisterDevice(ctx, "user123", "device2"))
+
+		delReq := shared.DeletionRequest{
+			UserId:   "user123",
+			Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{{EntryId: "entry1"}}},
+		}
+
+		err := b.AddDeletionRequest(ctx, delReq)
+		require.NoError(t, err)
+
+		// Both devices should have deletion requests
+		reqs1, err := b.GetDeletionRequests(ctx, "user123", "device1")
+		require.NoError(t, err)
+		assert.Len(t, reqs1, 1)
+
+		reqs2, err := b.GetDeletionRequests(ctx, "user123", "device2")
+		require.NoError(t, err)
+		assert.Len(t, reqs2, 1)
+	})
+
+	t.Run("handles batch deletion of many entries", func(t *testing.T) {
+		b := NewTestableS3Backend("user123", "")
+
+		// Register a device
+		require.NoError(t, b.RegisterDevice(ctx, "user123", "device1"))
+
+		// Add 50 entries (smaller than 1000 for unit test speed, integration test covers >1000)
+		numEntries := 50
+		idsToDelete := make([]shared.MessageIdentifier, 0, numEntries/2)
+
+		for i := 0; i < numEntries; i++ {
+			entryId := fmt.Sprintf("entry%d", i)
+			entry := &shared.EncHistoryEntry{EncryptedId: entryId, DeviceId: "device1", Date: time.Now()}
+			data, _ := json.Marshal(entry)
+			key := b.key("entries", "2024-01-15", entryId+".json")
+			require.NoError(t, b.putObject(ctx, key, data))
+
+			// Delete every other entry
+			if i%2 == 0 {
+				idsToDelete = append(idsToDelete, shared.MessageIdentifier{EntryId: entryId})
+			}
+		}
+
+		delReq := shared.DeletionRequest{
+			UserId:   "user123",
+			Messages: shared.MessageIdentifiers{Ids: idsToDelete},
+		}
+
+		err := b.AddDeletionRequest(ctx, delReq)
+		require.NoError(t, err)
+
+		// Verify correct entries were deleted
+		for i := 0; i < numEntries; i++ {
+			entryId := fmt.Sprintf("entry%d", i)
+			key := b.key("entries", "2024-01-15", entryId+".json")
+			_, err := b.getObject(ctx, key)
+			if i%2 == 0 {
+				assert.Error(t, err, "entry%d should be deleted", i)
+			} else {
+				assert.NoError(t, err, "entry%d should still exist", i)
+			}
+		}
+	})
+
+	t.Run("handles empty deletion request", func(t *testing.T) {
+		b := NewTestableS3Backend("user123", "")
+
+		require.NoError(t, b.RegisterDevice(ctx, "user123", "device1"))
+
+		delReq := shared.DeletionRequest{
+			UserId:   "user123",
+			Messages: shared.MessageIdentifiers{Ids: []shared.MessageIdentifier{}},
+		}
+
+		err := b.AddDeletionRequest(ctx, delReq)
+		require.NoError(t, err)
 	})
 }

@@ -31,6 +31,7 @@ type s3API interface {
 	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	DeleteObjects(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)
 	HeadBucket(ctx context.Context, params *s3.HeadBucketInput, optFns ...func(*s3.Options)) (*s3.HeadBucketOutput, error)
 	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 }
@@ -406,16 +407,39 @@ func (b *S3Backend) AddDeletionRequest(ctx context.Context, request shared.Delet
 	}
 
 	// Also delete the entries from the main entries store
+	// Build set of entry IDs to delete
+	idsToDelete := make(map[string]bool)
 	for _, msg := range request.Messages.Ids {
-		if msg.EntryId == "" {
-			continue
+		if msg.EntryId != "" {
+			idsToDelete[msg.EntryId] = true
 		}
-		// Find and delete matching entries by entry ID
+	}
+
+	if len(idsToDelete) > 0 {
+		// List all entries once
 		entriesPrefix := b.key("entries") + "/"
-		objects, _ := b.listObjects(ctx, entriesPrefix)
+		objects, err := b.listObjects(ctx, entriesPrefix)
+		if err != nil {
+			return fmt.Errorf("failed to list entries for deletion: %w", err)
+		}
+
+		// Single pass: find all matching keys
+		// Key format is: [prefix]/[userId]/entries/[date]/[entryId].json
+		// We match by checking if the key ends with [entryId].json
+		var keysToDelete []string
 		for _, obj := range objects {
-			if strings.Contains(*obj.Key, msg.EntryId) {
-				_ = b.deleteObject(ctx, *obj.Key)
+			for id := range idsToDelete {
+				if strings.HasSuffix(*obj.Key, "/"+id+".json") {
+					keysToDelete = append(keysToDelete, *obj.Key)
+					break
+				}
+			}
+		}
+
+		// Batch delete
+		if len(keysToDelete) > 0 {
+			if err := b.deleteObjects(ctx, keysToDelete); err != nil {
+				return fmt.Errorf("failed to delete entries: %w", err)
 			}
 		}
 	}
@@ -575,6 +599,33 @@ func (b *S3Backend) deleteObject(ctx context.Context, key string) error {
 		Key:    aws.String(key),
 	})
 	return err
+}
+
+// deleteObjects deletes multiple objects in batches of up to 1000 (S3 limit).
+func (b *S3Backend) deleteObjects(ctx context.Context, keys []string) error {
+	const maxBatchSize = 1000
+
+	for i := 0; i < len(keys); i += maxBatchSize {
+		end := i + maxBatchSize
+		if end > len(keys) {
+			end = len(keys)
+		}
+
+		batch := keys[i:end]
+		objects := make([]types.ObjectIdentifier, len(batch))
+		for j, key := range batch {
+			objects[j] = types.ObjectIdentifier{Key: aws.String(key)}
+		}
+
+		_, err := b.client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+			Bucket: aws.String(b.bucket),
+			Delete: &types.Delete{Objects: objects},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (b *S3Backend) listObjects(ctx context.Context, prefix string) ([]types.Object, error) {
