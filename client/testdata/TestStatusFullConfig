@@ -15,7 +15,7 @@ Full Config:
 	customcolumns: []
 	forcecompactmode: false
 	isoffline: false
-	filterduplicatecommands: true
+	filterduplicatecommands: false
 	filterwhitespaceprefix: true
 	timestampformat: Jan 2 2006 15:04:05 MST
 	betamode: false
