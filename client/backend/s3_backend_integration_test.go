@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -18,13 +17,6 @@ import (
 
 // TestMain starts MinIO for S3 integration tests
 func TestMain(m *testing.M) {
-	// Skip S3 integration tests on macOS in GitHub Actions entirely
-	// Docker/colima is too flaky to reliably run these tests there
-	if testutils.IsGithubAction() && runtime.GOOS == "darwin" {
-		fmt.Println("Skipping S3 integration tests: Docker/colima is flaky on macOS GitHub Actions")
-		os.Exit(0)
-	}
-
 	// S3 backend integration tests run in shard 3
 	// Skip this entire test file if we're in sharded mode and not shard 3
 	if testutils.IsShardedTestRun() && testutils.CurrentShardNumber() != 3 {
@@ -33,6 +25,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Start MinIO for S3 backend tests
+	// On macOS, this will use native MinIO (via brew) which is more reliable than Docker
 	cleanup := testutils.RunMinioServer()
 	defer cleanup()
 
@@ -42,11 +35,11 @@ func TestMain(m *testing.M) {
 	// Skip S3 integration tests if MinIO isn't available
 	if !testutils.IsMinioRunning() {
 		if testutils.IsGithubAction() {
-			fmt.Println("Skipping S3 integration tests: MinIO not available (Docker may not be working)")
+			fmt.Println("Skipping S3 integration tests: MinIO not available")
 			os.Exit(0)
 		}
 		// Locally, we want to fail so developers know something is wrong
-		fmt.Println("ERROR: MinIO is not running. Please ensure Docker is running and try again.")
+		fmt.Println("ERROR: MinIO is not running. Please install MinIO (brew install minio minio-mc) or Docker.")
 		os.Exit(1)
 	}
 

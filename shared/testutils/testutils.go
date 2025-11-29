@@ -439,9 +439,85 @@ const (
 )
 
 // RunMinioServer starts a MinIO server for S3 backend testing.
-// It uses Docker to run MinIO and creates a test bucket.
-// If Docker is not available, it prints a warning and returns a no-op cleanup function.
+// On macOS, it prefers using a native MinIO binary (installed via brew).
+// On other platforms, it uses Docker to run MinIO.
+// If neither is available, it prints a warning and returns a no-op cleanup function.
 func RunMinioServer() func() {
+	// On macOS, prefer native MinIO binary (more reliable than Docker/colima)
+	if runtime.GOOS == "darwin" {
+		if cleanup := runNativeMinioServer(); cleanup != nil {
+			return cleanup
+		}
+		// Fall through to try Docker if native MinIO failed
+	}
+
+	// Try Docker-based MinIO
+	return runDockerMinioServer()
+}
+
+// runNativeMinioServer starts MinIO using a native binary (e.g., installed via brew).
+// Returns nil if MinIO binary is not available.
+func runNativeMinioServer() func() {
+	minioPath, err := exec.LookPath("minio")
+	if err != nil {
+		fmt.Println("Native MinIO not found, will try Docker instead.")
+		return nil
+	}
+
+	// Create a temporary directory for MinIO data
+	dataDir, err := os.MkdirTemp("", "hishtory-minio-test-*")
+	if err != nil {
+		fmt.Printf("WARNING: Failed to create temp dir for MinIO: %v\n", err)
+		return nil
+	}
+
+	// Start MinIO server as a background process
+	cmd := exec.Command(minioPath, "server", dataDir, "--address", ":9000", "--console-address", ":9001")
+	cmd.Env = append(os.Environ(),
+		"MINIO_ROOT_USER="+MinioAccessKeyID,
+		"MINIO_ROOT_PASSWORD="+MinioSecretAccessKey,
+	)
+
+	// Redirect output to avoid cluttering test output
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("WARNING: Failed to start native MinIO: %v\n", err)
+		_ = os.RemoveAll(dataDir)
+		return nil
+	}
+
+	// Wait for MinIO to be ready
+	time.Sleep(2 * time.Second)
+
+	// Create the test bucket using mc (MinIO client)
+	if mcPath, err := exec.LookPath("mc"); err == nil {
+		aliasCmd := exec.Command(mcPath, "alias", "set", "local", "http://localhost:9000", MinioAccessKeyID, MinioSecretAccessKey)
+		_ = aliasCmd.Run()
+
+		mbCmd := exec.Command(mcPath, "mb", "local/"+MinioBucket, "--ignore-existing")
+		_ = mbCmd.Run()
+	}
+
+	// Set HISHTORY_S3_SECRET_ACCESS_KEY environment variable for tests
+	os.Setenv("HISHTORY_S3_SECRET_ACCESS_KEY", MinioSecretAccessKey)
+
+	fmt.Println("Started native MinIO server for S3 backend tests")
+	return func() {
+		// Kill the MinIO process
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
+		// Clean up data directory
+		_ = os.RemoveAll(dataDir)
+		os.Unsetenv("HISHTORY_S3_SECRET_ACCESS_KEY")
+	}
+}
+
+// runDockerMinioServer starts MinIO using Docker.
+func runDockerMinioServer() func() {
 	// Check if Docker is available
 	if _, err := exec.LookPath("docker"); err != nil {
 		fmt.Println("WARNING: Docker not available, skipping MinIO server startup. S3 tests will be skipped.")
