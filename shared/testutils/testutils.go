@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -510,4 +511,45 @@ func GetCurrentGitBranch(t *testing.T) string {
 	}
 
 	return strings.TrimSpace(out.String())
+}
+
+// IsShardedTestRun returns whether this is a sharded test run (i.e., in GitHub Actions).
+func IsShardedTestRun() bool {
+	return NumTestShards() != -1 && CurrentShardNumber() != -1
+}
+
+// NumTestShards returns the total number of test shards, or -1 if not sharding.
+func NumTestShards() int {
+	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
+	if numTestShardsStr == "" {
+		return -1
+	}
+	numTestShards, err := strconv.Atoi(numTestShardsStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse NUM_TEST_SHARDS: %v", err))
+	}
+	return numTestShards
+}
+
+// CurrentShardNumber returns the current shard number, or -1 if not sharding.
+func CurrentShardNumber() int {
+	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
+	if currentShardNumberStr == "" {
+		return -1
+	}
+	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse CURRENT_SHARD_NUM: %v", err))
+	}
+	return currentShardNumber
+}
+
+// MarkTestForSharding marks the given test for sharding with the given test ID number.
+// Tests with the same shard number will run on the same shard.
+func MarkTestForSharding(t *testing.T, testShardNumber int) {
+	if IsShardedTestRun() {
+		if testShardNumber%NumTestShards() != CurrentShardNumber() {
+			t.Skip("Skipping sharded test")
+		}
+	}
 }

@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/ddworken/hishtory/shared"
+	"github.com/ddworken/hishtory/shared/testutils"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -166,11 +168,13 @@ func TestS3BackendKeyBuilding(t *testing.T) {
 }
 
 func TestS3ConfigValidate(t *testing.T) {
+	testutils.MarkTestForSharding(t, 18)
 	tests := []struct {
-		name    string
-		config  S3Config
-		wantErr bool
-		errMsg  string
+		name     string
+		config   S3Config
+		wantErr  bool
+		errMsg   string
+		clearEnv bool // if true, temporarily unset HISHTORY_S3_SECRET_ACCESS_KEY
 	}{
 		{
 			name: "valid config",
@@ -203,8 +207,9 @@ func TestS3ConfigValidate(t *testing.T) {
 				Region:      "us-east-1",
 				AccessKeyID: "AKIAIOSFODNN7EXAMPLE",
 			},
-			wantErr: true,
-			errMsg:  "secret access key is missing",
+			wantErr:  true,
+			errMsg:   "secret access key is missing",
+			clearEnv: true,
 		},
 		{
 			name: "access key with secret",
@@ -229,6 +234,11 @@ func TestS3ConfigValidate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.clearEnv {
+				oldVal := os.Getenv("HISHTORY_S3_SECRET_ACCESS_KEY")
+				os.Unsetenv("HISHTORY_S3_SECRET_ACCESS_KEY")
+				defer os.Setenv("HISHTORY_S3_SECRET_ACCESS_KEY", oldVal)
+			}
 			err := tt.config.Validate()
 			if tt.wantErr {
 				require.Error(t, err)
