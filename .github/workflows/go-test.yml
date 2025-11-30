@@ -32,7 +32,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23
+        go-version: "1.24"
     - name: Linux Setup
       if: ${{ matrix.os == 'ubuntu-latest'}}
       run: |
@@ -119,7 +119,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23
+        go-version: "1.24"
     - name: Download artifact
       uses: actions/download-artifact@v4
     - name: Check all goldens were used
