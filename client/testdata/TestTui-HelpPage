@@ -28,4 +28,4 @@ hiSHtory: Search your shell history
 ↑                                   scroll up                                     ↓      scroll down                      pgup     page up                   pgdn     page down
 ←                                   move left                                     →      move right                       shift+←  scroll the table left     shift+→  scroll the table right
 enter                               select an entry                               ctrl+k delete the highlighted entry     esc      exit hiSHtory             ctrl+h   help
-ctrl+x                              select an entry and cd into that directory
+ctrl+x                              select an entry and cd into that directory    ctrl+o toggle preview pane
