@@ -47,7 +47,13 @@ func printOnlineStatus(config *hctx.ClientConfig) {
 		fmt.Println("Sync Mode: Disabled")
 	} else {
 		fmt.Println("Sync Mode: Enabled")
-		if lib.GetServerHostname() != lib.DefaultServerHostname {
+		if config.BackendType != "" && config.BackendType != "http" {
+			fmt.Printf("Sync Backend: %s", config.BackendType)
+			if config.S3Config != nil {
+				fmt.Printf(" (bucket: %s, region: %s)", config.S3Config.Bucket, config.S3Config.Region)
+			}
+			fmt.Println()
+		} else if lib.GetServerHostname() != lib.DefaultServerHostname {
 			fmt.Println("Sync Server: " + lib.GetServerHostname())
 		}
 		if config.HaveMissedUploads || len(config.PendingDeletionRequests) > 0 {
