@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -175,11 +176,20 @@ func presaveHistoryEntry(ctx context.Context) {
 	entry.StartTime = parseCrossPlatformTime(os.Args[4])
 	entry.EndTime = time.Unix(0, 0).UTC()
 
-	// Persist it locally only (presaved entries are not synced remotely)
+	// Persist it locally
 	db := hctx.GetDb(ctx)
 	err = lib.ReliableDbCreate(db, *entry)
 	lib.CheckFatalError(err)
 	db.Commit()
+
+	// Persist it remotely (unless PresaveLocalOnly is enabled)
+	if !config.IsOffline && !config.PresaveLocalOnly {
+		encEntries, err := lib.EncryptEntries(config, []*data.HistoryEntry{entry})
+		lib.CheckFatalError(err)
+		b, ctx := lib.GetSyncBackend(ctx)
+		_, err = b.SubmitEntries(ctx, encEntries, config.DeviceId)
+		handlePotentialUploadFailure(ctx, err, config, entry.StartTime)
+	}
 }
 
 func saveHistoryEntry(ctx context.Context) {
@@ -225,6 +235,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryCount int) error {
 	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
 
 	// Create the query to find the presaved entries
 	query := "cwd:" + entry.CurrentWorkingDirectory
@@ -236,20 +247,28 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryC
 	}
 	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Where("device_id = ?", entry.DeviceId).Session(&gorm.Session{})
 
-	// Check if the presaved entry exists before attempting deletion
-	var count int64
-	countResult := matchingEntryQuery.Model(&data.HistoryEntry{}).Count(&count)
-	if countResult.Error != nil {
-		return fmt.Errorf("failed to count presaved entries for cmd=%#v: %w", entry.Command, countResult.Error)
+	// Get the presaved entry (needed for remote deletion when PresaveLocalOnly is false)
+	presavedEntry, err := lib.RetryingDbFunctionWithResult(func() (data.HistoryEntry, error) {
+		var presavedEntry data.HistoryEntry
+		res := matchingEntryQuery.Find(&presavedEntry)
+		if res.Error != nil {
+			return presavedEntry, fmt.Errorf("failed to search for presaved entry for cmd=%#v: %w", entry.Command, res.Error)
+		}
+		return presavedEntry, nil
+	})
+	if err != nil {
+		return err
 	}
-	if count == 0 {
-		// Presaved entry doesn't exist. This can happen either due to:
+	if reflect.ValueOf(presavedEntry).IsZero() {
+		// Presaved entry is zero, aka there is no presaved entry. This can happen either due to:
 		//
 		// 1. A failure in presaving, or this feature was just enabled (in which case there is nothing to do here)
 		// 2. A race condition where presaving hasn't finished, but we're looking for the entry here
 		//
 		// We want to ensure this isn't case #2. There isn't a great way to do this, but we can just retry
 		// this function after a short delay. If it still is empty, then we assume we are in case #1.
+		// We retry up to 3 times with increasing delays since presaving can take 1+ seconds when uploading
+		// to remote backends (especially S3).
 		const maxRetries = 3
 		if retryCount >= maxRetries {
 			// Already retried max times, assume we're in case #1
@@ -262,7 +281,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryC
 		return deletePresavedEntries(ctx, entry, retryCount+1)
 	}
 
-	// Delete presaved entries locally (no remote deletion needed since presaves are not synced)
+	// Delete presaved entries locally
 	deletePresavedEntryFunc := func() error {
 		res := matchingEntryQuery.Delete(&data.HistoryEntry{})
 		if res.Error != nil {
@@ -270,7 +289,29 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryC
 		}
 		return nil
 	}
-	return lib.RetryingDbFunction(deletePresavedEntryFunc)
+	err = lib.RetryingDbFunction(deletePresavedEntryFunc)
+	if err != nil {
+		return err
+	}
+
+	// Delete it remotely (unless PresaveLocalOnly is enabled)
+	if !config.IsOffline && !config.PresaveLocalOnly {
+		var deletionRequest shared.DeletionRequest
+		deletionRequest.SendTime = time.Now()
+		deletionRequest.UserId = data.UserId(config.UserSecret)
+		deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
+			// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
+			shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
+		)
+		err = lib.SendDeletionRequest(ctx, deletionRequest)
+		if lib.IsOfflineError(ctx, err) {
+			// Cache the deletion request to send once the client comes back online
+			config.PendingDeletionRequests = append(config.PendingDeletionRequests, deletionRequest)
+			return hctx.SetConfig(config)
+		}
+		return err
+	}
+	return nil
 }
 
 func handleDumpRequests(ctx context.Context, dumpRequests []*shared.DumpRequest) error {

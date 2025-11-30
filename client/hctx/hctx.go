@@ -236,6 +236,9 @@ type ClientConfig struct {
 	AiCompletion bool `json:"ai_completion"`
 	// Whether to enable presaving
 	EnablePresaving bool `json:"enable_presaving"`
+	// Whether presaved entries should only be stored locally (not synced to remote)
+	// When true, presaved entries are not uploaded to the server
+	PresaveLocalOnly bool `json:"presave_local_only"`
 	// The current color scheme for the TUI
 	ColorScheme ColorScheme `json:"color_scheme"`
 	// A default filter that will be applied to all search queries
