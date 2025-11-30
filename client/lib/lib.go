@@ -577,8 +577,6 @@ func GetSyncBackend(ctx context.Context) (backend.SyncBackend, context.Context) 
 	config := hctx.GetConf(ctx)
 	cfg := backend.Config{
 		BackendType: config.BackendType,
-		UserId:      data.UserId(config.UserSecret),
-		DeviceId:    config.DeviceId,
 		Version:     Version,
 		HTTPClient:  GetHttpClient(),
 	}
@@ -603,9 +601,7 @@ func GetSyncBackend(ctx context.Context) (backend.SyncBackend, context.Context) 
 		b = backend.NewHTTPBackend(
 			backend.WithVersion(Version),
 			backend.WithHTTPClient(GetHttpClient()),
-			backend.WithHeadersCallback(func() (string, string) {
-				return config.DeviceId, data.UserId(config.UserSecret)
-			}),
+			backend.WithAuth(config.DeviceId, data.UserId(config.UserSecret)),
 		)
 	}
 

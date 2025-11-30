@@ -4,21 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"github.com/ddworken/hishtory/client/data"
+	"github.com/ddworken/hishtory/client/hctx"
 )
 
-// Config holds the minimal configuration needed to create a backend.
-// This avoids circular imports with the hctx package.
+// Config holds the configuration needed to create a backend.
 type Config struct {
 	// BackendType is either "http" (default) or "s3"
 	BackendType string
 
-	// UserId is the hashed user secret, used as the folder name in S3
-	UserId string
-
-	// DeviceId is this device's unique identifier
-	DeviceId string
-
-	// Version is the client version for HTTP headers
+	// Version is the client version for HTTP headers (from lib.Version, can't be grabbed at runtime due to circular import)
 	Version string
 
 	// S3 configuration (only used when BackendType is "s3")
@@ -36,6 +32,11 @@ type Config struct {
 // If BackendType is empty or "http", creates an HTTPBackend.
 // If BackendType is "s3", creates an S3Backend.
 func NewBackendFromConfig(ctx context.Context, cfg Config) (SyncBackend, error) {
+	// Get userId and deviceId from context
+	conf := hctx.GetConf(ctx)
+	userId := data.UserId(conf.UserSecret)
+	deviceId := conf.DeviceId
+
 	switch BackendType(cfg.BackendType) {
 	case BackendTypeS3:
 		s3cfg := &S3Config{
@@ -46,15 +47,13 @@ func NewBackendFromConfig(ctx context.Context, cfg Config) (SyncBackend, error) 
 			Prefix:      cfg.S3Prefix,
 			// SecretAccessKey is loaded from environment by S3Config.Validate()
 		}
-		return NewS3Backend(ctx, s3cfg, cfg.UserId)
+		return NewS3Backend(ctx, s3cfg, userId)
 
 	case BackendTypeHTTP, "":
 		// Default to HTTP backend
 		opts := []HTTPBackendOption{
 			WithVersion(cfg.Version),
-			WithHeadersCallback(func() (string, string) {
-				return cfg.DeviceId, cfg.UserId
-			}),
+			WithAuth(deviceId, userId),
 		}
 		if cfg.HTTPClient != nil {
 			opts = append(opts, WithHTTPClient(cfg.HTTPClient))

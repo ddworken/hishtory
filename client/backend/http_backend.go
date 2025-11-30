@@ -17,10 +17,11 @@ const DefaultServerHostname = "https://api.hishtory.dev"
 
 // HTTPBackend implements SyncBackend by making HTTP requests to the hishtory server.
 type HTTPBackend struct {
-	serverURL  string
-	client     *http.Client
-	version    string
-	getHeaders func() (deviceId, userId string) // callback to get auth headers
+	serverURL string
+	client    *http.Client
+	version   string
+	deviceId  string
+	userId    string
 }
 
 // HTTPBackendOption is a functional option for configuring HTTPBackend
@@ -47,10 +48,11 @@ func WithVersion(version string) HTTPBackendOption {
 	}
 }
 
-// WithHeadersCallback sets a callback to get deviceId and userId for request headers
-func WithHeadersCallback(fn func() (deviceId, userId string)) HTTPBackendOption {
+// WithAuth sets the deviceId and userId for request headers
+func WithAuth(deviceId, userId string) HTTPBackendOption {
 	return func(b *HTTPBackend) {
-		b.getHeaders = fn
+		b.deviceId = deviceId
+		b.userId = userId
 	}
 }
 
@@ -247,14 +249,10 @@ func (b *HTTPBackend) apiPost(ctx context.Context, path, contentType string, bod
 // setHeaders sets common headers on the request.
 func (b *HTTPBackend) setHeaders(req *http.Request) {
 	req.Header.Set("X-Hishtory-Version", "v0."+b.version)
-
-	if b.getHeaders != nil {
-		deviceId, userId := b.getHeaders()
-		if deviceId != "" {
-			req.Header.Set("X-Hishtory-Device-Id", deviceId)
-		}
-		if userId != "" {
-			req.Header.Set("X-Hishtory-User-Id", userId)
-		}
+	if b.deviceId != "" {
+		req.Header.Set("X-Hishtory-Device-Id", b.deviceId)
+	}
+	if b.userId != "" {
+		req.Header.Set("X-Hishtory-User-Id", b.userId)
 	}
 }

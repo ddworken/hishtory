@@ -262,9 +262,7 @@ func TestHTTPBackendHeaders(t *testing.T) {
 	b := NewHTTPBackend(
 		WithServerURL(server.URL),
 		WithVersion("123"),
-		WithHeadersCallback(func() (string, string) {
-			return "test-device", "test-user"
-		}),
+		WithAuth("test-device", "test-user"),
 	)
 
 	err := b.Ping(context.Background())
