@@ -69,10 +69,13 @@ Full Config:
 	        - ctrl+left
 	    wordright:
 	        - ctrl+right
+	    togglepreviewpane:
+	        - ctrl+o
 	loglevel: info
 	fullscreenrendering: false
 	defaultsearchcolumns:
 	    - command
 	    - hostname
 	    - current_working_directory
+	showpreviewpane: false
 	
