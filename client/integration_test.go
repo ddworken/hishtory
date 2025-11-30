@@ -2575,44 +2575,42 @@ func testTui_fullscreen(t *testing.T) {
 	tester, _, _ := setupTestTui(t, Online)
 
 	// By default full-screen mode is disabled
-	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get full-screen`)))
-	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get compact-mode`)))
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, ` hishtory config-get full-screen`)))
+	require.Equal(t, "false", strings.TrimSpace(tester.RunInteractiveShell(t, ` hishtory config-get compact-mode`)))
 
 	// Test that we can enable it
-	tester.RunInteractiveShell(t, `hishtory config-set full-screen true`)
-	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, `hishtory config-get full-screen`)))
+	tester.RunInteractiveShell(t, ` hishtory config-set full-screen true`)
+	require.Equal(t, "true", strings.TrimSpace(tester.RunInteractiveShell(t, ` hishtory config-get full-screen`)))
 
 	// Test that it renders in full-screen mode taking up the entire terminal
 	out := captureTerminalOutput(t, tester, []string{
-		"echo foo ENTER",
-		"hishtory SPACE tquery ENTER",
+		"SPACE hishtory SPACE tquery ENTER",
 	})
 	testutils.CompareGoldens(t, out, "TestTui-FullScreenRender")
 
 	// Test that it clears full-screen mode and restores the original terminal state
 	out = captureTerminalOutput(t, tester, []string{
-		"echo SPACE foo ENTER",
-		"hishtory SPACE tquery ENTER",
+		"SPACE echo SPACE foo ENTER",
+		"SPACE hishtory SPACE tquery ENTER",
 		"Escape",
 	})
-	require.Contains(t, out, "echo foo\n")
-	require.Contains(t, out, "hishtory tquery\n")
+	require.Contains(t, out, " echo foo\n")
+	require.Contains(t, out, " hishtory tquery\n")
 	require.NotContains(t, out, "Search Query")
 	require.True(t, len(strings.Split(out, "\n")) <= 7)
 
 	// Test that it renders the help page fine
 	out = captureTerminalOutput(t, tester, []string{
-		"echo SPACE foo ENTER",
-		"hishtory SPACE tquery ENTER",
+		"SPACE echo SPACE foo ENTER",
+		"SPACE hishtory SPACE tquery ENTER",
 		"C-h",
 	})
 	testutils.CompareGoldens(t, out, "TestTui-FullScreenHelp")
 
 	// Test that it renders fine in full-screen mode and compact-mode
-	tester.RunInteractiveShell(t, `hishtory config-set compact-mode true`)
+	tester.RunInteractiveShell(t, ` hishtory config-set compact-mode true`)
 	out = captureTerminalOutput(t, tester, []string{
-		"echo foo ENTER",
-		"hishtory SPACE tquery ENTER",
+		"SPACE hishtory SPACE tquery ENTER",
 	})
 	testutils.CompareGoldens(t, out, "TestTui-FullScreenCompactRender")
 }

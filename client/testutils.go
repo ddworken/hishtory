@@ -35,7 +35,7 @@ type shellTester interface {
 type bashTester struct{}
 
 func (b bashTester) RunInteractiveShell(t testing.TB, script string) string {
-	out, err := b.RunInteractiveShellRelaxed(t, "set -emo pipefail\n"+script)
+	out, err := b.RunInteractiveShellRelaxed(t, " set -emo pipefail\n"+script)
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
 		require.NoError(t, err, fmt.Sprintf("error when running command at %s:%dv", filename, line))
@@ -76,7 +76,7 @@ func (b bashTester) ShellName() string {
 type zshTester struct{}
 
 func (z zshTester) RunInteractiveShell(t testing.TB, script string) string {
-	res, err := z.RunInteractiveShellRelaxed(t, "set -eo pipefail\n"+script)
+	res, err := z.RunInteractiveShellRelaxed(t, " set -eo pipefail\n"+script)
 	require.NoError(t, err)
 	return res
 }
