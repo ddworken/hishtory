@@ -188,6 +188,68 @@ A few configuration options:
 </blockquote></details>
 
 <details>
+<summary>S3 Backend (Serverless Self-Hosting)</summary><blockquote>
+
+> **Beta Feature:** The S3 backend is currently in beta. While functional, it may have rough edges. Please report any issues on GitHub.
+
+As an alternative to running your own hiSHtory server, you can sync your history directly via an S3 bucket (or any S3-compatible storage like MinIO, Backblaze B2, etc.). This gives you full control over your data without needing to run a server.
+
+**Setup:**
+
+1. Create an S3 bucket (or use an existing one)
+2. Configure hiSHtory by editing `~/.hishtory/config.json`:
+
+```json
+{
+  "backend_type": "s3",
+  "s3_config": {
+    "bucket": "my-hishtory-bucket",
+    "region": "us-east-1",
+    "access_key_id": "AKIAIOSFODNN7EXAMPLE",
+    "prefix": "hishtory/"
+  }
+}
+```
+
+3. Set your secret access key via environment variable (for security, this is never stored in the config file):
+
+```bash
+export HISHTORY_S3_SECRET_ACCESS_KEY='your-secret-key-here'
+```
+
+Add this to your `.bashrc`/`.zshrc` so it's always available.
+
+**Configuration Options:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `bucket` | Yes | S3 bucket name |
+| `region` | Yes | AWS region (e.g., `us-east-1`) |
+| `access_key_id` | No* | AWS access key ID |
+| `prefix` | No | Path prefix within bucket (e.g., `hishtory/`) |
+| `endpoint` | No | Custom S3-compatible endpoint URL |
+
+*If not provided, hiSHtory will use AWS default credential chain (IAM roles, environment variables, etc.)
+
+**Using S3-Compatible Storage (MinIO, Backblaze, etc.):**
+
+For S3-compatible services, add the `endpoint` field:
+
+```json
+{
+  "backend_type": "s3",
+  "s3_config": {
+    "bucket": "hishtory",
+    "region": "us-east-1",
+    "endpoint": "http://localhost:9000",
+    "access_key_id": "minioadmin"
+  }
+}
+```
+
+</blockquote></details>
+
+<details>
 <summary>Importing existing history</summary><blockquote>
 
 hiSHtory imports your existing shell history by default. If for some reason this didn't work (e.g. you had your shell history in a non-standard file), you can import it by piping it into `hishtory import` (e.g. `cat ~/.my_history | hishtory import`).

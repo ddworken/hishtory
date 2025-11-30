@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -428,6 +429,154 @@ func GetOsVersion(t *testing.T) string {
 
 const DefaultGitBranchName = "master"
 
+// MinIO test configuration
+const (
+	MinioEndpoint        = "http://127.0.0.1:9000"
+	MinioAccessKeyID     = "minioadmin"
+	MinioSecretAccessKey = "minioadmin"
+	MinioBucket          = "hishtory-test"
+	MinioRegion          = "us-east-1"
+)
+
+// RunMinioServer starts a MinIO server for S3 backend testing.
+// On macOS, it prefers using a native MinIO binary (installed via brew).
+// On other platforms, it uses Docker to run MinIO.
+// If neither is available, it prints a warning and returns a no-op cleanup function.
+func RunMinioServer() func() {
+	// On macOS, prefer native MinIO binary (more reliable than Docker/colima)
+	if runtime.GOOS == "darwin" {
+		if cleanup := runNativeMinioServer(); cleanup != nil {
+			return cleanup
+		}
+		// Fall through to try Docker if native MinIO failed
+	}
+
+	// Try Docker-based MinIO
+	return runDockerMinioServer()
+}
+
+// runNativeMinioServer starts MinIO using a native binary (e.g., installed via brew).
+// Returns nil if MinIO binary is not available.
+func runNativeMinioServer() func() {
+	minioPath, err := exec.LookPath("minio")
+	if err != nil {
+		fmt.Println("Native MinIO not found, will try Docker instead.")
+		return nil
+	}
+
+	// Create a temporary directory for MinIO data
+	dataDir, err := os.MkdirTemp("", "hishtory-minio-test-*")
+	if err != nil {
+		fmt.Printf("WARNING: Failed to create temp dir for MinIO: %v\n", err)
+		return nil
+	}
+
+	// Start MinIO server as a background process
+	cmd := exec.Command(minioPath, "server", dataDir, "--address", ":9000", "--console-address", ":9001")
+	cmd.Env = append(os.Environ(),
+		"MINIO_ROOT_USER="+MinioAccessKeyID,
+		"MINIO_ROOT_PASSWORD="+MinioSecretAccessKey,
+	)
+
+	// Redirect output to avoid cluttering test output
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("WARNING: Failed to start native MinIO: %v\n", err)
+		_ = os.RemoveAll(dataDir)
+		return nil
+	}
+
+	// Wait for MinIO to be ready
+	time.Sleep(2 * time.Second)
+
+	// Create the test bucket using mc (MinIO client)
+	if mcPath, err := exec.LookPath("mc"); err == nil {
+		aliasCmd := exec.Command(mcPath, "alias", "set", "local", "http://localhost:9000", MinioAccessKeyID, MinioSecretAccessKey)
+		_ = aliasCmd.Run()
+
+		mbCmd := exec.Command(mcPath, "mb", "local/"+MinioBucket, "--ignore-existing")
+		_ = mbCmd.Run()
+	}
+
+	// Set HISHTORY_S3_SECRET_ACCESS_KEY environment variable for tests
+	os.Setenv("HISHTORY_S3_SECRET_ACCESS_KEY", MinioSecretAccessKey)
+
+	fmt.Println("Started native MinIO server for S3 backend tests")
+	return func() {
+		// Kill the MinIO process
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
+		// Clean up data directory
+		_ = os.RemoveAll(dataDir)
+		os.Unsetenv("HISHTORY_S3_SECRET_ACCESS_KEY")
+	}
+}
+
+// runDockerMinioServer starts MinIO using Docker.
+func runDockerMinioServer() func() {
+	// Check if Docker is available
+	if _, err := exec.LookPath("docker"); err != nil {
+		fmt.Println("WARNING: Docker not available, skipping MinIO server startup. S3 tests will be skipped.")
+		return func() {}
+	}
+
+	// Kill any existing MinIO container
+	_ = exec.Command("docker", "rm", "-f", "hishtory-minio-test").Run()
+
+	// Start MinIO container
+	cmd := exec.Command("docker", "run", "-d",
+		"--name", "hishtory-minio-test",
+		"-p", "9000:9000",
+		"-p", "9001:9001",
+		"-e", "MINIO_ROOT_USER="+MinioAccessKeyID,
+		"-e", "MINIO_ROOT_PASSWORD="+MinioSecretAccessKey,
+		"minio/minio", "server", "/data", "--console-address", ":9001",
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("WARNING: Failed to start MinIO container: %v. S3 tests will be skipped.\n", err)
+		return func() {}
+	}
+
+	// Wait for MinIO to be ready
+	time.Sleep(3 * time.Second)
+
+	// Create the test bucket using mc (MinIO client) in container
+	createBucketCmd := exec.Command("docker", "exec", "hishtory-minio-test",
+		"mc", "alias", "set", "local", "http://localhost:9000", MinioAccessKeyID, MinioSecretAccessKey)
+	_ = createBucketCmd.Run()
+
+	createBucketCmd = exec.Command("docker", "exec", "hishtory-minio-test",
+		"mc", "mb", "local/"+MinioBucket, "--ignore-existing")
+	_ = createBucketCmd.Run()
+
+	// Set HISHTORY_S3_SECRET_ACCESS_KEY environment variable for tests
+	os.Setenv("HISHTORY_S3_SECRET_ACCESS_KEY", MinioSecretAccessKey)
+
+	return func() {
+		// Stop and remove the container
+		_ = exec.Command("docker", "rm", "-f", "hishtory-minio-test").Run()
+		os.Unsetenv("HISHTORY_S3_SECRET_ACCESS_KEY")
+	}
+}
+
+// IsMinioRunning checks if the MinIO server is running and accessible
+func IsMinioRunning() bool {
+	resp, err := http.Get(MinioEndpoint + "/minio/health/live")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == 200
+}
+
 func GetCurrentGitBranch(t *testing.T) string {
 	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
 	var out bytes.Buffer
@@ -438,4 +587,45 @@ func GetCurrentGitBranch(t *testing.T) string {
 	}
 
 	return strings.TrimSpace(out.String())
+}
+
+// IsShardedTestRun returns whether this is a sharded test run (i.e., in GitHub Actions).
+func IsShardedTestRun() bool {
+	return NumTestShards() != -1 && CurrentShardNumber() != -1
+}
+
+// NumTestShards returns the total number of test shards, or -1 if not sharding.
+func NumTestShards() int {
+	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
+	if numTestShardsStr == "" {
+		return -1
+	}
+	numTestShards, err := strconv.Atoi(numTestShardsStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse NUM_TEST_SHARDS: %v", err))
+	}
+	return numTestShards
+}
+
+// CurrentShardNumber returns the current shard number, or -1 if not sharding.
+func CurrentShardNumber() int {
+	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
+	if currentShardNumberStr == "" {
+		return -1
+	}
+	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse CURRENT_SHARD_NUM: %v", err))
+	}
+	return currentShardNumber
+}
+
+// MarkTestForSharding marks the given test for sharding with the given test ID number.
+// Tests with the same shard number will run on the same shard.
+func MarkTestForSharding(t *testing.T, testShardNumber int) {
+	if IsShardedTestRun() {
+		if testShardNumber%NumTestShards() != CurrentShardNumber() {
+			t.Skip("Skipping sharded test")
+		}
+	}
 }

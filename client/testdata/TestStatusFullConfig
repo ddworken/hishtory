@@ -2,6 +2,8 @@ hiSHtory: v0.Unknown
 Enabled: true
 Commit Hash: Unknown
 Full Config:
+	backendtype: ""
+	s3config: null
 	controlrsearchenabled: true
 	displayedcolumns:
 	    - Hostname

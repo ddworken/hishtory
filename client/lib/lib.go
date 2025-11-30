@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ddworken/hishtory/client/backend"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/shared"
@@ -515,30 +516,97 @@ func IsOfflineError(ctx context.Context, err error) bool {
 	if err == nil {
 		return false
 	}
-	if strings.Contains(err.Error(), "dial tcp: lookup api.hishtory.dev") ||
-		strings.Contains(err.Error(), ": no such host") ||
-		strings.Contains(err.Error(), "connect: network is unreachable") ||
-		strings.Contains(err.Error(), "read: connection reset by peer") ||
-		strings.Contains(err.Error(), ": EOF") ||
-		strings.Contains(err.Error(), ": status_code=502") ||
-		strings.Contains(err.Error(), ": status_code=503") ||
-		strings.Contains(err.Error(), ": i/o timeout") ||
-		strings.Contains(err.Error(), "connect: operation timed out") ||
-		strings.Contains(err.Error(), "net/http: TLS handshake timeout") ||
-		strings.Contains(err.Error(), "connect: connection refused") {
+	errStr := err.Error()
+
+	// Common network errors (shared between HTTP and S3)
+	if strings.Contains(errStr, ": no such host") ||
+		strings.Contains(errStr, "connect: network is unreachable") ||
+		strings.Contains(errStr, "read: connection reset by peer") ||
+		strings.Contains(errStr, ": EOF") ||
+		strings.Contains(errStr, ": i/o timeout") ||
+		strings.Contains(errStr, "connect: operation timed out") ||
+		strings.Contains(errStr, "net/http: TLS handshake timeout") ||
+		strings.Contains(errStr, "connect: connection refused") ||
+		strings.Contains(errStr, "dial tcp") {
 		return true
 	}
-	if !CanReachHishtoryServer(ctx) {
-		// If the backend server is down, then treat all errors as offline errors
+
+	// HTTP backend specific errors
+	if strings.Contains(errStr, ": status_code=502") ||
+		strings.Contains(errStr, ": status_code=503") {
+		return true
+	}
+
+	// S3/AWS SDK specific errors
+	if strings.Contains(errStr, "RequestCanceled") ||
+		strings.Contains(errStr, "connection reset by peer") ||
+		strings.Contains(errStr, "use of closed network connection") ||
+		strings.Contains(errStr, "net/http: request canceled") ||
+		strings.Contains(errStr, "context deadline exceeded") ||
+		strings.Contains(errStr, "no route to host") ||
+		strings.Contains(errStr, "UnknownEndpoint") ||
+		strings.Contains(errStr, "could not resolve endpoint") {
+		return true
+	}
+
+	if !CanReachBackend(ctx) {
+		// If the backend is unreachable, then treat all errors as offline errors
 		return true
 	}
 	// A truly unexpected error, bubble this up
 	return false
 }
 
-func CanReachHishtoryServer(ctx context.Context) bool {
-	_, err := ApiGet(ctx, "/api/v1/ping")
-	return err == nil
+// CanReachBackend checks if the configured sync backend is reachable.
+func CanReachBackend(ctx context.Context) bool {
+	b, ctx := GetSyncBackend(ctx)
+	return b.Ping(ctx) == nil
+}
+
+// GetSyncBackend returns the sync backend from the context, creating it if necessary.
+// If a backend is already stored in the context, it returns that.
+// Otherwise, it creates a new backend based on the configuration and stores it.
+// Returns (backend, updatedContext) where the updatedContext contains the backend.
+func GetSyncBackend(ctx context.Context) (backend.SyncBackend, context.Context) {
+	// Check if backend is already in context
+	if b := hctx.GetBackend(ctx); b != nil {
+		return b, ctx
+	}
+
+	// Create new backend from config
+	config := hctx.GetConf(ctx)
+	cfg := backend.Config{
+		BackendType: config.BackendType,
+		Version:     Version,
+		HTTPClient:  GetHttpClient(),
+	}
+
+	// Add S3 config if applicable
+	if config.S3Config != nil {
+		cfg.S3Bucket = config.S3Config.Bucket
+		cfg.S3Region = config.S3Config.Region
+		cfg.S3Endpoint = config.S3Config.Endpoint
+		cfg.S3AccessKey = config.S3Config.AccessKeyID
+		cfg.S3Prefix = config.S3Config.Prefix
+	}
+
+	b, err := backend.NewBackendFromConfig(ctx, cfg)
+	if err != nil {
+		// If user explicitly configured a non-HTTP backend, fail loudly rather than
+		// silently falling back to HTTP (which could sync data to unexpected places)
+		if config.BackendType != "" && config.BackendType != "http" {
+			CheckFatalError(fmt.Errorf("failed to create %s backend: %w", config.BackendType, err))
+		}
+		// For default/HTTP backend, create it directly
+		b = backend.NewHTTPBackend(
+			backend.WithVersion(Version),
+			backend.WithHTTPClient(GetHttpClient()),
+			backend.WithAuth(config.DeviceId, data.UserId(config.UserSecret)),
+		)
+	}
+
+	// Store backend in context and return
+	return b, hctx.WithBackend(ctx, b)
 }
 
 func normalizeEntryTimezone(entry data.HistoryEntry) data.HistoryEntry {
@@ -597,20 +665,30 @@ func ReliableDbCreate(db *gorm.DB, entry data.HistoryEntry) error {
 }
 
 func EncryptAndMarshal(config *hctx.ClientConfig, entries []*data.HistoryEntry) ([]byte, error) {
-	var encEntries []shared.EncHistoryEntry
-	for _, entry := range entries {
-		encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt history entry: %w", err)
-		}
-		encEntry.DeviceId = config.DeviceId
-		encEntries = append(encEntries, encEntry)
+	encEntries, err := EncryptEntries(config, entries)
+	if err != nil {
+		return nil, err
 	}
 	jsonValue, err := json.Marshal(encEntries)
 	if err != nil {
 		return jsonValue, fmt.Errorf("failed to marshal encrypted history entry: %w", err)
 	}
 	return jsonValue, nil
+}
+
+// EncryptEntries encrypts history entries for syncing without marshaling.
+// Used by the sync backend implementations.
+func EncryptEntries(config *hctx.ClientConfig, entries []*data.HistoryEntry) ([]*shared.EncHistoryEntry, error) {
+	var encEntries []*shared.EncHistoryEntry
+	for _, entry := range entries {
+		encEntry, err := data.EncryptHistoryEntry(config.UserSecret, *entry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt history entry: %w", err)
+		}
+		encEntry.DeviceId = config.DeviceId
+		encEntries = append(encEntries, &encEntry)
+	}
+	return encEntries, nil
 }
 
 func Reupload(ctx context.Context) error {
@@ -653,14 +731,15 @@ func Reupload(ctx context.Context) error {
 		// it is apparent that this value seems to work quite well.
 		uploadChunkSize := 500
 		chunks := shared.Chunks(entries, uploadChunkSize)
+		b, ctx := GetSyncBackend(ctx)
 		err = shared.ForEach(chunks, 10, func(chunk []*data.HistoryEntry) error {
-			jsonValue, err := EncryptAndMarshal(config, chunk)
+			encEntries, err := EncryptEntries(config, chunk)
 			if err != nil {
 				return fmt.Errorf("failed to reupload due to failed encryption: %w", err)
 			}
-			_, err = ApiPost(ctx, "/api/v1/submit?source_device_id="+config.DeviceId, "application/json", jsonValue)
+			_, err = b.SubmitEntries(ctx, encEntries, config.DeviceId)
 			if err != nil {
-				return fmt.Errorf("failed to reupload due to failed POST: %w", err)
+				return fmt.Errorf("failed to reupload due to failed submit: %w", err)
 			}
 			if bar != nil {
 				_ = bar.Add(uploadChunkSize)
@@ -679,18 +758,16 @@ func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string
 	if config.IsOffline {
 		return nil
 	}
-	respBody, err := ApiGet(ctx, "/api/v1/query?device_id="+config.DeviceId+"&user_id="+data.UserId(config.UserSecret)+"&queryReason="+queryReason)
+
+	b, ctx := GetSyncBackend(ctx)
+	retrievedEntries, err := b.QueryEntries(ctx, config.DeviceId, data.UserId(config.UserSecret), queryReason)
 	if IsOfflineError(ctx, err) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	var retrievedEntries []*shared.EncHistoryEntry
-	err = json.Unmarshal(respBody, &retrievedEntries)
-	if err != nil {
-		return fmt.Errorf("failed to load JSON response: %w", err)
-	}
+
 	for _, entry := range retrievedEntries {
 		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
 		if err != nil {
@@ -706,15 +783,12 @@ func ProcessDeletionRequests(ctx context.Context) error {
 	if config.IsOffline {
 		return nil
 	}
-	resp, err := ApiGet(ctx, "/api/v1/get-deletion-requests?user_id="+data.UserId(config.UserSecret)+"&device_id="+config.DeviceId)
+
+	b, ctx := GetSyncBackend(ctx)
+	deletionRequests, err := b.GetDeletionRequests(ctx, data.UserId(config.UserSecret), config.DeviceId)
 	if IsOfflineError(ctx, err) {
 		return nil
 	}
-	if err != nil {
-		return err
-	}
-	var deletionRequests []*shared.DeletionRequest
-	err = json.Unmarshal(resp, &deletionRequests)
 	if err != nil {
 		return err
 	}
@@ -1145,11 +1219,8 @@ func unescape(query string) string {
 }
 
 func SendDeletionRequest(ctx context.Context, deletionRequest shared.DeletionRequest) error {
-	data, err := json.Marshal(deletionRequest)
-	if err != nil {
-		return err
-	}
-	_, err = ApiPost(ctx, "/api/v1/add-deletion-request", "application/json", data)
+	b, ctx := GetSyncBackend(ctx)
+	err := b.AddDeletionRequest(ctx, deletionRequest)
 	if err != nil {
 		return fmt.Errorf("failed to send deletion request to backend service, this may cause commands to not get deleted on other instances of hishtory: %w", err)
 	}

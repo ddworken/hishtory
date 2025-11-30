@@ -28,7 +28,7 @@ var redactCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		skipOnlineRedaction := false
-		if !hctx.GetConf(ctx).IsOffline && !lib.CanReachHishtoryServer(ctx) {
+		if !hctx.GetConf(ctx).IsOffline && !lib.CanReachBackend(ctx) {
 			fmt.Printf("Cannot reach hishtory backend (is this device offline?) so redaction will only apply to this device and not other synced devices. Would you like to continue with a local-only redaction anyways? [y/N] ")
 			reader := bufio.NewReader(os.Stdin)
 			resp, err := reader.ReadString('\n')

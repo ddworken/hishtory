@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/ddworken/hishtory/client/backend"
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -355,6 +356,64 @@ func installHishtory(t testing.TB, tester shellTester, userSecret string) string
 	return matches[1]
 }
 
+// configureS3Backend configures the current device to use the S3 sync backend with the test MinIO server
+func configureS3Backend(t testing.TB) {
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+
+	// Configure S3 backend settings
+	config.BackendType = "s3"
+	config.S3Config = &hctx.S3BackendConfig{
+		Bucket:      testutils.MinioBucket,
+		Region:      testutils.MinioRegion,
+		Endpoint:    testutils.MinioEndpoint,
+		AccessKeyID: testutils.MinioAccessKeyID,
+		Prefix:      "",
+	}
+
+	err := hctx.SetConfig(config)
+	require.NoError(t, err, "failed to configure S3 backend")
+
+	// Refresh context to pick up new config
+	ctx = hctx.MakeContext()
+	b, ctx := lib.GetSyncBackend(ctx)
+	config = hctx.GetConf(ctx)
+	userId := data.UserId(config.UserSecret)
+
+	// Register the device with the S3 backend
+	err = b.RegisterDevice(ctx, userId, config.DeviceId)
+	require.NoError(t, err, "failed to register device with S3 backend")
+
+	// Bootstrap: retrieve all existing entries from S3
+	retrievedEntries, err := b.Bootstrap(ctx, userId, config.DeviceId)
+	require.NoError(t, err, "failed to bootstrap from S3 backend")
+
+	// Add bootstrapped entries to the local database
+	db := hctx.GetDb(ctx)
+	for _, entry := range retrievedEntries {
+		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
+		require.NoError(t, err, "failed to decrypt history entry from S3")
+		lib.AddToDbIfNew(db, decEntry)
+	}
+}
+
+// installWithOnlineStatusAndBackend installs hishtory with specified online status and optionally configures S3 backend
+func installWithOnlineStatusAndBackend(t testing.TB, tester shellTester, onlineStatus OnlineStatus, backendType backend.BackendType) string {
+	var userSecret string
+	if onlineStatus == Online {
+		userSecret = installHishtory(t, tester, "")
+	} else {
+		userSecret = installHishtory(t, tester, "--offline")
+	}
+
+	// If S3 backend requested and not offline, configure it
+	if backendType == backend.BackendTypeS3 && onlineStatus == Online {
+		configureS3Backend(t)
+	}
+
+	return userSecret
+}
+
 func stripShellPrefix(out string) string {
 	if strings.Contains(out, "\n\n\n") {
 		return strings.TrimSpace(strings.Split(out, "\n\n\n")[1])
@@ -380,49 +439,9 @@ func wrapTestForSharding(test func(t *testing.T)) func(t *testing.T) {
 	shardNumberAllocator += 1
 	return func(t *testing.T) {
 		testShardNumber := shardNumberAllocator
-		markTestForSharding(t, testShardNumber)
+		testutils.MarkTestForSharding(t, testShardNumber)
 		test(t)
 	}
 }
 
 var shardNumberAllocator int = 0
-
-// Returns whether this is a sharded test run. false during all normal non-github action operations.
-func isShardedTestRun() bool {
-	return numTestShards() != -1 && currentShardNumber() != -1
-}
-
-// Get the total number of test shards
-func numTestShards() int {
-	numTestShardsStr := os.Getenv("NUM_TEST_SHARDS")
-	if numTestShardsStr == "" {
-		return -1
-	}
-	numTestShards, err := strconv.Atoi(numTestShardsStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse NUM_TEST_SHARDS: %v", err))
-	}
-	return numTestShards
-}
-
-// Get the current shard number
-func currentShardNumber() int {
-	currentShardNumberStr := os.Getenv("CURRENT_SHARD_NUM")
-	if currentShardNumberStr == "" {
-		return -1
-	}
-	currentShardNumber, err := strconv.Atoi(currentShardNumberStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse CURRENT_SHARD_NUM: %v", err))
-	}
-	return currentShardNumber
-}
-
-// Mark the given test for sharding with the given test ID number.
-func markTestForSharding(t *testing.T, testShardNumber int) {
-	if isShardedTestRun() {
-		if testShardNumber%numTestShards() != currentShardNumber() {
-			t.Skip("Skipping sharded test")
-		}
-	}
-}

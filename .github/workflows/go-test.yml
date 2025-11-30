@@ -51,12 +51,12 @@ jobs:
       run: |
 
           # Install our dependencies
-          brew install fish tmux bash
+          brew install fish tmux bash minio minio-mc
 
           # Set a consistent hostname so we can run tests that depend on it
           sudo scutil --set HostName ghaction-runner-hostname
     - name: MacOS Docker Setup
-      if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-14 '}}
+      if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-14' }}
       continue-on-error: true  # Since colima is flaky, and a failure here only impacts our metrics
       run: |
           # Install docker so it can be used for datadog
