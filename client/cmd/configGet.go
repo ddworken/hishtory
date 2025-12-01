@@ -209,6 +209,7 @@ func init() {
 	configGetCmd.AddCommand(getCompactMode)
 	configGetCmd.AddCommand(getLogLevelCmd)
 	configGetCmd.AddCommand(getFullScreenCmd)
+	configGetCmd.AddCommand(getShowPreviewPaneCmd)
 	configGetCmd.AddCommand(getDefaultSearchColumns)
 }
 
@@ -229,5 +230,15 @@ var getFullScreenCmd = &cobra.Command{
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
 		fmt.Println(config.FullScreenRendering)
+	},
+}
+
+var getShowPreviewPaneCmd = &cobra.Command{
+	Use:   "show-preview-pane",
+	Short: "Get whether the preview pane is enabled for displaying full commands",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.ShowPreviewPane)
 	},
 }

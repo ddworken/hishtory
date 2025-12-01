@@ -99,6 +99,9 @@ type model struct {
 
 	// Whether we've finished the first load of results. If we haven't, we refuse to run additional queries to avoid race conditions with how we handle invalid initial queries.
 	hasFinishedFirstLoad bool
+
+	// Whether the preview pane is visible
+	showPreviewPane bool
 }
 
 type (
@@ -154,7 +157,7 @@ func initialModel(ctx context.Context, shellName, initialQuery string) model {
 		queryInput.SetValue(initialQuery)
 	}
 	CURRENT_QUERY_FOR_HIGHLIGHTING = initialQuery
-	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName, hasFinishedFirstLoad: false}
+	return model{ctx: ctx, spinner: s, isLoading: true, table: nil, tableEntries: []*data.HistoryEntry{}, runQuery: &initialQuery, queryInput: queryInput, help: help.New(), shellName: shellName, hasFinishedFirstLoad: false, showPreviewPane: cfg.ShowPreviewPane}
 }
 
 func (m model) Init() tea.Cmd {
@@ -270,6 +273,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, loadedKeyBindings.Help):
 			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
+		case key.Matches(msg, loadedKeyBindings.TogglePreviewPane):
+			m.showPreviewPane = !m.showPreviewPane
+			cmd := runQueryAndUpdateTable(m, true, true)
+			return m, cmd
 		case key.Matches(msg, loadedKeyBindings.JumpStartOfInput):
 			m.queryInput.SetCursor(0)
 			return m, nil
@@ -383,6 +390,59 @@ func calculateWordBoundaries(input string) []int {
 	return ret
 }
 
+func renderPreviewPane(m model) string {
+	if !m.showPreviewPane || m.table == nil || len(m.tableEntries) == 0 {
+		return ""
+	}
+
+	cursor := m.table.Cursor()
+	if cursor >= len(m.tableEntries) {
+		return ""
+	}
+
+	command := m.tableEntries[cursor].Command
+
+	terminalWidth, _, err := getTerminalSize()
+	if err != nil {
+		terminalWidth = 80
+	}
+
+	wrappedCommand := wrapText(command, terminalWidth-4)
+
+	return "\n" + wrappedCommand
+}
+
+func wrapText(text string, width int) string {
+	if width <= 0 {
+		width = 80
+	}
+
+	var result strings.Builder
+	lines := strings.Split(text, "\n")
+
+	for lineIdx, line := range lines {
+		if lineIdx > 0 {
+			result.WriteString("\n")
+		}
+
+		if len(line) <= width {
+			result.WriteString(line)
+			continue
+		}
+
+		for len(line) > width {
+			result.WriteString(line[:width])
+			result.WriteString("\n")
+			line = line[width:]
+		}
+		if len(line) > 0 {
+			result.WriteString(line)
+		}
+	}
+
+	return result.String()
+}
+
 func (m model) View() string {
 	if m.fatalErr != nil {
 		return fmt.Sprintf("An unrecoverable error occured: %v\n", m.fatalErr)
@@ -432,7 +492,8 @@ func (m model) View() string {
 	if isCompactHeightMode(m.ctx) {
 		additionalSpacing = ""
 	}
-	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView)) + helpView
+	previewPane := renderPreviewPane(m)
+	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n%s%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView), previewPane) + helpView
 }
 
 func isExtraCompactHeightMode(ctx context.Context) bool {
@@ -721,6 +782,9 @@ func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.M
 	}
 	if isExtraCompactHeightMode(ctx) {
 		tuiSize -= 3
+	}
+	if config.ShowPreviewPane {
+		tuiSize += 6
 	}
 	tableHeight := min(getTableHeight(ctx), terminalHeight-tuiSize)
 	t := table.New(
