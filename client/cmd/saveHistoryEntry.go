@@ -176,14 +176,14 @@ func presaveHistoryEntry(ctx context.Context) {
 	entry.StartTime = parseCrossPlatformTime(os.Args[4])
 	entry.EndTime = time.Unix(0, 0).UTC()
 
-	// And persist it locally.
+	// Persist it locally
 	db := hctx.GetDb(ctx)
 	err = lib.ReliableDbCreate(db, *entry)
 	lib.CheckFatalError(err)
 	db.Commit()
 
-	// And persist it remotely
-	if !config.IsOffline {
+	// Persist it remotely (unless PresaveLocalOnly is enabled)
+	if !config.IsOffline && !config.PresaveLocalOnly {
 		encEntries, err := lib.EncryptEntries(config, []*data.HistoryEntry{entry})
 		lib.CheckFatalError(err)
 		b, ctx := lib.GetSyncBackend(ctx)
@@ -235,6 +235,7 @@ func saveHistoryEntry(ctx context.Context) {
 
 func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryCount int) error {
 	db := hctx.GetDb(ctx)
+	config := hctx.GetConf(ctx)
 
 	// Create the query to find the presaved entries
 	query := "cwd:" + entry.CurrentWorkingDirectory
@@ -246,7 +247,7 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryC
 	}
 	matchingEntryQuery = matchingEntryQuery.Where("command = ?", entry.Command).Where("device_id = ?", entry.DeviceId).Session(&gorm.Session{})
 
-	// Get the presaved entry since we need it for doing remote deletes
+	// Get the presaved entry (needed for remote deletion when PresaveLocalOnly is false)
 	presavedEntry, err := lib.RetryingDbFunctionWithResult(func() (data.HistoryEntry, error) {
 		var presavedEntry data.HistoryEntry
 		res := matchingEntryQuery.Find(&presavedEntry)
@@ -293,9 +294,8 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryC
 		return err
 	}
 
-	// And delete it remotely
-	config := hctx.GetConf(ctx)
-	if !config.IsOffline {
+	// Delete it remotely (unless PresaveLocalOnly is enabled)
+	if !config.IsOffline && !config.PresaveLocalOnly {
 		var deletionRequest shared.DeletionRequest
 		deletionRequest.SendTime = time.Now()
 		deletionRequest.UserId = data.UserId(config.UserSecret)
