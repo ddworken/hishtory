@@ -69,6 +69,7 @@ type KeyMap struct {
 	GotoBottom   key.Binding
 	MoveLeft     key.Binding
 	MoveRight    key.Binding
+	HideColumns  key.Binding
 }
 
 // DefaultKeyMap returns a default set of keybindings.
@@ -277,6 +278,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.MoveLeft(m.hstep)
 		case key.Matches(msg, m.KeyMap.MoveRight):
 			m.MoveRight(m.hstep)
+		case key.Matches(msg, m.KeyMap.HideColumns):
+			m.ToggleHideColumns()
 		}
 	}
 
@@ -533,6 +536,34 @@ func (m *Model) MoveLeft(n int) {
 // MoveRight scrolls right
 func (m *Model) MoveRight(n int) {
 	m.hcursor = clamp(m.hcursor+n, 0, m.MaxHScroll())
+	m.UpdateViewport()
+}
+
+// ToggleHideColumns hides or shows all the columns but the first one
+func (m *Model) ToggleHideColumns() {
+	var (
+		cmdIdx int
+		width  int
+	)
+	for i, col := range m.cols {
+		width += col.Width + 1
+		if col.Title == "Command" {
+			cmdIdx = i
+		}
+	}
+	m.cols = []Column{
+		{Title: "Command", Width: width},
+	}
+
+	hiddenRows := m.rows[:]
+	m.rows = make([]Row, len(hiddenRows))
+	for i, row := range hiddenRows {
+		if len(row) == 0 {
+			break // Means we reached an empty rows section
+		}
+
+		m.rows[i] = Row{row[cmdIdx]}
+	}
 	m.UpdateViewport()
 }
 
