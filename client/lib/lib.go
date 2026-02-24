@@ -768,12 +768,22 @@ func RetrieveAdditionalEntriesFromRemote(ctx context.Context, queryReason string
 		return err
 	}
 
-	for _, entry := range retrievedEntries {
-		decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
+	for _, chunk := range shared.Chunks(retrievedEntries, 1000) {
+		err := RetryingDbFunction(func() error {
+			return db.Transaction(func(tx *gorm.DB) error {
+				for _, entry := range chunk {
+					decEntry, err := data.DecryptHistoryEntry(config.UserSecret, *entry)
+					if err != nil {
+						return fmt.Errorf("failed to decrypt history entry from server: %w", err)
+					}
+					AddToDbIfNew(tx, decEntry)
+				}
+				return nil
+			})
+		})
 		if err != nil {
-			return fmt.Errorf("failed to decrypt history entry from server: %w", err)
+			return err
 		}
-		AddToDbIfNew(db, decEntry)
 	}
 	return ProcessDeletionRequests(ctx)
 }

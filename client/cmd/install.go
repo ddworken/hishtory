@@ -668,12 +668,24 @@ func registerAndBootstrapDevice(ctx context.Context, config *hctx.ClientConfig, 
 	}
 
 	hctx.GetLogger().Infof("Bootstrapping new device: Found %d entries", len(retrievedEntries))
-	for _, entry := range retrievedEntries {
-		decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
+
+	chunkSize := 1000
+	for _, chunk := range shared.Chunks(retrievedEntries, chunkSize) {
+		err := lib.RetryingDbFunction(func() error {
+			return db.Transaction(func(tx *gorm.DB) error {
+				for _, entry := range chunk {
+					decEntry, err := data.DecryptHistoryEntry(userSecret, *entry)
+					if err != nil {
+						return fmt.Errorf("failed to decrypt history entry from server: %w", err)
+					}
+					lib.AddToDbIfNew(tx, decEntry)
+				}
+				return nil
+			})
+		})
 		if err != nil {
-			return fmt.Errorf("failed to decrypt history entry from server: %w", err)
+			return err
 		}
-		lib.AddToDbIfNew(db, decEntry)
 	}
 
 	return nil
