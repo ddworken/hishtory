@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strconv"
 	"context"
 	"fmt"
 	"math/rand"
@@ -31,6 +32,8 @@ var EXAMPLE_QUERIES string = `Example queries:
 
 var GROUP_ID_QUERYING string = "group_id:querying"
 
+var queryLimit int
+
 var queryCmd = &cobra.Command{
 	Use:                "query",
 	Short:              "Query your shell history and display the results in an ASCII art table",
@@ -38,9 +41,26 @@ var queryCmd = &cobra.Command{
 	Long:               strings.ReplaceAll(EXAMPLE_QUERIES, "SUBCOMMAND", "query"),
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Manual flag parsing because DisableFlagParsing is true
+		var queryArgs []string
+		for i := 0; i < len(args); i++ {
+			if args[i] == "--limit" && i+1 < len(args) {
+				if val, err := strconv.Atoi(args[i+1]); err == nil {
+					queryLimit = val
+					i++
+					continue
+				}
+			} else if strings.HasPrefix(args[i], "--limit=") {
+				if val, err := strconv.Atoi(strings.TrimPrefix(args[i], "--limit=")); err == nil {
+					queryLimit = val
+					continue
+				}
+			}
+			queryArgs = append(queryArgs, args[i])
+		}
 		ctx := hctx.MakeContext()
 		lib.CheckFatalError(lib.ProcessDeletionRequests(ctx))
-		query(ctx, strings.Join(args, " "))
+		query(ctx, strings.Join(queryArgs, " "))
 	},
 }
 
@@ -160,8 +180,9 @@ func query(ctx context.Context, query string) {
 		}
 	}
 	lib.CheckFatalError(displayBannerIfSet(ctx))
-	numResults := 25
-	data, err := lib.Search(ctx, db, query, numResults*5)
+//	fmt.Printf("DEBUG: queryLimit=%d\n", queryLimit)
+	numResults := queryLimit
+	data, err := lib.Search(ctx, db, query, queryLimit)
 	lib.CheckFatalError(err)
 	lib.CheckFatalError(DisplayResults(ctx, data, numResults))
 }
@@ -169,38 +190,29 @@ func query(ctx context.Context, query string) {
 func DisplayResults(ctx context.Context, results []*data.HistoryEntry, numResults int) error {
 	config := hctx.GetConf(ctx)
 	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
-
 	columns := make([]any, 0)
-	for _, c := range config.DisplayedColumns {
-		columns = append(columns, c)
-	}
+	for _, c := range config.DisplayedColumns { columns = append(columns, c) }
 	tbl := table.New(columns...)
 	tbl.WithHeaderFormatter(headerFmt)
-
 	numRows := 0
-
 	seenCommands := make(map[string]bool)
-
 	for _, entry := range results {
 		if config.FilterDuplicateCommands && entry != nil {
 			cmd := strings.TrimSpace(entry.Command)
-			if seenCommands[cmd] {
-				continue
-			}
+			if seenCommands[cmd] { continue }
 			seenCommands[cmd] = true
 		}
-
-		row, err := lib.BuildTableRow(ctx, config.DisplayedColumns, *entry, func(s string) string { return s })
-		if err != nil {
-			return err
-		}
+		row, err := lib.BuildTableRow(ctx, config.DisplayedColumns, *entry, func(s string) string {
+			// 仅替换换行符，确保表格边框不崩坏；不进行截断，保留完整命令
+			s = strings.ReplaceAll(s, "\n", " ")
+			s = strings.ReplaceAll(s, "\r", " ")
+			return s
+		})
+		if err != nil { return err }
 		tbl.AddRow(stringArrayToAnyArray(row)...)
-		numRows += 1
-		if numRows >= numResults {
-			break
-		}
+		numRows++
+		if numRows >= numResults { break }
 	}
-
 	tbl.Print()
 	return nil
 }
@@ -229,6 +241,7 @@ func displayBannerIfSet(ctx context.Context) error {
 
 func init() {
 	rootCmd.AddCommand(queryCmd)
+	queryCmd.Flags().IntVar(&queryLimit, "limit", 25, "Maximum number of results to return")
 	rootCmd.AddCommand(tqueryCmd)
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(updateLocalDbFromRemoteCmd)

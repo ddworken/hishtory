@@ -91,6 +91,9 @@ type model struct {
 	// Whether the device is offline. If so, a warning will be displayed.
 	isOffline bool
 
+	// Whether regex search mode is enabled
+	regexMode bool
+
 	// A banner from the backend to be displayed. Generally an empty string.
 	banner string
 
@@ -209,6 +212,10 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 		if m.runQuery != nil {
 			query = *m.runQuery
 		}
+		// In regex mode, wrap query with re: prefix
+		if m.regexMode && query != "" && !strings.HasPrefix(query, "re:") && !strings.HasPrefix(query, "regex:") {
+			query = "re:" + query
+		}
 		queryId := allocateQueryId()
 		conf := hctx.GetConf(m.ctx)
 		defaultFilter := conf.DefaultFilter
@@ -270,6 +277,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, loadedKeyBindings.Help):
 			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
+		case key.Matches(msg, loadedKeyBindings.ToggleRegex):
+			m.regexMode = !m.regexMode
+			searchQuery := m.queryInput.Value()
+			m.runQuery = &searchQuery
+			cmd := runQueryAndUpdateTable(m, true, true)
+			return m, cmd
 		case key.Matches(msg, loadedKeyBindings.JumpStartOfInput):
 			m.queryInput.SetCursor(0)
 			return m, nil
@@ -432,7 +445,11 @@ func (m model) View() string {
 	if isCompactHeightMode(m.ctx) {
 		additionalSpacing = ""
 	}
-	return fmt.Sprintf("%s%s%s%sSearch Query: %s\n%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView)) + helpView
+	regexIndicator := ""
+	if m.regexMode {
+		regexIndicator = "[REGEX] "
+	}
+	return fmt.Sprintf("%s%s%s%sSearch Query: %s%s\n%s%s\n", additionalSpacing, additionalMessagesStr, m.banner, additionalSpacing, regexIndicator, m.queryInput.View(), additionalSpacing, renderNullableTable(m, helpView)) + helpView
 }
 
 func isExtraCompactHeightMode(ctx context.Context) bool {

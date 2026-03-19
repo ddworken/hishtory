@@ -145,6 +145,80 @@ func MakeRegexFromQuery(query string) string {
 	return r
 }
 
+// regexTokenPattern matches regex: or re: patterns in query string
+var regexTokenPattern = regexp.MustCompile(`(-?)(regex:|re:)(\S+)`)
+
+// extractRegexPatterns extracts regex patterns directly from query string
+// extractRegexPatterns extracts regex patterns directly from query string
+func extractRegexPatterns(query string) (include []string, exclude []string) {
+	trimmed := strings.TrimSpace(query)
+	if strings.HasPrefix(trimmed, "re:") {
+		return []string{strings.TrimPrefix(trimmed, "re:")}, nil
+	}
+	if strings.HasPrefix(trimmed, "regex:") {
+		return []string{strings.TrimPrefix(trimmed, "regex:")}, nil
+	}
+	matches := regexTokenPattern.FindAllStringSubmatch(query, -1)
+	for _, m := range matches {
+		isExclude := m[1] == "-"
+		pattern := m[3]
+		if pattern != "" {
+			if isExclude {
+				exclude = append(exclude, pattern)
+			} else {
+				include = append(include, pattern)
+			}
+		}
+	}
+	return
+}
+
+// filterByRegex filters history entries using regex patterns
+func filterByRegex(entries []*data.HistoryEntry, include, exclude []string) ([]*data.HistoryEntry, error) {
+	if len(include) == 0 && len(exclude) == 0 {
+		return entries, nil
+	}
+	var includeRe, excludeRe []*regexp.Regexp
+	for _, p := range include {
+		if re, err := regexp.Compile(p); err != nil {
+			return nil, fmt.Errorf("invalid regex pattern '%s': %w", p, err)
+		} else {
+			includeRe = append(includeRe, re)
+		}
+	}
+	for _, p := range exclude {
+		if re, err := regexp.Compile(p); err != nil {
+			return nil, fmt.Errorf("invalid regex pattern '%s': %w", p, err)
+		} else {
+			excludeRe = append(excludeRe, re)
+		}
+	}
+	result := make([]*data.HistoryEntry, 0, len(entries))
+	for _, entry := range entries {
+		match := true
+		for _, re := range includeRe {
+			if !re.MatchString(entry.Command) {
+				match = false
+				break
+			}
+		}
+		if !match {
+			continue
+		}
+		excluded := false
+		for _, re := range excludeRe {
+			if re.MatchString(entry.Command) {
+				excluded = true
+				break
+			}
+		}
+		if !excluded {
+			result = append(result, entry)
+		}
+	}
+	return result, nil
+}
+
 func CheckFatalError(err error) {
 	if err != nil {
 		_, filename, line, _ := runtime.Caller(1)
@@ -936,7 +1010,36 @@ func SearchWithCache(ctx context.Context, db *gorm.DB, query string, limit int) 
 }
 
 func Search(ctx context.Context, db *gorm.DB, query string, limit int) ([]*data.HistoryEntry, error) {
-	return SearchWithOffset(ctx, db, query, limit, 0)
+	includePatterns, excludePatterns := extractRegexPatterns(query)
+	hasRegex := len(includePatterns) > 0 || len(excludePatterns) > 0
+	searchLimit := limit
+	if hasRegex && limit > 0 {
+		searchLimit = limit * 10
+		if searchLimit < 10000 {
+			searchLimit = 10000
+		}
+	}
+	
+// If we are using regex, we must NOT pass the raw query to SQL, 
+// because SQL will try to match regex tokens (like ".*") as literal text.
+// Instead, we pass an empty query to fetch the latest rows, then filter in Go.
+sqlQuery := query
+if hasRegex {
+sqlQuery = "" 
+}
+results, err := SearchWithOffset(ctx, db, sqlQuery, searchLimit, 0)
+	if err != nil {
+		return nil, err
+	}
+	if hasRegex {
+		if results, err = filterByRegex(results, includePatterns, excludePatterns); err != nil {
+			return nil, err
+		}
+		if limit > 0 && len(results) > limit {
+			results = results[:limit]
+		}
+	}
+	return results, nil
 }
 
 func SearchWithOffset(ctx context.Context, db *gorm.DB, query string, limit, offset int) ([]*data.HistoryEntry, error) {
@@ -1050,6 +1153,11 @@ func parseAtomizedToken(ctx context.Context, token string) (string, any, any, er
 		return "(CAST(strftime(\"%s\",end_time) AS INTEGER) = ?)", strconv.FormatInt(t.Unix(), 10), nil, nil
 	case "command":
 		return "(instr(command, ?) > 0)", val, nil, nil
+	case "regex", "re":
+		if _, err := regexp.Compile(val); err != nil {
+			return "", nil, nil, fmt.Errorf("invalid regex pattern '%s': %w", val, err)
+		}
+		return "(1=1)", nil, nil, nil
 	default:
 		q, args, err := buildCustomColumnSearchQuery(ctx, field, val)
 		if err != nil {
