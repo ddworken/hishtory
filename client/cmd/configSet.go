@@ -125,6 +125,24 @@ var setPresavingCmd = &cobra.Command{
 	},
 }
 
+var setPresaveLocalOnlyCmd = &cobra.Command{
+	Use:       "presave-local-only",
+	Short:     "Whether presaved entries should only be stored locally (not synced to remote)",
+	Long:      "When enabled, presaved entries are not uploaded to the server. This reduces network traffic but means presaved entries won't be visible on other devices until the command completes.",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{"true", "false"},
+	Run: func(cmd *cobra.Command, args []string) {
+		val := args[0]
+		if val != "true" && val != "false" {
+			log.Fatalf("Unexpected config value %s, must be one of: true, false", val)
+		}
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		config.PresaveLocalOnly = (val == "true")
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setFilterWhitespacePrefixCmd = &cobra.Command{
 	Use:       "filter-whitespace-prefix",
 	Short:     "Whether to filter out commands that start with whitespace (space, tab, etc.)",
@@ -335,6 +353,7 @@ func init() {
 	configSetCmd.AddCommand(setHighlightMatchesCmd)
 	configSetCmd.AddCommand(setEnableAiCompletionCmd)
 	configSetCmd.AddCommand(setPresavingCmd)
+	configSetCmd.AddCommand(setPresaveLocalOnlyCmd)
 	configSetCmd.AddCommand(setColorSchemeCmd)
 	configSetCmd.AddCommand(setDefaultFilterCommand)
 	configSetCmd.AddCommand(setAiCompletionEndpoint)

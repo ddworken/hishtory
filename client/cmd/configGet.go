@@ -95,6 +95,16 @@ var getPresavingCmd = &cobra.Command{
 	},
 }
 
+var getPresaveLocalOnlyCmd = &cobra.Command{
+	Use:   "presave-local-only",
+	Short: "Whether presaved entries are only stored locally (not synced to remote)",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.PresaveLocalOnly)
+	},
+}
+
 var getBetaModeCmd = &cobra.Command{
 	Use:   "beta-mode",
 	Short: "Enable beta-mode to opt-in to unreleased features",
@@ -203,6 +213,7 @@ func init() {
 	configGetCmd.AddCommand(getHighlightMatchesCmd)
 	configGetCmd.AddCommand(getEnableAiCompletion)
 	configGetCmd.AddCommand(getPresavingCmd)
+	configGetCmd.AddCommand(getPresaveLocalOnlyCmd)
 	configGetCmd.AddCommand(getColorScheme)
 	configGetCmd.AddCommand(getDefaultFilterCmd)
 	configGetCmd.AddCommand(getAiCompletionEndpoint)
