@@ -85,7 +85,7 @@ func VerifyBinary(ctx context.Context, binaryPath, attestationPath, versionTag s
 		}
 	}
 slsa_status_error_continue_update:
-	if err := checkForDowngrade(Version, versionTag); err != nil && os.Getenv("HISHTORY_ALLOW_DOWNGRADE") == "true" {
+	if err := checkForDowngrade(Version, versionTag); err != nil && os.Getenv("HISHTORY_ALLOW_DOWNGRADE") != "true" {
 		return err
 	}
 
