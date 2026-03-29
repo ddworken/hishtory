@@ -67,7 +67,7 @@ func BuildUpdateInfo(version string) shared.UpdateInfo {
 func decrementVersionIfInvalid(initialVersion string) string {
 	// Decrements the version up to 5 times if the version doesn't have valid binaries yet.
 	version := initialVersion
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		updateInfo := BuildUpdateInfo(version)
 		err := assertValidUpdate(updateInfo)
 		if err == nil {
