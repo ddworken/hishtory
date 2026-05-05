@@ -163,7 +163,7 @@ func makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiMo
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to parse AI API response=%#v: %w", string(bodyText), err)
 	}
 	if len(apiResp.Choices) == 0 {
-		return nil, OpenAiUsage{}, fmt.Errorf("AI API returned zero choices, parsed resp=%#v, resp body=%#v, resp.StatusCode=%d", apiResp, bodyText, resp.StatusCode)
+		return nil, OpenAiUsage{}, fmt.Errorf("AI API returned zero choices, parsed resp=%#v, resp body=%#v, resp.StatusCode=%d", apiResp, string(bodyText), resp.StatusCode)
 	}
 	ret := make([]string, 0)
 	for _, item := range apiResp.Choices {
@@ -285,7 +285,7 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overrid
 		return nil, OpenAiUsage{}, fmt.Errorf("failed to parse OpenAI API response=%#v: %w", string(bodyText), err)
 	}
 	if len(apiResp.Choices) == 0 {
-		return nil, OpenAiUsage{}, fmt.Errorf("OpenAI API returned zero choices, parsed resp=%#v, resp body=%#v, resp.StatusCode=%d", apiResp, bodyText, resp.StatusCode)
+		return nil, OpenAiUsage{}, fmt.Errorf("OpenAI API returned zero choices, parsed resp=%#v, resp body=%#v, resp.StatusCode=%d", apiResp, string(bodyText), resp.StatusCode)
 	}
 	ret := make([]string, 0)
 	for _, item := range apiResp.Choices {

@@ -7,6 +7,7 @@ import (
 	"html"
 	"math"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/ddworken/hishtory/backend/server/internal/database"
@@ -337,7 +338,10 @@ func (s *Server) aiSuggestionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine which AI provider endpoint to use based on server environment
-	endpoint := ai.DefaultOpenAiEndpoint
+	endpoint := os.Getenv("HISHTORY_AI_ENDPOINT")
+	if endpoint == "" {
+		endpoint = ai.DefaultOpenAiEndpoint
+	}
 	provider := ai.GetAiProvider(endpoint)
 	if provider == ai.ProviderAnthropic {
 		endpoint = ai.DefaultClaudeEndpoint
