@@ -76,7 +76,8 @@ var getFilterWhitespacePrefixCmd = &cobra.Command{
 var getEnableAiCompletion = &cobra.Command{
 	Use:   "ai-completion",
 	Short: "Enable AI completion for searches starting with '?'",
-	Long:  "Note that AI completion requests are sent to the shared hiSHtory backend and then to OpenAI. Requests are not logged, but still be careful not to put anything sensitive in queries.",
+	Long: "Without API keys, AI completion defaults to Gemini web (no API key). With `ai-completion-backend chat` and no keys, requests use the hiSHtory backend. " +
+		"See `ai-completion-backend` and `ai-completion-endpoint`.",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := hctx.MakeContext()
 		config := hctx.GetConf(ctx)
@@ -178,6 +179,16 @@ var getAiCompletionEndpoint = &cobra.Command{
 	},
 }
 
+var getAiCompletionBackend = &cobra.Command{
+	Use:   "ai-completion-backend",
+	Short: "AI backend: empty (auto), gemini, ollama, or chat — see `hishtory config-set ai-completion-backend --help`",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		fmt.Println(config.AiCompletionBackend)
+	},
+}
+
 var getDefaultSearchColumns = &cobra.Command{
 	Use:   "default-search-columns",
 	Short: "Get the list of columns that are used for \"default\" search queries that don't use any search atoms",
@@ -206,6 +217,7 @@ func init() {
 	configGetCmd.AddCommand(getColorScheme)
 	configGetCmd.AddCommand(getDefaultFilterCmd)
 	configGetCmd.AddCommand(getAiCompletionEndpoint)
+	configGetCmd.AddCommand(getAiCompletionBackend)
 	configGetCmd.AddCommand(getCompactMode)
 	configGetCmd.AddCommand(getLogLevelCmd)
 	configGetCmd.AddCommand(getFullScreenCmd)

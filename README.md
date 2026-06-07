@@ -68,7 +68,11 @@ If you are ever trying to figure out a shell command and searching your history 
 
 If you would like to:
 * Disable this, you can run `hishtory config-set ai-completion false`
-* Run this with your own OpenAI API key (thereby ensuring that your queries do not pass through the centrally hosted hiSHtory server), you can run `export OPENAI_API_KEY='...'`
+* Use the default **Gemini web** integration (no API keys): queries go directly to Google Gemini. Requires network access to `gemini.google.com` (use `HTTPS_PROXY` if needed). Optional: `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_BL`, `GEMINI_COOKIE` / `GEMINI_COOKIE_FILE`.
+* Use **local Ollama** instead: `hishtory config-set ai-completion-backend ollama` and ensure [Ollama](https://ollama.com/) is running with a model pulled, e.g. `ollama pull eslider/bonsai-1.7b`.
+* Use your own **OpenAI** or **Anthropic** key so queries go **directly** to the provider (not through the hiSHtory server), set `export OPENAI_API_KEY='...'` or `export ANTHROPIC_API_KEY='...'`.
+* With **no API keys**, use the hiSHtory-hosted proxy instead of Gemini web: `hishtory config-set ai-completion-backend chat` and keep the default OpenAI chat URL (`hishtory config-set ai-completion-endpoint https://api.openai.com/v1/chat/completions` if needed).
+* Return to automatic behavior (no keys → Gemini web, keys → direct chat API): `hishtory config-set ai-completion-backend auto`.
 
 </blockquote></details>
 

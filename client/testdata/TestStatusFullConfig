@@ -27,7 +27,8 @@ Full Config:
 	    selectedbackground: '#3300ff'
 	    bordercolor: '#585858'
 	defaultfilter: ""
-	aicompletionendpoint: https://api.openai.com/v1/chat/completions
+	aicompletionbackend: gemini
+	aicompletionendpoint: ""
 	keybindings:
 	    up:
 	        - up

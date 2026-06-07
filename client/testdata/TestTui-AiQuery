@@ -3,9 +3,9 @@ Search Query: > ?myQuery
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Hostname        CWD         Timestamp                      Runtime  Exit Code  Command                 │
 │────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ OpenAI          N/A         N/A                            N/A      0          result 1                │
-│ OpenAI          N/A         N/A                            N/A      0          result 2                │
-│ OpenAI          N/A         N/A                            N/A      0          longer result 3         │
+│ AI              N/A         N/A                            N/A      0          result 1                │
+│ AI              N/A         N/A                            N/A      0          result 2                │
+│ AI              N/A         N/A                            N/A      0          longer result 3         │
 │                                                                                                        │
 │                                                                                                        │
 │                                                                                                        │

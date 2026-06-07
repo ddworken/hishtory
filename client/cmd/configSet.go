@@ -10,6 +10,7 @@ import (
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/shared"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -90,9 +91,10 @@ var setDefaultFilterCommand = &cobra.Command{
 }
 
 var setEnableAiCompletionCmd = &cobra.Command{
-	Use:       "ai-completion",
-	Short:     "Enable AI completion for searches starting with '?'",
-	Long:      "Note that AI completion requests are sent to the shared hiSHtory backend and then to OpenAI. Requests are not logged, but still be careful not to put anything sensitive in queries.",
+	Use:   "ai-completion",
+	Short: "Enable AI completion for searches starting with '?'",
+	Long: "Without API keys, AI completion uses Gemini web by default (no API key, requires network access to gemini.google.com). With `ai-completion-backend chat` and no keys, " +
+		"requests go through the shared hiSHtory backend (not logged, but avoid sensitive data). With your own API keys, requests go directly to the provider.",
 	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	ValidArgs: []string{"true", "false"},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -264,6 +266,25 @@ var setAiCompletionEndpoint = &cobra.Command{
 	},
 }
 
+var setAiCompletionBackend = &cobra.Command{
+	Use:   "ai-completion-backend",
+	Short: "AI integration: gemini (default), ollama (local), chat (OpenAI-compatible / hiSHtory proxy when no keys), or auto",
+	Long: "Values: gemini (Gemini web, no API key), ollama (always use Ollama at ai-completion-endpoint), chat (OpenAI-compatible; with no API keys and default cloud URLs, use hiSHtory proxy), " +
+		"auto (clear this setting: no keys -> Gemini web, keys -> direct chat API).",
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	ValidArgs: []string{shared.AiCompletionBackendGemini, shared.AiCompletionBackendOllama, shared.AiCompletionBackendChat, "auto"},
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := hctx.MakeContext()
+		config := hctx.GetConf(ctx)
+		if args[0] == "auto" {
+			config.AiCompletionBackend = ""
+		} else {
+			config.AiCompletionBackend = args[0]
+		}
+		lib.CheckFatalError(hctx.SetConfig(config))
+	},
+}
+
 var setLogLevelCmd = &cobra.Command{
 	Use:       "log-level",
 	Short:     "Set the log level for hishtory logs",
@@ -338,6 +359,7 @@ func init() {
 	configSetCmd.AddCommand(setColorSchemeCmd)
 	configSetCmd.AddCommand(setDefaultFilterCommand)
 	configSetCmd.AddCommand(setAiCompletionEndpoint)
+	configSetCmd.AddCommand(setAiCompletionBackend)
 	configSetCmd.AddCommand(compactMode)
 	configSetCmd.AddCommand(setLogLevelCmd)
 	configSetCmd.AddCommand(setFullScreenCmd)

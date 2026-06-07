@@ -299,7 +299,8 @@ func deletePresavedEntries(ctx context.Context, entry *data.HistoryEntry, retryC
 		var deletionRequest shared.DeletionRequest
 		deletionRequest.SendTime = time.Now()
 		deletionRequest.UserId = data.UserId(config.UserSecret)
-		deletionRequest.Messages.Ids = append(deletionRequest.Messages.Ids,
+		deletionRequest.Messages.Ids = append(
+			deletionRequest.Messages.Ids,
 			// Note that we aren't specifying an EndTime here since pre-saved entries don't have an EndTime
 			shared.MessageIdentifier{DeviceId: presavedEntry.DeviceId, EntryId: presavedEntry.EntryId},
 		)

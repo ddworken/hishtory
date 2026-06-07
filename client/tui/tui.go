@@ -480,26 +480,44 @@ func renderNullableTable(m model, helpText string) string {
 	return baseStyle.Render(m.table.View())
 }
 
+func aiSuggestionSourceLabel(ctx context.Context) string {
+	c := hctx.GetConf(ctx)
+	switch c.AiCompletionBackend {
+	case shared.AiCompletionBackendGemini:
+		return "Gemini"
+	case shared.AiCompletionBackendOllama:
+		return "Ollama"
+	case shared.AiCompletionBackendChat:
+		return "AI"
+	default:
+		if !shared.HasAiAPIKeys() {
+			return "Gemini"
+		}
+		return "AI"
+	}
+}
+
 func getRowsFromAiSuggestions(ctx context.Context, columnNames []string, shellName, query string) ([]table.Row, []*data.HistoryEntry, error) {
 	suggestions, err := ai.DebouncedGetAiSuggestions(ctx, shellName, strings.TrimPrefix(query, "?"), 5)
 	if err != nil {
 		hctx.GetLogger().Warnf("failed to get AI query suggestions: %v", err)
 		return nil, nil, fmt.Errorf("failed to get AI query suggestions: %w", err)
 	}
+	src := aiSuggestionSourceLabel(ctx)
 	var rows []table.Row
 	var entries []*data.HistoryEntry
 	for _, suggestion := range suggestions {
 		entry := data.HistoryEntry{
-			LocalUsername:           "OpenAI",
-			Hostname:                "OpenAI",
+			LocalUsername:           src,
+			Hostname:                src,
 			Command:                 suggestion,
 			CurrentWorkingDirectory: "N/A",
 			HomeDirectory:           "N/A",
 			ExitCode:                0,
 			StartTime:               time.Unix(0, 0).UTC(),
 			EndTime:                 time.Unix(0, 0).UTC(),
-			DeviceId:                "OpenAI",
-			EntryId:                 "OpenAI",
+			DeviceId:                src,
+			EntryId:                 src,
 		}
 		entries = append(entries, &entry)
 		row, err := lib.BuildTableRow(ctx, columnNames, entry, func(s string) string { return s })
@@ -833,7 +851,8 @@ func deleteHistoryEntry(ctx context.Context, entry data.HistoryEntry) error {
 		UserId:   data.UserId(hctx.GetConf(ctx).UserSecret),
 		SendTime: time.Now(),
 	}
-	dr.Messages.Ids = append(dr.Messages.Ids,
+	dr.Messages.Ids = append(
+		dr.Messages.Ids,
 		shared.MessageIdentifier{DeviceId: entry.DeviceId, EndTime: entry.EndTime, EntryId: entry.EntryId},
 	)
 	err := lib.SendDeletionRequest(ctx, dr)

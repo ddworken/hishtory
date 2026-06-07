@@ -14,6 +14,7 @@ import (
 	"github.com/ddworken/hishtory/client/data"
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
+	"github.com/ddworken/hishtory/shared"
 	"github.com/ddworken/hishtory/shared/ai"
 )
 
@@ -80,27 +81,41 @@ func augmentQuery(ctx context.Context, query string) string {
 }
 
 func GetAiSuggestions(ctx context.Context, shellName, query string, numberCompletions int) ([]string, error) {
-	// Determine which API key is available
-	hasOpenAiKey := os.Getenv("OPENAI_API_KEY") != ""
-	hasAnthropicKey := os.Getenv("ANTHROPIC_API_KEY") != ""
-	hasGenericKey := os.Getenv("AI_API_KEY") != ""
+	cfg := hctx.GetConf(ctx)
+	hasKeys := shared.HasAiAPIKeys()
+	endpoint := cfg.AiCompletionEndpoint
+	augmented := augmentQuery(ctx, query)
 
-	// Get the configured endpoint
-	endpoint := hctx.GetConf(ctx).AiCompletionEndpoint
-
-	// Check if we should use the hishtory proxy API (no API keys set and using default endpoints)
-	if !hasOpenAiKey && !hasAnthropicKey && !hasGenericKey {
-		if endpoint == ai.DefaultOpenAiEndpoint || endpoint == ai.DefaultClaudeEndpoint {
-			return GetAiSuggestionsViaHishtoryApi(ctx, shellName, augmentQuery(ctx, query), numberCompletions)
-		}
+	// Explicit "chat" backend with no keys and default cloud URLs: hiSHtory proxy (legacy no-key path).
+	if cfg.AiCompletionBackend == shared.AiCompletionBackendChat && !hasKeys &&
+		(endpoint == ai.DefaultOpenAiEndpoint || endpoint == ai.DefaultClaudeEndpoint) {
+		return GetAiSuggestionsViaHishtoryApi(ctx, shellName, augmented, numberCompletions)
 	}
 
-	// Use direct API call with the configured endpoint
+	// Gemini: forced backend, or auto with no API keys (default).
+	if cfg.AiCompletionBackend == shared.AiCompletionBackendGemini ||
+		(!hasKeys && cfg.AiCompletionBackend != shared.AiCompletionBackendChat &&
+			cfg.AiCompletionBackend != shared.AiCompletionBackendOllama) {
+		modelOverride := os.Getenv("AI_API_MODEL")
+		if modelOverride == "" {
+			modelOverride = os.Getenv("GEMINI_MODEL")
+		}
+		suggestions, _, err := ai.GetAiSuggestionsViaGeminiWeb(augmented, shellName, getOsName(), modelOverride, numberCompletions)
+		return suggestions, err
+	}
+
+	// Ollama: forced backend or endpoint is Ollama /api/generate.
+	if cfg.AiCompletionBackend == shared.AiCompletionBackendOllama ||
+		shared.IsOllamaGenerateAPIEndpoint(endpoint) {
+		suggestions, _, err := ai.GetAiSuggestionsViaOllama(endpoint, augmented, shellName, getOsName(), "", numberCompletions)
+		return suggestions, err
+	}
+
 	modelOverride := os.Getenv("AI_API_MODEL")
 	if modelOverride == "" {
 		modelOverride = os.Getenv("OPENAI_API_MODEL")
 	}
-	suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(endpoint, augmentQuery(ctx, query), shellName, getOsName(), modelOverride, numberCompletions)
+	suggestions, _, err := ai.GetAiSuggestionsViaOpenAiApi(endpoint, augmented, shellName, getOsName(), modelOverride, numberCompletions)
 	return suggestions, err
 }
 
@@ -156,5 +171,5 @@ func GetAiSuggestionsViaHishtoryApi(ctx context.Context, shellName, query string
 		return nil, fmt.Errorf("failed to parse /api/v1/ai-suggest response: %w", err)
 	}
 	hctx.GetLogger().Infof("For AI query=%#v ==> %#v", query, resp.Suggestions)
-	return resp.Suggestions, nil
+	return ai.NormalizeSuggestionSlice(resp.Suggestions), nil
 }

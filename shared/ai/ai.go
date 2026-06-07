@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/ddworken/hishtory/client/hctx"
 	"github.com/ddworken/hishtory/client/lib"
@@ -19,6 +22,8 @@ import (
 const (
 	DefaultOpenAiEndpoint = "https://api.openai.com/v1/chat/completions"
 	DefaultClaudeEndpoint = "https://api.anthropic.com/v1/chat/completions"
+	// DefaultOllamaEndpoint is the default URL for Ollama's generate API.
+	DefaultOllamaEndpoint = shared.DefaultOllamaGenerateEndpoint
 )
 
 type AiProvider string
@@ -66,6 +71,139 @@ type TestOnlyOverrideAiSuggestionRequest struct {
 }
 
 var TestOnlyOverrideAiSuggestions map[string][]string = make(map[string][]string)
+
+// markdownFenceLangs is the set of common info-string tokens after an opening ``` fence.
+var markdownFenceLangs = map[string]struct{}{
+	"bash": {}, "sh": {}, "shell": {}, "zsh": {}, "fish": {}, "nu": {}, "xonsh": {}, "elvish": {},
+	"pwsh": {}, "powershell": {}, "posh": {}, "cmd": {}, "bat": {}, "batch": {},
+	"text": {}, "plaintext": {}, "console": {}, "terminal": {}, "unix": {}, "linux": {},
+}
+
+func isMarkdownFenceLang(line string) bool {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return true
+	}
+	_, ok := markdownFenceLangs[strings.ToLower(line)]
+	return ok
+}
+
+// stripLeadingMarkdownFence removes ``` fences: closed ```...``` blocks (optionally with a
+// language line like ```bash) or an opening ``` plus a language line when there is no closing fence yet.
+func stripLeadingMarkdownFence(s string) string {
+	s = strings.TrimFunc(s, unicode.IsSpace)
+	for strings.HasPrefix(s, "```") {
+		s = strings.TrimFunc(s, unicode.IsSpace)
+		if strings.HasSuffix(s, "```") && len(s) >= 6 {
+			inner := strings.TrimFunc(s[3:len(s)-3], unicode.IsSpace)
+			first, rest, ok := splitFirstLine(inner)
+			if ok && isMarkdownFenceLang(first) {
+				s = strings.TrimLeft(rest, " \t\r\n")
+				continue
+			}
+			s = inner
+			continue
+		}
+		s = strings.TrimPrefix(s, "```")
+		s = strings.TrimLeft(s, " \t\r\n")
+		first, rest, ok := splitFirstLine(s)
+		if !ok {
+			break
+		}
+		if isMarkdownFenceLang(first) {
+			s = strings.TrimLeft(rest, " \t\r\n")
+			continue
+		}
+		break
+	}
+	return strings.TrimFunc(s, unicode.IsSpace)
+}
+
+func splitFirstLine(s string) (first, rest string, ok bool) {
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		first = s[:i]
+		rest = s[i+1:]
+		first = strings.TrimSuffix(first, "\r")
+		return first, rest, true
+	}
+	if i := strings.IndexByte(s, '\r'); i >= 0 {
+		return s[:i], s[i+1:], true
+	}
+	return "", s, false
+}
+
+// stripBalancedOuterChar removes one layer of leading+trailing r only when both ends match.
+func stripBalancedOuterChar(s string, r rune) string {
+	s = strings.TrimFunc(s, unicode.IsSpace)
+	first, fw := utf8.DecodeRuneInString(s)
+	last, lw := utf8.DecodeLastRuneInString(s)
+	if first == utf8.RuneError || last == utf8.RuneError || fw+lw >= len(s) {
+		return s
+	}
+	if first == r && last == r {
+		return strings.TrimFunc(s[fw:len(s)-lw], unicode.IsSpace)
+	}
+	return s
+}
+
+// NormalizeAISuggestion strips opening markdown fences (e.g. ```bash), then trims
+// leading/trailing whitespace. Trailing `,` / `;` are removed; `"`, `'`, and “ ` “
+// are only stripped when they wrap the whole string (same char at start and end).
+func NormalizeAISuggestion(s string) string {
+	s = stripLeadingMarkdownFence(s)
+	s = strings.TrimFunc(s, unicode.IsSpace)
+	for {
+		before := s
+		s = strings.TrimFunc(s, unicode.IsSpace)
+		s2 := stripBalancedOuterChar(s, '`')
+		if s2 != s {
+			s = s2
+			continue
+		}
+		s2 = stripBalancedOuterChar(s, '\'')
+		if s2 != s {
+			s = s2
+			continue
+		}
+		s2 = stripBalancedOuterChar(s, '"')
+		if s2 != s {
+			s = s2
+			continue
+		}
+		s = strings.TrimSuffix(s, ",")
+		s = strings.TrimSuffix(s, ";")
+		s = strings.TrimFunc(s, unicode.IsSpace)
+		if s == before {
+			break
+		}
+	}
+	return strings.TrimFunc(s, unicode.IsSpace)
+}
+
+// NormalizeSuggestionSlice applies [NormalizeAISuggestion] to each entry, drops empties, and de-dupes.
+func NormalizeSuggestionSlice(ss []string) []string {
+	out := make([]string, 0, len(ss))
+	for _, s := range ss {
+		n := NormalizeAISuggestion(s)
+		if n == "" {
+			continue
+		}
+		if !slices.Contains(out, n) {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+type ollamaGenerateRequest struct {
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
+	Stream bool   `json:"stream"`
+}
+
+type ollamaGenerateResponse struct {
+	Response string `json:"response"`
+}
 
 // getEnvWithFallbacks returns the first non-empty environment variable from the list
 func getEnvWithFallbacks(keys ...string) string {
@@ -167,8 +305,12 @@ func makeSingleApiCall(apiEndpoint, query, shellName, osName, overriddenOpenAiMo
 	}
 	ret := make([]string, 0)
 	for _, item := range apiResp.Choices {
-		if !slices.Contains(ret, item.Message.Content) {
-			ret = append(ret, item.Message.Content)
+		norm := NormalizeAISuggestion(item.Message.Content)
+		if norm == "" {
+			continue
+		}
+		if !slices.Contains(ret, norm) {
+			ret = append(ret, norm)
 		}
 	}
 	return ret, apiResp.Usage, nil
@@ -226,7 +368,7 @@ func getMultipleClaudeCompletions(apiEndpoint, query, shellName, osName, overrid
 
 func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
 	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
-		return results, OpenAiUsage{}, nil
+		return NormalizeSuggestionSlice(results), OpenAiUsage{}, nil
 	}
 
 	provider := GetAiProvider(apiEndpoint)
@@ -289,12 +431,165 @@ func GetAiSuggestionsViaOpenAiApi(apiEndpoint, query, shellName, osName, overrid
 	}
 	ret := make([]string, 0)
 	for _, item := range apiResp.Choices {
-		if !slices.Contains(ret, item.Message.Content) {
-			ret = append(ret, item.Message.Content)
+		norm := NormalizeAISuggestion(item.Message.Content)
+		if norm == "" {
+			continue
+		}
+		if !slices.Contains(ret, norm) {
+			ret = append(ret, norm)
 		}
 	}
 	hctx.GetLogger().Infof("For OpenAI query=%#v ==> %#v", query, ret)
 	return ret, apiResp.Usage, nil
+}
+
+func buildShellAssistantMessages(query, shellName, osName string) []openAiMessage {
+	if osName == "" {
+		osName = "Linux"
+	}
+	if shellName == "" {
+		shellName = "bash"
+	}
+	defaultSystemPrompt := "You are an expert programmer that loves to help people with writing shell commands. " +
+		"You always reply with just a shell command and no additional context, information, or formatting. " +
+		"Your replies will be directly executed in " + shellName + " on " + osName +
+		", so ensure that they are correct and do not contain anything other than a shell command."
+
+	if systemPrompt := getEnvWithFallbacks("AI_API_SYSTEM_PROMPT", "OPENAI_API_SYSTEM_PROMPT"); systemPrompt != "" {
+		defaultSystemPrompt = systemPrompt
+	}
+
+	return []openAiMessage{
+		{Role: "system", Content: defaultSystemPrompt},
+		{Role: "user", Content: query},
+	}
+}
+
+func resolveOllamaModel(overriddenModel string) string {
+	model := shared.DefaultOllamaModel
+	if envModel := getEnvWithFallbacks("OLLAMA_MODEL", "AI_API_MODEL", "OPENAI_API_MODEL"); envModel != "" {
+		model = envModel
+	}
+	if overriddenModel != "" {
+		model = overriddenModel
+	}
+	return model
+}
+
+func ollamaPromptFromMessages(msgs []openAiMessage) string {
+	if len(msgs) < 2 {
+		return ""
+	}
+	return msgs[0].Content + "\n\n" + msgs[1].Content
+}
+
+func makeSingleOllamaCall(apiEndpoint, model, prompt string) (string, error) {
+	body := ollamaGenerateRequest{
+		Model:  model,
+		Prompt: prompt,
+		Stream: false,
+	}
+	apiReqStr, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize JSON for Ollama API: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, apiEndpoint, bytes.NewBuffer(apiReqStr))
+	if err != nil {
+		return "", fmt.Errorf("failed to create Ollama API request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := lib.GetHttpClient().Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to query Ollama API: %w", err)
+	}
+	defer resp.Body.Close()
+	bodyText, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read Ollama API response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("ollama API returned status %d, body=%#v", resp.StatusCode, string(bodyText))
+	}
+	var apiResp ollamaGenerateResponse
+	if err := json.Unmarshal(bodyText, &apiResp); err != nil {
+		return "", fmt.Errorf("failed to parse Ollama API response=%#v: %w", string(bodyText), err)
+	}
+	if apiResp.Response == "" {
+		return "", fmt.Errorf("ollama API returned empty response, body=%#v", string(bodyText))
+	}
+	return NormalizeAISuggestion(apiResp.Response), nil
+}
+
+func getMultipleOllamaCompletions(apiEndpoint, query, shellName, osName, overriddenModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
+	hctx.GetLogger().Infof("Making %d parallel Ollama API calls for multiple completions", numberCompletions)
+	msgs := buildShellAssistantMessages(query, shellName, osName)
+	prompt := ollamaPromptFromMessages(msgs)
+	model := resolveOllamaModel(overriddenModel)
+
+	indices := make([]int, numberCompletions)
+	for i := 0; i < numberCompletions; i++ {
+		indices[i] = i
+	}
+
+	results, err := shared.ParallelMap(indices, func(index int) (apiCallResult, error) {
+		text, err := makeSingleOllamaCall(apiEndpoint, model, prompt)
+		if err != nil {
+			return apiCallResult{}, fmt.Errorf("failed on completion %d/%d: %w", index+1, numberCompletions, err)
+		}
+		return apiCallResult{results: []string{text}, usage: OpenAiUsage{}}, nil
+	})
+	if err != nil {
+		return nil, OpenAiUsage{}, err
+	}
+
+	allResults := make([]string, 0, numberCompletions)
+	for _, result := range results {
+		for _, r := range result.results {
+			norm := NormalizeAISuggestion(r)
+			if norm == "" {
+				continue
+			}
+			if !slices.Contains(allResults, norm) {
+				allResults = append(allResults, norm)
+			}
+		}
+	}
+	hctx.GetLogger().Infof("For Ollama query=%#v with %d parallel completions ==> %#v", query, numberCompletions, allResults)
+	return allResults, OpenAiUsage{}, nil
+}
+
+// GetAiSuggestionsViaOllama calls Ollama's /api/generate endpoint (non-streaming JSON).
+func GetAiSuggestionsViaOllama(apiEndpoint, query, shellName, osName, overriddenModel string, numberCompletions int) ([]string, OpenAiUsage, error) {
+	if results := TestOnlyOverrideAiSuggestions[query]; len(results) > 0 {
+		return NormalizeSuggestionSlice(results), OpenAiUsage{}, nil
+	}
+
+	hctx.GetLogger().Infof("Running AI query via Ollama for %#v", query)
+
+	if envNumberCompletions := getEnvWithFallbacks("AI_API_NUMBER_COMPLETIONS", "OPENAI_API_NUMBER_COMPLETIONS"); envNumberCompletions != "" {
+		n, err := strconv.Atoi(envNumberCompletions)
+		if err == nil {
+			numberCompletions = n
+		}
+	}
+
+	if numberCompletions > 1 {
+		return getMultipleOllamaCompletions(apiEndpoint, query, shellName, osName, overriddenModel, numberCompletions)
+	}
+
+	msgs := buildShellAssistantMessages(query, shellName, osName)
+	prompt := ollamaPromptFromMessages(msgs)
+	model := resolveOllamaModel(overriddenModel)
+
+	text, err := makeSingleOllamaCall(apiEndpoint, model, prompt)
+	if err != nil {
+		return nil, OpenAiUsage{}, err
+	}
+	hctx.GetLogger().Infof("For Ollama query=%#v ==> %#v", query, text)
+	if norm := NormalizeAISuggestion(text); norm != "" {
+		return []string{norm}, OpenAiUsage{}, nil
+	}
+	return nil, OpenAiUsage{}, fmt.Errorf("ollama returned only whitespace or punctuation after normalization")
 }
 
 type AiSuggestionRequest struct {
@@ -312,13 +607,6 @@ type AiSuggestionResponse struct {
 }
 
 func createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel string, numberCompletions int) openAiRequest {
-	if osName == "" {
-		osName = "Linux"
-	}
-	if shellName == "" {
-		shellName = "bash"
-	}
-
 	// Determine the default model based on available API keys
 	defaultModel := "gpt-4o-mini"
 	if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
@@ -343,22 +631,11 @@ func createOpenAiRequest(query, shellName, osName, overriddenOpenAiModel string,
 		}
 	}
 
-	// Set default system prompt
-	defaultSystemPrompt := "You are an expert programmer that loves to help people with writing shell commands. " +
-		"You always reply with just a shell command and no additional context, information, or formatting. " +
-		"Your replies will be directly executed in " + shellName + " on " + osName +
-		", so ensure that they are correct and do not contain anything other than a shell command."
-
-	if systemPrompt := getEnvWithFallbacks("AI_API_SYSTEM_PROMPT", "OPENAI_API_SYSTEM_PROMPT"); systemPrompt != "" {
-		defaultSystemPrompt = systemPrompt
-	}
+	msgs := buildShellAssistantMessages(query, shellName, osName)
 
 	return openAiRequest{
 		Model:             model,
 		NumberCompletions: numberCompletions,
-		Messages: []openAiMessage{
-			{Role: "system", Content: defaultSystemPrompt},
-			{Role: "user", Content: query},
-		},
+		Messages:          msgs,
 	}
 }

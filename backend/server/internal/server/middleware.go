@@ -34,7 +34,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 }
 
 func getFunctionName(temp any) string {
-	strs := strings.Split((runtime.FuncForPC(reflect.ValueOf(temp).Pointer()).Name()), ".")
+	strs := strings.Split(runtime.FuncForPC(reflect.ValueOf(temp).Pointer()).Name(), ".")
 	return strs[len(strs)-1]
 }
 

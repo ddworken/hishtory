@@ -1,0 +1,30 @@
+# Runs on the eSlider fork when upstream PR workflows require maintainer approval.
+name: Fork CI
+
+on:
+  push:
+    branches: [master, feature/ollama-ai-defaults]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.24"
+      - name: Format check
+        run: |
+          go install mvdan.cc/gofumpt@latest
+          go install github.com/daixiang0/gci@v0.13.5
+          make fmt
+          git diff --exit-code
+      - name: Vet and unit tests
+        run: |
+          go vet ./...
+          go test ./shared/ai/... -count=1 -run 'TestNormalize|TestOllama|TestGetAiSuggestionsViaGemini|TestExtract|TestBuild|TestResolve'

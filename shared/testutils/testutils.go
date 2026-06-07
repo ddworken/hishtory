@@ -473,7 +473,8 @@ func runNativeMinioServer() func() {
 
 	// Start MinIO server as a background process
 	cmd := exec.Command(minioPath, "server", dataDir, "--address", ":9000", "--console-address", ":9001")
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"MINIO_ROOT_USER="+MinioAccessKeyID,
 		"MINIO_ROOT_PASSWORD="+MinioSecretAccessKey,
 	)
@@ -528,7 +529,8 @@ func runDockerMinioServer() func() {
 	_ = exec.Command("docker", "rm", "-f", "hishtory-minio-test").Run()
 
 	// Start MinIO container
-	cmd := exec.Command("docker", "run", "-d",
+	cmd := exec.Command(
+		"docker", "run", "-d",
 		"--name", "hishtory-minio-test",
 		"-p", "9000:9000",
 		"-p", "9001:9001",

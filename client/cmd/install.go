@@ -247,6 +247,16 @@ func handleUpgradedFeatures() error {
 		// Whitespace filtering is not yet configured, so enable it by default
 		config.FilterWhitespacePrefix = true
 	}
+	if !strings.Contains(string(configContents), "ai_completion_backend") {
+		if !shared.HasAiAPIKeys() &&
+			(config.AiCompletionEndpoint == "" ||
+				config.AiCompletionEndpoint == "https://api.openai.com/v1/chat/completions" ||
+				config.AiCompletionEndpoint == "https://api.anthropic.com/v1/chat/completions" ||
+				config.AiCompletionEndpoint == shared.DefaultOllamaGenerateEndpoint) {
+			config.AiCompletionBackend = shared.AiCompletionBackendGemini
+			config.AiCompletionEndpoint = ""
+		}
+	}
 	return hctx.SetConfig(&config)
 }
 
@@ -623,6 +633,9 @@ func setup(userSecret string, isOffline bool) error {
 	config.HighlightMatches = true
 	config.AiCompletion = true
 	config.IsOffline = isOffline
+	if !isOffline {
+		config.AiCompletionBackend = shared.AiCompletionBackendGemini
+	}
 	if isOffline {
 		// By default, offline mode disables AI completion. Users can still enable it if they want it. See #220.
 		config.AiCompletion = false

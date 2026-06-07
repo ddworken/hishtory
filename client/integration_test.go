@@ -2285,10 +2285,14 @@ func testConfigGetSet(t *testing.T, tester shellTester) {
 		t.Fatalf("unexpected config-get output: %#v", out)
 	}
 
-	// For OpenAI endpoints
+	// Default AI backend (Gemini web when no API keys)
 	out = tester.RunInteractiveShell(t, `hishtory config-get ai-completion-endpoint`)
-	if out != "https://api.openai.com/v1/chat/completions\n" {
+	if out != "\n" {
 		t.Fatalf("unexpected config-get output: %#v", out)
+	}
+	out = tester.RunInteractiveShell(t, `hishtory config-get ai-completion-backend`)
+	if out != "gemini\n" {
+		t.Fatalf("unexpected config-get ai-completion-backend: %#v", out)
 	}
 	tester.RunInteractiveShell(t, `hishtory config-set ai-completion-endpoint https://example.com/foo/bar`)
 	out = tester.RunInteractiveShell(t, `hishtory config-get ai-completion-endpoint`)
@@ -2943,7 +2947,8 @@ func testTui_keybindings(t *testing.T) {
 	tester, _, _ := setupTestTui(t, Online)
 
 	// Check the default config
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory config-get key-bindings`),
 		"TestTui-KeyBindings-Default",
 	)
@@ -2953,7 +2958,8 @@ func testTui_keybindings(t *testing.T) {
 	tester.RunInteractiveShell(t, `hishtory config-set key-bindings help ctrl+j`)
 
 	// Check that they got configured
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory config-get key-bindings`),
 		"TestTui-KeyBindings-Configured",
 	)
@@ -3007,6 +3013,8 @@ func testTui_ai(t *testing.T) {
 	os.Setenv("ANTHROPIC_API_KEY", "")
 	os.Setenv("AI_API_KEY", "")
 	tester, _, _ := setupTestTui(t, Online)
+	tester.RunInteractiveShell(t, `hishtory config-set ai-completion-backend chat`)
+	tester.RunInteractiveShell(t, `hishtory config-set ai-completion-endpoint https://api.openai.com/v1/chat/completions`)
 	req, err := json.Marshal(
 		ai.TestOnlyOverrideAiSuggestionRequest{Query: "myQuery", Suggestions: []string{"result 1", "result 2", "longer result 3"}},
 	)
@@ -3972,7 +3980,8 @@ func TestChangeSyncingStatus(t *testing.T) {
 	userSecret := installWithOnlineStatus(t, tester, Offline)
 	assertOnlineStatus(t, Offline)
 	tester.RunInteractiveShell(t, `echo "device1_whileOffline_1"`)
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
 		"TestChangeSyncingStatus-Offline",
 	)
@@ -3980,7 +3989,8 @@ func TestChangeSyncingStatus(t *testing.T) {
 	// Go online
 	out := tester.RunInteractiveShell(t, `hishtory syncing enable`)
 	require.Equal(t, "Enabled syncing successfully\n", out)
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
 		"TestChangeSyncingStatus-Online",
 	)
@@ -3990,7 +4000,8 @@ func TestChangeSyncingStatus(t *testing.T) {
 	installHishtory(t, tester, userSecret)
 	out = tester.RunInteractiveShell(t, `hishtory export`)
 	require.Contains(t, out, "device1_whileOffline_1")
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
 		"TestChangeSyncingStatus-Online",
 	)
@@ -3998,12 +4009,14 @@ func TestChangeSyncingStatus(t *testing.T) {
 	// Go back to the first device, disable syncing, and then record a command
 	restoreDev2 := testutils.BackupAndRestoreWithId(t, "dev2")
 	restoreDev1()
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
 		"TestChangeSyncingStatus-Online",
 	)
 	out = tester.RunInteractiveShell(t, `hishtory syncing disable`)
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
 		"TestChangeSyncingStatus-Offline",
 	)
@@ -4019,7 +4032,8 @@ func TestChangeSyncingStatus(t *testing.T) {
 	out = tester.RunInteractiveShell(t, `hishtory export`)
 	require.Contains(t, out, "device1_whileOffline_1")
 	require.NotContains(t, out, "device1_whileOffline_2")
-	testutils.CompareGoldens(t,
+	testutils.CompareGoldens(
+		t,
 		tester.RunInteractiveShell(t, `hishtory status -v | grep -v User | grep -v Device | grep -v Secret`),
 		"TestChangeSyncingStatus-Online",
 	)

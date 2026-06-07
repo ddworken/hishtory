@@ -149,7 +149,7 @@ func MakeContext() context.Context {
 func GetConf(ctx context.Context) *ClientConfig {
 	v := ctx.Value(ConfigCtxKey)
 	if v != nil {
-		return (v.(*ClientConfig))
+		return v.(*ClientConfig)
 	}
 	panic(fmt.Errorf("failed to find config in ctx"))
 }
@@ -242,6 +242,8 @@ type ClientConfig struct {
 	DefaultFilter string `json:"default_filter"`
 	// The endpoint to use for AI suggestions
 	AiCompletionEndpoint string `json:"ai_completion_endpoint"`
+	// AiCompletionBackend selects the AI integration: empty (auto), "gemini", "chat" (OpenAI-compatible / hishtory proxy), or "ollama".
+	AiCompletionBackend string `json:"ai_completion_backend,omitempty"`
 	// Custom key bindings for the TUI
 	KeyBindings keybindings.SerializableKeyMap `json:"key_bindings"`
 	// The log level for hishtory (e.g., "debug", "info", "warn", "error")
@@ -335,11 +337,26 @@ func GetConfig() (ClientConfig, error) {
 		config.ColorScheme.BorderColor = GetDefaultColorScheme().BorderColor
 	}
 	if config.AiCompletionEndpoint == "" {
-		// Default to the appropriate endpoint based on available API keys
-		if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
-			config.AiCompletionEndpoint = "https://api.anthropic.com/v1/chat/completions"
-		} else {
-			config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+		switch config.AiCompletionBackend {
+		case shared.AiCompletionBackendChat:
+			if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
+				config.AiCompletionEndpoint = "https://api.anthropic.com/v1/chat/completions"
+			} else {
+				config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+			}
+		case shared.AiCompletionBackendOllama:
+			config.AiCompletionEndpoint = shared.DefaultOllamaGenerateEndpoint
+		case shared.AiCompletionBackendGemini:
+			// Gemini web uses a built-in StreamGenerate URL; endpoint stays empty.
+		default:
+			if shared.HasAiAPIKeys() {
+				if os.Getenv("ANTHROPIC_API_KEY") != "" && os.Getenv("OPENAI_API_KEY") == "" {
+					config.AiCompletionEndpoint = "https://api.anthropic.com/v1/chat/completions"
+				} else {
+					config.AiCompletionEndpoint = "https://api.openai.com/v1/chat/completions"
+				}
+			}
+			// auto with no keys: Gemini web (endpoint stays empty).
 		}
 	}
 	if config.LogLevel == logrus.Level(0) {
