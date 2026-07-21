@@ -31,6 +31,28 @@ Override for the OpenAI model used in completions. Lower priority than `AI_API_M
 - **Default**: `"gpt-4o-mini"` (or `"claude-haiku-4-5-20251001"` if only Anthropic key is available)
 - **Priority**: `AI_API_MODEL` > `OPENAI_API_MODEL`
 
+### `AI_API_NUMBER_COMPLETIONS`
+Overrides the number of AI completions requested per query. Takes priority over `OPENAI_API_NUMBER_COMPLETIONS`. Non-numeric values are silently ignored.
+
+- **Default**: Empty (uses the number requested by the caller)
+- **Priority**: `AI_API_NUMBER_COMPLETIONS` > `OPENAI_API_NUMBER_COMPLETIONS`
+
+### `OPENAI_API_NUMBER_COMPLETIONS`
+Override for the number of AI completions requested per query. Lower priority than `AI_API_NUMBER_COMPLETIONS`.
+
+- **Default**: Empty (uses the number requested by the caller)
+
+### `AI_API_SYSTEM_PROMPT`
+Overrides the system prompt sent to the AI API. Takes priority over `OPENAI_API_SYSTEM_PROMPT`.
+
+- **Default**: Empty (uses the built-in system prompt that instructs the model to reply with just a shell command)
+- **Priority**: `AI_API_SYSTEM_PROMPT` > `OPENAI_API_SYSTEM_PROMPT`
+
+### `OPENAI_API_SYSTEM_PROMPT`
+Override for the system prompt sent to the AI API. Lower priority than `AI_API_SYSTEM_PROMPT`.
+
+- **Default**: Empty (uses the built-in system prompt)
+
 ## hiSHtory Server
 
 ### `HISHTORY_SERVER`
@@ -44,7 +66,7 @@ Sets the port the hiSHtory server listens on.
 - **Default**: `"8080"`
 
 ### `HISHTORY_ENV`
-Determines if the server is running in production mode. Affects DB migration behavior and other production-specific logic like DeepClean.
+Determines if the server is running in production mode. In production mode, the server skips DB auto-migration and index creation on startup, enables usage data tracking, and disables the self-hosted deep clean job (which only runs when the server is neither in production nor in test mode).
 
 - **Default**: Empty (not production)
 - **Production value**: `"prod"`
@@ -73,10 +95,21 @@ PostgreSQL password for self-hosted hiSHtory server database connection. Used to
 - **Default**: None (HISHTORY_POSTGRES_DB is expected instead)
 
 ### `HISHTORY_SELF_HOSTED_DEEP_CLEAN`
-When set, permanently deletes history entries and devices that have been offline for 90+ days. Without it, only counts and warns.
+When set, permanently deletes history entries and devices that have been offline for 90+ days. Without it, only counts and warns. The deep clean job only runs on self-hosted servers (not in production or test mode) and is a no-op on SQLite backends.
 
 - **Default**: Empty (only warns, doesn't delete)
 - **Any non-empty value**: Performs deep clean
+
+### `HISHTORY_MAX_NUM_USERS`
+Limits the maximum number of users that can register on the server. Non-numeric values are ignored.
+
+- **Default**: Empty (unlimited)
+- **Example**: `"10"`
+
+### `DD_API_KEY`
+DataDog API key. On the server it enables the DataDog profiler (production observability). It is also read by the post-test tooling (`client/posttest`) to export test metrics to DataDog.
+
+- **Default**: Empty (no DataDog integration)
 
 ## hiSHtory Client
 
@@ -101,9 +134,9 @@ Signals that the TUI is being invoked from shell integration (Control+R). When s
 - **Note**: Set automatically by the shell config files
 
 ### `HISHTORY_SKIP_INIT_IMPORT`
-Skips the automatic import of existing shell history during `hishtory install` or `hishtory init`.
+Skips the automatic import of existing shell history during `hishtory install` or `hishtory init`. During `install`, auto-import only happens when fewer than 10 entries are already stored; during `init`, it always happens unless this variable is set.
 
-- **Default**: Empty (auto-import is enabled if < 10 entries exist)
+- **Default**: Empty (auto-import is enabled)
 - **Any non-empty value**: Skips auto-import
 - **Note**: Set to `"1"` in CI/testing to avoid flaky imports
 
@@ -131,10 +164,16 @@ Bypasses the downgrade check during SLSA binary verification.
 - **Default**: Empty (downgrades are blocked)
 - **Value**: `"true"` to allow
 
+### `_hishtory_tui_color`
+Communicates the terminal's color support level to the TUI as an int (the termenv profile). Needed because the Control+R integration is not hooked up to the main TTY, so the TUI cannot detect color support itself.
+
+- **Default**: Empty (falls back to ANSI256)
+- **Note**: Set automatically by the shell config files using `hishtory getColorSupport`; not meant to be set by hand
+
 ## Testing
 
 ### `HISHTORY_TEST`
-Master test flag that enables test-specific behavior: ANSI color profiles, tweaked shell configs, test environment detection, and background history saving.
+Master test flag that enables test-specific behavior: the TUI forces the ANSI color profile, `hishtory install` tweaks the generated shell configs for tests, the zsh config force-loads compinit, and the server runs against an in-memory SQLite DB.
 
 - **Default**: Empty (production behavior)
 - **Any non-empty value**: Enables test mode
@@ -171,6 +210,17 @@ Triggers extra DB migration code path in the server for Docker Compose integrati
 - **Any non-empty value**: Enables extra migrations
 - **Note**: Set to `"1"` in docker-compose test CI
 
+### `FORCED_BANNER`
+Forwarded by the client to the server's `/api/v1/banner` endpoint as the `forced_banner` query param. Used to test banner display.
+
+- **Default**: Empty (no forced banner)
+
+### `FAST`
+Skips slow tests in the client integration test suite.
+
+- **Default**: Empty (all tests run)
+- **Any non-empty value**: Skips slow tests
+
 ## CI/CD
 
 ### `GITHUB_ACTION`
@@ -200,7 +250,30 @@ Identifies which shard a test is running on during parallel test sharding. Used 
 ## S3 Storage
 
 ### `HISHTORY_S3_SECRET_ACCESS_KEY`
-S3 secret access key for hiSHtory's S3 backend storage. Required when using S3 storage alongside an access key ID. Referenced in code as `HISHTORY_S3_SECRET_ACCESS_KEY`.
+S3 secret access key for hiSHtory's S3 backend storage. The secret is intentionally never stored in the config file; it is always loaded from this environment variable.
 
-- **Default**: None (required for S3 backend)
-- **Note**: If `HISHTORY_S3_ACCESS_KEY_ID` is set but this is not, an error is raised
+- **Default**: Empty
+- **Note**: If the `access_key_id` field is set in the S3 config file but this variable is not set, an error is raised. If neither is set, IAM-role/ambient AWS credentials can be used instead.
+
+## Standard Variables
+
+These are standard shell/system variables that hiSHtory reads but does not own.
+
+### `ZDOTDIR`
+Used during `hishtory install` to locate the `.zshrc` file to modify.
+
+- **Default**: Empty (falls back to `~/.zshrc`)
+
+### `HISTFILE`
+Custom shell history file location, added to the list of files scanned by `hishtory import` (alongside `~/.bash_history`, `~/.zsh_history`, etc.).
+
+### `HISTTIMEFORMAT`
+Bash history timestamp format. Used when parsing bash history lines to strip the timestamp prefix from imported commands.
+
+### `PWD`
+Fallback for detecting the current working directory when saving a history entry, if `syscall.Getwd` fails.
+
+### `TMPDIR`
+Temporary directory used for downloading the new client binary during `hishtory update`.
+
+- **Default**: `/tmp/`
