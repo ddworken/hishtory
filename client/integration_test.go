@@ -145,6 +145,7 @@ func TestParam(t *testing.T) {
 	t.Run("testTui/defaultFilter", wrapTestForSharding(testTui_defaultFilter))
 	t.Run("testTui/escaping", wrapTestForSharding(testTui_escaping))
 	t.Run("testTui/fullscreen", wrapTestForSharding(testTui_fullscreen))
+	t.Run("testTui/hideColumns", wrapTestForSharding(testTui_hideColumns))
 
 	// Assert there are no leaked connections
 	assertNoLeakedConnections(t)
@@ -2615,6 +2616,78 @@ func testTui_fullscreen(t *testing.T) {
 		"hishtory SPACE tquery ENTER",
 	})
 	testutils.CompareGoldens(t, out, "TestTui-FullScreenCompactRender")
+}
+
+func testTui_hideColumns(t *testing.T) {
+	// Setup. Unlike the other TUI tests, this runs offline with a bash tester so
+	// that it can also run on dev machines that have neither zsh nor a local backend.
+	defer testutils.BackupAndRestore(t)()
+	tester := bashTester{}
+	installWithOnlineStatus(t, tester, Offline)
+	assertOnlineStatus(t, Offline)
+
+	// Disable recording so that all our testing commands don't get recorded
+	_, _ = tester.RunInteractiveShellRelaxed(t, ` hishtory disable`)
+
+	// Insert a couple hishtory entries
+	db := hctx.GetDb(hctx.MakeContext())
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("ls ~/")).Error)
+	require.NoError(t, db.Create(testutils.MakeFakeHistoryEntry("echo 'aaaaaa bbbb'")).Error)
+
+	// Check that pressing the hide-columns hotkey hides all the columns but Command
+	out := captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		// ExtraDelay after each key press so that the async table re-query finishes before the next step
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "C-t", ExtraDelay: 1.0},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-HideColumns-Hidden")
+
+	// Check that pressing it again restores the columns from the config
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "C-t", ExtraDelay: 1.0},
+		{Keys: "C-t", ExtraDelay: 1.0},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-HideColumns-Unhidden")
+
+	// Check that searching still works while the columns are hidden
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "C-t", ExtraDelay: 1.0},
+		{Keys: "aaaaaa", ExtraDelay: 1.0},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-HideColumns-Search")
+
+	// Check that the columns stay hidden when the table is rebuilt from scratch after a terminal resize
+	out = captureTerminalOutputWithShellNameAndDimensions(t, tester, tester.ShellName(), 200, 50, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "C-t", ExtraDelay: 1.0},
+		{ResizeX: 150, ResizeY: 40, ExtraDelay: 1.0},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-HideColumns-Resize")
+
+	// Check that the hide-columns hotkey can be rebound and that the new binding works
+	tester.RunInteractiveShell(t, `hishtory config-set key-bindings hide-columns ctrl+y`)
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "C-y", ExtraDelay: 1.0},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-HideColumns-Hidden")
+	tester.RunInteractiveShell(t, `hishtory config-set key-bindings hide-columns ctrl+t`)
+
+	// Check that deleting an entry keeps the columns hidden. This is last since it mutates the DB.
+	out = captureTerminalOutputWithComplexCommands(t, tester, []TmuxCommand{
+		{Keys: "hishtory SPACE tquery ENTER", ExtraDelay: 1.0},
+		{Keys: "C-t", ExtraDelay: 1.0},
+		{Keys: "C-K", ExtraDelay: 1.0},
+	})
+	out = stripTuiCommandPrefix(t, out)
+	testutils.CompareGoldens(t, out, "TestTui-HideColumns-Delete")
 }
 
 func testTui_defaultFilter(t *testing.T) {

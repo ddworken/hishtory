@@ -25,6 +25,7 @@ type SerializableKeyMap struct {
 	JumpEndOfInput          []string
 	WordLeft                []string
 	WordRight               []string
+	HideColumns             []string
 }
 
 func prettifyKeyBinding(kb string) string {
@@ -126,6 +127,10 @@ func (s SerializableKeyMap) ToKeyMap() KeyMap {
 			key.WithKeys(s.WordRight...),
 			key.WithHelp(prettifyKeyBinding(s.WordRight[0]), "jump right one word "),
 		),
+		HideColumns: key.NewBinding(
+			key.WithKeys(s.HideColumns...),
+			key.WithHelp(prettifyKeyBinding(s.HideColumns[0]), "hide all columns but the 'Command' one"),
+		),
 	}
 }
 
@@ -181,6 +186,9 @@ func (s SerializableKeyMap) WithDefaults() SerializableKeyMap {
 	if len(s.WordRight) == 0 {
 		s.WordRight = DefaultKeyMap.WordRight.Keys()
 	}
+	if len(s.HideColumns) == 0 {
+		s.HideColumns = DefaultKeyMap.HideColumns.Keys()
+	}
 	return s
 }
 
@@ -202,6 +210,7 @@ type KeyMap struct {
 	JumpEndOfInput          key.Binding
 	WordLeft                key.Binding
 	WordRight               key.Binding
+	HideColumns             key.Binding
 }
 
 func (k KeyMap) ToSerializable() SerializableKeyMap {
@@ -223,6 +232,7 @@ func (k KeyMap) ToSerializable() SerializableKeyMap {
 		JumpEndOfInput:          k.JumpEndOfInput.Keys(),
 		WordLeft:                k.WordLeft.Keys(),
 		WordRight:               k.WordRight.Keys(),
+		HideColumns:             k.HideColumns.Keys(),
 	}
 }
 
@@ -322,5 +332,9 @@ var DefaultKeyMap = KeyMap{
 	WordRight: key.NewBinding(
 		key.WithKeys("ctrl+right"),
 		key.WithHelp("ctrl+right", "jump right one word "),
+	),
+	HideColumns: key.NewBinding(
+		key.WithKeys("ctrl+t"),
+		key.WithHelp("ctrl+t", "hide all columns but the 'Command' one"),
 	),
 }

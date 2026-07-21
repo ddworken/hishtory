@@ -99,6 +99,9 @@ type model struct {
 
 	// Whether we've finished the first load of results. If we haven't, we refuse to run additional queries to avoid race conditions with how we handle invalid initial queries.
 	hasFinishedFirstLoad bool
+
+	// Whether to display only the Command column, hiding all the other columns
+	hideColumns bool
 }
 
 type (
@@ -175,7 +178,7 @@ func updateTable(m model, rows []table.Row, entries []*data.HistoryEntry, search
 		initialCursor = m.table.Cursor()
 	}
 	if forceUpdateTable || m.table == nil {
-		t, err := makeTable(m.ctx, m.shellName, rows)
+		t, err := makeTable(m.ctx, m.shellName, displayedColumnNames(m), rows)
 		if err != nil {
 			m.fatalErr = err
 			return m
@@ -203,6 +206,14 @@ func preventTableOverscrolling(m model) {
 	}
 }
 
+// displayedColumnNames returns the column names to fetch and display, honoring the hide-columns toggle.
+func displayedColumnNames(m model) []string {
+	if m.hideColumns {
+		return []string{"Command"}
+	}
+	return hctx.GetConf(m.ctx).DisplayedColumns
+}
+
 func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.Cmd {
 	if (m.runQuery != nil && *m.runQuery != m.lastQuery) || forceUpdateTable || m.searchErr != nil {
 		query := m.lastQuery
@@ -217,15 +228,17 @@ func runQueryAndUpdateTable(m model, forceUpdateTable, maintainCursor bool) tea.
 			defaultFilter = ""
 		}
 
+		displayedColumns := displayedColumnNames(m)
+
 		// Kick off an async query to getRows() so that we can start our DB query in the background
 		// before bubbletea actually invokes our tea.Msg. This reduces latency between key presses
 		// and results being displayed.
 		go func() {
-			_, _, _ = getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+			_, _, _ = getRows(m.ctx, displayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
 		}()
 
 		return func() tea.Msg {
-			rows, entries, searchErr := getRows(m.ctx, conf.DisplayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
+			rows, entries, searchErr := getRows(m.ctx, displayedColumns, m.shellName, defaultFilter, query, getNumEntriesNeeded(m.ctx))
 			return asyncQueryFinishedMsg{queryId, rows, entries, searchErr, forceUpdateTable, maintainCursor, nil, false}
 		}
 	}
@@ -296,6 +309,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+		case key.Matches(msg, loadedKeyBindings.HideColumns):
+			if m.table == nil {
+				return m, nil
+			}
+			m.hideColumns = !m.hideColumns
+			hctx.GetLogger().Debugf("toggled hide-columns to %v, re-querying to rebuild the table", m.hideColumns)
+			cmd := runQueryAndUpdateTable(m, true, true)
+			preventTableOverscrolling(m)
+			return m, cmd
 		default:
 			pendingCommands := tea.Batch()
 			if m.table != nil {
@@ -567,6 +589,10 @@ func calculateColumnWidths(rows []table.Row, numColumns int) []int {
 	neededColumnWidth := make([]int, numColumns)
 	for _, row := range rows {
 		for i, v := range row {
+			if i >= numColumns {
+				// Rows built for a previous set of displayed columns may be wider than the current one
+				break
+			}
 			neededColumnWidth[i] = max(neededColumnWidth[i], len(v))
 		}
 	}
@@ -577,7 +603,9 @@ func getTerminalSize() (int, int, error) {
 	return term.GetSize(2)
 }
 
-var bigQueryResults []table.Row
+// Cached results of a wide search per displayed-column set. Keyed by the joined
+// column names since the row shape changes when the hide-columns toggle flips.
+var bigQueryResults = make(map[string][]table.Row)
 
 func makeTableColumns(ctx context.Context, shellName string, columnNames []string, rows []table.Row) ([]table.Column, error) {
 	// Handle an initial query with no results
@@ -607,14 +635,15 @@ func makeTableColumns(ctx context.Context, shellName string, columnNames []strin
 	}
 
 	// Calculate the maximum column width that is useful for each column if we search for the empty string
-	if bigQueryResults == nil {
+	columnsKey := strings.Join(columnNames, "\x00")
+	if bigQueryResults[columnsKey] == nil {
 		bigRows, _, err := getRows(ctx, columnNames, shellName, "", "", 1000)
 		if err != nil {
 			return nil, err
 		}
-		bigQueryResults = bigRows
+		bigQueryResults[columnsKey] = bigRows
 	}
-	maximumColumnWidths := calculateColumnWidths(bigQueryResults, len(columnNames))
+	maximumColumnWidths := calculateColumnWidths(bigQueryResults[columnsKey], len(columnNames))
 
 	// Get the actual terminal width. If we're below this, opportunistically add some padding aiming for the maximum column widths
 	terminalWidth, _, err := getTerminalSize()
@@ -689,9 +718,9 @@ func getNumEntriesNeeded(ctx context.Context) int {
 	return getTableHeight(ctx) * 5
 }
 
-func makeTable(ctx context.Context, shellName string, rows []table.Row) (table.Model, error) {
+func makeTable(ctx context.Context, shellName string, columnNames []string, rows []table.Row) (table.Model, error) {
 	config := hctx.GetConf(ctx)
-	columns, err := makeTableColumns(ctx, shellName, config.DisplayedColumns, rows)
+	columns, err := makeTableColumns(ctx, shellName, columnNames, rows)
 	if err != nil {
 		return table.Model{}, err
 	}
