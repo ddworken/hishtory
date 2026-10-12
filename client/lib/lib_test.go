@@ -2,6 +2,7 @@ package lib
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -404,5 +405,106 @@ func TestWhere(t *testing.T) {
 		})
 		require.Equal(t, tc.expected_query, queryString)
 
+	}
+}
+
+func TestIsRedactCommand(t *testing.T) {
+	testcases := []struct {
+		command  string
+		expected bool
+	}{
+		// Basic redact commands
+		{"hishtory redact foo", true},
+		{"hishtory redact sensitive-term", true},
+		{"hishtory redact", true},
+		{"hishtory delete foo", true},
+		{"hishtory delete sensitive-term", true},
+
+		// With environment variables
+		{"HISHTORY_REDACT_FORCE=1 hishtory redact foo", true},
+		{"HISHTORY_REDACT_FORCE=true hishtory redact bar", true},
+		{"FOO=bar BAZ=qux hishtory redact test", true},
+		{"FOO=bar hishtory delete test", true},
+
+		// With leading/trailing whitespace
+		{"  hishtory redact foo  ", true},
+		{"  HISHTORY_REDACT_FORCE=1 hishtory redact foo  ", true},
+		{" hishtory delete bar ", true},
+
+		// Non-redact commands
+		{"hishtory query foo", false},
+		{"hishtory export", false},
+		{"hishtory status", false},
+		{"echo hishtory redact", true},
+		{"echo hishtory delete", true},
+		{"ls /tmp", false},
+		{"hishtory", false},
+		{"FOO=bar echo test", false},
+
+		// Edge cases
+		{"hishtoryredact", false},
+		{"hishtory  redact", true},
+		{"", false},
+		{"   ", false},
+	}
+
+	for _, tc := range testcases {
+		actual := IsRedactCommand(tc.command)
+		require.Equal(t, tc.expected, actual, "IsRedactCommand(%#v) unexpected result", tc.command)
+	}
+}
+
+func TestAddToDbIfNewSkipsRedactCommands(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	require.NoError(t, hctx.InitConfig())
+	db := hctx.GetDb(hctx.MakeContext())
+
+	// Redact commands must be omitted from history persistence
+	redactEntry := testutils.MakeFakeHistoryEntry("hishtory redact sensitive_password")
+	AddToDbIfNew(db, redactEntry)
+
+	var entries []*data.HistoryEntry
+	require.NoError(t, db.Find(&entries).Error)
+	require.Empty(t, entries, "expected redact commands to be skipped by AddToDbIfNew")
+
+	deleteEntry := testutils.MakeFakeHistoryEntry("hishtory delete sensitive_api_key")
+	AddToDbIfNew(db, deleteEntry)
+
+	entries = nil
+	require.NoError(t, db.Find(&entries).Error)
+	require.Empty(t, entries, "expected delete commands to be skipped by AddToDbIfNew")
+
+	// Standard command must be persisted
+	normalEntry := testutils.MakeFakeHistoryEntry("curl -I https://example.com")
+	AddToDbIfNew(db, normalEntry)
+
+	entries = nil
+	require.NoError(t, db.Find(&entries).Error)
+	require.Len(t, entries, 1)
+	require.Equal(t, "curl -I https://example.com", entries[0].Command)
+}
+
+func TestImportHistorySkipsRedactCommands(t *testing.T) {
+	defer testutils.BackupAndRestore(t)()
+	require.NoError(t, hctx.InitConfig())
+	ctx := hctx.MakeContext()
+	config := hctx.GetConf(ctx)
+	config.IsOffline = true
+	db := hctx.GetDb(ctx)
+
+	homedir := hctx.GetHome(ctx)
+	histFile := filepath.Join(homedir, ".bash_history")
+	histContent := "git status\nhishtory redact secret_token\nls -la\nhishtory delete secret_key\n"
+	require.NoError(t, os.WriteFile(histFile, []byte(histContent), 0600))
+
+	numImported, err := ImportHistory(ctx, false, true)
+	require.NoError(t, err)
+	require.Equal(t, 2, numImported)
+
+	var entries []*data.HistoryEntry
+	require.NoError(t, db.Find(&entries).Error)
+	require.Len(t, entries, 2)
+	for _, entry := range entries {
+		require.False(t, IsRedactCommand(entry.Command), "redact command was saved to history: %s", entry.Command)
 	}
 }
