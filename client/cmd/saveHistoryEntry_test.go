@@ -279,8 +279,7 @@ func TestIsRedactCommand(t *testing.T) {
 
 func TestBuildHistoryEntrySkipsRedactCommands(t *testing.T) {
 	defer testutils.BackupAndRestore(t)()
-	defer testutils.RunTestServer()()
-	require.NoError(t, setup("", false))
+	require.NoError(t, setup("", true))
 
 	// Test that redact commands are not saved
 	testcases := []string{

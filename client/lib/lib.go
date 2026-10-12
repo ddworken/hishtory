@@ -60,7 +60,17 @@ var ImportBatchSize = 100
 // Funnily enough, 256KB actually wasn't enough. See https://github.com/ddworken/hishtory/issues/93
 var maxSupportedLineLengthForImport = 512_000
 
+var redactCommandRegex = regexp.MustCompile(`hishtory\s+(redact|delete)`)
+
+// IsRedactCommand returns true if the command contains a hishtory redact or delete invocation.
+func IsRedactCommand(command string) bool {
+	return redactCommandRegex.MatchString(command)
+}
+
 func AddToDbIfNew(db *gorm.DB, entry data.HistoryEntry) {
+	if IsRedactCommand(entry.Command) {
+		return
+	}
 	tx := db.Where("local_username = ?", entry.LocalUsername)
 	tx = tx.Where("hostname = ?", entry.Hostname)
 	tx = tx.Where("command = ?", entry.Command)
@@ -281,7 +291,7 @@ func ImportHistory(ctx context.Context, shouldReadStdin, force bool) (int, error
 			return false
 		}
 		cmd = stripZshWeirdness(cmd)
-		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") {
+		if isBashWeirdness(cmd) || strings.HasPrefix(cmd, " ") || IsRedactCommand(cmd) {
 			return true
 		}
 		// Set the timestamps so that they are monotonically increasing
